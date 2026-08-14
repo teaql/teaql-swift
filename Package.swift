@@ -17,11 +17,10 @@ let package = Package(
         .executable(name: "teaql-order-management", targets: ["OrderManagement"]),
     ],
     targets: [
-        .systemLibrary(
-            name: "CSQLite",
-            pkgConfig: "sqlite3",
-            providers: [.apt(["libsqlite3-dev"]), .brew(["sqlite3"])]
-        ),
+    .systemLibrary(
+      name: "CSQLite",
+      providers: [.apt(["libsqlite3-dev"]), .brew(["sqlite3"])]
+    ),
         .target(name: "TeaQLCore"),
         .target(name: "TeaQLSQL", dependencies: ["TeaQLCore"]),
         .target(name: "TeaQLSQLite", dependencies: ["TeaQLCore", "TeaQLSQL", "CSQLite"]),
