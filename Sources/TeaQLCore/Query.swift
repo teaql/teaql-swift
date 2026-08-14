@@ -1,0 +1,94 @@
+import Foundation
+
+public indirect enum TeaQLExpression: Sendable, Hashable, Codable {
+  case equal(String, TeaQLValue)
+  case greaterThanOrEqual(String, TeaQLValue)
+  case lessThanOrEqual(String, TeaQLValue)
+  case contains(String, String)
+  case inList(String, [TeaQLValue])
+  case and([TeaQLExpression])
+  case or([TeaQLExpression])
+}
+
+public enum SortDirection: String, Sendable, Codable { case ascending, descending }
+
+public struct OrderBy: Sendable, Hashable, Codable {
+  public let field: String
+  public let direction: SortDirection
+
+  public init(_ field: String, _ direction: SortDirection) {
+    self.field = field
+    self.direction = direction
+  }
+}
+
+public struct SelectQuery: Sendable, Hashable, Codable {
+  public static let defaultHardLimit = 10_000
+
+  public let entity: EntityDescriptor
+  public var filter: TeaQLExpression?
+  public var orderBy: [OrderBy] = []
+  public var offset: Int = 0
+  public var limit: Int?
+  public var hardLimit: Int = Self.defaultHardLimit
+  public var projection: [String] = []
+  public var comment: String?
+  public var purpose: String?
+
+  public init(entity: EntityDescriptor) { self.entity = entity }
+
+  public func validatedForExecution() throws -> Self {
+    guard let comment, !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw TeaQLError.missingComment
+    }
+    guard let purpose, !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw TeaQLError.missingPurpose
+    }
+    guard hardLimit > 0, hardLimit <= Self.defaultHardLimit else {
+      throw TeaQLError.invalidHardLimit(hardLimit)
+    }
+    if let limit, limit > hardLimit {
+      throw TeaQLError.hardLimitExceeded(limit: limit, hardLimit: hardLimit)
+    }
+    guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }
+    return self
+  }
+}
+
+public enum TeaQLError: Error, Sendable, Equatable {
+  case missingComment
+  case missingPurpose
+  case missingAuditReason
+  case missingResource(String)
+  case invalidHardLimit(Int)
+  case hardLimitExceeded(limit: Int, hardLimit: Int)
+  case invalidOffset(Int)
+  case unknownEntity(String)
+  case unknownProperty(entity: String, property: String)
+  case optimisticLock(entity: String, id: TeaQLValue, expectedVersion: Int64)
+  case execution(String)
+}
+
+public struct QueryResult: Sendable {
+  public let records: [TeaQLRecord]
+  public let backend: String
+  public let trace: [TraceNode]
+
+  public init(records: [TeaQLRecord], backend: String, trace: [TraceNode] = []) {
+    self.records = records
+    self.backend = backend
+    self.trace = trace
+  }
+}
+
+public struct TraceNode: Sendable, Hashable, Codable {
+  public let entity: String
+  public let comment: String
+  public let purpose: String
+
+  public init(entity: String, comment: String, purpose: String) {
+    self.entity = entity
+    self.comment = comment
+    self.purpose = purpose
+  }
+}

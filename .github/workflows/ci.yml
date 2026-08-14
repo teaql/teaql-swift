@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install SQLite headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - name: Show Swift version
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+      - name: Compile libraries for iOS Simulator
+        if: runner.os == 'macOS'
+        run: >-
+          xcodebuild build
+          -scheme teaql-swift-Package
+          -destination 'generic/platform=iOS Simulator'
+          -skipPackagePluginValidation
+          CODE_SIGNING_ALLOWED=NO
+      - name: Run Order Management twice
+        run: |
+          mkdir "$RUNNER_TEMP/teaql-order-management"
+          cd "$RUNNER_TEMP/teaql-order-management"
+          swift run --package-path "$GITHUB_WORKSPACE" teaql-order-management
+          swift run --package-path "$GITHUB_WORKSPACE" teaql-order-management
