@@ -212,6 +212,9 @@ public typealias EntityCreationObserver = @Sendable (
 
 public struct UserContext: Sendable {
   public let actor: String?
+  /// Application-owned tenant identity. It is never populated from generated
+  /// query or federation payloads.
+  public let trustedTenant: String?
   public let queryExecutor: any QueryExecutor
   public let mutationExecutor: any MutationExecutor
   public let requestPolicy: RequestPolicy
@@ -222,6 +225,7 @@ public struct UserContext: Sendable {
 
   public init(
     actor: String? = nil,
+    trustedTenant: String? = nil,
     queryExecutor: any QueryExecutor,
     mutationExecutor: any MutationExecutor,
     requestPolicy: RequestPolicy,
@@ -231,6 +235,7 @@ public struct UserContext: Sendable {
     entityCreationObserver: EntityCreationObserver? = nil
   ) {
     self.actor = actor
+    self.trustedTenant = trustedTenant
     self.queryExecutor = queryExecutor
     self.mutationExecutor = mutationExecutor
     self.requestPolicy = requestPolicy
