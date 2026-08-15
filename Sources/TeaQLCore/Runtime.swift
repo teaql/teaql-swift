@@ -2,6 +2,14 @@ import Foundation
 
 public protocol QueryExecutor: Sendable {
   func execute(_ query: SelectQuery) async throws -> QueryResult
+  func count(_ query: SelectQuery) async throws -> Int
+}
+
+public extension QueryExecutor {
+  func count(_ query: SelectQuery) async throws -> Int {
+    throw TeaQLError.execution(
+      "Exact count is not supported by the configured query executor for \(query.entity.name)")
+  }
 }
 
 public enum MutationKind: String, Sendable, Codable { case create, update, delete, recover }
@@ -208,6 +216,16 @@ public struct UserContext: Sendable {
       }
     }
     return QueryResult(records: records, backend: result.backend, trace: result.trace)
+  }
+
+  public func count(_ query: SelectQuery) async throws -> Int {
+    var validated = try requestPolicy.apply(query).validatedForExecution()
+    validated.orderBy = []
+    validated.offset = 0
+    validated.limit = nil
+    validated.projection = []
+    validated.relations = []
+    return try await queryExecutor.count(validated)
   }
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {

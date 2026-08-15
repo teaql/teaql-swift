@@ -31,6 +31,31 @@ private func context(_ service: SQLiteDataService, auditSink: (any AuditSink)? =
   )
 }
 
+@Test func sqliteCountsThePolicyFilteredSetWithoutPagination() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-count-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await service.ensureSchema([order])
+  for id in 1...3 {
+    _ = try await service.execute(
+      Mutation(
+        kind: .create, entity: order,
+        values: [
+          "id": .int(Int64(id)), "version": .int(1), "orderNumber": .string("A-\(id)"),
+          "orderDate": .date(Date()), "tenantID": .int(id == 3 ? 8 : 7),
+        ], auditReason: "Seed count fixture"))
+  }
+  var query = SelectQuery(entity: order)
+  query.offset = 1
+  query.limit = 1
+  query.comment = "List tenant orders"
+  query.purpose = "Verify exact filtered total"
+  let ctx = context(service)
+  #expect(try await ctx.execute(query).records.count == 1)
+  #expect(try await ctx.count(query) == 2)
+}
+
 @Test func sqliteCreatesSchemaQueriesAuditsAndRejectsStaleVersion() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-\(UUID().uuidString).db").path

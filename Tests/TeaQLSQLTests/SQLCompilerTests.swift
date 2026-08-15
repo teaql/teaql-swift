@@ -22,3 +22,22 @@ import Testing
   )
   #expect(compiled.parameters == [.string("%A-10%"), .int(10_000)])
 }
+
+@Test func countCompilerUsesOnlyTheSameFilter() throws {
+  let entity = EntityDescriptor(
+    name: "Order", table: "orders",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "status", type: .string),
+    ])
+  var query = SelectQuery(entity: entity)
+  query.filter = .equal("status", .string("ACTIVE"))
+  query.orderBy = [OrderBy("id", .ascending)]
+  query.offset = 20
+  query.limit = 10
+  query.comment = "Count active orders"
+  query.purpose = "Render an exact page total"
+  let compiled = try SQLiteCompiler().compileCount(query)
+  #expect(compiled.sql == "SELECT COUNT(*) FROM \"orders\" WHERE \"status\" = ?")
+  #expect(compiled.parameters == [.string("ACTIVE")])
+}

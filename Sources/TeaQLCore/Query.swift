@@ -110,8 +110,11 @@ public struct SelectQuery: Sendable, Hashable, Codable {
     guard hardLimit > 0, hardLimit <= Self.defaultHardLimit else {
       throw TeaQLError.invalidHardLimit(hardLimit)
     }
-    if let limit, limit > hardLimit {
-      throw TeaQLError.hardLimitExceeded(limit: limit, hardLimit: hardLimit)
+    if let limit {
+      guard limit > 0 else { throw TeaQLError.invalidLimit(limit) }
+      guard limit <= hardLimit else {
+        throw TeaQLError.hardLimitExceeded(limit: limit, hardLimit: hardLimit)
+      }
     }
     guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }
     return self
@@ -124,6 +127,7 @@ public enum TeaQLError: Error, Sendable, Equatable {
   case missingAuditReason
   case missingResource(String)
   case invalidHardLimit(Int)
+  case invalidLimit(Int)
   case hardLimitExceeded(limit: Int, hardLimit: Int)
   case invalidOffset(Int)
   case unknownEntity(String)
@@ -141,6 +145,20 @@ public struct QueryResult: Sendable {
     self.records = records
     self.backend = backend
     self.trace = trace
+  }
+}
+
+public struct TeaQLPage<Entity: Sendable>: Sendable {
+  public let items: [Entity]
+  public let total: Int
+  public let offset: Int
+  public let limit: Int
+
+  public init(items: [Entity], total: Int, offset: Int, limit: Int) {
+    self.items = items
+    self.total = total
+    self.offset = offset
+    self.limit = limit
   }
 }
 

@@ -85,6 +85,22 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     )
   }
 
+  public func count(_ query: SelectQuery) async throws -> Int {
+    let compiled = try compiler.compileCount(query)
+    var prepared: OpaquePointer?
+    guard sqlite3_prepare_v2(database, compiled.sql, -1, &prepared, nil) == SQLITE_OK,
+      let statement = prepared
+    else {
+      throw currentError(sql: compiled.sql)
+    }
+    defer { sqlite3_finalize(statement) }
+    try bind(compiled.parameters, to: statement)
+    guard sqlite3_step(statement) == SQLITE_ROW else {
+      throw currentError(sql: compiled.sql)
+    }
+    return Int(sqlite3_column_int64(statement, 0))
+  }
+
   public func execute(_ mutation: Mutation) async throws -> MutationResult {
     let mutation = try mutation.validatedForExecution()
     try executeSQL("BEGIN IMMEDIATE")

@@ -39,6 +39,16 @@ public struct SQLiteCompiler: Sendable {
     return CompiledSQL(sql: sql, parameters: parameters)
   }
 
+  public func compileCount(_ rawQuery: SelectQuery) throws -> CompiledSQL {
+    let query = try rawQuery.validatedForExecution()
+    var parameters: [TeaQLValue] = []
+    var sql = "SELECT COUNT(*) FROM \(quote(query.entity.table))"
+    if let filter = query.filter {
+      sql += " WHERE " + (try expression(filter, entity: query.entity, parameters: &parameters))
+    }
+    return CompiledSQL(sql: sql, parameters: parameters)
+  }
+
   public func createTable(_ entity: EntityDescriptor) throws -> String {
     let columns = entity.properties.map { property in
       var result = "\(quote(property.column)) \(sqlType(property.type))"
