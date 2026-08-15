@@ -140,11 +140,18 @@ public struct QueryResult: Sendable {
   public let records: [TeaQLRecord]
   public let backend: String
   public let trace: [TraceNode]
+  public let metadata: SQLExecutionMetadata?
 
-  public init(records: [TeaQLRecord], backend: String, trace: [TraceNode] = []) {
+  public init(
+    records: [TeaQLRecord],
+    backend: String,
+    trace: [TraceNode] = [],
+    metadata: SQLExecutionMetadata? = nil
+  ) {
     self.records = records
     self.backend = backend
     self.trace = trace
+    self.metadata = metadata
   }
 }
 

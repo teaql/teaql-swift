@@ -1,4 +1,5 @@
 import CSQLite
+import Dispatch
 import Foundation
 import TeaQLCore
 import TeaQLSQL
@@ -75,13 +76,21 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
     let compiled = try compiler.compile(query)
+    let startedAt = DispatchTime.now().uptimeNanoseconds
     let records = try fetch(compiled, entity: query.entity)
     return QueryResult(
       records: records,
       backend: "sqlite",
       trace: [
         TraceNode(entity: query.entity.name, comment: query.comment!, purpose: query.purpose!)
-      ]
+      ],
+      metadata: SQLExecutionMetadata(
+        operation: .select,
+        parameterizedSQL: compiled.sql,
+        parameters: compiled.parameters,
+        elapsedMicros: elapsedMicros(since: startedAt),
+        resultCount: records.count,
+        resultSummary: "Fetched \(records.count) rows")
     )
   }
 
@@ -145,19 +154,34 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
   }
 
   private func insert(_ mutation: Mutation) throws -> MutationResult {
-    let properties = try mutation.values.keys.sorted().map {
+    var insertValues = mutation.values
+    if let version = mutation.entity.versionProperty {
+      insertValues[version.name] = .int(1)
+    }
+    let properties = try insertValues.keys.sorted().map {
       try requireProperty($0, mutation.entity)
     }
     guard !properties.isEmpty else { throw TeaQLError.execution("Insert values must not be empty") }
     let sql =
       "INSERT INTO \(quote(mutation.entity.table)) (\(properties.map { quote($0.column) }.joined(separator: ", "))) VALUES (\(Array(repeating: "?", count: properties.count).joined(separator: ", ")))"
-    let values = properties.map { mutation.values[$0.name] ?? .null }
+    let values = properties.map { insertValues[$0.name] ?? .null }
+    let startedAt = DispatchTime.now().uptimeNanoseconds
     try run(sql, parameters: values)
+    let affected = Int(sqlite3_changes(database))
     var generated: TeaQLRecord = [:]
     if let id = mutation.entity.idProperty, mutation.values[id.name] == nil {
       generated[id.name] = .int(sqlite3_last_insert_rowid(database))
     }
-    return MutationResult(affectedRows: Int(sqlite3_changes(database)), generatedValues: generated)
+    return MutationResult(
+      affectedRows: affected,
+      generatedValues: generated,
+      metadata: SQLExecutionMetadata(
+        operation: .insert,
+        parameterizedSQL: sql,
+        parameters: values,
+        elapsedMicros: elapsedMicros(since: startedAt),
+        affectedRows: affected,
+        resultSummary: "Affected \(affected) rows"))
   }
 
   private func update(_ mutation: Mutation) throws -> MutationResult {
@@ -183,15 +207,24 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     guard !assignments.isEmpty else {
       throw TeaQLError.execution("Update values must not be empty")
     }
-    try run(
-      "UPDATE \(quote(mutation.entity.table)) SET \(assignments.joined(separator: ", ")) WHERE \(whereSQL)",
-      parameters: values)
+    let sql =
+      "UPDATE \(quote(mutation.entity.table)) SET \(assignments.joined(separator: ", ")) WHERE \(whereSQL)"
+    let startedAt = DispatchTime.now().uptimeNanoseconds
+    try run(sql, parameters: values)
     let changed = Int(sqlite3_changes(database))
     if changed == 0, let expected = mutation.expectedVersion {
       throw TeaQLError.optimisticLock(
         entity: mutation.entity.name, id: id, expectedVersion: expected)
     }
-    return MutationResult(affectedRows: changed)
+    return MutationResult(
+      affectedRows: changed,
+      metadata: SQLExecutionMetadata(
+        operation: .update,
+        parameterizedSQL: sql,
+        parameters: values,
+        elapsedMicros: elapsedMicros(since: startedAt),
+        affectedRows: changed,
+        resultSummary: "Affected \(changed) rows"))
   }
 
   private func delete(_ mutation: Mutation) throws -> MutationResult {
@@ -207,6 +240,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     let sql =
       "UPDATE \(quote(mutation.entity.table)) SET \(quote(versionProperty.column)) = ? WHERE \(quote(idProperty.column)) = ? AND \(quote(versionProperty.column)) = ?"
     let values: [TeaQLValue] = [.int(deletedVersion), id, .int(expected)]
+    let startedAt = DispatchTime.now().uptimeNanoseconds
     try run(sql, parameters: values)
     let changed = Int(sqlite3_changes(database))
     if changed == 0 {
@@ -215,7 +249,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     }
     return MutationResult(
       affectedRows: changed,
-      generatedValues: [versionProperty.name: .int(deletedVersion)])
+      generatedValues: [versionProperty.name: .int(deletedVersion)],
+      metadata: SQLExecutionMetadata(
+        operation: .delete,
+        parameterizedSQL: sql,
+        parameters: values,
+        elapsedMicros: elapsedMicros(since: startedAt),
+        affectedRows: changed,
+        resultSummary: "Affected \(changed) rows"))
   }
 
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {
@@ -262,6 +303,10 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
   }
 
   private func executeSQL(_ sql: String) throws { try run(sql, parameters: []) }
+
+  private func elapsedMicros(since startedAt: UInt64) -> UInt64 {
+    (DispatchTime.now().uptimeNanoseconds - startedAt) / 1_000
+  }
 
   private func run(_ sql: String, parameters: [TeaQLValue]) throws {
     var statement: OpaquePointer?

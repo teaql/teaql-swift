@@ -14,6 +14,63 @@ public extension QueryExecutor {
 
 public enum MutationKind: String, Sendable, Codable { case create, update, delete, recover }
 
+public enum SQLExecutionOperation: String, Sendable, Codable {
+  case select, insert, update, delete, recover
+}
+
+public struct SQLExecutionMetadata: Sendable {
+  public let operation: SQLExecutionOperation
+  public let parameterizedSQL: String
+  public let parameters: [TeaQLValue]
+  public let elapsedMicros: UInt64
+  public let resultCount: Int?
+  public let affectedRows: Int?
+  public let resultSummary: String
+
+  public init(
+    operation: SQLExecutionOperation,
+    parameterizedSQL: String,
+    parameters: [TeaQLValue],
+    elapsedMicros: UInt64,
+    resultCount: Int? = nil,
+    affectedRows: Int? = nil,
+    resultSummary: String
+  ) {
+    self.operation = operation
+    self.parameterizedSQL = parameterizedSQL
+    self.parameters = parameters
+    self.elapsedMicros = elapsedMicros
+    self.resultCount = resultCount
+    self.affectedRows = affectedRows
+    self.resultSummary = resultSummary
+  }
+}
+
+public protocol RuntimeTelemetrySink: Sendable {
+  func record(_ metadata: SQLExecutionMetadata) async
+}
+
+public actor SQLExecutionEvidenceStore: RuntimeTelemetrySink {
+  public enum Mode: Sendable, Equatable { case all, select, mutation, disabled }
+  private var mode: Mode = .all
+  private var entries: [SQLExecutionMetadata] = []
+
+  public init() {}
+
+  public func record(_ metadata: SQLExecutionMetadata) {
+    let isSelect = metadata.operation == .select
+    guard mode == .all || (mode == .select && isSelect) || (mode == .mutation && !isSelect)
+    else { return }
+    entries.append(metadata)
+  }
+
+  public func enableAll() { mode = .all; entries.removeAll() }
+  public func enableSelect() { mode = .select; entries.removeAll() }
+  public func enableMutation() { mode = .mutation; entries.removeAll() }
+  public func disable() { mode = .disabled; entries.removeAll() }
+  public func snapshot() -> [SQLExecutionMetadata] { entries }
+}
+
 public struct Mutation: Sendable, Codable {
   public let kind: MutationKind
   public let entity: EntityDescriptor
@@ -53,10 +110,16 @@ public struct Mutation: Sendable, Codable {
 public struct MutationResult: Sendable {
   public let affectedRows: Int
   public let generatedValues: TeaQLRecord
+  public let metadata: SQLExecutionMetadata?
 
-  public init(affectedRows: Int, generatedValues: TeaQLRecord = [:]) {
+  public init(
+    affectedRows: Int,
+    generatedValues: TeaQLRecord = [:],
+    metadata: SQLExecutionMetadata? = nil
+  ) {
     self.affectedRows = affectedRows
     self.generatedValues = generatedValues
+    self.metadata = metadata
   }
 }
 
@@ -153,6 +216,7 @@ public struct UserContext: Sendable {
   public let mutationExecutor: any MutationExecutor
   public let requestPolicy: RequestPolicy
   public let auditSink: (any AuditSink)?
+  public let telemetrySink: (any RuntimeTelemetrySink)?
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
 
@@ -162,6 +226,7 @@ public struct UserContext: Sendable {
     mutationExecutor: any MutationExecutor,
     requestPolicy: RequestPolicy,
     auditSink: (any AuditSink)? = nil,
+    telemetrySink: (any RuntimeTelemetrySink)? = nil,
     entityInitializers: [EntityInitializer] = [],
     entityCreationObserver: EntityCreationObserver? = nil
   ) {
@@ -170,6 +235,7 @@ public struct UserContext: Sendable {
     self.mutationExecutor = mutationExecutor
     self.requestPolicy = requestPolicy
     self.auditSink = auditSink
+    self.telemetrySink = telemetrySink
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
   }
@@ -195,6 +261,7 @@ public struct UserContext: Sendable {
     var base = validated
     base.relations = []
     let result = try await queryExecutor.execute(base)
+    if let metadata = result.metadata { await telemetrySink?.record(metadata) }
     guard !validated.relations.isEmpty, !result.records.isEmpty else { return result }
 
     var records = result.records
@@ -215,7 +282,8 @@ public struct UserContext: Sendable {
           : matches.first.map(TeaQLValue.object) ?? .null
       }
     }
-    return QueryResult(records: records, backend: result.backend, trace: result.trace)
+    return QueryResult(
+      records: records, backend: result.backend, trace: result.trace, metadata: result.metadata)
   }
 
   public func count(_ query: SelectQuery) async throws -> Int {
@@ -232,6 +300,7 @@ public struct UserContext: Sendable {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
     let result = try await mutationExecutor.execute(validated)
+    if let metadata = result.metadata { await telemetrySink?.record(metadata) }
     if let auditSink, let reason = validated.auditReason {
       try await auditSink.record(
         AuditEvent(

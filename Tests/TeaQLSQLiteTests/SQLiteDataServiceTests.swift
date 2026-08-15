@@ -15,7 +15,11 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
-private func context(_ service: SQLiteDataService, auditSink: (any AuditSink)? = nil) -> UserContext
+private func context(
+  _ service: SQLiteDataService,
+  auditSink: (any AuditSink)? = nil,
+  telemetrySink: (any RuntimeTelemetrySink)? = nil
+) -> UserContext
 {
   UserContext(
     actor: "tester",
@@ -27,8 +31,48 @@ private func context(_ service: SQLiteDataService, auditSink: (any AuditSink)? =
       query.filter = query.filter.map { .and([tenant, $0]) } ?? tenant
       return query
     },
-    auditSink: auditSink
+    auditSink: auditSink,
+    telemetrySink: telemetrySink
   )
+}
+
+@Test func sqliteCapturesParameterizedSafeExecutionEvidence() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-evidence-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await service.ensureSchema([order])
+  let evidence = SQLExecutionEvidenceStore()
+  let ctx = context(service, telemetrySink: evidence)
+
+  _ = try await ctx.execute(
+    Mutation(
+      kind: .create, entity: order,
+      values: [
+        "id": .int(100), "version": .int(1),
+        "orderNumber": .string("secret-customer-value"),
+        "orderDate": .date(Date()), "tenantID": .int(7),
+      ], auditReason: "Seed SQL evidence"))
+  var query = SelectQuery(entity: order)
+  query.filter = .equal("orderNumber", .string("secret-customer-value"))
+  query.comment = "Read SQL evidence fixture"
+  query.purpose = "Prove parameterized execution"
+  _ = try await ctx.execute(query)
+
+  let entries = await evidence.snapshot()
+  #expect(entries.contains { $0.operation == .insert })
+  #expect(entries.contains { $0.operation == .select })
+  #expect(entries.allSatisfy { !$0.parameterizedSQL.contains("secret-customer-value") })
+  #expect(entries.contains { !$0.parameters.isEmpty })
+  #expect(entries.contains { $0.resultCount != nil })
+  #expect(entries.contains { $0.affectedRows != nil })
+
+  await evidence.enableSelect()
+  #expect(await evidence.snapshot().isEmpty)
+  await evidence.enableMutation()
+  #expect(await evidence.snapshot().isEmpty)
+  await evidence.disable()
+  #expect(await evidence.snapshot().isEmpty)
 }
 
 @Test func sqliteCountsThePolicyFilteredSetWithoutPagination() async throws {
