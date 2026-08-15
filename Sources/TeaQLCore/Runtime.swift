@@ -114,25 +114,55 @@ public struct RequestPolicy: Sendable {
   }
 }
 
+public typealias EntityInitializer = @Sendable (
+  _ context: UserContext, _ entityName: String, _ entity: inout any TeaQLEntity
+) -> Void
+
+public typealias EntityCreationObserver = @Sendable (
+  _ context: UserContext, _ entityName: String, _ entity: any TeaQLEntity
+) -> Void
+
 public struct UserContext: Sendable {
   public let actor: String?
   public let queryExecutor: any QueryExecutor
   public let mutationExecutor: any MutationExecutor
   public let requestPolicy: RequestPolicy
   public let auditSink: (any AuditSink)?
+  private let entityInitializers: [EntityInitializer]
+  private let entityCreationObserver: EntityCreationObserver?
 
   public init(
     actor: String? = nil,
     queryExecutor: any QueryExecutor,
     mutationExecutor: any MutationExecutor,
     requestPolicy: RequestPolicy,
-    auditSink: (any AuditSink)? = nil
+    auditSink: (any AuditSink)? = nil,
+    entityInitializers: [EntityInitializer] = [],
+    entityCreationObserver: EntityCreationObserver? = nil
   ) {
     self.actor = actor
     self.queryExecutor = queryExecutor
     self.mutationExecutor = mutationExecutor
     self.requestPolicy = requestPolicy
     self.auditSink = auditSink
+    self.entityInitializers = entityInitializers
+    self.entityCreationObserver = entityCreationObserver
+  }
+
+  /// Applies trusted local defaults without exposing them as generated input.
+  public func initializeEntity<Entity: TeaQLEntity>(
+    _ entityName: String, _ entity: Entity
+  ) -> Entity {
+    precondition(!entityName.isEmpty, "entityName must not be empty")
+    var initialized: any TeaQLEntity = entity
+    for initializer in entityInitializers {
+      initializer(self, entityName, &initialized)
+    }
+    guard let concrete = initialized as? Entity else {
+      preconditionFailure("Entity initializer changed the concrete type for \(entityName)")
+    }
+    entityCreationObserver?(self, entityName, concrete)
+    return concrete
   }
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
