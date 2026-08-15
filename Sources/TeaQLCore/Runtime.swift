@@ -137,7 +137,30 @@ public struct UserContext: Sendable {
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
     let validated = try requestPolicy.apply(query).validatedForExecution()
-    return try await queryExecutor.execute(validated)
+    var base = validated
+    base.relations = []
+    let result = try await queryExecutor.execute(base)
+    guard !validated.relations.isEmpty, !result.records.isEmpty else { return result }
+
+    var records = result.records
+    for relation in validated.relations {
+      let localValues = records.compactMap { $0[relation.localKey] }
+      guard !localValues.isEmpty else { continue }
+      var child = relation.query.makeQuery()
+      child.comment = validated.comment
+      child.purpose = validated.purpose
+      let join = TeaQLExpression.inList(relation.foreignKey, localValues)
+      child.filter = child.filter.map { .and([$0, join]) } ?? join
+      let children = try await execute(child).records
+      let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
+      for index in records.indices {
+        let matches = grouped[records[index][relation.localKey] ?? .null] ?? []
+        records[index][relation.name] = relation.many
+          ? .array(matches.map(TeaQLValue.object))
+          : matches.first.map(TeaQLValue.object) ?? .null
+      }
+    }
+    return QueryResult(records: records, backend: result.backend, trace: result.trace)
   }
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {

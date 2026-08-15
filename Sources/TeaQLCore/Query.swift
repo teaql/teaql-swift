@@ -22,6 +22,57 @@ public struct OrderBy: Sendable, Hashable, Codable {
   }
 }
 
+public struct RelationLoad: Sendable, Hashable, Codable {
+  public let name: String
+  public let localKey: String
+  public let foreignKey: String
+  public let many: Bool
+  public let query: RelationQueryPlan
+
+  public init(
+    name: String, localKey: String, foreignKey: String, many: Bool, query: SelectQuery
+  ) {
+    self.name = name
+    self.localKey = localKey
+    self.foreignKey = foreignKey
+    self.many = many
+    self.query = RelationQueryPlan(query)
+  }
+}
+
+/// A non-recursive child-query snapshot. Runtime hydration deliberately loads
+/// one relation level per plan so SelectQuery remains a value type.
+public struct RelationQueryPlan: Sendable, Hashable, Codable {
+  public let entity: EntityDescriptor
+  public let filter: TeaQLExpression?
+  public let orderBy: [OrderBy]
+  public let offset: Int
+  public let limit: Int?
+  public let hardLimit: Int
+  public let projection: [String]
+
+  public init(_ query: SelectQuery) {
+    entity = query.entity
+    filter = query.filter
+    orderBy = query.orderBy
+    offset = query.offset
+    limit = query.limit
+    hardLimit = query.hardLimit
+    projection = query.projection
+  }
+
+  public func makeQuery() -> SelectQuery {
+    var query = SelectQuery(entity: entity)
+    query.filter = filter
+    query.orderBy = orderBy
+    query.offset = offset
+    query.limit = limit
+    query.hardLimit = hardLimit
+    query.projection = projection
+    return query
+  }
+}
+
 public struct SelectQuery: Sendable, Hashable, Codable {
   public static let defaultHardLimit = 10_000
 
@@ -32,10 +83,22 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var limit: Int?
   public var hardLimit: Int = Self.defaultHardLimit
   public var projection: [String] = []
+  public var relations: [RelationLoad] = []
   public var comment: String?
   public var purpose: String?
 
   public init(entity: EntityDescriptor) { self.entity = entity }
+
+  @discardableResult
+  public mutating func relationQuery(
+    _ name: String, localKey: String, foreignKey: String, many: Bool = true,
+    query: SelectQuery
+  ) -> Self {
+    relations.append(
+      RelationLoad(
+        name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query))
+    return self
+  }
 
   public func validatedForExecution() throws -> Self {
     guard let comment, !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
