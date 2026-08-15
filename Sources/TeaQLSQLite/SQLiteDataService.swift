@@ -182,22 +182,24 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     guard let id = mutation.id, let idProperty = mutation.entity.idProperty else {
       throw TeaQLError.execution("Delete requires entity ID metadata and an ID value")
     }
-    var sql = "DELETE FROM \(quote(mutation.entity.table)) WHERE \(quote(idProperty.column)) = ?"
-    var values = [id]
-    if let versionProperty = mutation.entity.versionProperty {
-      guard let expected = mutation.expectedVersion else {
-        throw TeaQLError.execution("Versioned delete requires expectedVersion")
-      }
-      sql += " AND \(quote(versionProperty.column)) = ?"
-      values.append(.int(expected))
+    guard let versionProperty = mutation.entity.versionProperty,
+      let expected = mutation.expectedVersion
+    else {
+      throw TeaQLError.execution("Soft delete requires version metadata and expectedVersion")
     }
+    let deletedVersion = -(expected + 1)
+    let sql =
+      "UPDATE \(quote(mutation.entity.table)) SET \(quote(versionProperty.column)) = ? WHERE \(quote(idProperty.column)) = ? AND \(quote(versionProperty.column)) = ?"
+    let values: [TeaQLValue] = [.int(deletedVersion), id, .int(expected)]
     try run(sql, parameters: values)
     let changed = Int(sqlite3_changes(database))
-    if changed == 0, let expected = mutation.expectedVersion {
+    if changed == 0 {
       throw TeaQLError.optimisticLock(
         entity: mutation.entity.name, id: id, expectedVersion: expected)
     }
-    return MutationResult(affectedRows: changed)
+    return MutationResult(
+      affectedRows: changed,
+      generatedValues: [versionProperty.name: .int(deletedVersion)])
   }
 
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {

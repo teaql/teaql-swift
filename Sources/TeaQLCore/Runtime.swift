@@ -89,6 +89,23 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     }
     return try await context.execute(mutation)
   }
+
+  /// Soft-deletes a loaded entity using its original optimistic version.
+  /// Providers retain the row with a negative version; physical deletion is
+  /// deliberately not part of the public entity lifecycle.
+  public func delete(_ context: UserContext) async throws -> MutationResult {
+    guard entity.id != 0 else {
+      throw TeaQLError.execution("Delete requires a loaded entity ID")
+    }
+    return try await context.execute(
+      Mutation(
+        kind: .delete,
+        entity: Entity.descriptor,
+        id: .int(entity.id),
+        expectedVersion: entity.version,
+        auditReason: reason
+      ))
+  }
 }
 
 extension TeaQLEntity {

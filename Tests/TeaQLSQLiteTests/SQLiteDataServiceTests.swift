@@ -91,10 +91,44 @@ private func context(_ service: SQLiteDataService, auditSink: (any AuditSink)? =
         auditReason: "Attempt stale update"
       ))
   }
+
+  let deleted = try await ctx.execute(
+    Mutation(
+      kind: .delete,
+      entity: order,
+      id: .int(100),
+      expectedVersion: 2,
+      auditReason: "Soft delete order"
+    ))
+  #expect(deleted.generatedValues["version"] == .int(-3))
+  var activeQuery = SelectQuery(entity: order)
+  activeQuery.filter = .greaterThanOrEqual("version", .int(1))
+  activeQuery.comment = "Read active order"
+  activeQuery.purpose = "Verify soft-deleted row is hidden"
+  #expect(try await ctx.execute(activeQuery).records.isEmpty)
+  var deletedQuery = SelectQuery(entity: order)
+  deletedQuery.filter = .lessThanOrEqual("version", .int(-1))
+  deletedQuery.comment = "Read deleted order"
+  deletedQuery.purpose = "Verify soft-deleted row is retained"
+  let deletedRows = try await ctx.execute(deletedQuery).records
+  #expect(deletedRows.count == 1)
+  #expect(deletedRows[0]["version"] == .int(-3))
+  await #expect(
+    throws: TeaQLError.optimisticLock(entity: "CustomerOrder", id: .int(100), expectedVersion: 2)
+  ) {
+    try await ctx.execute(
+      Mutation(
+        kind: .delete,
+        entity: order,
+        id: .int(100),
+        expectedVersion: 2,
+        auditReason: "Attempt stale delete"
+      ))
+  }
   let audit = try await service.auditEvents()
-  #expect(audit.count == 3)
-  #expect(audit.last?["reason"] == .string("Correct order number"))
-  #expect(await appAudit.events().count == 3)
+  #expect(audit.count == 4)
+  #expect(audit.last?["reason"] == .string("Soft delete order"))
+  #expect(await appAudit.events().count == 4)
 
   _ = try await service.transaction([
     Mutation(
