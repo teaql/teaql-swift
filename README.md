@@ -2,6 +2,15 @@
 
 TeaQL's Swift 6 runtime brings generated, governed data access to macOS, iOS, and Linux. This first version supports local SQLite applications and the TeaQL Federal Protocol client, allowing a Swift client and a server in another TeaQL language to share the same domain model.
 
+## Recommended Agent Harness
+
+When building SQLite-backed or federated applications with the TeaQL Swift
+runtime, we recommend using it together with the [TeaQL Agent Kit](https://github.com/teaql/teaql-agent-kit).
+The Agent Kit is TeaQL's continuously evolving **Harness Engineering** method.
+It gives coding agents a model-mediated, executable workflow for domain
+modeling, deterministic evaluation and repair, code generation, implementation,
+and evidence-based verification as the generator and runtimes evolve.
+
 ## Quick start
 
 Requirements: Swift 6 and SQLite development headers (`libsqlite3-dev` on Ubuntu or `sqlite3` with Homebrew).
