@@ -56,6 +56,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
       """)
   }
 
+  /// Explicitly creates/checks schema for a generated module.
+  /// Installing the module into `TeaQLRuntime` never calls this operation.
+  public func ensureSchema(_ module: RuntimeModule) throws {
+    try ensureSchema(module.entities)
+  }
+
   public func transaction(_ mutations: [Mutation]) async throws -> [MutationResult] {
     try executeSQL("BEGIN IMMEDIATE")
     do {

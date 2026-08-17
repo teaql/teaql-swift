@@ -223,6 +223,7 @@ public typealias EntityCreationObserver = @Sendable (
 ) -> Void
 
 public struct UserContext: Sendable {
+  public let runtime: TeaQLRuntime
   public let actor: String?
   /// Application-owned tenant identity. It is never populated from generated
   /// query or federation payloads.
@@ -236,6 +237,7 @@ public struct UserContext: Sendable {
   private let entityCreationObserver: EntityCreationObserver?
 
   public init(
+    runtime: TeaQLRuntime = TeaQLRuntime(),
     actor: String? = nil,
     trustedTenant: String? = nil,
     queryExecutor: any QueryExecutor,
@@ -246,6 +248,7 @@ public struct UserContext: Sendable {
     entityInitializers: [EntityInitializer] = [],
     entityCreationObserver: EntityCreationObserver? = nil
   ) {
+    self.runtime = runtime
     self.actor = actor
     self.trustedTenant = trustedTenant
     self.queryExecutor = queryExecutor
