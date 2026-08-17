@@ -9,6 +9,57 @@ public struct CompiledSQL: Sendable, Equatable {
     self.sql = sql
     self.parameters = parameters
   }
+
+  /// Returns a diagnostic statement whose parameters are SQL literals, suitable for copy/paste.
+  public func debugSQL() -> String {
+    var result = ""
+    var parameterIndex = 0
+    var inString = false
+    var index = sql.startIndex
+    while index < sql.endIndex {
+      let character = sql[index]
+      if character == "'" {
+        result.append(character)
+        let next = sql.index(after: index)
+        if inString, next < sql.endIndex, sql[next] == "'" {
+          result.append("'")
+          index = sql.index(after: next)
+        } else {
+          inString.toggle()
+          index = next
+        }
+        continue
+      }
+      if character == "?", !inString, parameterIndex < parameters.count {
+        result += sqlLiteral(parameters[parameterIndex])
+        parameterIndex += 1
+      } else {
+        result.append(character)
+      }
+      index = sql.index(after: index)
+    }
+    return result
+  }
+}
+
+private func sqlLiteral(_ value: TeaQLValue) -> String {
+  switch value {
+  case .null: "NULL"
+  case .bool(let value): value ? "TRUE" : "FALSE"
+  case .int(let value): String(value)
+  case .uint(let value): String(value)
+  case .double(let value): String(value)
+  case .decimal(let value): NSDecimalNumber(decimal: value).stringValue
+  case .string(let value): quoteSQLString(value)
+  case .date(let value): quoteSQLString(ISO8601DateFormatter().string(from: value))
+  case .data(let value): "X'" + value.map { String(format: "%02x", $0) }.joined() + "'"
+  case .array, .object:
+    quoteSQLString(String(data: try! JSONEncoder().encode(value), encoding: .utf8)!)
+  }
+}
+
+private func quoteSQLString(_ value: String) -> String {
+  "'" + value.replacingOccurrences(of: "'", with: "''") + "'"
 }
 
 public struct SQLiteCompiler: Sendable {

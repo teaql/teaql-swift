@@ -94,6 +94,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
         operation: .select,
         parameterizedSQL: compiled.sql,
         parameters: compiled.parameters,
+        debugSQL: compiled.debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         resultCount: records.count,
         resultSummary: "Fetched \(records.count) rows")
@@ -190,6 +191,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
         operation: .insert,
         parameterizedSQL: sql,
         parameters: values,
+        debugSQL: CompiledSQL(sql: sql, parameters: values).debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: affected,
         resultSummary: "Affected \(affected) rows"))
@@ -234,6 +236,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
         operation: .update,
         parameterizedSQL: sql,
         parameters: values,
+        debugSQL: CompiledSQL(sql: sql, parameters: values).debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
         resultSummary: "Affected \(changed) rows"))
@@ -267,6 +270,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
         operation: .delete,
         parameterizedSQL: sql,
         parameters: values,
+        debugSQL: CompiledSQL(sql: sql, parameters: values).debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
         resultSummary: "Affected \(changed) rows"))

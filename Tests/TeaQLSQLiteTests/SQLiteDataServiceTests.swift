@@ -117,6 +117,7 @@ private func context(
   #expect(entries.contains { $0.operation == .select })
   #expect(entries.allSatisfy { !$0.parameterizedSQL.contains("secret-customer-value") })
   #expect(entries.contains { !$0.parameters.isEmpty })
+  #expect(entries.contains { $0.debugSQL.contains("'secret-customer-value'") })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
 

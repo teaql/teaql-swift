@@ -22,6 +22,7 @@ public struct SQLExecutionMetadata: Sendable {
   public let operation: SQLExecutionOperation
   public let parameterizedSQL: String
   public let parameters: [TeaQLValue]
+  public let debugSQL: String
   public let elapsedMicros: UInt64
   public let resultCount: Int?
   public let affectedRows: Int?
@@ -31,6 +32,7 @@ public struct SQLExecutionMetadata: Sendable {
     operation: SQLExecutionOperation,
     parameterizedSQL: String,
     parameters: [TeaQLValue],
+    debugSQL: String,
     elapsedMicros: UInt64,
     resultCount: Int? = nil,
     affectedRows: Int? = nil,
@@ -39,6 +41,7 @@ public struct SQLExecutionMetadata: Sendable {
     self.operation = operation
     self.parameterizedSQL = parameterizedSQL
     self.parameters = parameters
+    self.debugSQL = debugSQL
     self.elapsedMicros = elapsedMicros
     self.resultCount = resultCount
     self.affectedRows = affectedRows

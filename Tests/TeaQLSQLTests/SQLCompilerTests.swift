@@ -41,3 +41,14 @@ import Testing
   #expect(compiled.sql == "SELECT COUNT(*) FROM \"orders\" WHERE \"status\" = ?")
   #expect(compiled.parameters == [.string("ACTIVE")])
 }
+
+@Test func debugSQLRendersCopyPasteStatement() {
+  let compiled = CompiledSQL(
+    sql: "SELECT * FROM school WHERE name = ? AND active = ? AND phone IS ? AND note = '?'",
+    parameters: [.string("O'Brien School"), .bool(true), .null]
+  )
+  #expect(
+    compiled.debugSQL()
+      == "SELECT * FROM school WHERE name = 'O''Brien School' AND active = TRUE AND phone IS NULL AND note = '?'"
+  )
+}
