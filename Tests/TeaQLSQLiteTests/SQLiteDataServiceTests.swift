@@ -15,6 +15,31 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+private struct SavedWidget: TeaQLEntity {
+  static let descriptor = EntityDescriptor(
+    name: "SavedWidget", table: "saved_widget",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "name", type: .string),
+      PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    ])
+
+  var id: Int64 = 0
+  var name = ""
+  var version: Int64 = 0
+
+  static func from(record: TeaQLRecord) throws -> Self {
+    Self(
+      id: record["id"]?.int64Value ?? 0,
+      name: record["name"]?.stringValue ?? "",
+      version: record["version"]?.int64Value ?? 0)
+  }
+
+  func toRecord() -> TeaQLRecord {
+    ["id": .int(id), "name": .string(name), "version": .int(version)]
+  }
+}
+
 private func context(
   _ service: SQLiteDataService,
   auditSink: (any AuditSink)? = nil,
@@ -34,6 +59,34 @@ private func context(
     auditSink: auditSink,
     telemetrySink: telemetrySink
   )
+}
+
+@Test func auditedLifecycleReturnsAuthoritativeTypedEntity() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-save-result-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await service.ensureSchema([SavedWidget.descriptor])
+  let ctx = context(service)
+
+  var widget = SavedWidget(name: "created")
+  let created = try await widget.auditAs("create widget").save(ctx)
+  #expect(created.id > 0)
+  #expect(created.version == 1)
+  #expect(created.name == "created")
+  #expect(widget.id == 0)
+
+  widget = created
+  widget.name = "updated"
+  let updated = try await widget.auditAs("update widget").save(ctx)
+  #expect(updated.id == created.id)
+  #expect(updated.version == 2)
+  #expect(updated.name == "updated")
+
+  let deleted = try await updated.auditAs("delete widget").delete(ctx)
+  #expect(deleted.id == created.id)
+  #expect(deleted.version == -3)
+  #expect(deleted.name == "updated")
 }
 
 @Test func sqliteCapturesParameterizedSafeExecutionEvidence() async throws {

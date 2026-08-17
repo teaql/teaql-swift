@@ -292,7 +292,8 @@ public struct FederalDataService: QueryExecutor, MutationExecutor, Sendable {
       ))
     return MutationResult(
       affectedRows: response.affectedRows,
-      generatedValues: response.data.first ?? [:]
+      generatedValues: response.data.first ?? [:],
+      persistedRecord: response.data.first
     )
   }
 }

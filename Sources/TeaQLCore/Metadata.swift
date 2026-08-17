@@ -53,4 +53,11 @@ public protocol TeaQLEntity: Sendable, Codable {
   var id: Int64 { get set }
   var version: Int64 { get set }
   func toRecord() -> TeaQLRecord
+  /// Returns only fields that are loaded and eligible for persistence.
+  func toMutationRecord() -> TeaQLRecord
+}
+
+public extension TeaQLEntity {
+  /// Compatibility default for entities that do not track loaded fields.
+  func toMutationRecord() -> TeaQLRecord { toRecord() }
 }

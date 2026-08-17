@@ -175,6 +175,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     return MutationResult(
       affectedRows: affected,
       generatedValues: generated,
+      persistedRecord: try fetchPersistedRecord(
+        entity: mutation.entity,
+        id: generated[mutation.entity.idProperty?.name ?? "id"]
+          ?? mutation.values[mutation.entity.idProperty?.name ?? "id"]
+      ),
       metadata: SQLExecutionMetadata(
         operation: .insert,
         parameterizedSQL: sql,
@@ -218,6 +223,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     }
     return MutationResult(
       affectedRows: changed,
+      persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id),
       metadata: SQLExecutionMetadata(
         operation: .update,
         parameterizedSQL: sql,
@@ -250,6 +256,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     return MutationResult(
       affectedRows: changed,
       generatedValues: [versionProperty.name: .int(deletedVersion)],
+      persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id),
       metadata: SQLExecutionMetadata(
         operation: .delete,
         parameterizedSQL: sql,
@@ -300,6 +307,25 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
       default: throw currentError(sql: compiled.sql)
       }
     }
+  }
+
+  private func fetchPersistedRecord(
+    entity: EntityDescriptor, id: TeaQLValue?
+  ) throws -> TeaQLRecord {
+    guard let id, let idProperty = entity.idProperty else {
+      throw TeaQLError.execution(
+        "Persisted state refresh requires entity ID metadata and an ID value")
+    }
+    let columns = entity.properties.map { quote($0.column) }.joined(separator: ", ")
+    let compiled = CompiledSQL(
+      sql: "SELECT \(columns) FROM \(quote(entity.table)) WHERE \(quote(idProperty.column)) = ?",
+      parameters: [id]
+    )
+    guard let record = try fetch(compiled, entity: entity).first else {
+      throw TeaQLError.execution(
+        "Persisted state refresh found no \(entity.name) row for ID \(id)")
+    }
+    return record
   }
 
   private func executeSQL(_ sql: String) throws { try run(sql, parameters: []) }

@@ -110,15 +110,19 @@ public struct Mutation: Sendable, Codable {
 public struct MutationResult: Sendable {
   public let affectedRows: Int
   public let generatedValues: TeaQLRecord
+  /// The authoritative persisted scalar row, captured in the mutation transaction.
+  public let persistedRecord: TeaQLRecord?
   public let metadata: SQLExecutionMetadata?
 
   public init(
     affectedRows: Int,
     generatedValues: TeaQLRecord = [:],
+    persistedRecord: TeaQLRecord? = nil,
     metadata: SQLExecutionMetadata? = nil
   ) {
     self.affectedRows = affectedRows
     self.generatedValues = generatedValues
+    self.persistedRecord = persistedRecord
     self.metadata = metadata
   }
 }
@@ -135,8 +139,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   public let entity: Entity
   public let reason: String
 
-  public func save(_ context: UserContext) async throws -> MutationResult {
-    var values = entity.toRecord()
+  public func save(_ context: UserContext) async throws -> Entity {
+    var values = entity.toMutationRecord()
     let mutation: Mutation
     if entity.id == 0 {
       values.removeValue(forKey: Entity.descriptor.idProperty?.name ?? "id")
@@ -158,24 +162,32 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         auditReason: reason
       )
     }
-    return try await context.execute(mutation)
+    return try persistedEntity(from: await context.execute(mutation))
   }
 
   /// Soft-deletes a loaded entity using its original optimistic version.
   /// Providers retain the row with a negative version; physical deletion is
   /// deliberately not part of the public entity lifecycle.
-  public func delete(_ context: UserContext) async throws -> MutationResult {
+  public func delete(_ context: UserContext) async throws -> Entity {
     guard entity.id != 0 else {
       throw TeaQLError.execution("Delete requires a loaded entity ID")
     }
-    return try await context.execute(
+    return try persistedEntity(from: await context.execute(
       Mutation(
         kind: .delete,
         entity: Entity.descriptor,
         id: .int(entity.id),
         expectedVersion: entity.version,
         auditReason: reason
-      ))
+      )))
+  }
+
+  private func persistedEntity(from result: MutationResult) throws -> Entity {
+    guard let record = result.persistedRecord else {
+      throw TeaQLError.execution(
+        "Mutation executor did not return authoritative persisted state for \(Entity.descriptor.name)")
+    }
+    return try Entity.from(record: record)
   }
 }
 
