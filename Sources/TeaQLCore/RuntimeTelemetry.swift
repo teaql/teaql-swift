@@ -38,10 +38,20 @@ public struct RuntimeOperation: Sendable, Equatable {
 public protocol RuntimeTelemetry: Sendable {
   func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,
+    completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
     _ body: () async throws -> Result
   ) async rethrows -> Result
   func flush() async
   func shutdown() async
+}
+
+public extension RuntimeTelemetry {
+  func withOperation<Result: Sendable>(
+    _ operation: RuntimeOperation,
+    _ body: () async throws -> Result
+  ) async rethrows -> Result {
+    try await withOperation(operation, completion: { _ in [:] }, body)
+  }
 }
 
 public struct NoopRuntimeTelemetry: RuntimeTelemetry {
@@ -49,6 +59,7 @@ public struct NoopRuntimeTelemetry: RuntimeTelemetry {
 
   public func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,
+    completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
     _ body: () async throws -> Result
   ) async rethrows -> Result {
     try await body()

@@ -15,6 +15,7 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
 
   public func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,
+    completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
     _ body: () async throws -> Result
   ) async rethrows -> Result {
     let builder = tracer.spanBuilder(spanName: "teaql.\(operation.family)")
@@ -25,6 +26,11 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
     return try await builder.withActiveSpan { span in
       do {
         let result = try await body()
+        for (key, value) in completion(result)
+          where key == "teaql.result.cardinality" || key == "teaql.cache.result"
+        {
+          set(value, key: key, on: span)
+        }
         span.status = .ok
         record(operation, outcome: "success", startedAt: startedAt)
         return result
@@ -67,6 +73,15 @@ private func set(_ value: RuntimeTelemetryValue, key: String, on builder: any Sp
   case .integer(let value): builder.setAttribute(key: key, value: Int(value))
   case .double(let value): builder.setAttribute(key: key, value: value)
   case .boolean(let value): builder.setAttribute(key: key, value: value)
+  }
+}
+
+private func set(_ value: RuntimeTelemetryValue, key: String, on span: any SpanBase) {
+  switch value {
+  case .string(let value): span.setAttribute(key: key, value: .string(value))
+  case .integer(let value): span.setAttribute(key: key, value: .int(Int(value)))
+  case .double(let value): span.setAttribute(key: key, value: .double(value))
+  case .boolean(let value): span.setAttribute(key: key, value: .bool(value))
   }
 }
 

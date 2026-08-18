@@ -6,6 +6,8 @@ public protocol QueryExecutor: Sendable {
 }
 
 public extension QueryExecutor {
+  var providerKind: String { String(describing: type(of: self)) }
+
   func count(_ query: SelectQuery) async throws -> Int {
     throw TeaQLError.execution(
       "Exact count is not supported by the configured query executor for \(query.entity.name)")
@@ -132,6 +134,10 @@ public struct MutationResult: Sendable {
 
 public protocol MutationExecutor: Sendable {
   func execute(_ mutation: Mutation) async throws -> MutationResult
+}
+
+public extension MutationExecutor {
+  var providerKind: String { String(describing: type(of: self)) }
 }
 
 public protocol AuditSink: Sendable {
@@ -287,8 +293,9 @@ public struct UserContext: Sendable {
       RuntimeOperation(
         family: "query", name: "\(query.entity.name).list",
         attributes: ["teaql.entity.type": .string(query.entity.name)]
-      )
-    ) {
+      ), completion: { result in
+      ["teaql.result.cardinality": .integer(Int64(result.records.count))]
+    }) {
       try await executeQuery(query)
     }
   }
@@ -297,7 +304,17 @@ public struct UserContext: Sendable {
     let validated = try requestPolicy.apply(query).validatedForExecution()
     var base = validated
     base.relations = []
-    let result = try await queryExecutor.execute(base)
+    let result = try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "provider", name: "\(queryExecutor.providerKind).query",
+        attributes: [
+          "teaql.provider.kind": .string(queryExecutor.providerKind),
+          "teaql.provider.operation": .string("query"),
+        ]
+      )
+    ) {
+      try await queryExecutor.execute(base)
+    }
     if let metadata = result.metadata { await telemetrySink?.record(metadata) }
     guard !validated.relations.isEmpty, !result.records.isEmpty else { return result }
 
@@ -306,7 +323,10 @@ public struct UserContext: Sendable {
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(
           family: "relation_load", name: "\(validated.entity.name).\(relation.name)",
-          attributes: ["teaql.entity.type": .string(validated.entity.name)]
+          attributes: [
+            "teaql.entity.type": .string(validated.entity.name),
+            "teaql.relation.name": .string(relation.name),
+          ]
         )
       ) {
         let localValues = records.compactMap { $0[relation.localKey] }
@@ -337,14 +357,27 @@ public struct UserContext: Sendable {
     validated.limit = nil
     validated.projection = []
     validated.relations = []
-    return try await queryExecutor.count(validated)
+    return try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "provider", name: "\(queryExecutor.providerKind).count",
+        attributes: [
+          "teaql.provider.kind": .string(queryExecutor.providerKind),
+          "teaql.provider.operation": .string("count"),
+        ]
+      )
+    ) {
+      try await queryExecutor.count(validated)
+    }
   }
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {
     try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "mutation", name: "\(mutation.entity.name).\(mutation.kind.rawValue)",
-        attributes: ["teaql.entity.type": .string(mutation.entity.name)]
+        attributes: [
+          "teaql.entity.type": .string(mutation.entity.name),
+          "teaql.mutation.kind": .string(mutation.kind.rawValue),
+        ]
       )
     ) {
       try await executeMutation(mutation)
@@ -354,13 +387,27 @@ public struct UserContext: Sendable {
   private func executeMutation(_ mutation: Mutation) async throws -> MutationResult {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
-    let result = try await mutationExecutor.execute(validated)
+    let result = try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "provider", name: "\(mutationExecutor.providerKind).mutation",
+        attributes: [
+          "teaql.provider.kind": .string(mutationExecutor.providerKind),
+          "teaql.provider.operation": .string(validated.kind.rawValue),
+        ]
+      )
+    ) {
+      try await mutationExecutor.execute(validated)
+    }
     if let metadata = result.metadata { await telemetrySink?.record(metadata) }
     if let auditSink, let reason = validated.auditReason {
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(
           family: "audit", name: "\(validated.entity.name).event",
-          attributes: ["teaql.entity.type": .string(validated.entity.name)]
+          attributes: [
+            "teaql.entity.type": .string(validated.entity.name),
+            "teaql.mutation.kind": .string(validated.kind.rawValue),
+            "teaql.audit.changed_field_count": .integer(Int64(validated.values.count)),
+          ]
         )
       ) {
         try await auditSink.record(

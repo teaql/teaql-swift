@@ -29,6 +29,7 @@ private final class RecordingRuntimeTelemetry: RuntimeTelemetry, @unchecked Send
 
   func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,
+    completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
     _ body: () async throws -> Result
   ) async rethrows -> Result {
     do {

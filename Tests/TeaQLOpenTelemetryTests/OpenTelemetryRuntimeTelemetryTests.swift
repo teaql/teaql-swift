@@ -30,7 +30,7 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     _ = await telemetry.withOperation(RuntimeOperation(
       family: "query", name: "School.list",
       attributes: ["teaql.entity.id": .integer(42)]
-    )) {
+    ), completion: { _ in ["teaql.result.cardinality": .integer(1)] }) {
       await telemetry.withOperation(
         RuntimeOperation(family: "provider", name: "sqlite.query")
       ) { 1 }
@@ -43,6 +43,8 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     let query = try XCTUnwrap(spans.first { $0.name == "teaql.query" })
     let providerSpan = try XCTUnwrap(spans.first { $0.name == "teaql.provider" })
     XCTAssertEqual(providerSpan.parentSpanId, query.spanId)
+    XCTAssertEqual(
+      query.attributes["teaql.result.cardinality"], AttributeValue.int(1))
     XCTAssertTrue(metricExporter.names.contains("teaql.runtime.operation.duration"))
     XCTAssertTrue(metricExporter.names.contains("teaql.runtime.operation.count"))
     let logs = logExporter.records
