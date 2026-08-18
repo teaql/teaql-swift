@@ -43,14 +43,41 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
       meter: meterProvider.get(name: "io.teaql.runtime"),
       logger: loggerProvider.get(instrumentationScopeName: "io.teaql.runtime"))
 
-    _ = await telemetry.withOperation(RuntimeOperation(
-      family: "query", name: "ConformanceProbe.list",
-      attributes: [
+    let operations: [(String, String, [String: RuntimeTelemetryValue])] = [
+      ("query", "ConformanceProbe.list", ["teaql.entity.type": .string("ConformanceProbe")]),
+      ("mutation", "ConformanceProbe.update", [
         "teaql.entity.type": .string("ConformanceProbe"),
-        "teaql.entity.id": .string("must-not-export"),
-        "teaql.result.cardinality": .integer(1),
-      ]
-    )) { 1 }
+        "teaql.mutation.kind": .string("update"),
+      ]),
+      ("relation_load", "ConformanceProbe.children", [
+        "teaql.entity.type": .string("ConformanceProbe"),
+        "teaql.relation.name": .string("children"),
+      ]),
+      ("provider", "sqlite.query", [
+        "teaql.provider.kind": .string("sqlite"),
+        "teaql.provider.operation": .string("query"),
+      ]),
+      ("cache", "local.get", ["teaql.cache.operation": .string("get")]),
+      ("tfp", "client.query", ["teaql.tfp.role": .string("client")]),
+      ("audit", "ConformanceProbe.audit", [
+        "teaql.entity.type": .string("ConformanceProbe"),
+        "teaql.mutation.kind": .string("update"),
+        "teaql.audit.changed_field_count": .integer(1),
+      ]),
+    ]
+    for (family, name, baseAttributes) in operations {
+      var attributes = baseAttributes
+      attributes["teaql.entity.id"] = .string("must-not-export")
+      _ = await telemetry.withOperation(RuntimeOperation(
+        family: family, name: name, attributes: attributes
+      ), completion: { _ in
+        var completion: [String: RuntimeTelemetryValue] = [
+          "teaql.result.cardinality": .integer(1)
+        ]
+        if family == "cache" { completion["teaql.cache.result"] = .string("hit") }
+        return completion
+      }) { 1 }
+    }
 
     tracerProvider.forceFlush()
     XCTAssertEqual(meterProvider.forceFlush(), .success)
