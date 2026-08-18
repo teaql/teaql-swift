@@ -82,6 +82,27 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     XCTAssertEqual(
       carrier["traceparent"], "00-\(span.traceId.hexString)-\(span.spanId.hexString)-01")
   }
+
+  func testDelegatesExplicitApplicationOwnedLifecycle() async {
+    let calls = LifecycleCalls()
+    let telemetry = OpenTelemetryRuntimeTelemetry(
+      tracer: TracerProviderSdk().get(instrumentationName: "io.teaql.runtime.lifecycle"),
+      meter: MeterProviderSdk.builder().build().get(name: "io.teaql.runtime.lifecycle"),
+      flush: { calls.append("flush") },
+      shutdown: { calls.append("shutdown") })
+
+    await telemetry.flush()
+    await telemetry.shutdown()
+
+    XCTAssertEqual(calls.values, ["flush", "shutdown"])
+  }
+}
+
+private final class LifecycleCalls: @unchecked Sendable {
+  private let lock = NSLock()
+  private var calls: [String] = []
+  var values: [String] { lock.withLock { calls } }
+  func append(_ value: String) { lock.withLock { calls.append(value) } }
 }
 
 private final class CapturingLogExporter: LogRecordExporter, @unchecked Sendable {

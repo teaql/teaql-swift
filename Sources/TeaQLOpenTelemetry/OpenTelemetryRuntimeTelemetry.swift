@@ -6,11 +6,19 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
   private let tracer: any Tracer
   private let metrics: any RuntimeMetricRecorder
   private let logger: (any Logger)?
+  private let flushLifecycle: @Sendable () async -> Void
+  private let shutdownLifecycle: @Sendable () async -> Void
 
-  public init<M: Meter>(tracer: any Tracer, meter: M, logger: (any Logger)? = nil) {
+  public init<M: Meter>(
+    tracer: any Tracer, meter: M, logger: (any Logger)? = nil,
+    flush: @escaping @Sendable () async -> Void = {},
+    shutdown: @escaping @Sendable () async -> Void = {}
+  ) {
     self.tracer = tracer
     self.metrics = MetricInstruments(meter: meter)
     self.logger = logger
+    self.flushLifecycle = flush
+    self.shutdownLifecycle = shutdown
   }
 
   public func withOperation<Result: Sendable>(
@@ -73,8 +81,8 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
       spanContext: spanContext, carrier: &carrier, setter: DictionarySetter())
   }
 
-  public func flush() async {}
-  public func shutdown() async {}
+  public func flush() async { await flushLifecycle() }
+  public func shutdown() async { await shutdownLifecycle() }
 
   private func record(
     _ operation: RuntimeOperation, outcome: String,
