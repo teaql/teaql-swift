@@ -24,7 +24,8 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
     let traceExporter = OtlpHttpTraceExporter(endpoint: URL(string: "\(base)/v1/traces")!)
     let tracerProvider = TracerProviderBuilder()
       .with(resource: resource)
-      .add(spanProcessor: SimpleSpanProcessor(spanExporter: traceExporter))
+      .add(spanProcessor: BatchSpanProcessor(
+        spanExporter: traceExporter, maxQueueSize: 64, maxExportBatchSize: 16))
       .build()
     let metricExporter = OtlpHttpMetricExporter(endpoint: URL(string: "\(base)/v1/metrics")!)
     let meterProvider = MeterProviderSdk.builder()
@@ -34,9 +35,10 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
       .registerView(selector: InstrumentSelectorBuilder().build(), view: View.builder().build())
       .build()
     let logExporter = OtlpHttpLogExporter(endpoint: URL(string: "\(base)/v1/logs")!)
+    let logProcessor = BatchLogRecordProcessor(
+      logRecordExporter: logExporter, maxQueueSize: 64, maxExportBatchSize: 16)
     let loggerProvider = LoggerProviderBuilder()
-      .with(resource: resource)
-      .with(processors: [SimpleLogRecordProcessor(logRecordExporter: logExporter)])
+      .with(resource: resource).with(processors: [logProcessor])
       .build()
     let telemetry = OpenTelemetryRuntimeTelemetry(
       tracer: tracerProvider.get(instrumentationName: "io.teaql.runtime"),
@@ -81,5 +83,6 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
 
     tracerProvider.forceFlush()
     XCTAssertEqual(meterProvider.forceFlush(), .success)
+    XCTAssertEqual(logProcessor.forceFlush(), .success)
   }
 }
