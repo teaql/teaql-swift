@@ -84,19 +84,29 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
         return completion
       }) { 1 }
       completedOperations += 1
+      do {
+        _ = try await telemetry.withOperation(RuntimeOperation(
+          family: family, name: "\(name).failure", attributes: attributes
+        ), completion: { (_: Int) in [:] }) { throw ConformanceProbeError.expected }
+        XCTFail("failure probe unexpectedly succeeded for \(family)")
+      } catch ConformanceProbeError.expected {
+        completedOperations += 1
+      }
     }
 
     tracerProvider.forceFlush()
     let metricFlushed = meterProvider.forceFlush()
     let logFlushed = logProcessor.forceFlush(explicitTimeout: 2)
     if expectExportFailure {
-      XCTAssertEqual(completedOperations, 7)
+      XCTAssertEqual(completedOperations, 14)
     } else {
       XCTAssertTrue(isSuccess(metricFlushed))
       XCTAssertTrue(isSuccess(logFlushed))
     }
   }
 }
+
+private enum ConformanceProbeError: Error { case expected }
 
 private func isSuccess(_ result: ExportResult) -> Bool {
   if case .success = result { return true }
