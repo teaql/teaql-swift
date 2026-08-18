@@ -222,6 +222,7 @@ public struct TeaQLFederalClient: Sendable {
     if let supplied = try await headerProvider?() {
       for (name, value) in supplied { headers[name] = value }
     }
+    runtimeTelemetry.inject(&headers)
     let request = FederalHTTPRequest(
       url: baseURL.appendingPathComponent(path),
       headers: headers,

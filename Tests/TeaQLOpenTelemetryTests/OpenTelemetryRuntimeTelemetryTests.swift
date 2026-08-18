@@ -59,6 +59,29 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     XCTAssertEqual(queryLog.spanContext?.traceId, query.traceId)
     XCTAssertEqual(queryLog.spanContext?.spanId, query.spanId)
   }
+
+
+  func testInjectsActiveW3cTraceContext() async throws {
+    let exporter = InMemoryExporter()
+    let provider = TracerProviderSdk(
+      spanProcessors: [SimpleSpanProcessor(spanExporter: exporter)])
+    let telemetry = OpenTelemetryRuntimeTelemetry(
+      tracer: provider.get(instrumentationName: "io.teaql.runtime"),
+      meter: MeterProviderSdk.builder().build().get(name: "io.teaql.runtime"))
+    var carrier: [String: String] = [:]
+
+    await telemetry.withOperation(RuntimeOperation(
+      family: "tfp", name: "client.query",
+      attributes: ["teaql.tfp.role": .string("client")]
+    )) {
+      telemetry.inject(&carrier)
+    }
+
+    provider.forceFlush()
+    let span = try XCTUnwrap(exporter.getFinishedSpanItems().first)
+    XCTAssertEqual(
+      carrier["traceparent"], "00-\(span.traceId.hexString)-\(span.spanId.hexString)-01")
+  }
 }
 
 private final class CapturingLogExporter: LogRecordExporter, @unchecked Sendable {

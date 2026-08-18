@@ -67,6 +67,12 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
     }
   }
 
+  public func inject(_ carrier: inout [String: String]) {
+    guard let spanContext = OpenTelemetry.instance.contextProvider.activeSpan?.context else { return }
+    OpenTelemetry.instance.propagators.textMapPropagator.inject(
+      spanContext: spanContext, carrier: &carrier, setter: DictionarySetter())
+  }
+
   public func flush() async {}
   public func shutdown() async {}
 
@@ -98,6 +104,12 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
     {
       set(value, key: key, on: span)
     }
+  }
+}
+
+private struct DictionarySetter: Setter {
+  func set(carrier: inout [String: String], key: String, value: String) {
+    carrier[key] = value
   }
 }
 

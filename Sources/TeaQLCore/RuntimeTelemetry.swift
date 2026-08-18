@@ -46,11 +46,14 @@ public protocol RuntimeTelemetry: Sendable {
     completion: (Result) -> [String: RuntimeTelemetryValue],
     _ body: () throws -> Result
   ) rethrows -> Result
+  func inject(_ carrier: inout [String: String])
   func flush() async
   func shutdown() async
 }
 
 public extension RuntimeTelemetry {
+  func inject(_ carrier: inout [String: String]) {}
+
   func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,
     _ body: () async throws -> Result

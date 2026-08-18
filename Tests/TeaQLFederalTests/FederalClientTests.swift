@@ -26,6 +26,11 @@ private final class RecordingRuntimeTelemetry: RuntimeTelemetry, @unchecked Send
   private let lock = NSLock()
   private var storedEvents: [Event] = []
   var events: [Event] { lock.withLock { storedEvents } }
+  var injectedTraceparent: String?
+
+  func inject(_ carrier: inout [String: String]) {
+    if let injectedTraceparent { carrier["traceparent"] = injectedTraceparent }
+  }
 
   func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,
@@ -85,6 +90,25 @@ private struct FailingTransport: FederalTransport {
   #expect(payload["tenant"] == nil)
   #expect(payload["permissions"] == nil)
   #expect(payload["hardLimit"] == nil)
+}
+
+@Test func tfpClientInjectsTraceMetadataWithoutSerializingIt() async throws {
+  let transport = RecordingTransport(
+    json: #"{"data":[],"resultCode":0,"status":"YES","execution":{}}"#)
+  let telemetry = RecordingRuntimeTelemetry()
+  telemetry.injectedTraceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+  let client = TeaQLFederalClient(
+    baseURL: URL(string: "https://example.test/api/")!,
+    transport: transport, runtimeTelemetry: telemetry)
+  var query = FederalQuery(entity: "School")
+  query.comment = "list schools"
+  query.purpose = "verify trace propagation"
+
+  _ = try await client.execute(query)
+
+  let request = try #require(await transport.requests.first)
+  #expect(request.headers["traceparent"] == telemetry.injectedTraceparent)
+  #expect(!String(decoding: request.body, as: UTF8.self).contains("traceparent"))
 }
 
 @Test func mutationRequiresAndSerializesAuditReason() async throws {
