@@ -55,6 +55,7 @@ let package = Package(
         "TeaQLOpenTelemetry",
         .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift-core"),
         .product(name: "InMemoryExporter", package: "opentelemetry-swift"),
+        .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
       ]
     ),
   ],
