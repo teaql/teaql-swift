@@ -52,3 +52,14 @@ import Testing
       == "SELECT * FROM school WHERE name = 'O''Brien School' AND active = TRUE AND phone IS NULL AND note = '?'"
   )
 }
+
+@Test func debugSQLPreservesCommentsAndTemporalStorageLiterals() {
+  let compiled = CompiledSQL(
+    sql: "-- line ? $1\nSELECT '?', \"identifier?\", ?, ? /* block ? */",
+    parameters: [.calendarDate("2024-02-29"), .timestamp(1_787_110_200_123)]
+  )
+  #expect(
+    compiled.debugSQL()
+      == "-- line ? $1\nSELECT '?', \"identifier?\", '2024-02-29', 1787110200123 /* block ? */"
+  )
+}

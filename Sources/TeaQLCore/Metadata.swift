@@ -1,7 +1,7 @@
 import Foundation
 
 public enum PropertyType: String, Sendable, Codable {
-  case bool, int, uint, double, decimal, string, date, timestamp, data, json
+  case bool, int, uint, double, decimal, string, date, localDateTime, timestamp, data, json
 }
 
 public struct PropertyDescriptor: Sendable, Hashable, Codable {

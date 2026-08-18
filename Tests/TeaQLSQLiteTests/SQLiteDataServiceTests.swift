@@ -129,6 +129,46 @@ private func context(
   #expect(await evidence.snapshot().isEmpty)
 }
 
+@Test func sqliteTemporalPreparedAndDebugSQLShareStorageSemantics() async throws {
+  let temporal = EntityDescriptor(
+    name: "TemporalFixture", table: "temporal_fixture",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "version", type: .int, isVersion: true),
+      PropertyDescriptor(name: "calendarDate", column: "calendar_date", type: .date),
+      PropertyDescriptor(name: "localDateTime", column: "local_date_time", type: .localDateTime),
+      PropertyDescriptor(name: "instant", column: "instant_ms", type: .timestamp),
+      PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
+    ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-temporal-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await service.ensureSchema([temporal])
+  let evidence = SQLExecutionEvidenceStore()
+  let ctx = context(service, telemetrySink: evidence)
+
+  _ = try await ctx.execute(Mutation(
+    kind: .create, entity: temporal,
+    values: [
+      "id": .int(1), "version": .int(1), "calendarDate": .calendarDate("2024-02-29"),
+      "localDateTime": .localDateTime("2026-08-19 09:30:00.123"),
+      "instant": .timestamp(1_787_110_200_123), "tenantID": .int(7),
+    ], auditReason: "verify temporal SQLite storage"))
+  var query = SelectQuery(entity: temporal)
+  query.filter = .equal("id", .int(1))
+  query.comment = "Read temporal fixture"
+  query.purpose = "Verify temporal round trip"
+  let result = try await ctx.execute(query)
+
+  #expect(result.records[0]["calendarDate"] == .calendarDate("2024-02-29"))
+  #expect(result.records[0]["localDateTime"] == .localDateTime("2026-08-19 09:30:00.123"))
+  #expect(result.records[0]["instant"] == .timestamp(1_787_110_200_123))
+  let entries = await evidence.snapshot()
+  #expect(entries.contains { $0.debugSQL.contains("'2024-02-29'") })
+  #expect(entries.contains { $0.debugSQL.contains("1787110200123") })
+}
+
 @Test func sqliteCountsThePolicyFilteredSetWithoutPagination() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-count-\(UUID().uuidString).db").path

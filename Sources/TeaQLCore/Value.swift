@@ -8,6 +8,9 @@ public enum TeaQLValue: Sendable, Hashable, Codable {
   case double(Double)
   case decimal(Decimal)
   case string(String)
+  case calendarDate(String)
+  case localDateTime(String)
+  case timestamp(Int64)
   case date(Date)
   case data(Data)
   case array([TeaQLValue])
@@ -46,6 +49,9 @@ public enum TeaQLValue: Sendable, Hashable, Codable {
     case .double(let value): try container.encode(value)
     case .decimal(let value): try container.encode(value)
     case .string(let value): try container.encode(value)
+    case .calendarDate(let value): try container.encode(value)
+    case .localDateTime(let value): try container.encode(value)
+    case .timestamp(let value): try container.encode(value)
     case .date(let value): try container.encode(value)
     case .data(let value): try container.encode(value)
     case .array(let value): try container.encode(value)
@@ -61,12 +67,16 @@ extension TeaQLValue {
     switch self {
     case .int(let value): value
     case .uint(let value) where value <= UInt64(Int64.max): Int64(value)
+    case .timestamp(let value): value
     default: nil
     }
   }
 
   public var stringValue: String? {
-    if case .string(let value) = self { value } else { nil }
+    switch self {
+    case .string(let value), .calendarDate(let value), .localDateTime(let value): value
+    default: nil
+    }
   }
 
   public var boolValue: Bool? {
@@ -91,6 +101,14 @@ extension TeaQLValue {
   }
 
   public var dateValue: Date? {
-    if case .date(let value) = self { value } else { nil }
+    switch self {
+    case .date(let value): value
+    case .calendarDate(let value):
+      ISO8601DateFormatter().date(from: value + "T00:00:00Z")
+    case .localDateTime(let value):
+      ISO8601DateFormatter().date(from: value.replacingOccurrences(of: " ", with: "T") + "Z")
+    case .timestamp(let value): Date(timeIntervalSince1970: Double(value) / 1_000)
+    default: nil
+    }
   }
 }

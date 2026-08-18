@@ -367,6 +367,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
       case .double(let value): result = sqlite3_bind_double(statement, index, value)
       case .decimal(let value): result = bindText(String(describing: value), statement, index)
       case .string(let value): result = bindText(value, statement, index)
+      case .calendarDate(let value): result = bindText(value, statement, index)
+      case .localDateTime(let value): result = bindText(value, statement, index)
+      case .timestamp(let value): result = sqlite3_bind_int64(statement, index, value)
       case .date(let value):
         result = bindText(ISO8601DateFormatter().string(from: value), statement, index)
       case .data(let value):
@@ -392,7 +395,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     case SQLITE_NULL: return .null
     case SQLITE_INTEGER:
       let value = sqlite3_column_int64(statement, index)
-      return type == .bool ? .bool(value != 0) : .int(value)
+      if type == .bool { return .bool(value != 0) }
+      if type == .timestamp { return .timestamp(value) }
+      return .int(value)
     case SQLITE_FLOAT: return .double(sqlite3_column_double(statement, index))
     case SQLITE_BLOB:
       let count = Int(sqlite3_column_bytes(statement, index))
@@ -401,7 +406,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     default:
       let text = String(cString: sqlite3_column_text(statement, index))
       if type == .decimal, let decimal = Decimal(string: text) { return .decimal(decimal) }
-      if type == .date || type == .timestamp {
+      if type == .date { return .calendarDate(text) }
+      if type == .localDateTime { return .localDateTime(text) }
+      if type == .timestamp {
         if let date = ISO8601DateFormatter().date(from: text) { return .date(date) }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -440,6 +447,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     case .double(let value): String(value)
     case .decimal(let value): String(describing: value)
     case .string(let value): value
+    case .calendarDate(let value): value
+    case .localDateTime(let value): value
+    case .timestamp(let value): String(value)
     case .date(let value): ISO8601DateFormatter().string(from: value)
     case .data: "<data>"
     case .array: "<array>"

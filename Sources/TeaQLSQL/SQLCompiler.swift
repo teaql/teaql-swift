@@ -14,23 +14,33 @@ public struct CompiledSQL: Sendable, Equatable {
   public func debugSQL() -> String {
     var result = ""
     var parameterIndex = 0
-    var inString = false
+    var state = SQLScanState.sql
     var index = sql.startIndex
     while index < sql.endIndex {
       let character = sql[index]
-      if character == "'" {
+      let nextIndex = sql.index(after: index)
+      let next = nextIndex < sql.endIndex ? sql[nextIndex] : nil
+      if state == .sql, character == "'" { result.append(character); state = .singleQuote }
+      else if state == .sql, character == "\"" { result.append(character); state = .doubleQuote }
+      else if state == .sql, character == "-", next == "-" {
+        result += "--"; index = nextIndex; state = .lineComment
+      } else if state == .sql, character == "/", next == "*" {
+        result += "/*"; index = nextIndex; state = .blockComment
+      } else if state == .singleQuote {
         result.append(character)
-        let next = sql.index(after: index)
-        if inString, next < sql.endIndex, sql[next] == "'" {
-          result.append("'")
-          index = sql.index(after: next)
-        } else {
-          inString.toggle()
-          index = next
-        }
-        continue
-      }
-      if character == "?", !inString, parameterIndex < parameters.count {
+        if character == "'", next == "'" { result.append("'"); index = nextIndex }
+        else if character == "'" { state = .sql }
+      } else if state == .doubleQuote {
+        result.append(character)
+        if character == "\"", next == "\"" { result.append("\""); index = nextIndex }
+        else if character == "\"" { state = .sql }
+      } else if state == .lineComment {
+        result.append(character)
+        if character == "\n" || character == "\r" { state = .sql }
+      } else if state == .blockComment {
+        result.append(character)
+        if character == "*", next == "/" { result.append("/"); index = nextIndex; state = .sql }
+      } else if character == "?", parameterIndex < parameters.count {
         result += sqlLiteral(parameters[parameterIndex])
         parameterIndex += 1
       } else {
@@ -42,6 +52,8 @@ public struct CompiledSQL: Sendable, Equatable {
   }
 }
 
+private enum SQLScanState { case sql, singleQuote, doubleQuote, lineComment, blockComment }
+
 private func sqlLiteral(_ value: TeaQLValue) -> String {
   switch value {
   case .null: "NULL"
@@ -51,6 +63,9 @@ private func sqlLiteral(_ value: TeaQLValue) -> String {
   case .double(let value): String(value)
   case .decimal(let value): NSDecimalNumber(decimal: value).stringValue
   case .string(let value): quoteSQLString(value)
+  case .calendarDate(let value): quoteSQLString(value)
+  case .localDateTime(let value): quoteSQLString(value)
+  case .timestamp(let value): String(value)
   case .date(let value): quoteSQLString(ISO8601DateFormatter().string(from: value))
   case .data(let value): "X'" + value.map { String(format: "%02x", $0) }.joined() + "'"
   case .array, .object:
@@ -169,7 +184,8 @@ public struct SQLiteCompiler: Sendable {
     case .double: "REAL"
     case .decimal: "NUMERIC"
     case .string: "TEXT"
-    case .date, .timestamp: "TEXT"
+    case .date, .localDateTime: "TEXT"
+    case .timestamp: "INTEGER"
     case .data: "BLOB"
     case .json: "TEXT"
     }
