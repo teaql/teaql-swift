@@ -13,6 +13,7 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
     }
     let base = ProcessInfo.processInfo.environment["OTEL_EXPORTER_OTLP_ENDPOINT"]
       ?? "http://localhost:4318"
+    let expectExportFailure = ProcessInfo.processInfo.environment["TEAQL_EXPECT_EXPORT_FAILURE"] == "1"
     let runID = String(serviceName.split(separator: "-").last!)
     let resource = Resource(attributes: [
       "service.name": .string(serviceName),
@@ -25,7 +26,8 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
     let tracerProvider = TracerProviderBuilder()
       .with(resource: resource)
       .add(spanProcessor: BatchSpanProcessor(
-        spanExporter: traceExporter, maxQueueSize: 64, maxExportBatchSize: 16))
+        spanExporter: traceExporter, exportTimeout: 2,
+        maxQueueSize: 64, maxExportBatchSize: 16))
       .build()
     let metricExporter = OtlpHttpMetricExporter(endpoint: URL(string: "\(base)/v1/metrics")!)
     let meterProvider = MeterProviderSdk.builder()
@@ -36,7 +38,8 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
       .build()
     let logExporter = OtlpHttpLogExporter(endpoint: URL(string: "\(base)/v1/logs")!)
     let logProcessor = BatchLogRecordProcessor(
-      logRecordExporter: logExporter, maxQueueSize: 64, maxExportBatchSize: 16)
+      logRecordExporter: logExporter, exportTimeout: 2,
+      maxQueueSize: 64, maxExportBatchSize: 16)
     let loggerProvider = LoggerProviderBuilder()
       .with(resource: resource).with(processors: [logProcessor])
       .build()
@@ -67,6 +70,7 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
         "teaql.audit.changed_field_count": .integer(1),
       ]),
     ]
+    var completedOperations = 0
     for (family, name, baseAttributes) in operations {
       var attributes = baseAttributes
       attributes["teaql.entity.id"] = .string("must-not-export")
@@ -79,10 +83,22 @@ final class OpenTelemetryOtlpSmokeTests: XCTestCase {
         if family == "cache" { completion["teaql.cache.result"] = .string("hit") }
         return completion
       }) { 1 }
+      completedOperations += 1
     }
 
     tracerProvider.forceFlush()
-    XCTAssertEqual(meterProvider.forceFlush(), .success)
-    XCTAssertEqual(logProcessor.forceFlush(), .success)
+    let metricFlushed = meterProvider.forceFlush()
+    let logFlushed = logProcessor.forceFlush(explicitTimeout: 2)
+    if expectExportFailure {
+      XCTAssertEqual(completedOperations, 7)
+    } else {
+      XCTAssertTrue(isSuccess(metricFlushed))
+      XCTAssertTrue(isSuccess(logFlushed))
+    }
   }
+}
+
+private func isSuccess(_ result: ExportResult) -> Bool {
+  if case .success = result { return true }
+  return false
 }
