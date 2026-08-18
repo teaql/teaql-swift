@@ -18,6 +18,38 @@ private actor RecordingTransport: FederalTransport {
   }
 }
 
+private final class RecordingRuntimeTelemetry: RuntimeTelemetry, @unchecked Sendable {
+  struct Event: Sendable, Equatable {
+    let operation: RuntimeOperation
+    let outcome: String
+  }
+  private let lock = NSLock()
+  private var storedEvents: [Event] = []
+  var events: [Event] { lock.withLock { storedEvents } }
+
+  func withOperation<Result: Sendable>(
+    _ operation: RuntimeOperation,
+    _ body: () async throws -> Result
+  ) async rethrows -> Result {
+    do {
+      let result = try await body()
+      lock.withLock { storedEvents.append(Event(operation: operation, outcome: "success")) }
+      return result
+    } catch {
+      lock.withLock { storedEvents.append(Event(operation: operation, outcome: "failure")) }
+      throw error
+    }
+  }
+
+  func flush() async {}
+  func shutdown() async {}
+}
+
+private struct FailingTransport: FederalTransport {
+  let error: FederalError
+  func send(_ request: FederalHTTPRequest) async throws -> FederalHTTPResponse { throw error }
+}
+
 @Test func queryUsesCanonicalTFPShapeWithoutTrustedContext() async throws {
   let transport = RecordingTransport(
     json: #"{"data":[{"id":7}],"resultCode":0,"status":"YES","execution":{}}"#)
@@ -101,4 +133,47 @@ private actor RecordingTransport: FederalTransport {
   let payload = try #require(try JSONSerialization.jsonObject(with: request.body) as? [String: Any])
   #expect(payload["_limit"] as? Int == 1)
   #expect(payload["hardLimit"] == nil)
+}
+
+@Test func federalClientRecordsBalancedTFPLifecyclesAndRethrowsTransportFailure() async throws {
+  let telemetry = RecordingRuntimeTelemetry()
+  let transport = RecordingTransport(
+    json: #"{"data":[{"id":7}],"resultCode":0,"status":"YES","execution":{}}"#)
+  let client = TeaQLFederalClient(
+    baseURL: URL(string: "https://example.test/")!,
+    transport: transport,
+    runtimeTelemetry: telemetry)
+  var query = FederalQuery(entity: "CustomerOrder")
+  query.comment = "Telemetry query"
+  query.purpose = "Verify TFP lifecycle"
+
+  _ = try await client.execute(query)
+  let success = try #require(telemetry.events.first)
+  #expect(success.operation.family == "tfp")
+  #expect(success.operation.name == "client.query")
+  #expect(success.operation.attributes["teaql.tfp.role"] == .string("client"))
+  #expect(success.outcome == "success")
+
+  let mutationTransport = RecordingTransport(
+    json: #"{"affectedRows":1,"data":[{"id":9}],"resultCode":0,"status":"YES"}"#)
+  let mutationClient = TeaQLFederalClient(
+    baseURL: URL(string: "https://example.test/")!,
+    transport: mutationTransport,
+    runtimeTelemetry: telemetry)
+  _ = try await mutationClient.execute(FederalMutation(
+    entity: "Task", action: .create, payload: [:], auditReason: "Telemetry mutation"))
+  let mutation = try #require(telemetry.events.last)
+  #expect(mutation.operation.name == "client.mutation")
+  #expect(mutation.operation.attributes["teaql.tfp.role"] == .string("client"))
+  #expect(mutation.outcome == "success")
+
+  let original = FederalError.transport(status: 503, message: "unavailable")
+  let failing = TeaQLFederalClient(
+    baseURL: URL(string: "https://example.test/")!,
+    transport: FailingTransport(error: original),
+    runtimeTelemetry: telemetry)
+  await #expect(throws: original) { try await failing.execute(query) }
+  let failure = try #require(telemetry.events.last)
+  #expect(failure.operation.name == "client.query")
+  #expect(failure.outcome == "failure")
 }

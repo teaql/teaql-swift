@@ -140,15 +140,18 @@ public struct TeaQLFederalClient: Sendable {
   private let baseURL: URL
   private let transport: any FederalTransport
   private let headerProvider: HeaderProvider?
+  private let runtimeTelemetry: any RuntimeTelemetry
 
   public init(
     baseURL: URL,
     transport: any FederalTransport = URLSessionFederalTransport(),
-    headerProvider: HeaderProvider? = nil
+    headerProvider: HeaderProvider? = nil,
+    runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry()
   ) {
     self.baseURL = baseURL
     self.transport = transport
     self.headerProvider = headerProvider
+    self.runtimeTelemetry = runtimeTelemetry
   }
 
   public func execute(_ query: FederalQuery) async throws -> FederalQueryResponse {
@@ -181,7 +184,14 @@ public struct TeaQLFederalClient: Sendable {
     ]
     if let limit = query.limit { payload["_limit"] = .int(Int64(limit)) }
     if let offset = query.offset { payload["_offset"] = .int(Int64(offset)) }
-    return try await post(path: "query", payload: payload, as: FederalQueryResponse.self)
+    return try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "tfp", name: "client.query",
+        attributes: ["teaql.tfp.role": .string("client")]
+      )
+    ) {
+      try await post(path: "query", payload: payload, as: FederalQueryResponse.self)
+    }
   }
 
   public func execute(_ mutation: FederalMutation) async throws -> FederalMutationResponse {
@@ -193,7 +203,14 @@ public struct TeaQLFederalClient: Sendable {
       "comment": .string(reason),
     ]
     if let id = mutation.id { payload["id"] = id }
-    return try await post(path: "mutate", payload: payload, as: FederalMutationResponse.self)
+    return try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "tfp", name: "client.mutation",
+        attributes: ["teaql.tfp.role": .string("client")]
+      )
+    ) {
+      try await post(path: "mutate", payload: payload, as: FederalMutationResponse.self)
+    }
   }
 
   private func post<Response: Decodable>(
