@@ -19,9 +19,18 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
       .registerView(selector: InstrumentSelectorBuilder().build(), view: View.builder().build())
       .build()
     let meter = meterProvider.get(name: "io.teaql.runtime")
-    let telemetry = OpenTelemetryRuntimeTelemetry(tracer: tracer, meter: meter)
+    let logExporter = CapturingLogExporter()
+    let loggerProvider = LoggerProviderBuilder()
+      .with(processors: [SimpleLogRecordProcessor(logRecordExporter: logExporter)])
+      .build()
+    let telemetry = OpenTelemetryRuntimeTelemetry(
+      tracer: tracer, meter: meter,
+      logger: loggerProvider.get(instrumentationScopeName: "io.teaql.runtime"))
 
-    _ = await telemetry.withOperation(RuntimeOperation(family: "query", name: "School.list")) {
+    _ = await telemetry.withOperation(RuntimeOperation(
+      family: "query", name: "School.list",
+      attributes: ["teaql.entity.id": .integer(42)]
+    )) {
       await telemetry.withOperation(
         RuntimeOperation(family: "provider", name: "sqlite.query")
       ) { 1 }
@@ -36,7 +45,33 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     XCTAssertEqual(providerSpan.parentSpanId, query.spanId)
     XCTAssertTrue(metricExporter.names.contains("teaql.runtime.operation.duration"))
     XCTAssertTrue(metricExporter.names.contains("teaql.runtime.operation.count"))
+    let logs = logExporter.records
+    XCTAssertEqual(logs.count, 2)
+    let queryLog = try XCTUnwrap(logs.first {
+      $0.attributes["teaql.operation.family"] == AttributeValue.string("query")
+    })
+    XCTAssertEqual(queryLog.body, AttributeValue.string("TeaQL runtime operation completed"))
+    XCTAssertEqual(
+      queryLog.attributes["teaql.operation.name"], AttributeValue.string("School.list"))
+    XCTAssertNil(queryLog.attributes["teaql.entity.id"])
+    XCTAssertEqual(queryLog.spanContext?.traceId, query.traceId)
+    XCTAssertEqual(queryLog.spanContext?.spanId, query.spanId)
   }
+}
+
+private final class CapturingLogExporter: LogRecordExporter, @unchecked Sendable {
+  private let lock = NSLock()
+  private var exported: [ReadableLogRecord] = []
+  var records: [ReadableLogRecord] { lock.withLock { exported } }
+
+  func export(
+    logRecords: [ReadableLogRecord], explicitTimeout: TimeInterval?
+  ) -> ExportResult {
+    lock.withLock { exported.append(contentsOf: logRecords) }
+    return .success
+  }
+  func shutdown(explicitTimeout: TimeInterval?) {}
+  func forceFlush(explicitTimeout: TimeInterval?) -> ExportResult { .success }
 }
 
 private final class CapturingMetricExporter: MetricExporter, @unchecked Sendable {

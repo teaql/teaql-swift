@@ -5,10 +5,12 @@ import TeaQLCore
 public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked Sendable {
   private let tracer: any Tracer
   private let metrics: any RuntimeMetricRecorder
+  private let logger: (any Logger)?
 
-  public init<M: Meter>(tracer: any Tracer, meter: M) {
+  public init<M: Meter>(tracer: any Tracer, meter: M, logger: (any Logger)? = nil) {
     self.tracer = tracer
     self.metrics = MetricInstruments(meter: meter)
+    self.logger = logger
   }
 
   public func withOperation<Result: Sendable>(
@@ -46,6 +48,16 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
     let milliseconds = Double(elapsed.components.seconds) * 1_000
       + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000
     metrics.record(family: operation.family, outcome: outcome, milliseconds: milliseconds)
+    logger?.logRecordBuilder()
+      .setSeverity(.info)
+      .setBody(.string("TeaQL runtime operation completed"))
+      .setAttributes([
+        "teaql.operation.family": .string(operation.family),
+        "teaql.operation.name": .string(operation.name),
+        "teaql.operation.outcome": .string(outcome),
+        "teaql.operation.duration_ms": .double(milliseconds),
+      ])
+      .emit()
   }
 }
 
