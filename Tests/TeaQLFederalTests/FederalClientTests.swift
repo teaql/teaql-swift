@@ -42,6 +42,14 @@ private final class RecordingRuntimeTelemetry: RuntimeTelemetry, @unchecked Send
     }
   }
 
+  func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result {
+    try body()
+  }
+
   func flush() async {}
   func shutdown() async {}
 }

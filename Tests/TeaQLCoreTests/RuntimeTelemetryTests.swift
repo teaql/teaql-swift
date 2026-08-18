@@ -73,6 +73,16 @@ private final class RecordingTelemetry: RuntimeTelemetry, @unchecked Sendable {
     return result
   }
 
+  func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result {
+    let result = try body()
+    lock.withLock { stored.append(Event(operation: operation, completion: completion(result))) }
+    return result
+  }
+
   func flush() async {}
   func shutdown() async {}
 }

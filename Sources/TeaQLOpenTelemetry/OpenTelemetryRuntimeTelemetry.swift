@@ -43,6 +43,30 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
     }
   }
 
+  public func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result {
+    let builder = tracer.spanBuilder(spanName: "teaql.\(operation.family)")
+    for (key, value) in operation.attributes { set(value, key: key, on: builder) }
+    let startedAt = ContinuousClock.now
+    return try builder.withActiveSpan { span in
+      do {
+        let result = try body()
+        setSafeCompletion(completion(result), on: span)
+        span.status = .ok
+        record(operation, outcome: "success", startedAt: startedAt)
+        return result
+      } catch {
+        span.setAttribute(key: "teaql.error.type", value: String(reflecting: type(of: error)))
+        span.status = .error(description: "TeaQL operation failed")
+        record(operation, outcome: "failure", startedAt: startedAt)
+        throw error
+      }
+    }
+  }
+
   public func flush() async {}
   public func shutdown() async {}
 
@@ -64,6 +88,16 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
         "teaql.operation.duration_ms": .double(milliseconds),
       ])
       .emit()
+  }
+
+  private func setSafeCompletion(
+    _ completion: [String: RuntimeTelemetryValue], on span: any SpanBase
+  ) {
+    for (key, value) in completion
+      where key == "teaql.result.cardinality" || key == "teaql.cache.result"
+    {
+      set(value, key: key, on: span)
+    }
   }
 }
 

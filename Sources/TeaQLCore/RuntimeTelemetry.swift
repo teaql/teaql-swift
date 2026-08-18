@@ -41,6 +41,11 @@ public protocol RuntimeTelemetry: Sendable {
     completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
     _ body: () async throws -> Result
   ) async rethrows -> Result
+  func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result
   func flush() async
   func shutdown() async
 }
@@ -51,6 +56,13 @@ public extension RuntimeTelemetry {
     _ body: () async throws -> Result
   ) async rethrows -> Result {
     try await withOperation(operation, completion: { _ in [:] }, body)
+  }
+
+  func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    _ body: () throws -> Result
+  ) rethrows -> Result {
+    try withSynchronousOperation(operation, completion: { _ in [:] }, body)
   }
 }
 
@@ -63,6 +75,14 @@ public struct NoopRuntimeTelemetry: RuntimeTelemetry {
     _ body: () async throws -> Result
   ) async rethrows -> Result {
     try await body()
+  }
+
+  public func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result {
+    try body()
   }
 
   public func flush() async {}
