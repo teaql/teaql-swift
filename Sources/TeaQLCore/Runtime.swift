@@ -236,6 +236,7 @@ public struct UserContext: Sendable {
   public let requestPolicy: RequestPolicy
   public let auditSink: (any AuditSink)?
   public let telemetrySink: (any RuntimeTelemetrySink)?
+  public let runtimeTelemetry: any RuntimeTelemetry
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
 
@@ -248,6 +249,7 @@ public struct UserContext: Sendable {
     requestPolicy: RequestPolicy,
     auditSink: (any AuditSink)? = nil,
     telemetrySink: (any RuntimeTelemetrySink)? = nil,
+    runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry(),
     entityInitializers: [EntityInitializer] = [],
     entityCreationObserver: EntityCreationObserver? = nil
   ) {
@@ -259,6 +261,7 @@ public struct UserContext: Sendable {
     self.requestPolicy = requestPolicy
     self.auditSink = auditSink
     self.telemetrySink = telemetrySink
+    self.runtimeTelemetry = runtimeTelemetry
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
   }
@@ -280,6 +283,17 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
+    try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "query", name: "\(query.entity.name).list",
+        attributes: ["teaql.entity.type": .string(query.entity.name)]
+      )
+    ) {
+      try await executeQuery(query)
+    }
+  }
+
+  private func executeQuery(_ query: SelectQuery) async throws -> QueryResult {
     let validated = try requestPolicy.apply(query).validatedForExecution()
     var base = validated
     base.relations = []
@@ -289,20 +303,27 @@ public struct UserContext: Sendable {
 
     var records = result.records
     for relation in validated.relations {
-      let localValues = records.compactMap { $0[relation.localKey] }
-      guard !localValues.isEmpty else { continue }
-      var child = relation.query.makeQuery()
-      child.comment = validated.comment
-      child.purpose = validated.purpose
-      let join = TeaQLExpression.inList(relation.foreignKey, localValues)
-      child.filter = child.filter.map { .and([$0, join]) } ?? join
-      let children = try await execute(child).records
-      let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
-      for index in records.indices {
-        let matches = grouped[records[index][relation.localKey] ?? .null] ?? []
-        records[index][relation.name] = relation.many
-          ? .array(matches.map(TeaQLValue.object))
-          : matches.first.map(TeaQLValue.object) ?? .null
+      try await runtimeTelemetry.withOperation(
+        RuntimeOperation(
+          family: "relation_load", name: "\(validated.entity.name).\(relation.name)",
+          attributes: ["teaql.entity.type": .string(validated.entity.name)]
+        )
+      ) {
+        let localValues = records.compactMap { $0[relation.localKey] }
+        guard !localValues.isEmpty else { return }
+        var child = relation.query.makeQuery()
+        child.comment = validated.comment
+        child.purpose = validated.purpose
+        let join = TeaQLExpression.inList(relation.foreignKey, localValues)
+        child.filter = child.filter.map { .and([$0, join]) } ?? join
+        let children = try await execute(child).records
+        let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
+        for index in records.indices {
+          let matches = grouped[records[index][relation.localKey] ?? .null] ?? []
+          records[index][relation.name] = relation.many
+            ? .array(matches.map(TeaQLValue.object))
+            : matches.first.map(TeaQLValue.object) ?? .null
+        }
       }
     }
     return QueryResult(
@@ -320,20 +341,38 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {
+    try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "mutation", name: "\(mutation.entity.name).\(mutation.kind.rawValue)",
+        attributes: ["teaql.entity.type": .string(mutation.entity.name)]
+      )
+    ) {
+      try await executeMutation(mutation)
+    }
+  }
+
+  private func executeMutation(_ mutation: Mutation) async throws -> MutationResult {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
     let result = try await mutationExecutor.execute(validated)
     if let metadata = result.metadata { await telemetrySink?.record(metadata) }
     if let auditSink, let reason = validated.auditReason {
-      try await auditSink.record(
-        AuditEvent(
-          entity: validated.entity.name,
-          entityID: validated.id ?? result.generatedValues["id"],
-          operation: validated.kind,
-          reason: reason,
-          actor: actor,
-          occurredAt: Date()
-        ))
+      try await runtimeTelemetry.withOperation(
+        RuntimeOperation(
+          family: "audit", name: "\(validated.entity.name).event",
+          attributes: ["teaql.entity.type": .string(validated.entity.name)]
+        )
+      ) {
+        try await auditSink.record(
+          AuditEvent(
+            entity: validated.entity.name,
+            entityID: validated.id ?? result.generatedValues["id"],
+            operation: validated.kind,
+            reason: reason,
+            actor: actor,
+            occurredAt: Date()
+          ))
+      }
     }
     return result
   }
