@@ -67,10 +67,10 @@ private func context(
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
   try await service.ensureSchema([SavedWidget.descriptor])
-  let ctx = context(service)
+  let context = context(service)
 
   var widget = SavedWidget(name: "created")
-  let created = try await widget.auditAs("create widget").save(ctx)
+  let created = try await widget.auditAs("create widget").save(context)
   #expect(created.id > 0)
   #expect(created.version == 1)
   #expect(created.name == "created")
@@ -78,12 +78,12 @@ private func context(
 
   widget = created
   widget.name = "updated"
-  let updated = try await widget.auditAs("update widget").save(ctx)
+  let updated = try await widget.auditAs("update widget").save(context)
   #expect(updated.id == created.id)
   #expect(updated.version == 2)
   #expect(updated.name == "updated")
 
-  let deleted = try await updated.auditAs("delete widget").delete(ctx)
+  let deleted = try await updated.auditAs("delete widget").delete(context)
   #expect(deleted.id == created.id)
   #expect(deleted.version == -3)
   #expect(deleted.name == "updated")
@@ -96,9 +96,9 @@ private func context(
   let service = try SQLiteDataService(path: path)
   try await service.ensureSchema([order])
   let evidence = SQLExecutionEvidenceStore()
-  let ctx = context(service, telemetrySink: evidence)
+  let context = context(service, telemetrySink: evidence)
 
-  _ = try await ctx.execute(
+  _ = try await context.execute(
     Mutation(
       kind: .create, entity: order,
       values: [
@@ -110,7 +110,7 @@ private func context(
   query.filter = .equal("orderNumber", .string("secret-customer-value"))
   query.comment = "Read SQL evidence fixture"
   query.purpose = "Prove parameterized execution"
-  _ = try await ctx.execute(query)
+  _ = try await context.execute(query)
 
   let entries = await evidence.snapshot()
   #expect(entries.contains { $0.operation == .insert })
@@ -146,9 +146,9 @@ private func context(
   let service = try SQLiteDataService(path: path)
   try await service.ensureSchema([temporal])
   let evidence = SQLExecutionEvidenceStore()
-  let ctx = context(service, telemetrySink: evidence)
+  let context = context(service, telemetrySink: evidence)
 
-  _ = try await ctx.execute(Mutation(
+  _ = try await context.execute(Mutation(
     kind: .create, entity: temporal,
     values: [
       "id": .int(1), "version": .int(1), "calendarDate": .calendarDate("2024-02-29"),
@@ -159,7 +159,7 @@ private func context(
   query.filter = .equal("id", .int(1))
   query.comment = "Read temporal fixture"
   query.purpose = "Verify temporal round trip"
-  let result = try await ctx.execute(query)
+  let result = try await context.execute(query)
 
   #expect(result.records[0]["calendarDate"] == .calendarDate("2024-02-29"))
   #expect(result.records[0]["localDateTime"] == .localDateTime("2026-08-19 09:30:00.123"))
@@ -189,9 +189,9 @@ private func context(
   query.limit = 1
   query.comment = "List tenant orders"
   query.purpose = "Verify exact filtered total"
-  let ctx = context(service)
-  #expect(try await ctx.execute(query).records.count == 1)
-  #expect(try await ctx.count(query) == 2)
+  let context = context(service)
+  #expect(try await context.execute(query).records.count == 1)
+  #expect(try await context.count(query) == 2)
 }
 
 @Test func sqliteCreatesSchemaQueriesAuditsAndRejectsStaleVersion() async throws {
@@ -201,9 +201,9 @@ private func context(
   let service = try SQLiteDataService(path: path)
   try await service.ensureSchema([order])
   let appAudit = RecordingAuditSink()
-  let ctx = context(service, auditSink: appAudit)
+  let context = context(service, auditSink: appAudit)
 
-  _ = try await ctx.execute(
+  _ = try await context.execute(
     Mutation(
       kind: .create,
       entity: order,
@@ -213,7 +213,7 @@ private func context(
       ],
       auditReason: "Create order fixture"
     ))
-  _ = try await ctx.execute(
+  _ = try await context.execute(
     Mutation(
       kind: .create,
       entity: order,
@@ -227,12 +227,12 @@ private func context(
   var query = SelectQuery(entity: order)
   query.comment = "Search tenant orders"
   query.purpose = "Verify tenant isolation"
-  let result = try await ctx.execute(query)
+  let result = try await context.execute(query)
   #expect(result.records.count == 1)
   #expect(result.records[0]["id"] == .int(100))
   #expect(result.records[0]["orderDate"]?.dateValue != nil)
 
-  _ = try await ctx.execute(
+  _ = try await context.execute(
     Mutation(
       kind: .update,
       entity: order,
@@ -244,7 +244,7 @@ private func context(
   await #expect(
     throws: TeaQLError.optimisticLock(entity: "CustomerOrder", id: .int(100), expectedVersion: 1)
   ) {
-    try await ctx.execute(
+    try await context.execute(
       Mutation(
         kind: .update,
         entity: order,
@@ -255,7 +255,7 @@ private func context(
       ))
   }
 
-  let deleted = try await ctx.execute(
+  let deleted = try await context.execute(
     Mutation(
       kind: .delete,
       entity: order,
@@ -268,18 +268,18 @@ private func context(
   activeQuery.filter = .greaterThanOrEqual("version", .int(1))
   activeQuery.comment = "Read active order"
   activeQuery.purpose = "Verify soft-deleted row is hidden"
-  #expect(try await ctx.execute(activeQuery).records.isEmpty)
+  #expect(try await context.execute(activeQuery).records.isEmpty)
   var deletedQuery = SelectQuery(entity: order)
   deletedQuery.filter = .lessThanOrEqual("version", .int(-1))
   deletedQuery.comment = "Read deleted order"
   deletedQuery.purpose = "Verify soft-deleted row is retained"
-  let deletedRows = try await ctx.execute(deletedQuery).records
+  let deletedRows = try await context.execute(deletedQuery).records
   #expect(deletedRows.count == 1)
   #expect(deletedRows[0]["version"] == .int(-3))
   await #expect(
     throws: TeaQLError.optimisticLock(entity: "CustomerOrder", id: .int(100), expectedVersion: 2)
   ) {
-    try await ctx.execute(
+    try await context.execute(
       Mutation(
         kind: .delete,
         entity: order,
@@ -317,7 +317,7 @@ private func context(
   transactionQuery.filter = .inList("id", [.int(300), .int(301)])
   transactionQuery.comment = "Read transaction records"
   transactionQuery.purpose = "Verify atomic batch persistence"
-  #expect(try await ctx.execute(transactionQuery).records.count == 2)
+  #expect(try await context.execute(transactionQuery).records.count == 2)
 
   await #expect(throws: (any Error).self) {
     try await service.transaction([
@@ -345,5 +345,5 @@ private func context(
   rollbackQuery.filter = .equal("id", .int(400))
   rollbackQuery.comment = "Read rolled-back record"
   rollbackQuery.purpose = "Verify failed batch rollback"
-  #expect(try await ctx.execute(rollbackQuery).records.isEmpty)
+  #expect(try await context.execute(rollbackQuery).records.isEmpty)
 }
