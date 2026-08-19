@@ -43,9 +43,12 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
         record(operation, outcome: "success", startedAt: startedAt)
         return result
       } catch {
-        span.setAttribute(key: "teaql.error.type", value: String(reflecting: type(of: error)))
+        let errorType = String(reflecting: type(of: error))
+        let category = runtimeErrorCategory(errorType)
+        span.setAttribute(key: "teaql.error.type", value: errorType)
+        span.setAttribute(key: "teaql.error.category", value: category)
         span.status = .error(description: "TeaQL operation failed")
-        record(operation, outcome: "failure", startedAt: startedAt)
+        record(operation, outcome: "failure", startedAt: startedAt, errorCategory: category)
         throw error
       }
     }
@@ -67,9 +70,12 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
         record(operation, outcome: "success", startedAt: startedAt)
         return result
       } catch {
-        span.setAttribute(key: "teaql.error.type", value: String(reflecting: type(of: error)))
+        let errorType = String(reflecting: type(of: error))
+        let category = runtimeErrorCategory(errorType)
+        span.setAttribute(key: "teaql.error.type", value: errorType)
+        span.setAttribute(key: "teaql.error.category", value: category)
         span.status = .error(description: "TeaQL operation failed")
-        record(operation, outcome: "failure", startedAt: startedAt)
+        record(operation, outcome: "failure", startedAt: startedAt, errorCategory: category)
         throw error
       }
     }
@@ -86,21 +92,23 @@ public final class OpenTelemetryRuntimeTelemetry: RuntimeTelemetry, @unchecked S
 
   private func record(
     _ operation: RuntimeOperation, outcome: String,
-    startedAt: ContinuousClock.Instant
+    startedAt: ContinuousClock.Instant, errorCategory: String? = nil
   ) {
     let elapsed = startedAt.duration(to: .now)
     let milliseconds = Double(elapsed.components.seconds) * 1_000
       + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000
     metrics.record(family: operation.family, outcome: outcome, milliseconds: milliseconds)
+    var logAttributes: [String: AttributeValue] = [
+      "teaql.operation.family": .string(operation.family),
+      "teaql.operation.name": .string(operation.name),
+      "teaql.operation.outcome": .string(outcome),
+      "teaql.operation.duration_ms": .double(milliseconds),
+    ]
+    if let errorCategory { logAttributes["teaql.error.category"] = .string(errorCategory) }
     logger?.logRecordBuilder()
       .setSeverity(.info)
       .setBody(.string("TeaQL runtime operation completed"))
-      .setAttributes([
-        "teaql.operation.family": .string(operation.family),
-        "teaql.operation.name": .string(operation.name),
-        "teaql.operation.outcome": .string(outcome),
-        "teaql.operation.duration_ms": .double(milliseconds),
-      ])
+      .setAttributes(logAttributes)
       .emit()
   }
 

@@ -2,6 +2,12 @@ import XCTest
 @testable import TeaQLCore
 
 final class RuntimeTelemetryTests: XCTestCase {
+  func testErrorCategoryUsesTypeName() {
+    XCTAssertEqual(runtimeErrorCategory("DatabaseTimeoutError"), "timeout")
+    XCTAssertEqual(runtimeErrorCategory("PermissionError"), "authorization")
+    XCTAssertEqual(runtimeErrorCategory("UnknownTeaQLError"), "internal")
+  }
+
   func testOperationDropsSensitiveAttributesAndNoopReturnsBodyValue() async throws {
     let operation = RuntimeOperation(
       family: "query", name: "School.list",

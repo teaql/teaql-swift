@@ -1,5 +1,18 @@
 import Foundation
 
+public func runtimeErrorCategory(_ errorType: String) -> String {
+  let type = errorType.lowercased()
+  let rules: [(String, [String])] = [
+    ("timeout", ["timeout", "deadline"]),
+    ("authorization", ["authentication", "authorization", "unauthorized", "forbidden", "permission"]),
+    ("validation", ["validation", "invalidargument", "valueerror", "parse", "format"]),
+    ("conflict", ["conflict", "optimistic", "version", "duplicate", "alreadyexists"]),
+    ("transport", ["transport", "network", "connection", "socket", "http", "ioerror"]),
+    ("provider", ["provider", "sql", "database", "jdbc"]),
+  ]
+  return rules.first { _, terms in terms.contains { type.contains($0) } }?.0 ?? "internal"
+}
+
 public enum RuntimeTelemetryValue: Sendable, Equatable {
   case string(String)
   case integer(Int64)
