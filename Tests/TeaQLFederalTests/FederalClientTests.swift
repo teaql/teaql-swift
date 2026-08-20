@@ -86,7 +86,12 @@ private struct FailingTransport: FederalTransport {
   #expect(request.headers["X-TeaQL-Test-Identity"] == "test-operator")
   let payload = try #require(try JSONSerialization.jsonObject(with: request.body) as? [String: Any])
   #expect(payload["entity"] as? String == "CustomerOrder")
-  #expect(payload["_limit"] as? Int == 10)
+  #expect(payload["limitValue"] as? Int == 10)
+  #expect(payload["filterCondition"] != nil)
+  #expect(payload["commentText"] as? String == "Federated Swift order query")
+  #expect(payload["purposeText"] as? String == "Render order browser")
+  #expect(payload["_limit"] == nil)
+  #expect(payload["_filters"] == nil)
   #expect(payload["tenant"] == nil)
   #expect(payload["permissions"] == nil)
   #expect(payload["hardLimit"] == nil)
@@ -164,7 +169,7 @@ private struct FailingTransport: FederalTransport {
   #expect(result.records == [["id": .int(7)]])
   let request = try #require(await transport.requests.first)
   let payload = try #require(try JSONSerialization.jsonObject(with: request.body) as? [String: Any])
-  #expect(payload["_limit"] as? Int == 1)
+  #expect(payload["limitValue"] as? Int == 1)
   #expect(payload["hardLimit"] == nil)
 }
 

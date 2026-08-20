@@ -103,6 +103,7 @@ public struct FederalMutation: Sendable {
   public let action: MutationKind
   public let payload: TeaQLRecord
   public let id: TeaQLValue?
+  public let expectedVersion: Int64?
   public let auditReason: String
 
   public init(
@@ -110,12 +111,14 @@ public struct FederalMutation: Sendable {
     action: MutationKind,
     payload: TeaQLRecord,
     id: TeaQLValue? = nil,
+    expectedVersion: Int64? = nil,
     auditReason: String
   ) {
     self.entity = entity
     self.action = action
     self.payload = payload
     self.id = id
+    self.expectedVersion = expectedVersion
     self.auditReason = auditReason
   }
 }
@@ -157,33 +160,37 @@ public struct TeaQLFederalClient: Sendable {
   public func execute(_ query: FederalQuery) async throws -> FederalQueryResponse {
     guard let comment = nonBlank(query.comment) else { throw FederalError.missingComment }
     guard let purpose = nonBlank(query.purpose) else { throw FederalError.missingPurpose }
-    if let limit = query.limit, limit < 0 {
-      throw TeaQLError.execution("Federation limit must not be negative")
+    if let limit = query.limit, limit < 1 {
+      throw TeaQLError.execution("Federation limit must be positive")
     }
     if let offset = query.offset, offset < 0 { throw TeaQLError.invalidOffset(offset) }
 
     var payload: [String: TeaQLValue] = [
       "entity": .string(query.entity),
-      "_filters": .array(try query.filters.map(encodeExpression)),
-      "_orderBy": .array(
+      "orderItems": .array(
         query.orderBy.map {
           .object([
-            "f": .string($0.field), "d": .string($0.direction == .ascending ? "asc" : "desc"),
+            "field": .string($0.field),
+            "direction": .string($0.direction == .ascending ? "Asc" : "Desc"),
           ])
         }),
       "selectItems": .array(query.select.map(TeaQLValue.string)),
-      "_groupBy": .array(query.groupBy.map(TeaQLValue.string)),
-      "_aggregates": .array(
+      "groupByItems": .array(query.groupBy.map(TeaQLValue.string)),
+      "aggregateItems": .array(
         query.aggregates.map {
           .object([
-            "func": .string($0.function), "field": .string($0.field), "retName": .string($0.alias),
+            "function": .string($0.function), "field": .string($0.field),
+            "alias": .string($0.alias),
           ])
         }),
-      "_comment": .string(comment),
-      "_purpose": .string(purpose),
+      "commentText": .string(comment),
+      "purposeText": .string(purpose),
     ]
-    if let limit = query.limit { payload["_limit"] = .int(Int64(limit)) }
-    if let offset = query.offset { payload["_offset"] = .int(Int64(offset)) }
+    let filters = try query.filters.map(encodeExpression)
+    if filters.count == 1 { payload["filterCondition"] = filters[0] }
+    else if !filters.isEmpty { payload["filterCondition"] = .object(["$and": .array(filters)]) }
+    if let limit = query.limit { payload["limitValue"] = .int(Int64(limit)) }
+    if let offset = query.offset { payload["offsetValue"] = .int(Int64(offset)) }
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "tfp", name: "client.query",
@@ -203,6 +210,7 @@ public struct TeaQLFederalClient: Sendable {
       "comment": .string(reason),
     ]
     if let id = mutation.id { payload["id"] = id }
+    if let version = mutation.expectedVersion { payload["expectedVersion"] = .int(version) }
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "tfp", name: "client.mutation",

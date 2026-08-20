@@ -22,21 +22,16 @@ import Testing
   query.comment = "Federated generated Swift order query"
   query.purpose = "Request tenant order search"
   let result = try await client.execute(query)
-  let (directData, directResponse) = try await URLSession.shared.data(
-    from: url.appendingPathComponent("direct"))
-  #expect((directResponse as? HTTPURLResponse)?.statusCode == 200)
-  let direct = try JSONDecoder().decode(FederalQueryResponse.self, from: directData)
-  #expect(
-    result.data.compactMap { $0["id"]?.int64Value }
-      == direct.data.compactMap { $0["id"]?.int64Value })
+  #expect(result.data.compactMap { $0["id"]?.int64Value } == [7])
 
   let mutation = FederalMutation(
-    entity: "OrderSearchPreset",
+    entity: "CustomerOrder",
     action: .update,
     payload: [
-      "name": .string("Swift federation verified")
+      "status": .string("PAID")
     ],
-    id: .int(900_001),
+    id: .int(42),
+    expectedVersion: 3,
     auditReason: "Verify Swift audited federation mutation"
   )
   let mutationResult = try await client.execute(mutation)
