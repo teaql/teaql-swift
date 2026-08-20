@@ -26,7 +26,7 @@ let package = Package(
       name: "CSQLite",
       providers: [.apt(["libsqlite3-dev"]), .brew(["sqlite3"])]
     ),
-    .target(name: "TeaQLCore"),
+    .target(name: "TeaQLCore", resources: [.process("Resources")]),
     .target(name: "TeaQLSQL", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLSQLite", dependencies: ["TeaQLCore", "TeaQLSQL", "CSQLite"]),
     .target(name: "TeaQLFederal", dependencies: ["TeaQLCore"]),

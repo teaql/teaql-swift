@@ -243,6 +243,8 @@ public struct UserContext: Sendable {
   public let auditSink: (any AuditSink)?
   public let telemetrySink: (any RuntimeTelemetrySink)?
   public let runtimeTelemetry: any RuntimeTelemetry
+  public private(set) var locale: TeaQLLocale
+  public private(set) var i18nCatalog: I18nCatalog
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
 
@@ -256,6 +258,8 @@ public struct UserContext: Sendable {
     auditSink: (any AuditSink)? = nil,
     telemetrySink: (any RuntimeTelemetrySink)? = nil,
     runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry(),
+    locale: TeaQLLocale = .en,
+    i18nCatalog: I18nCatalog = .builtin,
     entityInitializers: [EntityInitializer] = [],
     entityCreationObserver: EntityCreationObserver? = nil
   ) {
@@ -268,9 +272,16 @@ public struct UserContext: Sendable {
     self.auditSink = auditSink
     self.telemetrySink = telemetrySink
     self.runtimeTelemetry = runtimeTelemetry
+    self.locale = locale
+    self.i18nCatalog = i18nCatalog
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
   }
+
+  public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
+  public mutating func setLanguageCode(_ code: String) throws { try setLocaleCode(code) }
+  public mutating func installI18nCatalog(_ catalog: I18nCatalog) { i18nCatalog = catalog }
+  public func translateCheckResults(_ results: [CheckResult]) -> [CheckResult] { results.map { i18nCatalog.translate($0, locale: locale) } }
 
   /// Applies trusted local defaults without exposing them as generated input.
   public func initializeEntity<Entity: TeaQLEntity>(
