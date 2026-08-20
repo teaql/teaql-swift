@@ -156,12 +156,12 @@ public struct QueryResult: Sendable {
 }
 
 public struct TeaQLPage<Entity: Sendable>: Sendable {
-  public let items: [Entity]
+  public let items: SmartList<Entity>
   public let total: Int
   public let offset: Int
   public let limit: Int
 
-  public init(items: [Entity], total: Int, offset: Int, limit: Int) {
+  public init(items: SmartList<Entity>, total: Int, offset: Int, limit: Int) {
     self.items = items
     self.total = total
     self.offset = offset
