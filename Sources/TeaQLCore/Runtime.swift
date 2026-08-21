@@ -16,6 +16,17 @@ public extension QueryExecutor {
 
 public enum MutationKind: String, Sendable, Codable { case create, update, delete, recover }
 
+public protocol EntityChecker: Sendable {
+  func checkAndFix(
+    context: UserContext, mutation: inout Mutation, now: Date
+  ) -> [CheckResult]
+}
+
+public struct CheckException: Error, Sendable {
+  public let violations: [CheckResult]
+  public init(_ violations: [CheckResult]) { self.violations = violations }
+}
+
 public enum SQLExecutionOperation: String, Sendable, Codable {
   case select, insert, update, delete, recover
 }
@@ -398,6 +409,11 @@ public struct UserContext: Sendable {
   private func executeMutation(_ mutation: Mutation) async throws -> MutationResult {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
+    if let checker = runtime.checker(named: validated.entity.name) {
+      let violations = translateCheckResults(
+        checker.checkAndFix(context: self, mutation: &validated, now: Date()))
+      if !violations.isEmpty { throw CheckException(violations) }
+    }
     let result = try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(mutationExecutor.providerKind).mutation",

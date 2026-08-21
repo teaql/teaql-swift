@@ -4,17 +4,23 @@ import Foundation
 public struct RuntimeModule: Sendable {
   public let name: String
   public let entities: [EntityDescriptor]
+  public let checkers: [String: any EntityChecker]
 
-  public init(name: String, entities: [EntityDescriptor]) {
+  public init(
+    name: String, entities: [EntityDescriptor],
+    checkers: [String: any EntityChecker] = [:]
+  ) {
     precondition(!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     self.name = name
     self.entities = entities
+    self.checkers = checkers
   }
 }
 
 /// Application-owned runtime assembly. Installing metadata never changes a database schema.
 public struct TeaQLRuntime: Sendable {
   private var descriptorsByName: [String: EntityDescriptor] = [:]
+  private var checkersByName: [String: any EntityChecker] = [:]
 
   public init() {}
 
@@ -26,6 +32,7 @@ public struct TeaQLRuntime: Sendable {
       }
       descriptorsByName[descriptor.name] = descriptor
     }
+    for (name, checker) in module.checkers { checkersByName[name] = checker }
   }
 
   public var entities: [EntityDescriptor] {
@@ -35,4 +42,6 @@ public struct TeaQLRuntime: Sendable {
   public func entity(named name: String) -> EntityDescriptor? {
     descriptorsByName[name]
   }
+
+  public func checker(named name: String) -> (any EntityChecker)? { checkersByName[name] }
 }
