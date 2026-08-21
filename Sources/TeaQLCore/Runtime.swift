@@ -176,6 +176,11 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   public let entity: Entity
   public let reason: String
 
+  public init(entity: Entity, reason: String) {
+    self.entity = entity
+    self.reason = reason
+  }
+
   public func save(_ context: UserContext) async throws -> Entity {
     var values = entity.toMutationRecord()
     let rooted = entity as? any TeaQLMutationRootedEntity
