@@ -22,4 +22,12 @@ final class EntityRootTests: XCTestCase {
     XCTAssertFalse(root.isNew(line))
     XCTAssertFalse(root.isDeleted(line))
   }
+
+  func testMergesRekeysAndClearsOneEntity() {
+    let child = EntityRoot(); let temporary = EntityKey(entity: "Line", id: .int(-1)); let persisted = EntityKey(entity: "Line", id: .int(42))
+    child.markAsNew(temporary); child.set(temporary, field: "quantity", value: .int(2))
+    let root = EntityRoot(); root.merge(from: child); root.rekey(temporary, to: persisted)
+    XCTAssertTrue(root.isNew(persisted)); XCTAssertEqual(root.change(persisted)["quantity"], .int(2))
+    root.clearEntity(persisted); XCTAssertFalse(root.isNew(persisted)); XCTAssertTrue(root.change(persisted).isEmpty)
+  }
 }

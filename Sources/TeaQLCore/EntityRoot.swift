@@ -31,6 +31,36 @@ public final class EntityRoot: @unchecked Sendable {
     return changes
   }
 
+  public func change(_ key: EntityKey) -> TeaQLRecord {
+    lock.lock(); defer { lock.unlock() }; return changes[key] ?? [:]
+  }
+
+  public func merge(from other: EntityRoot) {
+    if other === self { return }
+    let state = other.fullSnapshot()
+    lock.lock(); defer { lock.unlock() }
+    for (key, values) in state.changes { for (field, value) in values { changes[key, default: [:]][field] = value } }
+    for (key, version) in state.versions { originalVersions[key] = version }
+    newKeys.formUnion(state.newKeys); deletedKeys.formUnion(state.deletedKeys)
+  }
+
+  private func fullSnapshot() -> (changes: [EntityKey: TeaQLRecord], versions: [EntityKey: Int64], newKeys: Set<EntityKey>, deletedKeys: Set<EntityKey>) {
+    lock.lock(); defer { lock.unlock() }; return (changes, originalVersions, newKeys, deletedKeys)
+  }
+
+  public func rekey(_ oldKey: EntityKey, to newKey: EntityKey) {
+    guard oldKey != newKey else { return }
+    lock.lock(); defer { lock.unlock() }
+    if let values = changes.removeValue(forKey: oldKey) { for (field, value) in values { changes[newKey, default: [:]][field] = value } }
+    if let version = originalVersions.removeValue(forKey: oldKey) { originalVersions[newKey] = version }
+    if newKeys.remove(oldKey) != nil { newKeys.insert(newKey) }
+    if deletedKeys.remove(oldKey) != nil { deletedKeys.insert(newKey) }
+  }
+
+  public func clearEntity(_ key: EntityKey) {
+    lock.lock(); defer { lock.unlock() }; changes.removeValue(forKey: key); newKeys.remove(key); deletedKeys.remove(key)
+  }
+
   public func setOriginalVersion(_ key: EntityKey, version: Int64) {
     lock.lock(); defer { lock.unlock() }; originalVersions[key] = version
   }
