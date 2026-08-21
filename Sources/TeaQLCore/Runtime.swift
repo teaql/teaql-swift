@@ -204,7 +204,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         auditReason: reason
       )
     }
-    let saved = try persistedEntity(from: await context.execute(mutation))
+    let saved = try persistedEntity(from: await context.execute(mutation, ledgerKey: rooted?.teaqlEntityKey))
     if let rooted {
       let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
       context.entityRoot.rekey(rooted.teaqlEntityKey, to: savedKey)
@@ -221,14 +221,18 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     guard entity.id != 0 else {
       throw TeaQLError.execution("Delete requires a loaded entity ID")
     }
-    return try persistedEntity(from: await context.execute(
+    let rooted = entity as? any TeaQLMutationRootedEntity
+    if let rooted { context.entityRoot.merge(from: rooted.teaqlEntityRoot); context.entityRoot.markAsDeleted(rooted.teaqlEntityKey) }
+    let saved = try persistedEntity(from: await context.execute(
       Mutation(
         kind: .delete,
         entity: Entity.descriptor,
         id: .int(entity.id),
         expectedVersion: entity.version,
         auditReason: reason
-      )))
+      ), ledgerKey: rooted?.teaqlEntityKey))
+    if let rooted { context.entityRoot.clearEntity(rooted.teaqlEntityKey) }
+    return saved
   }
 
   private func persistedEntity(from result: MutationResult) throws -> Entity {
@@ -438,6 +442,10 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {
+    try await execute(mutation, ledgerKey: nil)
+  }
+
+  public func execute(_ mutation: Mutation, ledgerKey: EntityKey?) async throws -> MutationResult {
     try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "mutation", name: "\(mutation.entity.name).\(mutation.kind.rawValue)",
@@ -447,16 +455,19 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await executeMutation(mutation)
+      try await executeMutation(mutation, ledgerKey: ledgerKey)
     }
   }
 
-  private func executeMutation(_ mutation: Mutation) async throws -> MutationResult {
+  private func executeMutation(_ mutation: Mutation, ledgerKey: EntityKey?) async throws -> MutationResult {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
     if let checker = runtime.checker(named: validated.entity.name) {
       let violations = translateCheckResults(
         try checker.checkAndFix(context: self, mutation: &validated, now: Date()))
+      if let ledgerKey {
+        for (field, value) in validated.values { entityRoot.set(ledgerKey, field: field, value: value) }
+      }
       if !violations.isEmpty { throw CheckException(violations) }
     }
     let result = try await runtimeTelemetry.withOperation(
