@@ -16,10 +16,27 @@ public extension QueryExecutor {
 
 public enum MutationKind: String, Sendable, Codable { case create, update, delete, recover }
 
+public struct ContextEntityRef: Sendable, Hashable, Codable {
+  public let entity: String
+  public let id: TeaQLValue
+  public init(entity: String, id: TeaQLValue) {
+    precondition(!entity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    self.entity = entity
+    self.id = id
+  }
+}
+
+public struct ContextRootError: Error, Sendable {
+  public enum Reason: String, Sendable { case missing, typeMismatch }
+  public let reason: Reason
+  public let expectedType: String
+  public let activeRoot: ContextEntityRef?
+}
+
 public protocol EntityChecker: Sendable {
   func checkAndFix(
     context: UserContext, mutation: inout Mutation, now: Date
-  ) -> [CheckResult]
+  ) throws -> [CheckResult]
 }
 
 public struct CheckException: Error, Sendable {
@@ -248,6 +265,7 @@ public struct UserContext: Sendable {
   /// Application-owned tenant identity. It is never populated from generated
   /// query or federation payloads.
   public let trustedTenant: String?
+  public let activeRoot: ContextEntityRef?
   public let queryExecutor: any QueryExecutor
   public let mutationExecutor: any MutationExecutor
   public let requestPolicy: RequestPolicy
@@ -263,6 +281,7 @@ public struct UserContext: Sendable {
     runtime: TeaQLRuntime = TeaQLRuntime(),
     actor: String? = nil,
     trustedTenant: String? = nil,
+    activeRoot: ContextEntityRef? = nil,
     queryExecutor: any QueryExecutor,
     mutationExecutor: any MutationExecutor,
     requestPolicy: RequestPolicy,
@@ -277,6 +296,7 @@ public struct UserContext: Sendable {
     self.runtime = runtime
     self.actor = actor
     self.trustedTenant = trustedTenant
+    self.activeRoot = activeRoot
     self.queryExecutor = queryExecutor
     self.mutationExecutor = mutationExecutor
     self.requestPolicy = requestPolicy
@@ -287,6 +307,16 @@ public struct UserContext: Sendable {
     self.i18nCatalog = i18nCatalog
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
+  }
+
+  public func requireActiveRoot(_ expectedType: String) throws -> ContextEntityRef {
+    guard let activeRoot else {
+      throw ContextRootError(reason: .missing, expectedType: expectedType, activeRoot: nil)
+    }
+    guard activeRoot.entity == expectedType else {
+      throw ContextRootError(reason: .typeMismatch, expectedType: expectedType, activeRoot: activeRoot)
+    }
+    return activeRoot
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
@@ -411,7 +441,7 @@ public struct UserContext: Sendable {
     validated.actor = actor
     if let checker = runtime.checker(named: validated.entity.name) {
       let violations = translateCheckResults(
-        checker.checkAndFix(context: self, mutation: &validated, now: Date()))
+        try checker.checkAndFix(context: self, mutation: &validated, now: Date()))
       if !violations.isEmpty { throw CheckException(violations) }
     }
     let result = try await runtimeTelemetry.withOperation(

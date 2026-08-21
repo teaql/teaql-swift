@@ -51,6 +51,18 @@ final class RuntimeModuleTests: XCTestCase {
     let mutationCalls = await executor.mutationCalls
     XCTAssertEqual(mutationCalls, 0)
   }
+
+  func testActiveRootIsTypedAndFailsClosed() throws {
+    let executor = CountingExecutor()
+    let missing = UserContext(
+      queryExecutor: executor, mutationExecutor: executor, requestPolicy: RequestPolicy { $0 })
+    XCTAssertThrowsError(try missing.requireActiveRoot("Tenant"))
+    let context = UserContext(
+      activeRoot: ContextEntityRef(entity: "Tenant", id: .int(42)),
+      queryExecutor: executor, mutationExecutor: executor, requestPolicy: RequestPolicy { $0 })
+    XCTAssertEqual(try context.requireActiveRoot("Tenant").id, .int(42))
+    XCTAssertThrowsError(try context.requireActiveRoot("Store"))
+  }
 }
 
 private final class RequiredNameChecker: EntityChecker, @unchecked Sendable {
