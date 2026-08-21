@@ -178,6 +178,11 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
 
   public func save(_ context: UserContext) async throws -> Entity {
     var values = entity.toMutationRecord()
+    let rooted = entity as? any TeaQLMutationRootedEntity
+    if let rooted {
+      context.entityRoot.merge(from: rooted.teaqlEntityRoot)
+      if entity.id != 0 { values = context.entityRoot.change(rooted.teaqlEntityKey) }
+    }
     let mutation: Mutation
     if entity.id == 0 {
       values.removeValue(forKey: Entity.descriptor.idProperty?.name ?? "id")
@@ -199,7 +204,14 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         auditReason: reason
       )
     }
-    return try persistedEntity(from: await context.execute(mutation))
+    let saved = try persistedEntity(from: await context.execute(mutation))
+    if let rooted {
+      let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
+      context.entityRoot.rekey(rooted.teaqlEntityKey, to: savedKey)
+      context.entityRoot.clearEntity(savedKey)
+      context.entityRoot.setOriginalVersion(savedKey, version: saved.version)
+    }
+    return saved
   }
 
   /// Soft-deletes a loaded entity using its original optimistic version.

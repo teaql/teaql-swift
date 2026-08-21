@@ -70,6 +70,7 @@ public final class EntityRoot: @unchecked Sendable {
   }
 
   public func markAsNew(_ key: EntityKey) { lock.lock(); defer { lock.unlock() }; newKeys.insert(key) }
+  public func markAsPersisted(_ key: EntityKey) { lock.lock(); defer { lock.unlock() }; newKeys.remove(key); deletedKeys.remove(key) }
   public func isNew(_ key: EntityKey) -> Bool { lock.lock(); defer { lock.unlock() }; return newKeys.contains(key) }
   public func markAsDeleted(_ key: EntityKey) {
     lock.lock(); defer { lock.unlock() }; changes.removeValue(forKey: key); deletedKeys.insert(key)

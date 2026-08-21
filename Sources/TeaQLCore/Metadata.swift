@@ -57,6 +57,11 @@ public protocol TeaQLEntity: Sendable, Codable {
   func toMutationRecord() -> TeaQLRecord
 }
 
+public protocol TeaQLMutationRootedEntity: TeaQLEntity {
+  var teaqlEntityRoot: EntityRoot { get }
+  var teaqlEntityKey: EntityKey { get }
+}
+
 public extension TeaQLEntity {
   /// Compatibility default for entities that do not track loaded fields.
   func toMutationRecord() -> TeaQLRecord { toRecord() }
