@@ -54,12 +54,67 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
           occurred_at TEXT NOT NULL
       )
       """)
+    try executeSQL(
+      """
+      CREATE TABLE IF NOT EXISTS teaql_id_space (
+          type_name TEXT NOT NULL PRIMARY KEY,
+          current_level INTEGER NOT NULL
+      )
+      """)
   }
 
   /// Explicitly creates/checks schema for a generated module.
   /// Installing the module into `TeaQLRuntime` never calls this operation.
   public func ensureSchema(_ module: RuntimeModule) throws {
     try ensureSchema(module.entities)
+  }
+
+  /// Advances an ID space after model-defined roots or constants are seeded.
+  /// The floor is monotonic and is never allowed to move backwards.
+  public func ensureIDFloor(typeName: String, floor: Int64) throws {
+    guard floor >= 0 else {
+      throw TeaQLError.execution("Invalid ID space floor \(floor) for \(typeName)")
+    }
+    try executeSQL("BEGIN IMMEDIATE")
+    do {
+      try ensureIDFloorInCurrentTransaction(typeName: typeName, floor: floor)
+      try executeSQL("COMMIT")
+    } catch {
+      try? executeSQL("ROLLBACK")
+      throw error
+    }
+  }
+
+  private func ensureIDFloorInCurrentTransaction(typeName: String, floor: Int64) throws {
+    try executeSQL(
+      "CREATE TABLE IF NOT EXISTS teaql_id_space (type_name TEXT NOT NULL PRIMARY KEY, current_level INTEGER NOT NULL)")
+    for attempt in 1...100 {
+      if let current = try scalarInt64(
+        "SELECT current_level FROM teaql_id_space WHERE type_name = ?",
+        parameters: [.string(typeName)])
+      {
+        if current >= floor { return }
+        try run(
+          "UPDATE teaql_id_space SET current_level = ? WHERE type_name = ? AND current_level = ?",
+          parameters: [.int(floor), .string(typeName), .int(current)])
+        if sqlite3_changes(database) == 1 { return }
+      } else {
+        do {
+          try run(
+            "INSERT INTO teaql_id_space(type_name, current_level) VALUES (?, ?)",
+            parameters: [.string(typeName), .int(floor)])
+          if sqlite3_changes(database) == 1 { return }
+        } catch {
+          if try scalarInt64(
+            "SELECT current_level FROM teaql_id_space WHERE type_name = ?",
+            parameters: [.string(typeName)]) == nil { throw error }
+        }
+      }
+      if attempt == 100 {
+        throw TeaQLError.execution(
+          "Unable to synchronize ID space floor for \(typeName) after 100 optimistic-lock attempts")
+      }
+    }
   }
 
   public func transaction(_ mutations: [Mutation]) async throws -> [MutationResult] {
@@ -162,6 +217,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
 
   private func insert(_ mutation: Mutation) throws -> MutationResult {
     var insertValues = mutation.values
+    if let id = mutation.entity.idProperty {
+      if insertValues[id.name] == nil {
+        insertValues[id.name] = .int(try allocateID(typeName: mutation.entity.name))
+      } else if case .int(let explicitID) = insertValues[id.name] {
+        try ensureIDFloorInCurrentTransaction(typeName: mutation.entity.name, floor: explicitID)
+      }
+    }
     if let version = mutation.entity.versionProperty {
       insertValues[version.name] = .int(1)
     }
@@ -177,7 +239,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     let affected = Int(sqlite3_changes(database))
     var generated: TeaQLRecord = [:]
     if let id = mutation.entity.idProperty, mutation.values[id.name] == nil {
-      generated[id.name] = .int(sqlite3_last_insert_rowid(database))
+      generated[id.name] = insertValues[id.name]
     }
     return MutationResult(
       affectedRows: affected,
@@ -195,6 +257,45 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: affected,
         resultSummary: "Affected \(affected) rows"))
+  }
+
+  private func allocateID(typeName: String) throws -> Int64 {
+    for attempt in 1...100 {
+      if let current = try scalarInt64(
+        "SELECT current_level FROM teaql_id_space WHERE type_name = ?",
+        parameters: [.string(typeName)])
+      {
+        guard current < Int64.max else {
+          throw TeaQLError.execution("ID space overflow for \(typeName)")
+        }
+        let next = current + 1
+        try run(
+          "UPDATE teaql_id_space SET current_level = ? WHERE type_name = ? AND current_level = ?",
+          parameters: [.int(next), .string(typeName), .int(current)])
+        let changed = Int(sqlite3_changes(database))
+        if changed == 1 { return next }
+        if changed != 0 {
+          throw TeaQLError.execution(
+            "ID space update for \(typeName) changed \(changed) rows on attempt \(attempt)")
+        }
+        continue
+      }
+      do {
+        try run(
+          "INSERT INTO teaql_id_space(type_name, current_level) VALUES (?, 1)",
+          parameters: [.string(typeName)])
+        if sqlite3_changes(database) == 1 { return 1 }
+      } catch {
+        if try scalarInt64(
+          "SELECT current_level FROM teaql_id_space WHERE type_name = ?",
+          parameters: [.string(typeName)]) == nil
+        {
+          throw error
+        }
+      }
+    }
+    throw TeaQLError.execution(
+      "Unable to allocate ID for \(typeName) after 100 optimistic-lock attempts")
   }
 
   private func update(_ mutation: Mutation) throws -> MutationResult {
@@ -352,6 +453,20 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     defer { sqlite3_finalize(statement) }
     try bind(parameters, to: statement)
     guard sqlite3_step(statement) == SQLITE_DONE else { throw currentError(sql: sql) }
+  }
+
+  private func scalarInt64(_ sql: String, parameters: [TeaQLValue]) throws -> Int64? {
+    var statement: OpaquePointer?
+    guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
+      let statement
+    else { throw currentError(sql: sql) }
+    defer { sqlite3_finalize(statement) }
+    try bind(parameters, to: statement)
+    switch sqlite3_step(statement) {
+    case SQLITE_ROW: return sqlite3_column_int64(statement, 0)
+    case SQLITE_DONE: return nil
+    default: throw currentError(sql: sql)
+    }
   }
 
   private func bind(_ values: [TeaQLValue], to statement: OpaquePointer) throws {

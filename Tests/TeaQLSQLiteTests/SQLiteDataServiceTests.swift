@@ -61,6 +61,50 @@ private func context(
   )
 }
 
+@Test func sqliteIDSpaceIsSharedAcrossRuntimeInstances() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-id-space-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let first = try SQLiteDataService(path: path)
+  let second = try SQLiteDataService(path: path)
+  try await first.ensureSchema([SavedWidget.descriptor])
+
+  let initial = try await first.execute(Mutation(
+    kind: .create, entity: SavedWidget.descriptor,
+    values: ["name": .string("first")], auditReason: "allocate first ID"))
+  let continued = try await second.execute(Mutation(
+    kind: .create, entity: SavedWidget.descriptor,
+    values: ["name": .string("second")], auditReason: "allocate next ID"))
+  #expect(initial.generatedValues["id"] == .int(1))
+  #expect(continued.generatedValues["id"] == .int(2))
+  try await first.ensureIDFloor(typeName: "SeededWidget", floor: 1001)
+  let seededDescriptor = EntityDescriptor(
+    name: "SeededWidget", table: "seeded_widget",
+    properties: SavedWidget.descriptor.properties)
+  try await first.ensureSchema([seededDescriptor])
+  let seeded = try await second.execute(Mutation(
+    kind: .create, entity: seededDescriptor,
+    values: ["name": .string("after seed")], auditReason: "verify bootstrap floor"))
+  #expect(seeded.generatedValues["id"] == .int(1002))
+
+  let ids = try await withThrowingTaskGroup(of: Int64.self) { group in
+    for index in 0..<20 {
+      let service = index.isMultiple(of: 2) ? first : second
+      group.addTask {
+        let result = try await service.execute(Mutation(
+          kind: .create, entity: SavedWidget.descriptor,
+          values: ["name": .string("widget-\(index)")],
+          auditReason: "verify concurrent ID allocation"))
+        return result.generatedValues["id"]?.int64Value ?? -1
+      }
+    }
+    var values: [Int64] = []
+    for try await value in group { values.append(value) }
+    return values.sorted()
+  }
+  #expect(ids == Array(3...22))
+}
+
 @Test func auditedLifecycleReturnsAuthoritativeTypedEntity() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-save-result-\(UUID().uuidString).db").path
