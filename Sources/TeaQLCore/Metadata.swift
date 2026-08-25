@@ -6,6 +6,7 @@ public enum PropertyType: String, Sendable, Codable {
 
 public struct PropertyDescriptor: Sendable, Hashable, Codable {
   public let name: String
+  public let modelName: String?
   public let column: String
   public let type: PropertyType
   public let nullable: Bool
@@ -14,6 +15,7 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
 
   public init(
     name: String,
+    modelName: String? = nil,
     column: String? = nil,
     type: PropertyType,
     nullable: Bool = false,
@@ -21,6 +23,7 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     isVersion: Bool = false
   ) {
     self.name = name
+    self.modelName = modelName
     self.column = column ?? name
     self.type = type
     self.nullable = nullable
@@ -43,7 +46,7 @@ public struct EntityDescriptor: Sendable, Hashable, Codable {
   public var idProperty: PropertyDescriptor? { properties.first(where: \.isID) }
   public var versionProperty: PropertyDescriptor? { properties.first(where: \.isVersion) }
   public func property(named name: String) -> PropertyDescriptor? {
-    properties.first { $0.name == name }
+    properties.first { $0.name == name || $0.modelName == name || $0.column == name }
   }
 }
 

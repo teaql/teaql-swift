@@ -44,7 +44,7 @@ final class RuntimeModuleTests: XCTestCase {
         _ = try await context.execute(mutation)
         XCTFail("invalid mutation must fail")
       } catch let error as CheckException {
-        XCTAssertEqual(error.violations.first?.location, "name")
+        XCTAssertEqual(error.violations.first?.location, .property("name"))
       }
     }
     XCTAssertEqual(checker.calls, 2)
@@ -70,7 +70,7 @@ private final class RequiredNameChecker: EntityChecker, @unchecked Sendable {
   func checkAndFix(context: UserContext, mutation: inout Mutation, now: Date) -> [CheckResult] {
     calls += 1
     return mutation.values["name"] == nil
-      ? [CheckResult(ruleID: "required", location: "name")] : []
+      ? [CheckResult(ruleID: "required", location: .property("name"))] : []
   }
 }
 
