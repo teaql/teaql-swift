@@ -36,15 +36,16 @@ enum OrderManagementApp {
 
     if existing.isEmpty {
       var order = CustomerOrder()
-      order.orderNumber = "SWIFT-ORDER-001"
-      order.orderDate = Date()
-      order.totalAmount = Decimal(string: "129.95")!
-      order.status = 1
-      order.customer = 1
-      order.commercePlatform = 1
-      order.createTime = Date()
-      order.updateTime = Date()
-      order.version = 1
+      order.updateId(2001)
+      order.updateOrderNumber("SWIFT-ORDER-001")
+      order.updateOrderDate(Date())
+      order.updateTotalAmount(Decimal(string: "129.95")!)
+      order.updateStatus(1)
+      order.updateCustomer(1)
+      order.updateCommercePlatform(1)
+      order.updateCreateTime(Date())
+      order.updateUpdateTime(Date())
+      order.updateVersion(0)
       _ = try await order.auditAs("Create the Swift quick-start order").save(context)
       print("TeaQL seed: created SWIFT-ORDER-001")
     }

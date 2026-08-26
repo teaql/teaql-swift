@@ -1,0 +1,15 @@
+{
+  "originHash" : "090ad93db2e41f1aff25c624d0ef51bc088a604e4d1120f65dddbca068809ca5",
+  "pins" : [
+    {
+      "identity" : "teaql-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/teaql/teaql-swift.git",
+      "state" : {
+        "revision" : "4cbf489d19fb927713c1002b657d211b58f604ac",
+        "version" : "0.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}
