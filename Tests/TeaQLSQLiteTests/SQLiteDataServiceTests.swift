@@ -15,6 +15,34 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+@Test func mutationAcceptsCanonicalModelKeysForCreateAndUpdate() async throws {
+  let descriptor = EntityDescriptor(
+    name: "School", table: "school_data",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int),
+      PropertyDescriptor(name: "studentCapacity", modelName: "student_capacity", column: "student_capacity", type: .string),
+      PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-model-keys-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await service.ensureSchema([descriptor])
+  let created = try await service.execute(Mutation(
+    kind: .create, entity: descriptor,
+    values: ["school_type": .int(1001), "student_capacity": .string("800")],
+    auditReason: "create using KSML keys"))
+  let id = created.persistedRecord?["id"] ?? .null
+  #expect(created.persistedRecord?["schoolType"] == .int(1001))
+  #expect(created.persistedRecord?["studentCapacity"] == .string("800"))
+  let updated = try await service.execute(Mutation(
+    kind: .update, entity: descriptor, id: id,
+    values: ["student_capacity": .string("900")], expectedVersion: 1,
+    auditReason: "update using KSML keys"))
+  #expect(updated.persistedRecord?["studentCapacity"] == .string("900"))
+}
+
 private struct SavedWidget: TeaQLEntity {
   static let descriptor = EntityDescriptor(
     name: "SavedWidget", table: "saved_widget",

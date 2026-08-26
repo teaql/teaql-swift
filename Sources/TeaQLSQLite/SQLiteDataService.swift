@@ -266,7 +266,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
   }
 
   private func insert(_ mutation: Mutation) throws -> MutationResult {
-    var insertValues = mutation.values
+    var insertValues = try normalizedValues(mutation.values, for: mutation.entity)
     if let id = mutation.entity.idProperty {
       if insertValues[id.name] == nil {
         insertValues[id.name] = .int(try allocateID(typeName: mutation.entity.name))
@@ -353,11 +353,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
       throw TeaQLError.execution("Update requires entity ID metadata and an ID value")
     }
     let versionProperty = mutation.entity.versionProperty
-    let properties = try mutation.values.keys.sorted()
+    let normalized = try normalizedValues(mutation.values, for: mutation.entity)
+    let properties = try normalized.keys.sorted()
       .filter { $0 != idProperty.name && $0 != versionProperty?.name }
       .map { try requireProperty($0, mutation.entity) }
     var assignments = properties.map { "\(quote($0.column)) = ?" }
-    var values = properties.map { mutation.values[$0.name] ?? .null }
+    var values = properties.map { normalized[$0.name] ?? .null }
     var whereSQL = "\(quote(idProperty.column)) = ?"
     values.append(id)
     if let versionProperty {
@@ -588,6 +589,21 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
   private func currentError(sql: String?) -> SQLiteError {
     .sqlite(
       code: sqlite3_errcode(database), message: String(cString: sqlite3_errmsg(database)), sql: sql)
+  }
+
+  private func normalizedValues(
+    _ values: TeaQLRecord, for entity: EntityDescriptor
+  ) throws -> TeaQLRecord {
+    var normalized: TeaQLRecord = [:]
+    for (inputName, value) in values {
+      let property = try requireProperty(inputName, entity)
+      if let existing = normalized[property.name], existing != value {
+        throw TeaQLError.execution(
+          "Conflicting mutation values for \(entity.name).\(property.name)")
+      }
+      normalized[property.name] = value
+    }
+    return normalized
   }
 
   private func requireProperty(_ name: String, _ entity: EntityDescriptor) throws
