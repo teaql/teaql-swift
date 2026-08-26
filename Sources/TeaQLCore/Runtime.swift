@@ -189,8 +189,10 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
       if entity.id != 0 { values = context.entityRoot.change(rooted.teaqlEntityKey) }
     }
     let mutation: Mutation
-    if entity.id == 0 {
-      values.removeValue(forKey: Entity.descriptor.idProperty?.name ?? "id")
+    if entity.version == 0 {
+      let idName = Entity.descriptor.idProperty?.name ?? "id"
+      if entity.id == 0 { values.removeValue(forKey: idName) }
+      else { values[idName] = .int(entity.id) }
       mutation = Mutation(
         kind: .create,
         entity: Entity.descriptor,
@@ -198,6 +200,9 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         auditReason: reason
       )
     } else {
+      guard entity.id != 0 else {
+        throw TeaQLError.execution("Persisted \(Entity.descriptor.name) must have a non-zero id")
+      }
       values.removeValue(forKey: Entity.descriptor.idProperty?.name ?? "id")
       values.removeValue(forKey: Entity.descriptor.versionProperty?.name ?? "version")
       mutation = Mutation(

@@ -40,6 +40,19 @@ private struct SavedWidget: TeaQLEntity {
   }
 }
 
+@Test func auditedCreatePreservesExplicitIDWhenVersionIsNew() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-explicit-id-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await service.ensureSchema([SavedWidget.descriptor])
+  let saved = try await AuditedEntity(
+    entity: SavedWidget(id: 1001, name: "Primary", version: 0),
+    reason: "seed model-defined constant").save(context(service))
+  #expect(saved.id == 1001)
+  #expect(saved.version == 1)
+}
+
 @Test func schoolBootstrapIsIdempotentPreservesRootAndReconcilesConstants() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-school-bootstrap-\(UUID().uuidString).db").path
