@@ -40,7 +40,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
     if !existed { print("TeaQL SQLite: database not found; created \(path)") }
   }
 
-  public func ensureSchema(_ entities: [EntityDescriptor]) throws {
+  private func ensureEntitySchemas(_ entities: [EntityDescriptor]) throws {
     for entity in entities { try executeSQL(compiler.createTable(entity)) }
     try executeSQL(
       """
@@ -66,7 +66,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
   /// Explicitly creates/checks schema for a generated module.
   /// Installing the module into `TeaQLRuntime` never calls this operation.
   public func ensureSchema(_ module: RuntimeModule) throws {
-    try ensureSchema(module.entities)
+    try ensureEntitySchemas(module.entities)
     for seed in module.rootEntities { try ensureBootstrap(seed, module: module, reconcile: false) }
     for seed in module.constantEntities { try ensureBootstrap(seed, module: module, reconcile: true) }
   }

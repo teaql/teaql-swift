@@ -28,7 +28,7 @@ private let order = EntityDescriptor(
     .appendingPathComponent("teaql-swift-model-keys-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([descriptor])
+  try await service.ensureSchema(RuntimeModule(name: "scalar-storage", entities: [descriptor]))
   let created = try await service.execute(Mutation(
     kind: .create, entity: descriptor,
     values: ["school_type": .int(1001), "student_capacity": .string("800")],
@@ -73,7 +73,7 @@ private struct SavedWidget: TeaQLEntity {
     .appendingPathComponent("teaql-swift-explicit-id-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([SavedWidget.descriptor])
+  try await service.ensureSchema(RuntimeModule(name: "saved-widget", entities: [SavedWidget.descriptor]))
   let saved = try await AuditedEntity(
     entity: SavedWidget(id: 1001, name: "Primary", version: 0),
     reason: "seed model-defined constant").save(context(service))
@@ -156,7 +156,7 @@ private func context(
   defer { try? FileManager.default.removeItem(atPath: path) }
   let first = try SQLiteDataService(path: path)
   let second = try SQLiteDataService(path: path)
-  try await first.ensureSchema([SavedWidget.descriptor])
+  try await first.ensureSchema(RuntimeModule(name: "saved-widget-first", entities: [SavedWidget.descriptor]))
 
   let initial = try await first.execute(Mutation(
     kind: .create, entity: SavedWidget.descriptor,
@@ -170,7 +170,7 @@ private func context(
   let seededDescriptor = EntityDescriptor(
     name: "SeededWidget", table: "seeded_widget",
     properties: SavedWidget.descriptor.properties)
-  try await first.ensureSchema([seededDescriptor])
+  try await first.ensureSchema(RuntimeModule(name: "seeded-widget", entities: [seededDescriptor]))
   let seeded = try await second.execute(Mutation(
     kind: .create, entity: seededDescriptor,
     values: ["name": .string("after seed")], auditReason: "verify bootstrap floor"))
@@ -199,7 +199,7 @@ private func context(
     .appendingPathComponent("teaql-swift-save-result-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([SavedWidget.descriptor])
+  try await service.ensureSchema(RuntimeModule(name: "saved-widget-delete", entities: [SavedWidget.descriptor]))
   let context = context(service)
 
   var widget = SavedWidget(name: "created")
@@ -227,7 +227,7 @@ private func context(
     .appendingPathComponent("teaql-swift-evidence-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([order])
+  try await service.ensureSchema(RuntimeModule(name: "order-relations", entities: [order]))
   let evidence = SQLExecutionEvidenceStore()
   let context = context(service, telemetrySink: evidence)
 
@@ -277,7 +277,7 @@ private func context(
     .appendingPathComponent("teaql-swift-temporal-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([temporal])
+  try await service.ensureSchema(RuntimeModule(name: "temporal", entities: [temporal]))
   let evidence = SQLExecutionEvidenceStore()
   let context = context(service, telemetrySink: evidence)
 
@@ -307,7 +307,7 @@ private func context(
     .appendingPathComponent("teaql-swift-count-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([order])
+  try await service.ensureSchema(RuntimeModule(name: "order-comments", entities: [order]))
   for id in 1...3 {
     _ = try await service.execute(
       Mutation(
@@ -332,7 +332,7 @@ private func context(
     .appendingPathComponent("teaql-swift-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  try await service.ensureSchema([order])
+  try await service.ensureSchema(RuntimeModule(name: "order-sql-evidence", entities: [order]))
   let appAudit = RecordingAuditSink()
   let context = context(service, auditSink: appAudit)
 

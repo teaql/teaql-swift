@@ -18,7 +18,7 @@ enum OrderManagementApp {
       CustomerOrder.descriptor, Product.descriptor, OrderLine.descriptor,
       OrderSearchPreset.descriptor,
     ]
-    try await database.ensureSchema(descriptors)
+    try await database.ensureSchema(RuntimeModule(name: "OrderManagement", entities: descriptors))
     print("TeaQL SQLite: schema is ready")
 
     let context = UserContext(

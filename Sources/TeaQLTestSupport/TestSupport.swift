@@ -22,7 +22,7 @@ public enum TeaQLTestDatabase {
     let path = FileManager.default.temporaryDirectory
       .appendingPathComponent("teaql-\(name).sqlite").path
     let service = try SQLiteDataService(path: path)
-    try await service.ensureSchema(entities)
+    try await service.ensureSchema(RuntimeModule(name: "TeaQLTestDatabase", entities: entities))
     return (service, path)
   }
 }
