@@ -5,15 +5,30 @@ public struct RuntimeModule: Sendable {
   public let name: String
   public let entities: [EntityDescriptor]
   public let checkers: [String: any EntityChecker]
+  public let rootEntities: [BootstrapEntity]
+  public let constantEntities: [BootstrapEntity]
 
   public init(
     name: String, entities: [EntityDescriptor],
-    checkers: [String: any EntityChecker] = [:]
+    checkers: [String: any EntityChecker] = [:],
+    rootEntities: [BootstrapEntity] = [],
+    constantEntities: [BootstrapEntity] = []
   ) {
     precondition(!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     self.name = name
     self.entities = entities
     self.checkers = checkers
+    self.rootEntities = rootEntities
+    self.constantEntities = constantEntities
+  }
+}
+
+public struct BootstrapEntity: Sendable, Equatable {
+  public let entity: String
+  public let id: Int64
+  public let values: TeaQLRecord
+  public init(entity: String, id: Int64, values: TeaQLRecord) {
+    self.entity = entity; self.id = id; self.values = values
   }
 }
 
