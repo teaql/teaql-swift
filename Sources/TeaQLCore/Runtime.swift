@@ -7,7 +7,7 @@ public protocol QueryExecutor: Sendable {
 
 /// Physical schema capability selected by a UserContext.
 /// RuntimeModule installation remains passive; applications call UserContext.ensureSchema(_:).
-public protocol SchemaExecutor: Sendable {
+package protocol SchemaExecutor: Sendable {
   func ensureSchema(_ module: RuntimeModule, context: UserContext) async throws
 }
 

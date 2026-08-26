@@ -64,7 +64,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor 
   }
 
   /// Provider SPI. Application code calls `context.ensureSchema(module)`.
-  public func ensureSchema(_ module: RuntimeModule, context: UserContext) throws {
+  package func ensureSchema(_ module: RuntimeModule, context: UserContext) throws {
     try ensureEntitySchemas(module.entities)
     for seed in module.rootEntities { try ensureBootstrap(seed, module: module, reconcile: false) }
     for seed in module.constantEntities { try ensureBootstrap(seed, module: module, reconcile: true) }
