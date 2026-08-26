@@ -18,9 +18,6 @@ enum OrderManagementApp {
       CustomerOrder.descriptor, Product.descriptor, OrderLine.descriptor,
       OrderSearchPreset.descriptor,
     ]
-    try await database.ensureSchema(RuntimeModule(name: "OrderManagement", entities: descriptors))
-    print("TeaQL SQLite: schema is ready")
-
     let context = UserContext(
       actor: "swift-quick-start",
       queryExecutor: database,
@@ -28,6 +25,8 @@ enum OrderManagementApp {
       requestPolicy: RequestPolicy { $0 },
       auditSink: ConsoleAuditSink()
     )
+    try await context.ensureSchema(RuntimeModule(name: "OrderManagement", entities: descriptors))
+    print("TeaQL SQLite: schema is ready")
 
     let existing = try await Q.customerOrders()
       .withOrderNumberIs("SWIFT-ORDER-001")

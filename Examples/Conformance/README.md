@@ -10,4 +10,4 @@ swift run TeaQLConsole
 ```
 
 Installing `GeneratedRuntimeModule.module` is passive. The executable calls
-`database.ensureSchema(GeneratedRuntimeModule.module)` separately and explicitly.
+`context.ensureSchema(GeneratedRuntimeModule.module)` separately and explicitly.

@@ -14,14 +14,13 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     defer { try? FileManager.default.removeItem(atPath: path) }
     let service = try SQLiteDataService(path: path)
     let module = GeneratedRuntimeModule.module
-    try await service.ensureSchema(module)
-    try await service.ensureSchema(module)
-
     var runtime = TeaQLRuntime()
     try runtime.install(module)
     let context = UserContext(
       runtime: runtime, actor: "conformance", queryExecutor: service,
       mutationExecutor: service, requestPolicy: RequestPolicy { $0 })
+    try await context.ensureSchema(module)
+    try await context.ensureSchema(module)
     let platforms = try await Q.platforms().comment("verify seeded root")
       .purpose("local runtime verification").executeForList(context)
     let constants = try await Q.schoolTypes().orderByIdAscending()
@@ -39,7 +38,7 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
       name: module.name, entities: module.entities, checkers: module.checkers,
       rootEntities: module.rootEntities,
       constantEntities: [BootstrapEntity(entity: "SchoolType", id: 1001, values: values), module.constantEntities[1]])
-    try await service.ensureSchema(changedModule)
+    try await context.ensureSchema(changedModule)
     let changed = try await Q.schoolTypes().withIdIs(1001)
       .comment("verify constant reconciliation").purpose("local runtime verification")
       .executeForList(context)

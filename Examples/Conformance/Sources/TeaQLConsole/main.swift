@@ -18,8 +18,6 @@ enum ConformanceApp {
         let database = try SQLiteDataService(path: path)
         var runtime = TeaQLRuntime()
         try runtime.install(GeneratedRuntimeModule.module)
-        try await database.ensureSchema(GeneratedRuntimeModule.module)
-        print("PASS ensureSchema (explicit SQLite DDL from Runtime Module)")
 
         let evidence = SQLExecutionEvidenceStore()
         let context = UserContext(
@@ -30,6 +28,8 @@ enum ConformanceApp {
             requestPolicy: RequestPolicy { $0 },
             telemetrySink: evidence
         )
+        try await context.ensureSchema(GeneratedRuntimeModule.module)
+        print("PASS ensureSchema (context-scoped SQLite DDL from Runtime Module)")
 
         var invalid = WorkItem()
         invalid.updatePlatform(1)

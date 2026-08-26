@@ -19,7 +19,7 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
@@ -63,9 +63,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor {
       """)
   }
 
-  /// Explicitly creates/checks schema for a generated module.
-  /// Installing the module into `TeaQLRuntime` never calls this operation.
-  public func ensureSchema(_ module: RuntimeModule) throws {
+  /// Provider SPI. Application code calls `context.ensureSchema(module)`.
+  public func ensureSchema(_ module: RuntimeModule, context: UserContext) throws {
     try ensureEntitySchemas(module.entities)
     for seed in module.rootEntities { try ensureBootstrap(seed, module: module, reconcile: false) }
     for seed in module.constantEntities { try ensureBootstrap(seed, module: module, reconcile: true) }

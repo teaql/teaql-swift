@@ -5,6 +5,12 @@ public protocol QueryExecutor: Sendable {
   func count(_ query: SelectQuery) async throws -> Int
 }
 
+/// Physical schema capability selected by a UserContext.
+/// RuntimeModule installation remains passive; applications call UserContext.ensureSchema(_:).
+public protocol SchemaExecutor: Sendable {
+  func ensureSchema(_ module: RuntimeModule, context: UserContext) async throws
+}
+
 public extension QueryExecutor {
   var providerKind: String { String(describing: type(of: self)) }
 
@@ -346,6 +352,15 @@ public struct UserContext: Sendable {
       throw ContextRootError(reason: .typeMismatch, expectedType: expectedType, activeRoot: activeRoot)
     }
     return activeRoot
+  }
+
+  /// Explicitly reconciles a passive RuntimeModule through this context's provider.
+  public func ensureSchema(_ module: RuntimeModule) async throws {
+    guard let provider = queryExecutor as? any SchemaExecutor else {
+      throw TeaQLError.execution(
+        "Ensure Schema requires a schema-aware provider; configured provider is \(queryExecutor.providerKind)")
+    }
+    try await provider.ensureSchema(module, context: self)
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }

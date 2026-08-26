@@ -17,7 +17,8 @@ Requirements: Swift 6 and SQLite development headers (`libsqlite3-dev` on Ubuntu
 
 ```swift
 let database = try SQLiteDataService(path: "app.sqlite")
-try await database.ensureSchema([CustomerOrder.descriptor])
+try await context.ensureSchema(RuntimeModule(
+  name: "OrderManagement", entities: [CustomerOrder.descriptor]))
 
 let context = UserContext(
     actor: "current-user",
