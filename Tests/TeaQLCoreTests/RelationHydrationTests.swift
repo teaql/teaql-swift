@@ -22,7 +22,8 @@ final class RelationHydrationTests: XCTestCase {
       mutationExecutor: RejectingMutationExecutor(),
       requestPolicy: RequestPolicy { $0 })
 
-    let organization = SelectQuery(entity: childDescriptor)
+    var organization = SelectQuery(entity: childDescriptor)
+    organization.projection = ["displayName"]
     let children = SelectQuery(entity: childDescriptor)
     var parent = SelectQuery(entity: parentDescriptor)
     parent.comment = "Load parent graph"
@@ -56,6 +57,9 @@ private actor RelationFixtureExecutor: QueryExecutor {
     childQueries += 1
     switch query.filter {
     case .inList("id", [.int(9)]):
+      guard query.projection.contains("id") else {
+        throw TeaQLError.execution("relation foreign key was dropped from child projection")
+      }
       return QueryResult(records: [["id": .int(9)]], backend: "fixture")
     case .inList("parent", [.int(1)]):
       return QueryResult(

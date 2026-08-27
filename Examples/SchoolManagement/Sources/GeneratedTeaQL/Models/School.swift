@@ -217,6 +217,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateSchoolTypeToPrimary() -> Self {
         self.schoolType = 1001
         self._loadedFields.insert("schoolType")
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_type", value: .int(1001))
         return self
     }
 

@@ -428,6 +428,12 @@ public struct UserContext: Sendable {
         let localValues = records.compactMap { $0[relation.localKey] }
         guard !localValues.isEmpty else { return }
         var child = relation.query.makeQuery()
+        // Relation assembly groups child rows by the foreign key. A generated
+        // child projection may select only business fields, so the runtime must
+        // retain this structural key even when the caller did not request it.
+        if !child.projection.isEmpty && !child.projection.contains(relation.foreignKey) {
+          child.projection.append(relation.foreignKey)
+        }
         child.comment = validated.comment
         child.purpose = validated.purpose
         let join = TeaQLExpression.inList(relation.foreignKey, localValues)
