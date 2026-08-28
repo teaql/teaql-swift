@@ -400,6 +400,7 @@ public struct UserContext: Sendable {
     let validated = try requestPolicy.apply(query).validatedForExecution()
     var base = validated
     base.relations = []
+    base.facets = []
     let result = try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).query",
@@ -412,7 +413,44 @@ public struct UserContext: Sendable {
       try await queryExecutor.execute(base)
     }
     if let metadata = result.metadata { await telemetrySink?.record(metadata) }
-    guard !validated.relations.isEmpty, !result.records.isEmpty else { return result }
+    var facets: [String: SmartList<TeaQLRecord>] = [:]
+    for facet in validated.facets {
+      var membership = validated
+      membership.facets = []
+      membership.relations = []
+      membership.orderBy = []
+      membership.offset = 0
+      membership.limit = nil
+      membership.projection = [facet.relationName]
+      let membershipRows = try await execute(membership).records
+      var counts: [TeaQLValue: Int64] = [:]
+      for row in membershipRows {
+        guard let value = row[facet.relationName], value != .null else { continue }
+        counts[value, default: 0] += 1
+      }
+
+      var child = facet.query.makeQuery()
+      child.comment = validated.comment
+      child.purpose = validated.purpose
+      var childRows = try await execute(child).records.map { row in
+        var copy = row
+        if let id = row["id"] { copy["count"] = .int(counts[id] ?? 0) }
+        return copy
+      }
+      if !facet.includeAllFacets {
+        childRows.removeAll { row in
+          guard let id = row["id"] else { return true }
+          return counts[id] == nil
+        }
+      }
+      facets[facet.name] = SmartList(childRows)
+    }
+
+    guard !validated.relations.isEmpty, !result.records.isEmpty else {
+      return QueryResult(
+        records: result.records, backend: result.backend, trace: result.trace,
+        metadata: result.metadata, facets: facets)
+    }
 
     var records = result.records
     for relation in validated.relations {
@@ -449,7 +487,8 @@ public struct UserContext: Sendable {
       }
     }
     return QueryResult(
-      records: records, backend: result.backend, trace: result.trace, metadata: result.metadata)
+      records: records, backend: result.backend, trace: result.trace,
+      metadata: result.metadata, facets: facets)
   }
 
   public func count(_ query: SelectQuery) async throws -> Int {

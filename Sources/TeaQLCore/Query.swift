@@ -86,6 +86,22 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   }
 }
 
+public struct FacetRequest: Sendable, Hashable, Codable {
+  public let name: String
+  public let relationName: String
+  public let query: RelationQueryPlan
+  public let includeAllFacets: Bool
+
+  public init(
+    name: String, relationName: String, query: SelectQuery, includeAllFacets: Bool = true
+  ) {
+    self.name = name
+    self.relationName = relationName
+    self.query = RelationQueryPlan(query)
+    self.includeAllFacets = includeAllFacets
+  }
+}
+
 public struct SelectQuery: Sendable, Hashable, Codable {
   public static let defaultHardLimit = 10_000
 
@@ -97,6 +113,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var hardLimit: Int = Self.defaultHardLimit
   public var projection: [String] = []
   public var relations: [RelationLoad] = []
+  public var facets: [FacetRequest] = []
   public var comment: String?
   public var purpose: String?
 
@@ -155,17 +172,20 @@ public struct QueryResult: Sendable {
   public let backend: String
   public let trace: [TraceNode]
   public let metadata: SQLExecutionMetadata?
+  public let facets: [String: SmartList<TeaQLRecord>]
 
   public init(
     records: [TeaQLRecord],
     backend: String,
     trace: [TraceNode] = [],
-    metadata: SQLExecutionMetadata? = nil
+    metadata: SQLExecutionMetadata? = nil,
+    facets: [String: SmartList<TeaQLRecord>] = [:]
   ) {
     self.records = records
     self.backend = backend
     self.trace = trace
     self.metadata = metadata
+    self.facets = facets
   }
 }
 
