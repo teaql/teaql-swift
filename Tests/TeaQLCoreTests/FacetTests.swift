@@ -23,6 +23,7 @@ final class FacetTests: XCTestCase {
     var all = SelectQuery(entity: facetSchool)
     all.comment = "load school type facet"
     all.purpose = "verify include-all facet semantics"
+    all.filter = .contains("name", "Riverside")
     all.facets = [FacetRequest(name: "types", relationName: "schoolType", query: nested)]
     let allFacet = try await context.execute(all).facets["types"]!
     XCTAssertEqual(allFacet.count, 3)
@@ -43,6 +44,9 @@ private struct FacetFixtureExecutor: QueryExecutor {
   func execute(_ query: SelectQuery) async throws -> QueryResult {
     switch query.entity.name {
     case "School":
+      guard query.filter == .contains("name", "Riverside") else {
+        throw TeaQLError.execution("outer facet filter was not preserved")
+      }
       return QueryResult(records: [
         ["id": .int(1), "schoolType": .int(1001)],
         ["id": .int(2), "schoolType": .int(1001)],
