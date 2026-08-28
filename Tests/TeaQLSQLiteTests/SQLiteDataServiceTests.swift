@@ -15,6 +15,35 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+@Test func ensureSchemaRegistersSoundexAndExecutesPhoneticQuery() async throws {
+  let person = EntityDescriptor(name: "SoundexPerson", table: "soundex_person", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-soundex-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let soundexContext = UserContext(
+    queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 })
+  let module = RuntimeModule(name: "soundex", entities: [person])
+  try await soundexContext.ensureSchema(module)
+  try await soundexContext.ensureSchema(module)
+  for name in ["Robert", "Rupert", "Alice"] {
+    _ = try await service.execute(Mutation(kind: .create, entity: person,
+      values: ["name": .string(name)], auditReason: "seed soundex person"))
+  }
+  var query = SelectQuery(entity: person)
+  query.filter = .soundingLike("name", "Robert")
+  query.orderBy = [OrderBy("id", .ascending)]
+  query.comment = "find phonetic names"
+  query.purpose = "verify ensureSchema soundex registration"
+  let rows = try await soundexContext.execute(query).records
+  #expect(rows.compactMap { $0["name"]?.stringValue } == ["Robert", "Rupert"])
+}
+
 @Test func relationFacetUsesOuterFilterAndIncludeAllOnSQLite() async throws {
   let school = EntityDescriptor(name: "FacetSchool", table: "facet_school", properties: [
     PropertyDescriptor(name: "id", type: .int, isID: true),

@@ -42,7 +42,7 @@ import Testing
   #expect(compiled.parameters == [.string("ACTIVE")])
 }
 
-@Test func sqliteRejectsProviderAwareSoundingLikeExplicitly() throws {
+@Test func sqliteCompilesProviderRegisteredSoundingLike() throws {
   let entity = EntityDescriptor(
     name: "School", table: "school_data",
     properties: [
@@ -52,12 +52,10 @@ import Testing
   var query = SelectQuery(entity: entity)
   query.filter = .soundingLike("name", "Robert")
   query.comment = "Test provider-aware phonetic predicate"
-  query.purpose = "Reject unsupported SQLite SoundingLike"
-  #expect(throws: TeaQLError.unsupportedQueryCapability(
-    "QRY-P09 SoundingLike requires a provider with SOUNDEX support; SQLite is not supported"
-  )) {
-    try SQLiteCompiler().compile(query)
-  }
+  query.purpose = "Execute registered SQLite SoundingLike"
+  let compiled = try SQLiteCompiler().compile(query)
+  #expect(compiled.sql.contains("SOUNDEX(\"name\") = SOUNDEX(?)"))
+  #expect(compiled.parameters == [.string("Robert")])
 }
 
 @Test func debugSQLRendersCopyPasteStatement() {

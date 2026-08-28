@@ -4,6 +4,35 @@ import Foundation
 import TeaQLCore
 import TeaQLSQL
 
+private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+private func sqliteCompatibleSoundex(_ input: String?) -> String {
+  guard let input else { return "?000" }
+  let letters = input.uppercased().utf8.filter { $0 >= 65 && $0 <= 90 }
+  guard let first = letters.first else { return "?000" }
+  func code(_ byte: UInt8) -> UInt8 {
+    switch byte {
+    case 66, 70, 80, 86: 1
+    case 67, 71, 74, 75, 81, 83, 88, 90: 2
+    case 68, 84: 3
+    case 76: 4
+    case 77, 78: 5
+    case 82: 6
+    default: 0
+    }
+  }
+  var bytes: [UInt8] = [first]
+  var previous = code(first)
+  for letter in letters.dropFirst() {
+    let current = code(letter)
+    if current != 0 && current != previous { bytes.append(48 + current) }
+    if bytes.count == 4 { break }
+    previous = current
+  }
+  while bytes.count < 4 { bytes.append(48) }
+  return String(decoding: bytes, as: UTF8.self)
+}
+
 public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   case open(String)
   case sqlite(code: Int32, message: String, sql: String?)
@@ -65,9 +94,25 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor 
 
   /// Provider SPI. Application code calls `context.ensureSchema(module)`.
   package func ensureSchema(_ module: RuntimeModule, context: UserContext) throws {
+    try ensureSoundexFunction()
     try ensureEntitySchemas(module.entities)
     for seed in module.rootEntities { try ensureBootstrap(seed, module: module, reconcile: false) }
     for seed in module.constantEntities { try ensureBootstrap(seed, module: module, reconcile: true) }
+  }
+
+  private func ensureSoundexFunction() throws {
+    let status = sqlite3_create_function_v2(
+      database, "soundex", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil,
+      { context, count, values in
+        guard let context, count == 1, let values, let value = values[0] else { return }
+        let input = sqlite3_value_type(value) == SQLITE_NULL
+          ? nil : sqlite3_value_text(value).map { String(cString: $0) }
+        let encoded = sqliteCompatibleSoundex(input)
+        encoded.withCString { sqlite3_result_text(context, $0, -1, sqliteTransient) }
+      }, nil, nil, nil)
+    guard status == SQLITE_OK else {
+      throw SQLiteError.sqlite(code: status, message: String(cString: sqlite3_errmsg(database)), sql: nil)
+    }
   }
 
   private func ensureBootstrap(_ seed: BootstrapEntity, module: RuntimeModule, reconcile: Bool) throws {
@@ -637,8 +682,6 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor 
     }
   }
 }
-
-private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
 private final class SQLiteHandle: @unchecked Sendable {
   let pointer: OpaquePointer
