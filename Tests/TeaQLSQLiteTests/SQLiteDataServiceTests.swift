@@ -15,6 +15,52 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+@Test func relationFacetUsesOuterFilterAndIncludeAllOnSQLite() async throws {
+  let school = EntityDescriptor(name: "FacetSchool", table: "facet_school", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "schoolType", column: "school_type", type: .int),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let schoolType = EntityDescriptor(name: "FacetSchoolType", table: "facet_school_type", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "code", type: .string),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-facet-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let facetContext = UserContext(
+    queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 })
+  try await facetContext.ensureSchema(RuntimeModule(name: "facet", entities: [school, schoolType]))
+  for (id, code) in [(1001, "PRIMARY"), (1002, "SECONDARY"), (1003, "VOCATIONAL")] {
+    _ = try await service.execute(Mutation(kind: .create, entity: schoolType,
+      values: ["id": .int(Int64(id)), "code": .string(code)], auditReason: "seed facet type"))
+  }
+  for (id, name, type) in [(1, "Riverside", 1001), (2, "Riverside Annex", 1001), (3, "Other", 1002)] {
+    _ = try await service.execute(Mutation(kind: .create, entity: school, id: .int(Int64(id)),
+      values: ["name": .string(name), "schoolType": .int(Int64(type))], auditReason: "seed facet school"))
+  }
+  var nested = SelectQuery(entity: schoolType)
+  nested.projection = ["id", "code"]
+  var outer = SelectQuery(entity: school)
+  outer.filter = .contains("name", "Riverside")
+  outer.comment = "facet filtered schools"
+  outer.purpose = "verify SQLite facet semantics"
+  outer.facets = [FacetRequest(name: "types", relationName: "schoolType", query: nested)]
+  let all = try await facetContext.execute(outer).facets["types"]!
+  #expect(all.count == 3)
+  #expect(all.first { $0["id"]?.int64Value == 1001 }?["count"]?.int64Value == 2)
+  #expect(all.first { $0["id"]?.int64Value == 1002 }?["count"]?.int64Value == 0)
+  outer.facets = [FacetRequest(name: "types", relationName: "schoolType", query: nested,
+    includeAllFacets: false)]
+  let matched = try await facetContext.execute(outer).facets["types"]!
+  #expect(matched.count == 1)
+  #expect(matched.first?["id"]?.int64Value == 1001)
+}
+
 @Test func mutationAcceptsCanonicalModelKeysForCreateAndUpdate() async throws {
   let descriptor = EntityDescriptor(
     name: "School", table: "school_data",

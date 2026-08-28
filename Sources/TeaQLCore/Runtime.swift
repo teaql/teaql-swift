@@ -426,7 +426,7 @@ public struct UserContext: Sendable {
       var counts: [TeaQLValue: Int64] = [:]
       for row in membershipRows {
         guard let value = row[facet.relationName], value != .null else { continue }
-        counts[value, default: 0] += 1
+        counts[normalizedRelationIdentity(value), default: 0] += 1
       }
 
       var child = facet.query.makeQuery()
@@ -434,13 +434,15 @@ public struct UserContext: Sendable {
       child.purpose = validated.purpose
       var childRows = try await execute(child).records.map { row in
         var copy = row
-        if let id = row["id"] { copy["count"] = .int(counts[id] ?? 0) }
+        if let id = row["id"] {
+          copy["count"] = .int(counts[normalizedRelationIdentity(id)] ?? 0)
+        }
         return copy
       }
       if !facet.includeAllFacets {
         childRows.removeAll { row in
           guard let id = row["id"] else { return true }
-          return counts[id] == nil
+          return counts[normalizedRelationIdentity(id)] == nil
         }
       }
       facets[facet.name] = SmartList(childRows)
@@ -489,6 +491,11 @@ public struct UserContext: Sendable {
     return QueryResult(
       records: records, backend: result.backend, trace: result.trace,
       metadata: result.metadata, facets: facets)
+  }
+
+  private func normalizedRelationIdentity(_ value: TeaQLValue) -> TeaQLValue {
+    if let signed = value.int64Value { return .int(signed) }
+    return value
   }
 
   public func count(_ query: SelectQuery) async throws -> Int {
