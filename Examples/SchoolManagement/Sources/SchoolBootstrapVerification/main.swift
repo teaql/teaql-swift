@@ -82,7 +82,8 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         Date(timeIntervalSince1970: 788_918_400), Date(timeIntervalSince1970: 820_454_400)), 1),
       ("known", Q.schools().withAddressIsKnown(), 1),
       ("unknown", Q.schools().withAddressIsUnknown(), 0),
-      ("boolean", Q.schools().whichAreActive(), 1),
+        ("boolean true", Q.schools().whichAreActive(), 1),
+        ("boolean false", Q.schools().whichAreNotActive(), 0),
       ("constant relation", Q.schools().withSchoolTypeIsPrimary(), 1),
     ]
     for (label, request, expected) in queryCases {
