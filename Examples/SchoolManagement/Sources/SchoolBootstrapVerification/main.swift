@@ -65,6 +65,40 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     try require(primarySchools[0].schoolTypeEntity?.code == "PRIMARY",
                 "SchoolType forward relation did not hydrate PRIMARY")
 
+    let queryCases: [(String, SchoolRequest<RequestDraft>, Int)] = [
+      ("string equality", Q.schools().withNameIs("Riverside Primary School"), 1),
+      ("string inequality", Q.schools().withNameIsNot("Another School"), 1),
+      ("string membership", Q.schools().withNameIn(["Riverside Primary School", "Another School"]), 1),
+      ("negative membership", Q.schools().withNameNotIn(["Another School"]), 1),
+      ("contains", Q.schools().withNameContaining("Primary"), 1),
+      ("negative contains", Q.schools().withNameNotContaining("Secondary"), 1),
+      ("starts with", Q.schools().withNameStartingWith("Riverside"), 1),
+      ("negative starts with", Q.schools().withNameNotStartingWith("Lakeside"), 1),
+      ("ends with", Q.schools().withNameEndingWith("School"), 1),
+      ("negative ends with", Q.schools().withNameNotEndingWith("Academy"), 1),
+      ("number range", Q.schools().withStudentCapacityBetween("700", "900"), 1),
+      ("strict comparison", Q.schools().withStudentCapacityGreaterThan("799").withStudentCapacityLessThan("801"), 1),
+      ("date range", Q.schools().withEstablishedDateBetween(
+        Date(timeIntervalSince1970: 788_918_400), Date(timeIntervalSince1970: 820_454_400)), 1),
+      ("known", Q.schools().withAddressIsKnown(), 1),
+      ("unknown", Q.schools().withAddressIsUnknown(), 0),
+      ("boolean", Q.schools().whichAreActive(), 1),
+      ("constant relation", Q.schools().withSchoolTypeIsPrimary(), 1),
+    ]
+    for (label, request, expected) in queryCases {
+      let result = try await request.comment("Query parity: \(label)")
+        .purpose("Execute the shared School Query conformance case")
+        .executeForList(context)
+      try require(result.count == expected,
+                  "\(label): expected \(expected), got \(result.count)")
+    }
+    let projected = try await Q.schools().selectName().orderByIdDescending()
+      .comment("Query parity: projection and ordering")
+      .purpose("Execute the shared School Query conformance case")
+      .executeForList(context)
+    try require(projected.count == 1 && projected[0].name == "Riverside Primary School",
+                "projection/order query did not preserve typed School result")
+
     var values = module.constantEntities[0].values
     values["name"] = .string("Primary School")
     let changedModule = RuntimeModule(
@@ -77,6 +111,6 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
       .executeForList(context)
     try require(changed.count == 1 && changed[0].name == "Primary School" && changed[0].version == 2,
                 "Changed constant was not reconciled exactly once")
-    print("PASS Swift School bootstrap and constant relation graph with local runtime")
+    print("PASS Swift School bootstrap, portable Query parity, and constant relation graph")
   }
 }

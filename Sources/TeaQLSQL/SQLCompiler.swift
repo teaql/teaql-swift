@@ -140,20 +140,57 @@ public struct SQLiteCompiler: Sendable {
     case .equal(let field, let value):
       parameters.append(value)
       return "\(quote(try requireProperty(field, in: entity).column)) = ?"
+    case .notEqual(let field, let value):
+      parameters.append(value)
+      return "\(quote(try requireProperty(field, in: entity).column)) <> ?"
+    case .greaterThan(let field, let value):
+      parameters.append(value)
+      return "\(quote(try requireProperty(field, in: entity).column)) > ?"
     case .greaterThanOrEqual(let field, let value):
       parameters.append(value)
       return "\(quote(try requireProperty(field, in: entity).column)) >= ?"
+    case .lessThan(let field, let value):
+      parameters.append(value)
+      return "\(quote(try requireProperty(field, in: entity).column)) < ?"
     case .lessThanOrEqual(let field, let value):
       parameters.append(value)
       return "\(quote(try requireProperty(field, in: entity).column)) <= ?"
+    case .between(let field, let lower, let upper):
+      parameters.append(lower)
+      parameters.append(upper)
+      return "\(quote(try requireProperty(field, in: entity).column)) BETWEEN ? AND ?"
     case .contains(let field, let value):
       parameters.append(.string("%\(value)%"))
       return "\(quote(try requireProperty(field, in: entity).column)) LIKE ?"
+    case .notContains(let field, let value):
+      parameters.append(.string("%\(value)%"))
+      return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
+    case .startsWith(let field, let value):
+      parameters.append(.string("\(value)%"))
+      return "\(quote(try requireProperty(field, in: entity).column)) LIKE ?"
+    case .notStartsWith(let field, let value):
+      parameters.append(.string("\(value)%"))
+      return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
+    case .endsWith(let field, let value):
+      parameters.append(.string("%\(value)"))
+      return "\(quote(try requireProperty(field, in: entity).column)) LIKE ?"
+    case .notEndsWith(let field, let value):
+      parameters.append(.string("%\(value)"))
+      return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
     case .inList(let field, let values):
       guard !values.isEmpty else { return "0 = 1" }
       parameters.append(contentsOf: values)
       return
         "\(quote(try requireProperty(field, in: entity).column)) IN (\(Array(repeating: "?", count: values.count).joined(separator: ", ")))"
+    case .notInList(let field, let values):
+      guard !values.isEmpty else { return "1 = 1" }
+      parameters.append(contentsOf: values)
+      return
+        "\(quote(try requireProperty(field, in: entity).column)) NOT IN (\(Array(repeating: "?", count: values.count).joined(separator: ", ")))"
+    case .isNull(let field):
+      return "\(quote(try requireProperty(field, in: entity).column)) IS NULL"
+    case .isNotNull(let field):
+      return "\(quote(try requireProperty(field, in: entity).column)) IS NOT NULL"
     case .and(let items):
       return try items.map {
         "(" + (try self.expression($0, entity: entity, parameters: &parameters)) + ")"

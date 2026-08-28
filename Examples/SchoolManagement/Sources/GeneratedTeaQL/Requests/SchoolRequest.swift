@@ -315,6 +315,51 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         adding(.inList("id", values.map { .int($0) }))
     }
 
+    @discardableResult
+    public func withIdIsNot(_ value: Int64) -> Self {
+        adding(.notEqual("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdNotIn(_ values: [Int64]) -> Self {
+        adding(.notInList("id", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withIdGreaterThan(_ value: Int64) -> Self {
+        adding(.greaterThan("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.greaterThanOrEqual("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdLessThan(_ value: Int64) -> Self {
+        adding(.lessThan("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.lessThanOrEqual("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
+        adding(.between("id", .int(lower), .int(upper)))
+    }
+
+    @discardableResult
+    public func withIdIsKnown() -> Self {
+        adding(.isNotNull("id"))
+    }
+
+    @discardableResult
+    public func withIdIsUnknown() -> Self {
+        adding(.isNull("id"))
+    }
+
 
     @discardableResult
     public func filterByPlatform(_ value: Int64) -> Self {
@@ -351,9 +396,79 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     public func withNameIn(_ values: [String]) -> Self {
         adding(.inList("name", values.map { .string($0) }))
     }
+
+    @discardableResult
+    public func withNameIsNot(_ value: String) -> Self {
+        adding(.notEqual("name", .string(value)))
+    }
+
+    @discardableResult
+    public func withNameNotIn(_ values: [String]) -> Self {
+        adding(.notInList("name", values.map { .string($0) }))
+    }
+
+    @discardableResult
+    public func withNameGreaterThan(_ value: String) -> Self {
+        adding(.greaterThan("name", .string(value)))
+    }
+
+    @discardableResult
+    public func withNameGreaterThanOrEqualTo(_ value: String) -> Self {
+        adding(.greaterThanOrEqual("name", .string(value)))
+    }
+
+    @discardableResult
+    public func withNameLessThan(_ value: String) -> Self {
+        adding(.lessThan("name", .string(value)))
+    }
+
+    @discardableResult
+    public func withNameLessThanOrEqualTo(_ value: String) -> Self {
+        adding(.lessThanOrEqual("name", .string(value)))
+    }
+
+    @discardableResult
+    public func withNameBetween(_ lower: String, _ upper: String) -> Self {
+        adding(.between("name", .string(lower), .string(upper)))
+    }
+
+    @discardableResult
+    public func withNameIsKnown() -> Self {
+        adding(.isNotNull("name"))
+    }
+
+    @discardableResult
+    public func withNameIsUnknown() -> Self {
+        adding(.isNull("name"))
+    }
     @discardableResult
     public func withNameContaining(_ value: String) -> Self {
         adding(.contains("name", value))
+    }
+
+    @discardableResult
+    public func withNameNotContaining(_ value: String) -> Self {
+        adding(.notContains("name", value))
+    }
+
+    @discardableResult
+    public func withNameStartingWith(_ value: String) -> Self {
+        adding(.startsWith("name", value))
+    }
+
+    @discardableResult
+    public func withNameNotStartingWith(_ value: String) -> Self {
+        adding(.notStartsWith("name", value))
+    }
+
+    @discardableResult
+    public func withNameEndingWith(_ value: String) -> Self {
+        adding(.endsWith("name", value))
+    }
+
+    @discardableResult
+    public func withNameNotEndingWith(_ value: String) -> Self {
+        adding(.notEndsWith("name", value))
     }
 
 
@@ -366,9 +481,79 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     public func withAddressIn(_ values: [String]) -> Self {
         adding(.inList("address", values.map { .string($0) }))
     }
+
+    @discardableResult
+    public func withAddressIsNot(_ value: String) -> Self {
+        adding(.notEqual("address", .string(value)))
+    }
+
+    @discardableResult
+    public func withAddressNotIn(_ values: [String]) -> Self {
+        adding(.notInList("address", values.map { .string($0) }))
+    }
+
+    @discardableResult
+    public func withAddressGreaterThan(_ value: String) -> Self {
+        adding(.greaterThan("address", .string(value)))
+    }
+
+    @discardableResult
+    public func withAddressGreaterThanOrEqualTo(_ value: String) -> Self {
+        adding(.greaterThanOrEqual("address", .string(value)))
+    }
+
+    @discardableResult
+    public func withAddressLessThan(_ value: String) -> Self {
+        adding(.lessThan("address", .string(value)))
+    }
+
+    @discardableResult
+    public func withAddressLessThanOrEqualTo(_ value: String) -> Self {
+        adding(.lessThanOrEqual("address", .string(value)))
+    }
+
+    @discardableResult
+    public func withAddressBetween(_ lower: String, _ upper: String) -> Self {
+        adding(.between("address", .string(lower), .string(upper)))
+    }
+
+    @discardableResult
+    public func withAddressIsKnown() -> Self {
+        adding(.isNotNull("address"))
+    }
+
+    @discardableResult
+    public func withAddressIsUnknown() -> Self {
+        adding(.isNull("address"))
+    }
     @discardableResult
     public func withAddressContaining(_ value: String) -> Self {
         adding(.contains("address", value))
+    }
+
+    @discardableResult
+    public func withAddressNotContaining(_ value: String) -> Self {
+        adding(.notContains("address", value))
+    }
+
+    @discardableResult
+    public func withAddressStartingWith(_ value: String) -> Self {
+        adding(.startsWith("address", value))
+    }
+
+    @discardableResult
+    public func withAddressNotStartingWith(_ value: String) -> Self {
+        adding(.notStartsWith("address", value))
+    }
+
+    @discardableResult
+    public func withAddressEndingWith(_ value: String) -> Self {
+        adding(.endsWith("address", value))
+    }
+
+    @discardableResult
+    public func withAddressNotEndingWith(_ value: String) -> Self {
+        adding(.notEndsWith("address", value))
     }
 
 
@@ -382,6 +567,51 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         adding(.inList("establishedDate", values.map { .date($0) }))
     }
 
+    @discardableResult
+    public func withEstablishedDateIsNot(_ value: Date) -> Self {
+        adding(.notEqual("establishedDate", .date(value)))
+    }
+
+    @discardableResult
+    public func withEstablishedDateNotIn(_ values: [Date]) -> Self {
+        adding(.notInList("establishedDate", values.map { .date($0) }))
+    }
+
+    @discardableResult
+    public func withEstablishedDateGreaterThan(_ value: Date) -> Self {
+        adding(.greaterThan("establishedDate", .date(value)))
+    }
+
+    @discardableResult
+    public func withEstablishedDateGreaterThanOrEqualTo(_ value: Date) -> Self {
+        adding(.greaterThanOrEqual("establishedDate", .date(value)))
+    }
+
+    @discardableResult
+    public func withEstablishedDateLessThan(_ value: Date) -> Self {
+        adding(.lessThan("establishedDate", .date(value)))
+    }
+
+    @discardableResult
+    public func withEstablishedDateLessThanOrEqualTo(_ value: Date) -> Self {
+        adding(.lessThanOrEqual("establishedDate", .date(value)))
+    }
+
+    @discardableResult
+    public func withEstablishedDateBetween(_ lower: Date, _ upper: Date) -> Self {
+        adding(.between("establishedDate", .date(lower), .date(upper)))
+    }
+
+    @discardableResult
+    public func withEstablishedDateIsKnown() -> Self {
+        adding(.isNotNull("establishedDate"))
+    }
+
+    @discardableResult
+    public func withEstablishedDateIsUnknown() -> Self {
+        adding(.isNull("establishedDate"))
+    }
+
 
     @discardableResult
     public func withStudentCapacityIs(_ value: String) -> Self {
@@ -392,14 +622,50 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     public func withStudentCapacityIn(_ values: [String]) -> Self {
         adding(.inList("studentCapacity", values.map { .string($0) }))
     }
+
+    @discardableResult
+    public func withStudentCapacityIsNot(_ value: String) -> Self {
+        adding(.notEqual("studentCapacity", .string(value)))
+    }
+
+    @discardableResult
+    public func withStudentCapacityNotIn(_ values: [String]) -> Self {
+        adding(.notInList("studentCapacity", values.map { .string($0) }))
+    }
+
+    @discardableResult
+    public func withStudentCapacityGreaterThan(_ value: String) -> Self {
+        adding(.greaterThan("studentCapacity", .string(value)))
+    }
+
     @discardableResult
     public func withStudentCapacityGreaterThanOrEqualTo(_ value: String) -> Self {
         adding(.greaterThanOrEqual("studentCapacity", .string(value)))
     }
 
     @discardableResult
+    public func withStudentCapacityLessThan(_ value: String) -> Self {
+        adding(.lessThan("studentCapacity", .string(value)))
+    }
+
+    @discardableResult
     public func withStudentCapacityLessThanOrEqualTo(_ value: String) -> Self {
         adding(.lessThanOrEqual("studentCapacity", .string(value)))
+    }
+
+    @discardableResult
+    public func withStudentCapacityBetween(_ lower: String, _ upper: String) -> Self {
+        adding(.between("studentCapacity", .string(lower), .string(upper)))
+    }
+
+    @discardableResult
+    public func withStudentCapacityIsKnown() -> Self {
+        adding(.isNotNull("studentCapacity"))
+    }
+
+    @discardableResult
+    public func withStudentCapacityIsUnknown() -> Self {
+        adding(.isNull("studentCapacity"))
     }
 
 
@@ -424,6 +690,51 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         adding(.inList("createTime", values.map { .date($0) }))
     }
 
+    @discardableResult
+    public func withCreateTimeIsNot(_ value: Date) -> Self {
+        adding(.notEqual("createTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withCreateTimeNotIn(_ values: [Date]) -> Self {
+        adding(.notInList("createTime", values.map { .date($0) }))
+    }
+
+    @discardableResult
+    public func withCreateTimeGreaterThan(_ value: Date) -> Self {
+        adding(.greaterThan("createTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withCreateTimeGreaterThanOrEqualTo(_ value: Date) -> Self {
+        adding(.greaterThanOrEqual("createTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withCreateTimeLessThan(_ value: Date) -> Self {
+        adding(.lessThan("createTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withCreateTimeLessThanOrEqualTo(_ value: Date) -> Self {
+        adding(.lessThanOrEqual("createTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withCreateTimeBetween(_ lower: Date, _ upper: Date) -> Self {
+        adding(.between("createTime", .date(lower), .date(upper)))
+    }
+
+    @discardableResult
+    public func withCreateTimeIsKnown() -> Self {
+        adding(.isNotNull("createTime"))
+    }
+
+    @discardableResult
+    public func withCreateTimeIsUnknown() -> Self {
+        adding(.isNull("createTime"))
+    }
+
 
     @discardableResult
     public func withUpdateTimeIs(_ value: Date) -> Self {
@@ -435,6 +746,51 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         adding(.inList("updateTime", values.map { .date($0) }))
     }
 
+    @discardableResult
+    public func withUpdateTimeIsNot(_ value: Date) -> Self {
+        adding(.notEqual("updateTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withUpdateTimeNotIn(_ values: [Date]) -> Self {
+        adding(.notInList("updateTime", values.map { .date($0) }))
+    }
+
+    @discardableResult
+    public func withUpdateTimeGreaterThan(_ value: Date) -> Self {
+        adding(.greaterThan("updateTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withUpdateTimeGreaterThanOrEqualTo(_ value: Date) -> Self {
+        adding(.greaterThanOrEqual("updateTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withUpdateTimeLessThan(_ value: Date) -> Self {
+        adding(.lessThan("updateTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withUpdateTimeLessThanOrEqualTo(_ value: Date) -> Self {
+        adding(.lessThanOrEqual("updateTime", .date(value)))
+    }
+
+    @discardableResult
+    public func withUpdateTimeBetween(_ lower: Date, _ upper: Date) -> Self {
+        adding(.between("updateTime", .date(lower), .date(upper)))
+    }
+
+    @discardableResult
+    public func withUpdateTimeIsKnown() -> Self {
+        adding(.isNotNull("updateTime"))
+    }
+
+    @discardableResult
+    public func withUpdateTimeIsUnknown() -> Self {
+        adding(.isNull("updateTime"))
+    }
+
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
@@ -444,6 +800,51 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
         adding(.inList("version", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withVersionIsNot(_ value: Int64) -> Self {
+        adding(.notEqual("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionNotIn(_ values: [Int64]) -> Self {
+        adding(.notInList("version", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withVersionGreaterThan(_ value: Int64) -> Self {
+        adding(.greaterThan("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.greaterThanOrEqual("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionLessThan(_ value: Int64) -> Self {
+        adding(.lessThan("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.lessThanOrEqual("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
+        adding(.between("version", .int(lower), .int(upper)))
+    }
+
+    @discardableResult
+    public func withVersionIsKnown() -> Self {
+        adding(.isNotNull("version"))
+    }
+
+    @discardableResult
+    public func withVersionIsUnknown() -> Self {
+        adding(.isNull("version"))
     }
 
 

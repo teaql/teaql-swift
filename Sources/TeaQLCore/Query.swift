@@ -2,10 +2,22 @@ import Foundation
 
 public indirect enum TeaQLExpression: Sendable, Hashable, Codable {
   case equal(String, TeaQLValue)
+  case notEqual(String, TeaQLValue)
+  case greaterThan(String, TeaQLValue)
   case greaterThanOrEqual(String, TeaQLValue)
+  case lessThan(String, TeaQLValue)
   case lessThanOrEqual(String, TeaQLValue)
+  case between(String, TeaQLValue, TeaQLValue)
   case contains(String, String)
+  case notContains(String, String)
+  case startsWith(String, String)
+  case notStartsWith(String, String)
+  case endsWith(String, String)
+  case notEndsWith(String, String)
   case inList(String, [TeaQLValue])
+  case notInList(String, [TeaQLValue])
+  case isNull(String)
+  case isNotNull(String)
   case and([TeaQLExpression])
   case or([TeaQLExpression])
 }
