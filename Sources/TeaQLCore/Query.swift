@@ -14,6 +14,7 @@ public indirect enum TeaQLExpression: Sendable, Hashable, Codable {
   case notStartsWith(String, String)
   case endsWith(String, String)
   case notEndsWith(String, String)
+  case soundingLike(String, String)
   case inList(String, [TeaQLValue])
   case notInList(String, [TeaQLValue])
   case isNull(String)
@@ -146,6 +147,7 @@ public enum TeaQLError: Error, Sendable, Equatable {
   case unknownProperty(entity: String, property: String)
   case optimisticLock(entity: String, id: TeaQLValue, expectedVersion: Int64)
   case execution(String)
+  case unsupportedQueryCapability(String)
 }
 
 public struct QueryResult: Sendable {

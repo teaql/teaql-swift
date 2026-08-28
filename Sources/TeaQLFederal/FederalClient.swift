@@ -257,7 +257,7 @@ public struct TeaQLFederalClient: Sendable {
     case .inList(let field, let values): return .object([field: .object(["$in": .array(values)])])
     case .notEqual, .greaterThan, .lessThan, .between, .notContains,
          .startsWith, .notStartsWith, .endsWith, .notEndsWith, .notInList,
-         .isNull, .isNotNull:
+         .isNull, .isNotNull, .soundingLike:
       throw FederalError.unsupportedExpression(String(describing: expression))
     case .and(let values): return .object(["$and": .array(try values.map(encodeExpression))])
     case .or(let values): return .object(["$or": .array(try values.map(encodeExpression))])

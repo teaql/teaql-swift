@@ -177,6 +177,9 @@ public struct SQLiteCompiler: Sendable {
     case .notEndsWith(let field, let value):
       parameters.append(.string("%\(value)"))
       return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
+    case .soundingLike:
+      throw TeaQLError.unsupportedQueryCapability(
+        "QRY-P09 SoundingLike requires a provider with SOUNDEX support; SQLite is not supported")
     case .inList(let field, let values):
       guard !values.isEmpty else { return "0 = 1" }
       parameters.append(contentsOf: values)
