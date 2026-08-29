@@ -15,6 +15,144 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+@Test func completeScalarFixtureIncludingNullableBooleanExecutesOnSQLite() async throws {
+  let descriptor = EntityDescriptor(name: "QueryRecord", table: "query_record_scalar", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "requiredText", column: "required_text", type: .string),
+    PropertyDescriptor(name: "optionalText", column: "optional_text", type: .string, nullable: true),
+    PropertyDescriptor(name: "requiredInteger", column: "required_integer", type: .int),
+    PropertyDescriptor(name: "optionalLong", column: "optional_long", type: .int, nullable: true),
+    PropertyDescriptor(name: "requiredDecimal", column: "required_decimal", type: .decimal),
+    PropertyDescriptor(name: "requiredFloat", column: "required_float", type: .double),
+    PropertyDescriptor(name: "requiredDouble", column: "required_double", type: .double),
+    PropertyDescriptor(name: "requiredDate", column: "required_date", type: .date),
+    PropertyDescriptor(name: "requiredTime", column: "required_time", type: .int),
+    PropertyDescriptor(name: "requiredTimestamp", column: "required_timestamp", type: .timestamp),
+    PropertyDescriptor(name: "active", type: .bool),
+    PropertyDescriptor(name: "reviewed", type: .bool, nullable: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-complete-query-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let queryContext = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 })
+  try await queryContext.ensureSchema(RuntimeModule(name: "complete-query", entities: [descriptor]))
+  let rows: [(Int64, String, TeaQLValue, Int64, TeaQLValue, Decimal, Double, Double, String, Int64, Int64, Bool, TeaQLValue)] = [
+    (1, "Alpha", .string("optional"), 42, .int(42_000_000_000), Decimal(string: "42.125")!, 42.5, 42.75, "2026-08-29", 34_200_000, 1_777_632_600_000, true, .bool(false)),
+    (2, "Beta", .null, 7, .null, Decimal(string: "7.500")!, 7.5, 7.75, "2026-08-30", 36_000_000, 1_777_720_400_000, false, .null),
+    (3, "Gamma", .string("tail"), 99, .int(99_000_000_000), Decimal(string: "99.875")!, 99.5, 99.75, "2026-08-31", 37_800_000, 1_777_808_200_000, true, .bool(true)),
+  ]
+  for row in rows {
+    _ = try await service.execute(Mutation(kind: .create, entity: descriptor, id: .int(row.0), values: [
+      "requiredText": .string(row.1), "optionalText": row.2,
+      "requiredInteger": .int(row.3), "optionalLong": row.4,
+      "requiredDecimal": .decimal(row.5), "requiredFloat": .double(row.6),
+      "requiredDouble": .double(row.7), "requiredDate": .calendarDate(row.8),
+      "requiredTime": .int(row.9), "requiredTimestamp": .timestamp(row.10),
+      "active": .bool(row.11), "reviewed": row.12,
+    ], auditReason: "seed complete query scalar fixture"))
+  }
+  func ids(_ expression: TeaQLExpression) async throws -> [Int64] {
+    var query = SelectQuery(entity: descriptor)
+    query.projection = ["id"]
+    query.filter = expression
+    query.orderBy = [OrderBy("id", .ascending)]
+    query.comment = "execute complete scalar predicate"
+    query.purpose = "retain Query conformance evidence"
+    let records = try await queryContext.execute(query).records
+    print("relation fixture rows", records)
+    return records.compactMap { $0["id"]?.int64Value }
+  }
+  #expect(try await ids(.equal("requiredText", .string("Alpha"))) == [1])
+  #expect(try await ids(.notEqual("requiredText", .string("Alpha"))) == [2, 3])
+  #expect(try await ids(.inList("requiredText", [.string("Alpha"), .string("Gamma")])) == [1, 3])
+  #expect(try await ids(.startsWith("requiredText", "Al")) == [1])
+  #expect(try await ids(.endsWith("requiredText", "ma")) == [3])
+  #expect(try await ids(.contains("requiredText", "et")) == [2])
+  #expect(try await ids(.between("requiredInteger", .int(40), .int(100))) == [1, 3])
+  #expect(try await ids(.greaterThan("requiredDecimal", .decimal(50))) == [3])
+  #expect(try await ids(.lessThanOrEqual("requiredFloat", .double(7.5))) == [2])
+  #expect(try await ids(.greaterThanOrEqual("requiredDouble", .double(99.75))) == [3])
+  #expect(try await ids(.between("requiredDate", .calendarDate("2026-08-30"), .calendarDate("2026-08-31"))) == [2, 3])
+  #expect(try await ids(.greaterThan("requiredTime", .int(36_000_000))) == [3])
+  #expect(try await ids(.lessThan("requiredTimestamp", .timestamp(1_777_750_000_000))) == [1, 2])
+  #expect(try await ids(.isNull("optionalText")) == [2])
+  #expect(try await ids(.isNotNull("optionalLong")) == [1, 3])
+  #expect(try await ids(.equal("active", .bool(false))) == [2])
+  #expect(try await ids(.equal("reviewed", .bool(true))) == [3])
+  #expect(try await ids(.equal("reviewed", .bool(false))) == [1])
+  #expect(try await ids(.isNull("reviewed")) == [2])
+}
+
+@Test func relationSubqueriesExecutePositiveAndNegativePredicatesOnSQLite() async throws {
+  let group = EntityDescriptor(name: "QueryGroup", table: "query_group_data", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let record = EntityDescriptor(name: "QueryRecord", table: "query_record_data", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "queryGroup", column: "query_group", type: .int, nullable: true),
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-subquery-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let queryContext = UserContext(
+    queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 })
+  try await queryContext.ensureSchema(RuntimeModule(
+    name: "relation-subquery", entities: [group, record]))
+  for (id, name) in [(1, "Core"), (2, "Other"), (3, "Empty")] {
+    _ = try await service.execute(Mutation(
+      kind: .create, entity: group, id: .int(Int64(id)),
+      values: ["name": .string(name)], auditReason: "seed query group"))
+  }
+  for (id, groupID, name) in [(11, 1, "included"), (12, 2, "excluded")] {
+    _ = try await service.execute(Mutation(
+      kind: .create, entity: record, id: .int(Int64(id)),
+      values: ["queryGroup": .int(Int64(groupID)), "name": .string(name)],
+      auditReason: "seed query record"))
+  }
+  _ = try await service.execute(Mutation(
+    kind: .create, entity: record, id: .int(13),
+    values: ["queryGroup": .null, "name": .string("orphan")],
+    auditReason: "seed orphan query record"))
+  var child = SelectQuery(entity: group)
+  child.filter = .equal("name", .string("Core"))
+  var included = SelectQuery(entity: record)
+  included.filter = .inSubquery("queryGroup", RelationQueryPlan(child), "id")
+  included.comment = "select records in core group"
+  included.purpose = "verify positive relation predicate"
+  var excluded = SelectQuery(entity: record)
+  excluded.filter = .notInSubquery("queryGroup", RelationQueryPlan(child), "id")
+  excluded.comment = "exclude records in core group"
+  excluded.purpose = "verify negative relation predicate"
+
+  #expect(try await queryContext.execute(included).records.first?["name"] == .string("included"))
+  #expect(try await queryContext.execute(excluded).records.first?["name"] == .string("excluded"))
+
+  func names(_ entity: EntityDescriptor, _ filter: TeaQLExpression) async throws -> [String] {
+    var query = SelectQuery(entity: entity)
+    query.filter = filter
+    query.orderBy = [OrderBy("id", .ascending)]
+    query.comment = "execute complete relation predicate"
+    query.purpose = "retain complete relation fixture evidence"
+    return try await queryContext.execute(query).records.compactMap { $0["name"]?.stringValue }
+  }
+  #expect(try await names(record, .isNotNull("queryGroup")) == ["included", "excluded"])
+  #expect(try await names(record, .isNull("queryGroup")) == ["orphan"])
+  #expect(try await names(record, .inSubquery("queryGroup", RelationQueryPlan(child), "id")) == ["included"])
+  #expect(try await names(record, .notInSubquery("queryGroup", RelationQueryPlan(child), "id")) == ["excluded"])
+  let allRecords = SelectQuery(entity: record)
+  #expect(try await names(group, .inSubquery("id", RelationQueryPlan(allRecords), "queryGroup")) == ["Core", "Other"])
+  #expect(try await names(group, .notInSubquery("id", RelationQueryPlan(allRecords), "queryGroup")) == ["Empty"])
+}
+
 @Test func ensureSchemaRegistersSoundexAndExecutesPhoneticQuery() async throws {
   let person = EntityDescriptor(name: "SoundexPerson", table: "soundex_person", properties: [
     PropertyDescriptor(name: "id", type: .int, isID: true),

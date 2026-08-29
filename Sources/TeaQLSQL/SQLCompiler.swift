@@ -190,6 +190,14 @@ public struct SQLiteCompiler: Sendable {
       parameters.append(contentsOf: values)
       return
         "\(quote(try requireProperty(field, in: entity).column)) NOT IN (\(Array(repeating: "?", count: values.count).joined(separator: ", ")))"
+    case .inSubquery(let field, let plan, let projectedField):
+      return try subqueryExpression(
+        field: field, plan: plan, projectedField: projectedField,
+        operatorSQL: "IN", entity: entity, parameters: &parameters)
+    case .notInSubquery(let field, let plan, let projectedField):
+      return try subqueryExpression(
+        field: field, plan: plan, projectedField: projectedField,
+        operatorSQL: "NOT IN", entity: entity, parameters: &parameters)
     case .isNull(let field):
       return "\(quote(try requireProperty(field, in: entity).column)) IS NULL"
     case .isNotNull(let field):
@@ -203,6 +211,34 @@ public struct SQLiteCompiler: Sendable {
         "(" + (try self.expression($0, entity: entity, parameters: &parameters)) + ")"
       }.joined(separator: " OR ")
     }
+  }
+
+  private func subqueryExpression(
+    field: String,
+    plan: RelationQueryPlan,
+    projectedField: String,
+    operatorSQL: String,
+    entity: EntityDescriptor,
+    parameters: inout [TeaQLValue]
+  ) throws -> String {
+    let left = quote(try requireProperty(field, in: entity).column)
+    let child = plan.makeQuery()
+    let projection = quote(try requireProperty(projectedField, in: child.entity).column)
+    var sql = "SELECT \(projection) FROM \(quote(child.entity.table))"
+    var predicates: [String] = []
+    if let filter = child.filter {
+      predicates.append(try expression(filter, entity: child.entity, parameters: &parameters))
+    }
+    // SQL NOT IN is poisoned by one NULL in the projected set. Negative
+    // relation matching ignores orphan keys; explicit isNull remains the way
+    // to select those orphan rows.
+    if operatorSQL == "NOT IN" {
+      predicates.append("\(projection) IS NOT NULL")
+    }
+    if !predicates.isEmpty {
+      sql += " WHERE " + predicates.map { "(\($0))" }.joined(separator: " AND ")
+    }
+    return "\(left) \(operatorSQL) (\(sql))"
   }
 
   private func requireProperty(_ name: String, in entity: EntityDescriptor) throws

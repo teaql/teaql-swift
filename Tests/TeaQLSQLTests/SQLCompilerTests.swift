@@ -58,6 +58,35 @@ import Testing
   #expect(compiled.parameters == [.string("Robert")])
 }
 
+@Test func sqliteCompilesPositiveAndNegativeRelationSubqueries() throws {
+  let group = EntityDescriptor(
+    name: "QueryGroup", table: "query_group_data",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "groupName", column: "group_name", type: .string),
+    ])
+  let record = EntityDescriptor(
+    name: "QueryRecord", table: "query_record_data",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "queryGroup", column: "query_group", type: .int),
+    ])
+  var child = SelectQuery(entity: group)
+  child.filter = .equal("groupName", .string("Primary"))
+  var query = SelectQuery(entity: record)
+  query.filter = .and([
+    .inSubquery("queryGroup", RelationQueryPlan(child), "id"),
+    .notInSubquery("queryGroup", RelationQueryPlan(child), "id"),
+  ])
+  query.comment = "Compile relation matching"
+  query.purpose = "Verify positive and negative relation predicates"
+
+  let compiled = try SQLiteCompiler().compile(query)
+  #expect(compiled.sql.contains("\"query_group\" IN (SELECT \"id\" FROM \"query_group_data\" WHERE \"group_name\" = ?)"))
+  #expect(compiled.sql.contains("\"query_group\" NOT IN (SELECT \"id\" FROM \"query_group_data\" WHERE \"group_name\" = ?)"))
+  #expect(compiled.parameters.prefix(2) == [.string("Primary"), .string("Primary")])
+}
+
 @Test func debugSQLRendersCopyPasteStatement() {
   let compiled = CompiledSQL(
     sql: "SELECT * FROM school WHERE name = ? AND active = ? AND phone IS ? AND note = '?'",

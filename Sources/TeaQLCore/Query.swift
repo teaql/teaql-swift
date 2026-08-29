@@ -17,6 +17,8 @@ public indirect enum TeaQLExpression: Sendable, Hashable, Codable {
   case soundingLike(String, String)
   case inList(String, [TeaQLValue])
   case notInList(String, [TeaQLValue])
+  case inSubquery(String, RelationQueryPlan, String)
+  case notInSubquery(String, RelationQueryPlan, String)
   case isNull(String)
   case isNotNull(String)
   case and([TeaQLExpression])
