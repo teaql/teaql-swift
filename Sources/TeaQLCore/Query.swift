@@ -102,6 +102,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let projection: [String]
   public let groupBy: [String]
   public let aggregates: [QueryAggregate]
+  public let partitionBy: String?
 
   public init(_ query: SelectQuery) {
     entity = query.entity
@@ -113,6 +114,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     projection = query.projection
     groupBy = query.groupBy
     aggregates = query.aggregates
+    partitionBy = query.partitionBy
   }
 
   public func makeQuery() -> SelectQuery {
@@ -125,6 +127,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.projection = projection
     query.groupBy = groupBy
     query.aggregates = aggregates
+    query.partitionBy = partitionBy
     return query
   }
 }
@@ -157,6 +160,9 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var projection: [String] = []
   public var groupBy: [String] = []
   public var aggregates: [QueryAggregate] = []
+  /// Internal relation-loading scope. When paired with a limit, the slice is
+  /// applied independently to every distinct value of this field.
+  public var partitionBy: String?
   public var relations: [RelationLoad] = []
   public var relationAggregates: [RelationAggregateLoad] = []
   public var facets: [FacetRequest] = []

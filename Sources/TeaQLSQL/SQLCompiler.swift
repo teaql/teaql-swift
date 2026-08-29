@@ -93,6 +93,30 @@ public struct SQLiteCompiler: Sendable {
         quote(try requireProperty($0, in: query.entity).column)
       }.joined(separator: ", "))
     }
+    if let partitionBy = query.partitionBy, let limit = query.limit {
+      guard query.aggregates.isEmpty, query.groupBy.isEmpty else {
+        throw TeaQLError.unsupportedQueryCapability(
+          "Per-parent relation limits cannot be combined with aggregate/group queries")
+      }
+      let partitionColumn = quote(try requireProperty(partitionBy, in: query.entity).column)
+      var orders = query.orderBy
+      let idName = query.entity.idProperty?.name ?? "id"
+      if !orders.contains(where: { $0.field == idName }) {
+        orders.append(OrderBy(idName, .descending))
+      }
+      let windowOrder = try orders.map { item in
+        let property = try requireProperty(item.field, in: query.entity)
+        return "\(quote(property.column)) \(item.direction == .ascending ? "ASC" : "DESC")"
+      }.joined(separator: ", ")
+      let ranked = sql.replacingOccurrences(
+        of: "SELECT \(columns)",
+        with: "SELECT \(columns), ROW_NUMBER() OVER (PARTITION BY \(partitionColumn) ORDER BY \(windowOrder)) AS \(quote("__teaql_partition_rank"))",
+        options: [.anchored])
+      sql = "SELECT \(columns) FROM (\(ranked)) AS \(quote("__teaql_partitioned")) WHERE \(quote("__teaql_partition_rank")) > ? AND \(quote("__teaql_partition_rank")) <= ? ORDER BY \(quote("__teaql_partition_rank"))"
+      parameters.append(.int(Int64(query.offset)))
+      parameters.append(.int(Int64(query.offset + limit)))
+      return CompiledSQL(sql: sql, parameters: parameters)
+    }
     if !query.orderBy.isEmpty {
       let orders = try query.orderBy.map { item in
         let property = try requireProperty(item.field, in: query.entity)

@@ -514,6 +514,9 @@ public struct UserContext: Sendable {
         }
         child.comment = validated.comment
         child.purpose = validated.purpose
+        if child.limit != nil {
+          child.partitionBy = relation.foreignKey
+        }
         let join = TeaQLExpression.inList(relation.foreignKey, localValues)
         child.filter = child.filter.map { .and([$0, join]) } ?? join
         let children = try await execute(child).records
@@ -544,6 +547,7 @@ public struct UserContext: Sendable {
     validated.projection = []
     validated.relations = []
     validated.relationAggregates = []
+    validated.partitionBy = nil
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).count",

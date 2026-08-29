@@ -73,6 +73,59 @@ final class RelationHydrationTests: XCTestCase {
     let aggregateQueryCount = await executor.aggregateQueries()
     XCTAssertEqual(aggregateQueryCount, 2)
   }
+
+  func testLimitedReverseRelationIsPartitionedPerParent() async throws {
+    let executor = TopNRelationFixtureExecutor()
+    let context = UserContext(
+      queryExecutor: executor,
+      mutationExecutor: RejectingMutationExecutor(),
+      requestPolicy: RequestPolicy { $0 })
+    var children = SelectQuery(entity: childDescriptor)
+    children.orderBy = [OrderBy("id", .descending)]
+    children.limit = 1
+    var parent = SelectQuery(entity: parentDescriptor)
+    parent.comment = "Load recent child per parent"
+    parent.purpose = "Verify relation limit is partitioned"
+    parent.relationQuery(
+      "childList", localKey: "id", foreignKey: "parent", query: children)
+
+    let records = try await context.execute(parent).records
+
+    guard case .array(let first) = records[0]["childList"],
+      case .array(let second) = records[1]["childList"]
+    else { return XCTFail("limited relations were not hydrated") }
+    func ids(_ values: [TeaQLValue]) -> [TeaQLValue] {
+      values.compactMap { value in
+        guard case .object(let record) = value else { return nil }
+        return record["id"]
+      }
+    }
+    XCTAssertEqual(ids(first), [TeaQLValue.int(12)])
+    XCTAssertEqual(ids(second), [TeaQLValue.int(22)])
+    let usedPartitionedLimit = await executor.usedPartitionedLimit()
+    XCTAssertTrue(usedPartitionedLimit)
+  }
+}
+
+private actor TopNRelationFixtureExecutor: QueryExecutor {
+  private var partitioned = false
+
+  func usedPartitionedLimit() -> Bool { partitioned }
+
+  func execute(_ query: SelectQuery) async throws -> QueryResult {
+    if query.entity.name == "Parent" {
+      return QueryResult(records: [["id": .int(1)], ["id": .int(2)]], backend: "fixture")
+    }
+    guard query.partitionBy == "parent", query.limit == 1,
+      query.orderBy == [OrderBy("id", .descending)]
+    else { throw TeaQLError.execution("limited relation did not retain its per-parent plan") }
+    partitioned = true
+    return QueryResult(
+      records: [
+        ["id": .int(12), "parent": .int(1)],
+        ["id": .int(22), "parent": .int(2)],
+      ], backend: "fixture")
+  }
 }
 
 private actor RelationAggregateFixtureExecutor: QueryExecutor {

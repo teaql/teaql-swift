@@ -64,6 +64,32 @@ import Testing
   #expect(compiled.parameters == [.int(10_000)])
 }
 
+@Test func sqliteCompilesPerParentRelationLimitWithStableIDTieBreaker() throws {
+  let entity = EntityDescriptor(
+    name: "OrderLine", table: "order_line",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "order", column: "order_id", type: .int),
+      PropertyDescriptor(name: "name", type: .string),
+    ])
+  var query = SelectQuery(entity: entity)
+  query.projection = ["id", "order", "name"]
+  query.filter = .inList("order", [.int(10), .int(20)])
+  query.orderBy = [OrderBy("name", .ascending)]
+  query.offset = 1
+  query.limit = 3
+  query.partitionBy = "order"
+  query.comment = "Load bounded line previews"
+  query.purpose = "Verify independent Top-N relation slices"
+
+  let compiled = try SQLiteCompiler().compile(query)
+
+  #expect(compiled.sql.contains("ROW_NUMBER() OVER (PARTITION BY \"order_id\" ORDER BY \"name\" ASC, \"id\" DESC)"))
+  #expect(compiled.sql.contains("\"__teaql_partition_rank\" > ? AND \"__teaql_partition_rank\" <= ?"))
+  #expect(!compiled.sql.hasPrefix("SELECT *"))
+  #expect(compiled.parameters == [.int(10), .int(20), .int(1), .int(4)])
+}
+
 @Test func sqliteCompilesProviderRegisteredSoundingLike() throws {
   let entity = EntityDescriptor(
     name: "School", table: "school_data",
