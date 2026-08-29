@@ -103,7 +103,7 @@ import Testing
   query.purpose = "Execute registered SQLite SoundingLike"
   let compiled = try SQLiteCompiler().compile(query)
   #expect(compiled.sql.contains("SOUNDEX(\"name\") = SOUNDEX(?)"))
-  #expect(compiled.parameters == [.string("Robert")])
+  #expect(compiled.parameters == [.string("Robert"), .int(10_000)])
 }
 
 @Test func sqliteCompilesPositiveAndNegativeRelationSubqueries() throws {
@@ -130,8 +130,8 @@ import Testing
   query.purpose = "Verify positive and negative relation predicates"
 
   let compiled = try SQLiteCompiler().compile(query)
-  #expect(compiled.sql.contains("\"query_group\" IN (SELECT \"id\" FROM \"query_group_data\" WHERE \"group_name\" = ?)"))
-  #expect(compiled.sql.contains("\"query_group\" NOT IN (SELECT \"id\" FROM \"query_group_data\" WHERE \"group_name\" = ?)"))
+  #expect(compiled.sql.contains("\"query_group\" IN (SELECT \"id\" FROM \"query_group_data\" WHERE (\"group_name\" = ?))"))
+  #expect(compiled.sql.contains("\"query_group\" NOT IN (SELECT \"id\" FROM \"query_group_data\" WHERE (\"group_name\" = ?)"))
   #expect(compiled.parameters.prefix(2) == [.string("Primary"), .string("Primary")])
 }
 
