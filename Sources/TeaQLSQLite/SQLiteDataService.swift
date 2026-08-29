@@ -48,12 +48,13 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor, RelationTopNPlanning {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
   public let path: String
   public nonisolated var idSetDataSourceIdentity: String { "sqlite:\(path)" }
+  public nonisolated var relationTopNPolicy: RelationTopNPolicy { .alwaysProbe }
 
   public init(path: String) throws {
     self.path = path
@@ -71,7 +72,15 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor 
   }
 
   private func ensureEntitySchemas(_ entities: [EntityDescriptor]) throws {
-    for entity in entities { try executeSQL(compiler.createTable(entity)) }
+    for entity in entities {
+      try executeSQL(compiler.createTable(entity))
+      let idColumn = entity.properties.first(where: { $0.isID })?.column ?? "id"
+      for property in entity.properties
+      where property.name.hasSuffix("Id") || property.name.hasSuffix("_id") {
+        let index = "idx_\(entity.table)_\(property.column)_id_desc"
+        try executeSQL("CREATE INDEX IF NOT EXISTS \(quote(index)) ON \(quote(entity.table)) (\(quote(property.column)), \(quote(idColumn)) DESC)")
+      }
+    }
     try executeSQL(
       """
       CREATE TABLE IF NOT EXISTS teaql_row_audit_event (

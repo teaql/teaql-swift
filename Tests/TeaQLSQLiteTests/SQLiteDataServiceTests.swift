@@ -15,6 +15,84 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+@Test func topNRelationPlansAreEquivalentAndCanonicalIndexIsIdempotent() async throws {
+  let parent = EntityDescriptor(name: "TopNParent", table: "topn_parent", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let child = EntityDescriptor(name: "TopNChild", table: "topn_child", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "parentId", column: "parent_id", type: .int),
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "state", type: .string),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-topn-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 })
+  let module = RuntimeModule(name: "topn", entities: [parent, child])
+  try await context.ensureSchema(module)
+  try await context.ensureSchema(module)
+  for id in 1...3 {
+    _ = try await service.execute(Mutation(kind: .create, entity: parent, id: .int(Int64(id)),
+      values: [:], auditReason: "seed Top-N parent"))
+  }
+  for parentID in 1...2 {
+    for index in 1...4 {
+      _ = try await service.execute(Mutation(kind: .create, entity: child,
+        id: .int(Int64(parentID * 100 + index)), values: [
+          "parentId": .int(Int64(parentID)), "name": .string("same"), "state": .string("visible"),
+        ], auditReason: "seed Top-N child"))
+    }
+  }
+  _ = try await service.execute(Mutation(kind: .create, entity: child, id: .int(9999),
+    values: ["parentId": .int(1), "name": .string("same"), "state": .string("hidden")],
+    auditReason: "seed excluded Top-N child"))
+
+  func query(_ threshold: Int?) -> SelectQuery {
+    var nested = SelectQuery(entity: child)
+    nested.projection = ["id", "name"]
+    nested.filter = .and([.equal("state", .string("visible")), .greaterThan("version", .int(0))])
+    nested.orderBy = [OrderBy("name", .descending)]
+    nested.limit = 3
+    nested.topNProbeParentThreshold = threshold
+    var root = SelectQuery(entity: parent)
+    root.orderBy = [OrderBy("id", .ascending)]
+    root.comment = "load Top-N child relation"
+    root.purpose = "verify probe and window equivalence"
+    root.relationQuery("children", localKey: "id", foreignKey: "parentId", query: nested)
+    return root
+  }
+  func ids(_ rows: [TeaQLRecord]) -> [[Int64]] {
+    rows.map { row in
+      guard case .array(let children) = row["children"] else { return [] }
+      return children.compactMap { value in
+        guard case .object(let child) = value else { return nil }
+        return child["id"]?.int64Value
+      }
+    }
+  }
+  let probes = try await context.execute(query(nil)).records
+  let window = try await context.execute(query(0)).records
+  #expect(ids(probes) == ids(window))
+  #expect(ids(probes).map(\.count) == [3, 3, 0])
+  #expect(ids(try await context.execute(query(3)).records) == ids(probes))
+  #expect(ids(try await context.execute(query(2)).records) == ids(probes))
+
+  let schema = EntityDescriptor(name: "SQLiteSchema", table: "sqlite_master", properties: [
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "sql", type: .string, nullable: true),
+  ])
+  var indexQuery = SelectQuery(entity: schema)
+  indexQuery.filter = .equal("name", .string("idx_topn_child_parent_id_id_desc"))
+  indexQuery.comment = "inspect canonical Top-N relation index"
+  indexQuery.purpose = "verify idempotent schema ensure"
+  #expect(try await service.execute(indexQuery).records.count == 1)
+}
+
 @Test func continuousPageUsesIdSeekWithoutDuplicateOrMissingRows() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-continuous-page-\(UUID().uuidString).db").path

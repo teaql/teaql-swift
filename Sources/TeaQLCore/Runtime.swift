@@ -6,6 +6,11 @@ public protocol QueryExecutor: Sendable {
   func count(_ query: SelectQuery) async throws -> Int
 }
 
+public enum RelationTopNPolicy: Sendable { case window, alwaysProbe }
+public protocol RelationTopNPlanning: Sendable {
+  var relationTopNPolicy: RelationTopNPolicy { get }
+}
+
 /// Physical schema capability selected by a UserContext.
 /// RuntimeModule installation remains passive; applications call UserContext.ensureSchema(_:).
 package protocol SchemaExecutor: Sendable {
@@ -634,6 +639,13 @@ public struct UserContext: Sendable {
       }
     }
     for relation in validated.relations {
+      let relationParentCount = records.compactMap { $0[relation.localKey] }.count
+      let relationThreshold = relation.query.topNProbeParentThreshold
+      let relationLimited = relation.query.limit != nil
+      let relationAlwaysProbe =
+        (queryExecutor as? any RelationTopNPlanning)?.relationTopNPolicy == .alwaysProbe
+      let relationUsesProbes = relationLimited && ((relationAlwaysProbe && relationThreshold == nil)
+        || (relationThreshold.map { $0 > 0 && relationParentCount <= $0 } ?? false))
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(
           family: "relation_load", name: "\(validated.entity.name).\(relation.name)",
@@ -641,7 +653,15 @@ public struct UserContext: Sendable {
             "teaql.entity.type": .string(validated.entity.name),
             "teaql.relation.name": .string(relation.name),
           ]
-        )
+        ), completion: { _ in
+          return [
+            "teaql.relation.parent_count": .integer(Int64(relationParentCount)),
+            "teaql.relation.per_parent_limit": .integer(Int64(relation.query.limit ?? 0)),
+            "teaql.relation.configured_probe_threshold": .integer(Int64(relationThreshold ?? -1)),
+            "teaql.relation.selected_plan": .string(relationUsesProbes ? "bounded_probes" : relationLimited ? "window" : "batch"),
+            "teaql.relation.probe_count": .integer(Int64(relationUsesProbes ? relationParentCount : 0)),
+          ]
+        }
       ) {
         let localValues = records.compactMap { $0[relation.localKey] }
         guard !localValues.isEmpty else { return }
@@ -654,12 +674,30 @@ public struct UserContext: Sendable {
         }
         child.comment = validated.comment
         child.purpose = validated.purpose
-        if child.limit != nil {
-          child.partitionBy = relation.foreignKey
+        if child.limit != nil,
+          !child.orderBy.contains(where: { $0.field == (child.entity.properties.first(where: { $0.isID })?.name ?? "id") })
+        {
+          child.orderBy.append(OrderBy(child.entity.properties.first(where: { $0.isID })?.name ?? "id", .ascending))
         }
-        let join = TeaQLExpression.inList(relation.foreignKey, localValues)
-        child.filter = child.filter.map { .and([$0, join]) } ?? join
-        let children = try await execute(child).records
+        let threshold = child.topNProbeParentThreshold
+        let alwaysProbe = (queryExecutor as? any RelationTopNPlanning)?.relationTopNPolicy == .alwaysProbe
+        let useProbes = child.limit != nil && ((alwaysProbe && threshold == nil)
+          || (threshold.map { $0 > 0 && localValues.count <= $0 } ?? false))
+        var children: [TeaQLRecord] = []
+        if useProbes {
+          for localValue in localValues {
+            var probe = child
+            probe.partitionBy = nil
+            let join = TeaQLExpression.equal(relation.foreignKey, localValue)
+            probe.filter = probe.filter.map { .and([$0, join]) } ?? join
+            children.append(contentsOf: try await execute(probe).records)
+          }
+        } else {
+          if child.limit != nil { child.partitionBy = relation.foreignKey }
+          let join = TeaQLExpression.inList(relation.foreignKey, localValues)
+          child.filter = child.filter.map { .and([$0, join]) } ?? join
+          children = try await execute(child).records
+        }
         let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
         for index in records.indices {
           let matches = grouped[records[index][relation.localKey] ?? .null] ?? []

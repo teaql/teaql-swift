@@ -103,6 +103,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let groupBy: [String]
   public let aggregates: [QueryAggregate]
   public let partitionBy: String?
+  public let topNProbeParentThreshold: Int?
 
   public init(_ query: SelectQuery) {
     entity = query.entity
@@ -115,6 +116,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     groupBy = query.groupBy
     aggregates = query.aggregates
     partitionBy = query.partitionBy
+    topNProbeParentThreshold = query.topNProbeParentThreshold
   }
 
   public func makeQuery() -> SelectQuery {
@@ -128,6 +130,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.groupBy = groupBy
     query.aggregates = aggregates
     query.partitionBy = partitionBy
+    query.topNProbeParentThreshold = topNProbeParentThreshold
     return query
   }
 }
@@ -170,8 +173,16 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var purpose: String?
   public var continuousPage: ContinuousPageFetchOptions?
   public var idSetPagination: IdSetPaginationOptions?
+  public var topNProbeParentThreshold: Int?
 
   public init(entity: EntityDescriptor) { self.entity = entity }
+
+  @discardableResult
+  public mutating func topNProbeParentThreshold(_ threshold: Int) -> Self {
+    precondition(threshold >= 0, "Top-N probe parent threshold must not be negative")
+    topNProbeParentThreshold = threshold
+    return self
+  }
 
   @discardableResult
   public mutating func relationQuery(

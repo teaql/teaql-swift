@@ -83,6 +83,7 @@ final class RelationHydrationTests: XCTestCase {
     var children = SelectQuery(entity: childDescriptor)
     children.orderBy = [OrderBy("id", .descending)]
     children.limit = 1
+    children.topNProbeParentThreshold = 0
     var parent = SelectQuery(entity: parentDescriptor)
     parent.comment = "Load recent child per parent"
     parent.purpose = "Verify relation limit is partitioned"
@@ -105,26 +106,90 @@ final class RelationHydrationTests: XCTestCase {
     let usedPartitionedLimit = await executor.usedPartitionedLimit()
     XCTAssertTrue(usedPartitionedLimit)
   }
+
+  func testSQLitePolicyUsesBoundedProbesAtThresholdAndKeepsEmptyRelation() async throws {
+    let executor = TopNRelationFixtureExecutor()
+    let telemetry = TopNTelemetry()
+    let context = UserContext(
+      queryExecutor: executor, mutationExecutor: RejectingMutationExecutor(),
+      requestPolicy: RequestPolicy { $0 }, runtimeTelemetry: telemetry)
+    var children = SelectQuery(entity: childDescriptor)
+    children.orderBy = [OrderBy("name", .descending)]
+    children.limit = 1
+    children.topNProbeParentThreshold = 3
+    var parent = SelectQuery(entity: parentDescriptor)
+    parent.comment = "Load bounded child probes"
+    parent.purpose = "Verify provider Top-N policy"
+    parent.relationQuery("childList", localKey: "id", foreignKey: "parent", query: children)
+
+    let records = try await context.execute(parent).records
+    let repeated = try await context.execute(parent).records
+    let childQueryCount = await executor.childQueryCount()
+    XCTAssertEqual(childQueryCount, 6)
+    XCTAssertEqual(records, repeated)
+    guard case .array(let empty) = records[2]["childList"] else {
+      return XCTFail("empty relation was not attached")
+    }
+    XCTAssertTrue(empty.isEmpty)
+    let relationEvent = telemetry.events.first { $0.0.family == "relation_load" }
+    XCTAssertEqual(relationEvent?.1["teaql.relation.selected_plan"], .string("bounded_probes"))
+    XCTAssertEqual(relationEvent?.1["teaql.relation.parent_count"], .integer(3))
+    XCTAssertEqual(relationEvent?.1["teaql.relation.probe_count"], .integer(3))
+  }
 }
 
-private actor TopNRelationFixtureExecutor: QueryExecutor {
+private final class TopNTelemetry: RuntimeTelemetry, @unchecked Sendable {
+  private let lock = NSLock()
+  private var stored: [(RuntimeOperation, [String: RuntimeTelemetryValue])] = []
+  var events: [(RuntimeOperation, [String: RuntimeTelemetryValue])] { lock.withLock { stored } }
+  func withOperation<Result: Sendable>(
+    _ operation: RuntimeOperation,
+    completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () async throws -> Result
+  ) async rethrows -> Result {
+    let result = try await body()
+    lock.withLock { stored.append((operation, completion(result))) }
+    return result
+  }
+  func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation,
+    completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result { try body() }
+  func flush() async {}
+  func shutdown() async {}
+}
+
+private actor TopNRelationFixtureExecutor: QueryExecutor, RelationTopNPlanning {
+  nonisolated let relationTopNPolicy: RelationTopNPolicy = .alwaysProbe
   private var partitioned = false
+  private var childQueries = 0
 
   func usedPartitionedLimit() -> Bool { partitioned }
+  func childQueryCount() -> Int { childQueries }
 
   func execute(_ query: SelectQuery) async throws -> QueryResult {
     if query.entity.name == "Parent" {
-      return QueryResult(records: [["id": .int(1)], ["id": .int(2)]], backend: "fixture")
+      return QueryResult(records: [["id": .int(1)], ["id": .int(2)], ["id": .int(3)]], backend: "fixture")
     }
-    guard query.partitionBy == "parent", query.limit == 1,
-      query.orderBy == [OrderBy("id", .descending)]
-    else { throw TeaQLError.execution("limited relation did not retain its per-parent plan") }
-    partitioned = true
+    childQueries += 1
+    if query.partitionBy == "parent" {
+      guard query.limit == 1, query.orderBy == [OrderBy("id", .descending)] else {
+        throw TeaQLError.execution("limited relation did not retain its window plan")
+      }
+      partitioned = true
+      return QueryResult(
+        records: [
+          ["id": .int(12), "parent": .int(1)],
+          ["id": .int(22), "parent": .int(2)],
+        ], backend: "fixture")
+    }
+    guard case .equal("parent", let parentID) = query.filter, query.limit == 1,
+      query.orderBy == [OrderBy("name", .descending), OrderBy("id", .ascending)]
+    else { throw TeaQLError.execution("bounded probe did not retain filter/order/limit") }
     return QueryResult(
-      records: [
-        ["id": .int(12), "parent": .int(1)],
-        ["id": .int(22), "parent": .int(2)],
-      ], backend: "fixture")
+      records: parentID == .int(3) ? [] : [["id": .int(parentID == .int(1) ? 12 : 22), "parent": parentID]],
+      backend: "fixture")
   }
 }
 
