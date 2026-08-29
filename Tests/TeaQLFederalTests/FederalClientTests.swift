@@ -173,6 +173,30 @@ private struct FailingTransport: FederalTransport {
   #expect(payload["hardLimit"] == nil)
 }
 
+@Test func IDSET_015_federationPayloadCannotInjectRetentionControls() async throws {
+  let transport = RecordingTransport(
+    json: #"{"data":[{"id":7}],"resultCode":0,"status":"YES","execution":{}}"#)
+  let service = FederalDataService(
+    client: TeaQLFederalClient(
+      baseURL: URL(string: "https://example.test/")!, transport: transport))
+  let entity = EntityDescriptor(
+    name: "CustomerOrder", table: "customer_order_data",
+    properties: [PropertyDescriptor(name: "id", type: .int, isID: true)])
+  var query = SelectQuery(entity: entity)
+  query.limit = 1
+  query.idSetPagination = IdSetPaginationOptions(
+    namespace: "must-remain-local", ttlSeconds: 99_999, maxIds: 9_999_999)
+  query.comment = "verify local retention boundary"
+  query.purpose = "prevent TFP retention injection"
+  _ = try await service.execute(query)
+  let request = try #require(await transport.requests.first)
+  let payload = try #require(try JSONSerialization.jsonObject(with: request.body) as? [String: Any])
+  #expect(payload["idSetPagination"] == nil)
+  #expect(payload["namespace"] == nil)
+  #expect(payload["ttlSeconds"] == nil)
+  #expect(payload["maxIds"] == nil)
+}
+
 @Test func federalClientRecordsBalancedTFPLifecyclesAndRethrowsTransportFailure() async throws {
   let telemetry = RecordingRuntimeTelemetry()
   let transport = RecordingTransport(

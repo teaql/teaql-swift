@@ -53,6 +53,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor 
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
   public let path: String
+  public nonisolated var idSetDataSourceIdentity: String { "sqlite:\(path)" }
 
   public init(path: String) throws {
     self.path = path

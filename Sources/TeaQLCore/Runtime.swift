@@ -1,6 +1,7 @@
 import Foundation
 
 public protocol QueryExecutor: Sendable {
+  var idSetDataSourceIdentity: String { get }
   func execute(_ query: SelectQuery) async throws -> QueryResult
   func count(_ query: SelectQuery) async throws -> Int
 }
@@ -13,6 +14,7 @@ package protocol SchemaExecutor: Sendable {
 
 public extension QueryExecutor {
   var providerKind: String { String(describing: type(of: self)) }
+  var idSetDataSourceIdentity: String { providerKind }
 
   func count(_ query: SelectQuery) async throws -> Int {
     throw TeaQLError.execution(
@@ -341,17 +343,26 @@ public struct IdSetPaginationObservation: Sendable, Equatable {
   public let countAccuracy: String
 }
 
-private struct RetainedIdSet: Sendable {
-  let ids: [Int64]
-  let expiresAt: Date
+public struct RetainedIdSet: Sendable {
+  public let ids: [Int64]
+  public let expiresAt: Date
+  public init(ids: [Int64], expiresAt: Date) { self.ids = ids; self.expiresAt = expiresAt }
 }
 
-private actor IdSetStore {
-  static let shared = IdSetStore()
+public protocol IdSetStore: Sendable {
+  func obtain(
+    key: String, build: @escaping @Sendable () async throws -> RetainedIdSet
+  ) async throws -> (RetainedIdSet, Bool)
+}
+
+public actor InMemoryIdSetStore: IdSetStore {
+  public static let shared = InMemoryIdSetStore()
   private var sets: [String: RetainedIdSet] = [:]
   private var builds: [String: Task<RetainedIdSet, Error>] = [:]
 
-  func obtain(
+  public init() {}
+
+  public func obtain(
     key: String, build: @escaping @Sendable () async throws -> RetainedIdSet
   ) async throws -> (RetainedIdSet, Bool) {
     if let retained = sets[key], retained.expiresAt > Date() { return (retained, false) }
@@ -407,6 +418,7 @@ public struct UserContext: Sendable {
   private let entityCreationObserver: EntityCreationObserver?
   private let continuousPageState: ContinuousPageState
   private let idSetObservationState: IdSetObservationState
+  private let idSetStore: any IdSetStore
 
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
@@ -419,6 +431,7 @@ public struct UserContext: Sendable {
     auditSink: (any AuditSink)? = nil,
     telemetrySink: (any RuntimeTelemetrySink)? = nil,
     runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry(),
+    idSetStore: any IdSetStore = InMemoryIdSetStore.shared,
     locale: TeaQLLocale = .en,
     i18nCatalog: I18nCatalog = .builtin,
     entityInitializers: [EntityInitializer] = [],
@@ -434,6 +447,7 @@ public struct UserContext: Sendable {
     self.auditSink = auditSink
     self.telemetrySink = telemetrySink
     self.runtimeTelemetry = runtimeTelemetry
+    self.idSetStore = idSetStore
     self.locale = locale
     self.i18nCatalog = i18nCatalog
     self.entityInitializers = entityInitializers
@@ -686,11 +700,11 @@ public struct UserContext: Sendable {
     normalized.idSetPagination = nil; normalized.continuousPage = nil
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
     let encoded = try encoder.encode(normalized)
-    let security = "\(actor ?? "")|\(trustedTenant ?? "")|\(activeRoot.map { "\($0.entity):\($0.id)" } ?? "")|\(requestPolicy.idSetIdentity)|\(queryExecutor.providerKind)"
+    let security = "\(actor ?? "")|\(trustedTenant ?? "")|\(activeRoot.map { "\($0.entity):\($0.id)" } ?? "")|\(requestPolicy.idSetIdentity)|\(queryExecutor.idSetDataSourceIdentity)"
     let key = "teaql:id-set:v1:\(options.namespace):\(security):\(encoded.base64EncodedString())"
     let stableSnapshot = stable
     do {
-      let (retained, built) = try await IdSetStore.shared.obtain(key: key) {
+      let (retained, built) = try await idSetStore.obtain(key: key) {
         var idQuery = stableSnapshot
         idQuery.offset = 0
         idQuery.limit = options.maxIds == Int.max ? Int.max : options.maxIds + 1
