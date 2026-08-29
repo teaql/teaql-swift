@@ -168,6 +168,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var facets: [FacetRequest] = []
   public var comment: String?
   public var purpose: String?
+  public var continuousPage: ContinuousPageFetchOptions?
 
   public init(entity: EntityDescriptor) { self.entity = entity }
 
@@ -212,6 +213,18 @@ public struct SelectQuery: Sendable, Hashable, Codable {
     }
     guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }
     return self
+  }
+}
+
+public struct ContinuousPageFetchOptions: Sendable, Hashable, Codable {
+  public let namespace: String
+  public let ttlSeconds: Int
+
+  public init(namespace: String = "default", ttlSeconds: Int = 600) {
+    precondition(!namespace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    precondition(ttlSeconds > 0)
+    self.namespace = namespace
+    self.ttlSeconds = ttlSeconds
   }
 }
 

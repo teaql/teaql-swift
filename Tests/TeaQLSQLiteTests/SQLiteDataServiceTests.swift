@@ -15,6 +15,53 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
   ])
 
+@Test func continuousPageUsesIdSeekWithoutDuplicateOrMissingRows() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-continuous-page-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let context = UserContext(
+    queryExecutor: service, mutationExecutor: service, requestPolicy: RequestPolicy { $0 })
+  try await context.ensureSchema(RuntimeModule(name: "continuous-page", entities: [order]))
+  for id in 1...5 {
+    _ = try await service.execute(Mutation(
+      kind: .create, entity: order, id: .int(Int64(id)),
+      values: [
+        "orderNumber": .string("ORDER-\(id)"), "orderDate": .calendarDate("2026-08-29"),
+        "tenantID": .int(1),
+      ],
+      auditReason: "seed continuous page order"))
+  }
+  func page(_ offset: Int) async throws -> [Int64] {
+    var query = SelectQuery(entity: order)
+    query.projection = ["id", "orderNumber"]
+    query.orderBy = [OrderBy("id", .descending)]
+    query.offset = offset
+    query.limit = 2
+    query.continuousPage = ContinuousPageFetchOptions(namespace: "orders", ttlSeconds: 60)
+    query.comment = "load continuous order page"
+    query.purpose = "verify cursor seek semantics"
+    return try await context.execute(query).records.compactMap { $0["id"]?.int64Value }
+  }
+  let first = try await page(0)
+  #expect(first == [5, 4])
+  #expect(await context.continuousPageObservation().plan == "OFFSET_FALLBACK:FIRST_PAGE")
+  let second = try await page(2)
+  #expect(second == [3, 2])
+  #expect(Set(first).isDisjoint(with: second))
+  #expect(await context.continuousPageObservation().plan == "CURSOR_SEEK")
+
+  var missing = SelectQuery(entity: order)
+  missing.orderBy = [OrderBy("id", .descending)]
+  missing.offset = 4
+  missing.limit = 2
+  missing.continuousPage = ContinuousPageFetchOptions(namespace: "missing", ttlSeconds: 60)
+  missing.comment = "load page without checkpoint"
+  missing.purpose = "verify explicit cache miss fallback"
+  #expect(try await context.execute(missing).records.compactMap { $0["id"]?.int64Value } == [1])
+  #expect(await context.continuousPageObservation().plan == "OFFSET_FALLBACK:CACHE_MISS")
+}
+
 @Test func completeScalarFixtureIncludingNullableBooleanExecutesOnSQLite() async throws {
   let descriptor = EntityDescriptor(name: "QueryRecord", table: "query_record_scalar", properties: [
     PropertyDescriptor(name: "id", type: .int, isID: true),

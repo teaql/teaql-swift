@@ -291,6 +291,48 @@ public typealias EntityCreationObserver = @Sendable (
   _ context: UserContext, _ entityName: String, _ entity: any TeaQLEntity
 ) -> Void
 
+public struct ContinuousPageObservation: Sendable, Equatable {
+  public let plan: String
+  public let cursorID: String?
+}
+
+private struct ContinuousPageCursor: Sendable {
+  let id: String
+  let boundary: TeaQLValue
+  let expiresAt: Date
+}
+
+private actor ContinuousPageState {
+  private var cursors: [String: ContinuousPageCursor] = [:]
+  private var observation = ContinuousPageObservation(plan: "DISABLED", cursorID: nil)
+
+  func cursor(queryKey: String, offset: Int) -> ContinuousPageCursor? {
+    let key = "\(queryKey):\(offset)"
+    guard let cursor = cursors[key] else { return nil }
+    guard cursor.expiresAt > Date() else { cursors.removeValue(forKey: key); return nil }
+    return cursor
+  }
+
+  func put(queryKey: String, offset: Int, cursor: ContinuousPageCursor) {
+    cursors["\(queryKey):\(offset)"] = cursor
+  }
+
+  func observe(_ plan: String, cursorID: String? = nil) {
+    observation = ContinuousPageObservation(plan: plan, cursorID: cursorID)
+  }
+
+  func currentObservation() -> ContinuousPageObservation { observation }
+}
+
+private struct ContinuousPageExecution: Sendable {
+  let queryKey: String
+  let originalOffset: Int
+  let limit: Int
+  let ttlSeconds: Int
+  let optimized: Bool
+  let cursorID: String?
+}
+
 public struct UserContext: Sendable {
   public let runtime: TeaQLRuntime
   public let actor: String?
@@ -308,6 +350,7 @@ public struct UserContext: Sendable {
   public private(set) var i18nCatalog: I18nCatalog
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
+  private let continuousPageState: ContinuousPageState
 
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
@@ -339,6 +382,7 @@ public struct UserContext: Sendable {
     self.i18nCatalog = i18nCatalog
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
+    self.continuousPageState = ContinuousPageState()
   }
 
   public func requireActiveRoot(_ expectedType: String) throws -> ContextEntityRef {
@@ -393,9 +437,14 @@ public struct UserContext: Sendable {
     }
   }
 
+  public func continuousPageObservation() async -> ContinuousPageObservation {
+    await continuousPageState.currentObservation()
+  }
+
   private func executeQuery(_ query: SelectQuery) async throws -> QueryResult {
     let validated = try requestPolicy.apply(query).validatedForExecution()
-    var base = validated
+    let prepared = await prepareContinuousPage(validated)
+    var base = prepared.query
     base.relations = []
     base.relationAggregates = []
     base.facets = []
@@ -411,6 +460,7 @@ public struct UserContext: Sendable {
       try await queryExecutor.execute(base)
     }
     if let metadata = result.metadata { await telemetrySink?.record(metadata) }
+    await registerContinuousPage(prepared.execution, rows: result.records)
     var facets: [String: SmartList<TeaQLRecord>] = [:]
     for facet in validated.facets {
       var membership = validated
@@ -532,6 +582,68 @@ public struct UserContext: Sendable {
     return QueryResult(
       records: records, backend: result.backend, trace: result.trace,
       metadata: result.metadata, facets: facets)
+  }
+
+  private func prepareContinuousPage(
+    _ query: SelectQuery
+  ) async -> (query: SelectQuery, execution: ContinuousPageExecution?) {
+    guard let options = query.continuousPage else {
+      await continuousPageState.observe("DISABLED")
+      return (query, nil)
+    }
+    guard let limit = query.limit, query.orderBy.count == 1,
+      query.orderBy[0].field == (query.entity.idProperty?.name ?? "id"),
+      query.aggregates.isEmpty, query.groupBy.isEmpty, query.partitionBy == nil
+    else {
+      await continuousPageState.observe("OFFSET_FALLBACK:UNSUPPORTED_QUERY_SHAPE")
+      return (query, nil)
+    }
+    var normalized = query
+    normalized.offset = 0
+    normalized.comment = nil
+    normalized.purpose = nil
+    normalized.continuousPage = nil
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let encoded = (try? encoder.encode(normalized)) ?? Data()
+    let key = "teaql:continuous-page:v1:\(options.namespace):\(encoded.base64EncodedString())"
+    if query.offset == 0 {
+      await continuousPageState.observe("OFFSET_FALLBACK:FIRST_PAGE")
+      return (query, ContinuousPageExecution(
+        queryKey: key, originalOffset: 0, limit: limit, ttlSeconds: options.ttlSeconds,
+        optimized: false, cursorID: nil))
+    }
+    guard let cursor = await continuousPageState.cursor(queryKey: key, offset: query.offset) else {
+      await continuousPageState.observe("OFFSET_FALLBACK:CACHE_MISS")
+      return (query, ContinuousPageExecution(
+        queryKey: key, originalOffset: query.offset, limit: limit,
+        ttlSeconds: options.ttlSeconds, optimized: false, cursorID: nil))
+    }
+    var seek = query
+    seek.offset = 0
+    let condition: TeaQLExpression = query.orderBy[0].direction == .descending
+      ? .lessThan(query.orderBy[0].field, cursor.boundary)
+      : .greaterThan(query.orderBy[0].field, cursor.boundary)
+    seek.filter = seek.filter.map { .and([$0, condition]) } ?? condition
+    await continuousPageState.observe("CURSOR_SEEK", cursorID: cursor.id)
+    return (seek, ContinuousPageExecution(
+      queryKey: key, originalOffset: query.offset, limit: limit,
+      ttlSeconds: options.ttlSeconds, optimized: true, cursorID: cursor.id))
+  }
+
+  private func registerContinuousPage(
+    _ execution: ContinuousPageExecution?, rows: [TeaQLRecord]
+  ) async {
+    guard let execution, rows.count == execution.limit,
+      let boundary = rows.last?["id"], boundary != .null else { return }
+    await continuousPageState.put(
+      queryKey: execution.queryKey, offset: execution.originalOffset + rows.count,
+      cursor: ContinuousPageCursor(
+        id: "cpg_\(UUID().uuidString.lowercased())", boundary: boundary,
+        expiresAt: Date().addingTimeInterval(TimeInterval(execution.ttlSeconds))))
+    if execution.optimized {
+      await continuousPageState.observe("CURSOR_SEEK", cursorID: execution.cursorID)
+    }
   }
 
   private func normalizedRelationIdentity(_ value: TeaQLValue) -> TeaQLValue {
