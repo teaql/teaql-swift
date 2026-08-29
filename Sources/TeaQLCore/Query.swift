@@ -169,6 +169,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var comment: String?
   public var purpose: String?
   public var continuousPage: ContinuousPageFetchOptions?
+  public var idSetPagination: IdSetPaginationOptions?
 
   public init(entity: EntityDescriptor) { self.entity = entity }
 
@@ -213,6 +214,21 @@ public struct SelectQuery: Sendable, Hashable, Codable {
     }
     guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }
     return self
+  }
+}
+
+public struct IdSetPaginationOptions: Sendable, Hashable, Codable {
+  public let namespace: String
+  public let ttlSeconds: Int
+  public let maxIds: Int
+
+  public init(namespace: String = "default", ttlSeconds: Int = 600, maxIds: Int = 3_000_000) {
+    precondition(!namespace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    precondition(ttlSeconds > 0)
+    precondition(maxIds > 0)
+    self.namespace = namespace
+    self.ttlSeconds = ttlSeconds
+    self.maxIds = maxIds
   }
 }
 

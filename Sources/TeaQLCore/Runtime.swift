@@ -277,9 +277,11 @@ public struct AuditEvent: Sendable, Codable {
 
 public struct RequestPolicy: Sendable {
   public let apply: @Sendable (SelectQuery) throws -> SelectQuery
+  package let idSetIdentity: UUID
 
   public init(apply: @escaping @Sendable (SelectQuery) throws -> SelectQuery) {
     self.apply = apply
+    self.idSetIdentity = UUID()
   }
 }
 
@@ -333,6 +335,59 @@ private struct ContinuousPageExecution: Sendable {
   let cursorID: String?
 }
 
+public struct IdSetPaginationObservation: Sendable, Equatable {
+  public let plan: String
+  public let count: Int
+  public let countAccuracy: String
+}
+
+private struct RetainedIdSet: Sendable {
+  let ids: [Int64]
+  let expiresAt: Date
+}
+
+private actor IdSetStore {
+  static let shared = IdSetStore()
+  private var sets: [String: RetainedIdSet] = [:]
+  private var builds: [String: Task<RetainedIdSet, Error>] = [:]
+
+  func obtain(
+    key: String, build: @escaping @Sendable () async throws -> RetainedIdSet
+  ) async throws -> (RetainedIdSet, Bool) {
+    if let retained = sets[key], retained.expiresAt > Date() { return (retained, false) }
+    if let active = builds[key] { return (try await active.value, false) }
+    let task = Task { try await build() }
+    builds[key] = task
+    do {
+      let retained = try await task.value
+      builds.removeValue(forKey: key)
+      if sets.count >= 64, let oldest = sets.min(by: { $0.value.expiresAt < $1.value.expiresAt }) {
+        sets.removeValue(forKey: oldest.key)
+      }
+      sets[key] = retained
+      return (retained, true)
+    } catch {
+      builds.removeValue(forKey: key)
+      throw error
+    }
+  }
+}
+
+private actor IdSetObservationState {
+  private var value = IdSetPaginationObservation(
+    plan: "ID_SET_DISABLED", count: 0, countAccuracy: "UNKNOWN")
+  func observe(_ plan: String, count: Int = 0, accuracy: String = "UNKNOWN") {
+    value = IdSetPaginationObservation(plan: plan, count: count, countAccuracy: accuracy)
+  }
+  func current() -> IdSetPaginationObservation { value }
+}
+
+private struct IdSetExecution: Sendable {
+  let pageIds: [Int64]
+}
+
+private enum IdSetBuildError: Error { case limitExceeded(Int) }
+
 public struct UserContext: Sendable {
   public let runtime: TeaQLRuntime
   public let actor: String?
@@ -351,6 +406,7 @@ public struct UserContext: Sendable {
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
   private let continuousPageState: ContinuousPageState
+  private let idSetObservationState: IdSetObservationState
 
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
@@ -383,6 +439,7 @@ public struct UserContext: Sendable {
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
     self.continuousPageState = ContinuousPageState()
+    self.idSetObservationState = IdSetObservationState()
   }
 
   public func requireActiveRoot(_ expectedType: String) throws -> ContextEntityRef {
@@ -441,14 +498,19 @@ public struct UserContext: Sendable {
     await continuousPageState.currentObservation()
   }
 
+  public func idSetPaginationObservation() async -> IdSetPaginationObservation {
+    await idSetObservationState.current()
+  }
+
   private func executeQuery(_ query: SelectQuery) async throws -> QueryResult {
     let validated = try requestPolicy.apply(query).validatedForExecution()
-    let prepared = await prepareContinuousPage(validated)
+    let idSetPrepared = try await prepareIdSetPagination(validated)
+    let prepared = await prepareContinuousPage(idSetPrepared.query)
     var base = prepared.query
     base.relations = []
     base.relationAggregates = []
     base.facets = []
-    let result = try await runtimeTelemetry.withOperation(
+    let rawResult = try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).query",
         attributes: [
@@ -458,6 +520,20 @@ public struct UserContext: Sendable {
       )
     ) {
       try await queryExecutor.execute(base)
+    }
+    let result: QueryResult
+    if let execution = idSetPrepared.execution {
+      let order = Dictionary(uniqueKeysWithValues: execution.pageIds.enumerated().map { ($0.element, $0.offset) })
+      let records = rawResult.records.filter { row in
+        row["id"]?.int64Value.map { order[$0] != nil } ?? false
+      }.sorted { left, right in
+        order[left["id"]!.int64Value!]! < order[right["id"]!.int64Value!]!
+      }
+      result = QueryResult(
+        records: records, backend: rawResult.backend, trace: rawResult.trace,
+        metadata: rawResult.metadata, facets: rawResult.facets)
+    } else {
+      result = rawResult
     }
     if let metadata = result.metadata { await telemetrySink?.record(metadata) }
     await registerContinuousPage(prepared.execution, rows: result.records)
@@ -582,6 +658,72 @@ public struct UserContext: Sendable {
     return QueryResult(
       records: records, backend: result.backend, trace: result.trace,
       metadata: result.metadata, facets: facets)
+  }
+
+  private func prepareIdSetPagination(
+    _ query: SelectQuery
+  ) async throws -> (query: SelectQuery, execution: IdSetExecution?) {
+    guard let options = query.idSetPagination else {
+      await idSetObservationState.observe("ID_SET_DISABLED")
+      return (query, nil)
+    }
+    guard let limit = query.limit, limit > 0, query.aggregates.isEmpty,
+      query.groupBy.isEmpty, query.partitionBy == nil
+    else {
+      await idSetObservationState.observe("ID_SET_FALLBACK_UNSUPPORTED_SHAPE")
+      var fallback = query; fallback.idSetPagination = nil
+      return (fallback, nil)
+    }
+    let idField = query.entity.idProperty?.name ?? "id"
+    var stable = query
+    if !stable.orderBy.contains(where: { $0.field == idField }) {
+      stable.orderBy.append(OrderBy(idField, .ascending))
+    }
+    var normalized = stable
+    normalized.offset = 0; normalized.limit = nil; normalized.projection = []
+    normalized.relations = []; normalized.relationAggregates = []; normalized.facets = []
+    normalized.comment = nil; normalized.purpose = nil
+    normalized.idSetPagination = nil; normalized.continuousPage = nil
+    let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+    let encoded = try encoder.encode(normalized)
+    let security = "\(actor ?? "")|\(trustedTenant ?? "")|\(activeRoot.map { "\($0.entity):\($0.id)" } ?? "")|\(requestPolicy.idSetIdentity)|\(queryExecutor.providerKind)"
+    let key = "teaql:id-set:v1:\(options.namespace):\(security):\(encoded.base64EncodedString())"
+    let stableSnapshot = stable
+    do {
+      let (retained, built) = try await IdSetStore.shared.obtain(key: key) {
+        var idQuery = stableSnapshot
+        idQuery.offset = 0
+        idQuery.limit = options.maxIds == Int.max ? Int.max : options.maxIds + 1
+        idQuery.projection = [idField]
+        idQuery.relations = []; idQuery.relationAggregates = []; idQuery.facets = []
+        idQuery.idSetPagination = nil; idQuery.continuousPage = nil
+        let result = try await queryExecutor.execute(idQuery)
+        let ids = result.records.compactMap { $0[idField]?.int64Value }
+        guard ids.count <= options.maxIds else {
+          throw IdSetBuildError.limitExceeded(ids.count)
+        }
+        return RetainedIdSet(
+          ids: ids, expiresAt: Date().addingTimeInterval(TimeInterval(options.ttlSeconds)))
+      }
+      await idSetObservationState.observe(
+        built ? "ID_SET_BUILD" : "ID_SET_HIT", count: retained.ids.count, accuracy: "EXACT")
+      let pageIds = Array(retained.ids.dropFirst(query.offset).prefix(limit))
+      var page = query
+      page.offset = 0; page.limit = nil
+      page.idSetPagination = nil; page.continuousPage = nil
+      let membership = TeaQLExpression.inList(idField, pageIds.map(TeaQLValue.int))
+      page.filter = page.filter.map { .and([$0, membership]) } ?? membership
+      return (page, IdSetExecution(pageIds: pageIds))
+    } catch IdSetBuildError.limitExceeded(let count) {
+      await idSetObservationState.observe(
+        "ID_SET_FALLBACK_LIMIT_EXCEEDED", count: count, accuracy: "LOWER_BOUND")
+      var fallback = query; fallback.idSetPagination = nil
+      return (fallback, nil)
+    } catch {
+      await idSetObservationState.observe("ID_SET_FALLBACK_STORE_UNAVAILABLE")
+      var fallback = query; fallback.idSetPagination = nil
+      return (fallback, nil)
+    }
   }
 
   private func prepareContinuousPage(
