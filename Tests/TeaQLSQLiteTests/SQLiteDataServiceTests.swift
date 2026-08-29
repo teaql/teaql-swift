@@ -84,6 +84,29 @@ private let order = EntityDescriptor(
   #expect(try await ids(.equal("reviewed", .bool(true))) == [3])
   #expect(try await ids(.equal("reviewed", .bool(false))) == [1])
   #expect(try await ids(.isNull("reviewed")) == [2])
+
+  var grouped = SelectQuery(entity: descriptor)
+  grouped.groupBy = ["active"]
+  grouped.aggregates = [
+    QueryAggregate(.count, field: "*", alias: "rowCount"),
+    QueryAggregate(.sum, field: "requiredInteger", alias: "integerTotal"),
+    QueryAggregate(.min, field: "requiredInteger", alias: "minimumInteger"),
+    QueryAggregate(.max, field: "requiredInteger", alias: "maximumInteger"),
+    QueryAggregate(.avg, field: "requiredInteger", alias: "averageInteger"),
+  ]
+  grouped.orderBy = [OrderBy("active", .ascending)]
+  grouped.comment = "Group complete scalar rows"
+  grouped.purpose = "Verify portable aggregate semantics"
+  let aggregateRows = try await queryContext.execute(grouped).records
+  #expect(aggregateRows.count == 2)
+  #expect(aggregateRows[0]["active"]?.boolValue == false)
+  #expect(aggregateRows[0]["rowCount"]?.int64Value == 1)
+  #expect(aggregateRows[0]["integerTotal"]?.int64Value == 7)
+  #expect(aggregateRows[1]["active"]?.boolValue == true)
+  #expect(aggregateRows[1]["rowCount"]?.int64Value == 2)
+  #expect(aggregateRows[1]["integerTotal"]?.int64Value == 141)
+  #expect(aggregateRows[1]["minimumInteger"]?.int64Value == 42)
+  #expect(aggregateRows[1]["maximumInteger"]?.int64Value == 99)
 }
 
 @Test func relationSubqueriesExecutePositiveAndNegativePredicatesOnSQLite() async throws {

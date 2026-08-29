@@ -88,6 +88,11 @@ public struct SQLiteCompiler: Sendable {
     if let filter = query.filter {
       sql += " WHERE " + (try expression(filter, entity: query.entity, parameters: &parameters))
     }
+    if !query.groupBy.isEmpty {
+      sql += " GROUP BY " + (try query.groupBy.map {
+        quote(try requireProperty($0, in: query.entity).column)
+      }.joined(separator: ", "))
+    }
     if !query.orderBy.isEmpty {
       let orders = try query.orderBy.map { item in
         let property = try requireProperty(item.field, in: query.entity)
@@ -126,9 +131,39 @@ public struct SQLiteCompiler: Sendable {
   }
 
   private func projection(_ query: SelectQuery) throws -> String {
+    if !query.aggregates.isEmpty || !query.groupBy.isEmpty {
+      var items = try query.groupBy.map { field in
+        let property = try requireProperty(field, in: query.entity)
+        return "\(quote(property.column)) AS \(quote(property.name))"
+      }
+      for aggregate in query.aggregates {
+        guard isSafeAlias(aggregate.alias) else {
+          throw TeaQLError.execution("Invalid aggregate alias: \(aggregate.alias)")
+        }
+        let expression: String
+        if aggregate.function == .count && aggregate.field == "*" {
+          expression = "COUNT(*)"
+        } else {
+          let property = try requireProperty(aggregate.field, in: query.entity)
+          expression = "\(aggregate.function.rawValue.uppercased())(\(quote(property.column)))"
+        }
+        items.append("\(expression) AS \(quote(aggregate.alias))")
+      }
+      guard !items.isEmpty else { throw TeaQLError.execution("Aggregate query has no result columns") }
+      return items.joined(separator: ", ")
+    }
     let selected = query.projection.isEmpty ? query.entity.properties.map(\.name) : query.projection
     return try selected.map { quote(try requireProperty($0, in: query.entity).column) }.joined(
       separator: ", ")
+  }
+
+  private func isSafeAlias(_ value: String) -> Bool {
+    guard let first = value.unicodeScalars.first,
+      CharacterSet.letters.union(CharacterSet(charactersIn: "_")).contains(first)
+    else { return false }
+    return value.unicodeScalars.dropFirst().allSatisfy {
+      CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_")).contains($0)
+    }
   }
 
   private func expression(

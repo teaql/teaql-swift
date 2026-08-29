@@ -42,6 +42,28 @@ import Testing
   #expect(compiled.parameters == [.string("ACTIVE")])
 }
 
+@Test func sqliteCompilesGroupedPortableAggregatesWithAliases() throws {
+  let entity = EntityDescriptor(
+    name: "Order", table: "orders",
+    properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "status", type: .string),
+      PropertyDescriptor(name: "amount", type: .decimal),
+    ])
+  var query = SelectQuery(entity: entity)
+  query.groupBy = ["status"]
+  query.aggregates = [
+    QueryAggregate(.count, field: "*", alias: "orderCount"),
+    QueryAggregate(.sum, field: "amount", alias: "totalAmount"),
+    QueryAggregate(.avg, field: "amount", alias: "averageAmount"),
+  ]
+  query.comment = "Group orders"
+  query.purpose = "Render status totals"
+  let compiled = try SQLiteCompiler().compile(query)
+  #expect(compiled.sql == "SELECT \"status\" AS \"status\", COUNT(*) AS \"orderCount\", SUM(\"amount\") AS \"totalAmount\", AVG(\"amount\") AS \"averageAmount\" FROM \"orders\" GROUP BY \"status\" LIMIT ?")
+  #expect(compiled.parameters == [.int(10_000)])
+}
+
 @Test func sqliteCompilesProviderRegisteredSoundingLike() throws {
   let entity = EntityDescriptor(
     name: "School", table: "school_data",

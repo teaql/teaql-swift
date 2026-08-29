@@ -37,6 +37,22 @@ public struct OrderBy: Sendable, Hashable, Codable {
   }
 }
 
+public enum AggregateFunction: String, Sendable, Hashable, Codable {
+  case count, min, max, sum, avg
+}
+
+public struct QueryAggregate: Sendable, Hashable, Codable {
+  public let function: AggregateFunction
+  public let field: String
+  public let alias: String
+
+  public init(_ function: AggregateFunction, field: String, alias: String) {
+    self.function = function
+    self.field = field
+    self.alias = alias
+  }
+}
+
 public struct RelationLoad: Sendable, Hashable, Codable {
   public let name: String
   public let localKey: String
@@ -65,6 +81,8 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let limit: Int?
   public let hardLimit: Int
   public let projection: [String]
+  public let groupBy: [String]
+  public let aggregates: [QueryAggregate]
 
   public init(_ query: SelectQuery) {
     entity = query.entity
@@ -74,6 +92,8 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     limit = query.limit
     hardLimit = query.hardLimit
     projection = query.projection
+    groupBy = query.groupBy
+    aggregates = query.aggregates
   }
 
   public func makeQuery() -> SelectQuery {
@@ -84,6 +104,8 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.limit = limit
     query.hardLimit = hardLimit
     query.projection = projection
+    query.groupBy = groupBy
+    query.aggregates = aggregates
     return query
   }
 }
@@ -114,6 +136,8 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var limit: Int?
   public var hardLimit: Int = Self.defaultHardLimit
   public var projection: [String] = []
+  public var groupBy: [String] = []
+  public var aggregates: [QueryAggregate] = []
   public var relations: [RelationLoad] = []
   public var facets: [FacetRequest] = []
   public var comment: String?
