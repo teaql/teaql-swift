@@ -71,6 +71,25 @@ public struct RelationLoad: Sendable, Hashable, Codable {
   }
 }
 
+public struct RelationAggregateLoad: Sendable, Hashable, Codable {
+  public let relationName: String
+  public let foreignKey: String
+  public let alias: String
+  public let query: RelationQueryPlan
+  public let singleResult: Bool
+
+  public init(
+    relationName: String, foreignKey: String, alias: String, query: SelectQuery,
+    singleResult: Bool = true
+  ) {
+    self.relationName = relationName
+    self.foreignKey = foreignKey
+    self.alias = alias
+    self.query = RelationQueryPlan(query)
+    self.singleResult = singleResult
+  }
+}
+
 /// A non-recursive child-query snapshot. Runtime hydration deliberately loads
 /// one relation level per plan so SelectQuery remains a value type.
 public struct RelationQueryPlan: Sendable, Hashable, Codable {
@@ -139,6 +158,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var groupBy: [String] = []
   public var aggregates: [QueryAggregate] = []
   public var relations: [RelationLoad] = []
+  public var relationAggregates: [RelationAggregateLoad] = []
   public var facets: [FacetRequest] = []
   public var comment: String?
   public var purpose: String?
@@ -153,6 +173,18 @@ public struct SelectQuery: Sendable, Hashable, Codable {
     relations.append(
       RelationLoad(
         name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query))
+    return self
+  }
+
+  @discardableResult
+  public mutating func relationAggregate(
+    _ relationName: String, foreignKey: String, alias: String, query: SelectQuery,
+    singleResult: Bool = true
+  ) -> Self {
+    relationAggregates.append(
+      RelationAggregateLoad(
+        relationName: relationName, foreignKey: foreignKey, alias: alias, query: query,
+        singleResult: singleResult))
     return self
   }
 

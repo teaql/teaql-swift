@@ -397,6 +397,7 @@ public struct UserContext: Sendable {
     let validated = try requestPolicy.apply(query).validatedForExecution()
     var base = validated
     base.relations = []
+    base.relationAggregates = []
     base.facets = []
     let result = try await runtimeTelemetry.withOperation(
       RuntimeOperation(
@@ -415,6 +416,7 @@ public struct UserContext: Sendable {
       var membership = validated
       membership.facets = []
       membership.relations = []
+      membership.relationAggregates = []
       membership.orderBy = []
       membership.offset = 0
       membership.limit = nil
@@ -445,13 +447,52 @@ public struct UserContext: Sendable {
       facets[facet.name] = SmartList(childRows)
     }
 
-    guard !validated.relations.isEmpty, !result.records.isEmpty else {
+    guard (!validated.relations.isEmpty || !validated.relationAggregates.isEmpty),
+      !result.records.isEmpty else {
       return QueryResult(
         records: result.records, backend: result.backend, trace: result.trace,
         metadata: result.metadata, facets: facets)
     }
 
     var records = result.records
+    for aggregate in validated.relationAggregates {
+      guard let parentID = validated.entity.idProperty else {
+        throw TeaQLError.unknownProperty(entity: validated.entity.name, property: "id")
+      }
+      let parentIDs = records.compactMap { $0[parentID.name] }
+      guard !parentIDs.isEmpty else { continue }
+      var child = aggregate.query.makeQuery()
+      guard let foreignKey = child.entity.property(named: aggregate.foreignKey) else {
+        throw TeaQLError.unknownProperty(
+          entity: child.entity.name, property: aggregate.foreignKey)
+      }
+      if child.aggregates.isEmpty {
+        child.aggregates = [QueryAggregate(.count, field: "*", alias: aggregate.alias)]
+      }
+      let valueAlias = child.aggregates.first?.alias ?? aggregate.alias
+      child.groupBy = [foreignKey.name]
+      child.projection = []
+      child.orderBy = []
+      child.offset = 0
+      child.limit = nil
+      child.relations = []
+      child.relationAggregates = []
+      child.comment = validated.comment
+      child.purpose = validated.purpose
+      let membership = TeaQLExpression.inList(foreignKey.name, parentIDs)
+      child.filter = child.filter.map { .and([$0, membership]) } ?? membership
+      let rows = try await execute(child).records
+      let pairs: [(TeaQLValue, TeaQLValue)] = rows.compactMap { row in
+        guard let key = row[foreignKey.name], let value = row[valueAlias] else { return nil }
+        return (normalizedRelationIdentity(key), value)
+      }
+      let values: [TeaQLValue: TeaQLValue] = Dictionary(uniqueKeysWithValues: pairs)
+      let emptyValue: TeaQLValue = child.aggregates.first?.function == .count ? .int(0) : .null
+      for index in records.indices {
+        guard let id = records[index][parentID.name] else { continue }
+        records[index][aggregate.alias] = values[normalizedRelationIdentity(id)] ?? emptyValue
+      }
+    }
     for relation in validated.relations {
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(
@@ -502,6 +543,7 @@ public struct UserContext: Sendable {
     validated.limit = nil
     validated.projection = []
     validated.relations = []
+    validated.relationAggregates = []
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).count",

@@ -45,6 +45,55 @@ final class RelationHydrationTests: XCTestCase {
     }
     XCTAssertEqual(childList.count, 2)
   }
+
+  func testBatchesRelationAggregatesAndAppliesEmptySemantics() async throws {
+    let executor = RelationAggregateFixtureExecutor()
+    let context = UserContext(
+      queryExecutor: executor,
+      mutationExecutor: RejectingMutationExecutor(),
+      requestPolicy: RequestPolicy { $0 })
+    var countChildren = SelectQuery(entity: childDescriptor)
+    countChildren.aggregates = [QueryAggregate(.count, field: "id", alias: "recordCount")]
+    var sumChildren = SelectQuery(entity: childDescriptor)
+    sumChildren.aggregates = [QueryAggregate(.sum, field: "id", alias: "integerTotal")]
+    var parent = SelectQuery(entity: parentDescriptor)
+    parent.comment = "Load relation aggregates"
+    parent.purpose = "Verify one batched child query per aggregate"
+    parent.relationAggregate(
+      "childList", foreignKey: "parent", alias: "recordCount", query: countChildren)
+    parent.relationAggregate(
+      "childList", foreignKey: "parent", alias: "integerTotal", query: sumChildren)
+
+    let records = try await context.execute(parent).records
+
+    XCTAssertEqual(records[0]["recordCount"], .int(2))
+    XCTAssertEqual(records[0]["integerTotal"], .int(42))
+    XCTAssertEqual(records[1]["recordCount"], .int(0))
+    XCTAssertEqual(records[1]["integerTotal"], .null)
+    let aggregateQueryCount = await executor.aggregateQueries()
+    XCTAssertEqual(aggregateQueryCount, 2)
+  }
+}
+
+private actor RelationAggregateFixtureExecutor: QueryExecutor {
+  private var queries = 0
+
+  func aggregateQueries() -> Int { queries }
+
+  func execute(_ query: SelectQuery) async throws -> QueryResult {
+    if query.entity.name == "Parent" {
+      return QueryResult(records: [["id": .int(1)], ["id": .int(2)]], backend: "fixture")
+    }
+    queries += 1
+    guard case .inList("parent", [.int(1), .int(2)]) = query.filter,
+      query.groupBy == ["parent"], let aggregate = query.aggregates.first
+    else {
+      throw TeaQLError.execution("relation aggregate was not expressed as one grouped IN query")
+    }
+    return QueryResult(
+      records: [["parent": .int(1), aggregate.alias: .int(aggregate.function == .count ? 2 : 42)]],
+      backend: "fixture")
+  }
 }
 
 private actor RelationFixtureExecutor: QueryExecutor {
