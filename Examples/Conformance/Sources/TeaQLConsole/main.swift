@@ -84,7 +84,8 @@ enum ConformanceApp {
         try require(queried.version == oldVersion + 1, "Update did not increment version")
         print("PASS Update (version \(oldVersion) -> \(queried.version))")
 
-        _ = try await queried.auditAs("Delete conformance work item").delete(context)
+        queried.markForDeletion()
+        _ = try await queried.auditAs("Delete conformance work item").save(context)
         let remaining = try await Q.workItems().withIdIs(created.id)
             .comment("Verify soft-deleted work item is excluded")
             .purpose("Verify delete semantics")

@@ -203,6 +203,13 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
 
+
+    public mutating func markForDeletion() -> Self {
+        teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
+        return self
+    }
+
+
     public func auditAs(_ reason: String) -> SchoolTypeAudited {
         SchoolTypeAudited(entity: self, reason: reason)
     }
@@ -220,9 +227,5 @@ public struct SchoolTypeAudited: Sendable {
             _ = try await child.auditAs(reason).save(context)
         }
         return saved
-    }
-
-    public func delete(_ context: UserContext) async throws -> SchoolType {
-        try await AuditedEntity(entity: entity, reason: reason).delete(context)
     }
 }

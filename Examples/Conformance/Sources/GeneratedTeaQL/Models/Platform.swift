@@ -137,6 +137,13 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
 
+
+    public mutating func markForDeletion() -> Self {
+        teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
+        return self
+    }
+
+
     public func auditAs(_ reason: String) -> PlatformAudited {
         PlatformAudited(entity: self, reason: reason)
     }
@@ -149,14 +156,10 @@ public struct PlatformAudited: Sendable {
     public func save(_ context: UserContext) async throws -> Platform {
         let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
         for var child in entity.workItemList {
-            child.teaqlAttachRoot(context.entityRoot)
+            child.teaqlAttachRoot(entity.teaqlEntityRoot)
             child.updatePlatform(saved.id)
             _ = try await child.auditAs(reason).save(context)
         }
         return saved
-    }
-
-    public func delete(_ context: UserContext) async throws -> Platform {
-        try await AuditedEntity(entity: entity, reason: reason).delete(context)
     }
 }

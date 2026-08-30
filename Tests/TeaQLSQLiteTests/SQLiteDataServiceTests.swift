@@ -404,7 +404,7 @@ private let order = EntityDescriptor(
   #expect(updated.persistedRecord?["studentCapacity"] == .string("900"))
 }
 
-private struct SavedWidget: TeaQLEntity {
+private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
   static let descriptor = EntityDescriptor(
     name: "SavedWidget", table: "saved_widget",
     properties: [
@@ -416,6 +416,18 @@ private struct SavedWidget: TeaQLEntity {
   var id: Int64 = 0
   var name = ""
   var version: Int64 = 0
+  var teaqlEntityRoot = EntityRoot()
+  var teaqlEntityKey: EntityKey { EntityKey(entity: "SavedWidget", id: .int(id)) }
+  private enum CodingKeys: String, CodingKey { case id, name, version }
+
+  mutating func markForDeletion() {
+    teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
+  }
+
+  mutating func updateName(_ value: String) {
+    name = value
+    teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: .string(value))
+  }
 
   static func from(record: TeaQLRecord) throws -> Self {
     Self(
@@ -571,13 +583,15 @@ private func context(
   #expect(widget.id == 0)
 
   widget = created
-  widget.name = "updated"
+  widget.updateName("updated")
   let updated = try await widget.auditAs("update widget").save(context)
   #expect(updated.id == created.id)
   #expect(updated.version == 2)
   #expect(updated.name == "updated")
 
-  let deleted = try await updated.auditAs("delete widget").delete(context)
+  var deletion = updated
+  deletion.markForDeletion()
+  let deleted = try await deletion.auditAs("delete widget").save(context)
   #expect(deleted.id == created.id)
   #expect(deleted.version == -3)
   #expect(deleted.name == "updated")

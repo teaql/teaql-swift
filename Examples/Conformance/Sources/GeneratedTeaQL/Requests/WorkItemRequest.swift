@@ -269,13 +269,13 @@ public extension WorkItemRequest where State == RequestExecutable {
     func newEntity(_ context: UserContext) throws -> WorkItem {
         try ensureIntent()
         var entity = context.initializeEntity("WorkItem", WorkItem())
-        entity.teaqlAttachRoot(context.entityRoot)
         return entity
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<WorkItem> {
         try ensureIntent()
-        return SmartList(try await context.execute(query).records.map { try WorkItem.from(record: $0, root: context.entityRoot) })
+        let queryRoot = EntityRoot()
+        return SmartList(try await context.execute(query).records.map { try WorkItem.from(record: $0, root: queryRoot) })
     }
 
     func executeForPage(
@@ -286,8 +286,9 @@ public extension WorkItemRequest where State == RequestExecutable {
         pageQuery.offset = offset
         pageQuery.limit = limit
         let total = try await context.count(pageQuery)
+        let queryRoot = EntityRoot()
         let items = SmartList(
-            try await context.execute(pageQuery).records.map { try WorkItem.from(record: $0, root: context.entityRoot) },
+            try await context.execute(pageQuery).records.map { try WorkItem.from(record: $0, root: queryRoot) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

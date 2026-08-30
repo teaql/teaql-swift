@@ -201,7 +201,18 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
       if entity.id != 0 { values = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey) }
     }
     let mutation: Mutation
-    if entity.version == 0 {
+    if let rooted, rooted.teaqlEntityRoot.isDeleted(rooted.teaqlEntityKey) {
+      guard entity.id != 0, entity.version != 0 else {
+        throw TeaQLError.execution("Deletion requires a loaded entity ID and version")
+      }
+      mutation = Mutation(
+        kind: .delete,
+        entity: Entity.descriptor,
+        id: .int(entity.id),
+        expectedVersion: entity.version,
+        auditReason: reason
+      )
+    } else if entity.version == 0 {
       let idName = Entity.descriptor.idProperty?.name ?? "id"
       if entity.id == 0 { values.removeValue(forKey: idName) }
       else { values[idName] = .int(entity.id) }
@@ -234,27 +245,6 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
       rooted.teaqlEntityRoot.clearEntity(savedKey)
       rooted.teaqlEntityRoot.setOriginalVersion(savedKey, version: saved.version)
     }
-    return saved
-  }
-
-  /// Soft-deletes a loaded entity using its original optimistic version.
-  /// Providers retain the row with a negative version; physical deletion is
-  /// deliberately not part of the public entity lifecycle.
-  public func delete(_ context: UserContext) async throws -> Entity {
-    guard entity.id != 0 else {
-      throw TeaQLError.execution("Delete requires a loaded entity ID")
-    }
-    let rooted = entity as? any TeaQLMutationRootedEntity
-    if let rooted { rooted.teaqlEntityRoot.markAsDeleted(rooted.teaqlEntityKey) }
-    let saved = try persistedEntity(from: await context.execute(
-      Mutation(
-        kind: .delete,
-        entity: Entity.descriptor,
-        id: .int(entity.id),
-        expectedVersion: entity.version,
-        auditReason: reason
-      ), ledgerRoot: rooted?.teaqlEntityRoot, ledgerKey: rooted?.teaqlEntityKey))
-    if let rooted { rooted.teaqlEntityRoot.clearEntity(rooted.teaqlEntityKey) }
     return saved
   }
 
