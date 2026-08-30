@@ -177,8 +177,133 @@ public protocol MutationExecutor: Sendable {
   func execute(_ mutation: Mutation) async throws -> MutationResult
 }
 
+public protocol GraphTransactionExecutor: MutationExecutor {
+  func beginGraphTransaction() async throws
+  func commitGraphTransaction() async throws
+  func rollbackGraphTransaction() async throws
+}
+
 public extension MutationExecutor {
   var providerKind: String { String(describing: type(of: self)) }
+}
+
+private enum GraphSaveTaskContext {
+  @TaskLocal static var session: UUID?
+}
+
+public enum FixEvidenceSource: String, Sendable { case clock, context }
+
+public struct FixEvidence: Sendable, Equatable {
+  public let entityType: String
+  public let modelPath: String
+  public let source: FixEvidenceSource
+  public let sourceLabel: String
+
+  public init(entityType: String, modelPath: String, source: FixEvidenceSource, sourceLabel: String) {
+    precondition(!entityType.isEmpty && !modelPath.isEmpty && !sourceLabel.isEmpty)
+    let normalized = sourceLabel.lowercased()
+    precondition(!normalized.contains("authorization") && !normalized.contains("cookie") && !normalized.contains("token="),
+      "sourceLabel must be a safe framework label")
+    self.entityType = entityType; self.modelPath = modelPath; self.source = source; self.sourceLabel = sourceLabel
+  }
+}
+
+private final class GraphSaveCoordinator: @unchecked Sendable {
+  private let lock = NSLock()
+  private var activeSession: UUID?
+  private var waiters: [CheckedContinuation<Void, Never>] = []
+  private var commitActions: [@Sendable () -> Void] = []
+  private var rollbackActions: [@Sendable () -> Void] = []
+  private var capturedFixTime: Date?
+  private var currentFixEvidence: [FixEvidence] = []
+  private var retainedFixEvidence: [FixEvidence] = []
+
+  func execute<T: Sendable>(
+    executor: any MutationExecutor,
+    operation: @escaping @Sendable () async throws -> T
+  ) async throws -> T {
+    if let ambient = GraphSaveTaskContext.session, isActive(ambient) {
+      return try await operation()
+    }
+    guard let transaction = executor as? any GraphTransactionExecutor else {
+      throw TeaQLError.execution(
+        "The configured mutation provider does not support atomic graph saves")
+    }
+    let session = UUID()
+    await acquire(session)
+    do {
+      try await transaction.beginGraphTransaction()
+      let result = try await GraphSaveTaskContext.$session.withValue(session) {
+        try await operation()
+      }
+      try await transaction.commitGraphTransaction()
+      let actions = finish(session, committed: true)
+      actions.forEach { $0() }
+      return result
+    } catch {
+      try? await transaction.rollbackGraphTransaction()
+      let actions = finish(session, committed: false)
+      actions.reversed().forEach { $0() }
+      throw error
+    }
+  }
+
+  func afterCommit(_ action: @escaping @Sendable () -> Void) throws {
+    guard let session = GraphSaveTaskContext.session else {
+      throw TeaQLError.execution("No graph save is active")
+    }
+    lock.lock(); defer { lock.unlock() }
+    guard activeSession == session else { throw TeaQLError.execution("No graph save is active") }
+    commitActions.append(action)
+  }
+
+  func afterRollback(_ action: @escaping @Sendable () -> Void) throws {
+    guard let session = GraphSaveTaskContext.session else {
+      throw TeaQLError.execution("No graph save is active")
+    }
+    lock.lock(); defer { lock.unlock() }
+    guard activeSession == session else { throw TeaQLError.execution("No graph save is active") }
+    rollbackActions.append(action)
+  }
+
+  func fixTime() -> Date? { lock.withLock { capturedFixTime } }
+  func recordFixEvidence(_ evidence: FixEvidence) { lock.withLock { currentFixEvidence.append(evidence) } }
+  func lastFixEvidence() -> [FixEvidence] { lock.withLock { retainedFixEvidence } }
+
+  private func isActive(_ session: UUID) -> Bool {
+    lock.lock(); defer { lock.unlock() }; return activeSession == session
+  }
+
+  private func acquire(_ session: UUID) async {
+    while true {
+      let acquired = lock.withLock { () -> Bool in
+        guard activeSession == nil else { return false }
+        activeSession = session; commitActions = []; rollbackActions = []; capturedFixTime = Date(); currentFixEvidence = []
+        return true
+      }
+      if acquired { return }
+      await withCheckedContinuation { continuation in
+        let resumeImmediately = lock.withLock { () -> Bool in
+          if activeSession == nil { return true }
+          waiters.append(continuation)
+          return false
+        }
+        if resumeImmediately { continuation.resume() }
+      }
+    }
+  }
+
+  private func finish(_ session: UUID, committed: Bool) -> [@Sendable () -> Void] {
+    lock.lock()
+    precondition(activeSession == session)
+    let actions = committed ? commitActions : rollbackActions
+    retainedFixEvidence = currentFixEvidence
+    activeSession = nil; commitActions = []; rollbackActions = []; capturedFixTime = nil; currentFixEvidence = []
+    let waiter = waiters.isEmpty ? nil : waiters.removeFirst()
+    lock.unlock()
+    waiter?.resume()
+    return actions
+  }
 }
 
 public protocol AuditSink: Sendable {
@@ -195,10 +320,46 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   }
 
   public func save(_ context: UserContext) async throws -> Entity {
-    var values = entity.toMutationRecord()
+    try await context.executeGraphSave {
+      try await saveWithinGraph(context)
+    }
+  }
+
+  /// Generated graph infrastructure calls this for every reachable node before
+  /// the first mutation of the graph is sent to the provider.
+  public func preflight(_ context: UserContext) throws {
     let rooted = entity as? any TeaQLMutationRootedEntity
+    _ = try context.preflightMutation(
+      makeMutation(rooted: rooted),
+      ledgerRoot: rooted?.teaqlEntityRoot,
+      ledgerKey: rooted?.teaqlEntityKey)
+  }
+
+  private func saveWithinGraph(_ context: UserContext) async throws -> Entity {
+    let rooted = entity as? any TeaQLMutationRootedEntity
+    let mutation = try makeMutation(rooted: rooted)
+    let saved = try persistedEntity(from: await context.execute(
+      mutation, ledgerRoot: rooted?.teaqlEntityRoot, ledgerKey: rooted?.teaqlEntityKey))
     if let rooted {
-      if entity.id != 0 { values = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey) }
+      let originalKey = rooted.teaqlEntityKey
+      let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
+      let root = rooted.teaqlEntityRoot
+      try context.afterGraphCommit {
+        root.rekey(originalKey, to: savedKey)
+        root.clearEntity(savedKey)
+        root.setOriginalVersion(savedKey, version: saved.version)
+      }
+    }
+    return saved
+  }
+
+  private func makeMutation(rooted: (any TeaQLMutationRootedEntity)?) throws -> Mutation {
+    var values = entity.toMutationRecord()
+    if let rooted {
+      if entity.id != 0 {
+        let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
+        if !pending.isEmpty { values = pending }
+      }
     }
     let mutation: Mutation
     if let rooted, rooted.teaqlEntityRoot.isDeleted(rooted.teaqlEntityKey) {
@@ -237,15 +398,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         auditReason: reason
       )
     }
-    let saved = try persistedEntity(from: await context.execute(
-      mutation, ledgerRoot: rooted?.teaqlEntityRoot, ledgerKey: rooted?.teaqlEntityKey))
-    if let rooted {
-      let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
-      rooted.teaqlEntityRoot.rekey(rooted.teaqlEntityKey, to: savedKey)
-      rooted.teaqlEntityRoot.clearEntity(savedKey)
-      rooted.teaqlEntityRoot.setOriginalVersion(savedKey, version: saved.version)
-    }
-    return saved
+    return mutation
   }
 
   private func persistedEntity(from result: MutationResult) throws -> Entity {
@@ -253,7 +406,19 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
       throw TeaQLError.execution(
         "Mutation executor did not return authoritative persisted state for \(Entity.descriptor.name)")
     }
-    return try Entity.from(record: record)
+    // Providers return storage-column keys, while generated entity hydration is
+    // intentionally expressed in language-native property names.  Normalize at
+    // the runtime boundary so database-generated/defaulted and Checker/Fix
+    // values are visible on the authoritative entity returned by save().
+    var normalized = record
+    for property in Entity.descriptor.properties where normalized[property.name] == nil {
+      if let modelName = property.modelName, let value = record[modelName] {
+        normalized[property.name] = value
+      } else if let value = record[property.column] {
+        normalized[property.name] = value
+      }
+    }
+    return try Entity.from(record: normalized)
   }
 }
 
@@ -414,6 +579,7 @@ public struct UserContext: Sendable {
   private let continuousPageState: ContinuousPageState
   private let idSetObservationState: IdSetObservationState
   private let idSetStore: any IdSetStore
+  private let graphSaveCoordinator: GraphSaveCoordinator
 
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
@@ -449,7 +615,26 @@ public struct UserContext: Sendable {
     self.entityCreationObserver = entityCreationObserver
     self.continuousPageState = ContinuousPageState()
     self.idSetObservationState = IdSetObservationState()
+    self.graphSaveCoordinator = GraphSaveCoordinator()
   }
+
+  public func executeGraphSave<T: Sendable>(
+    _ operation: @escaping @Sendable () async throws -> T
+  ) async throws -> T {
+    try await graphSaveCoordinator.execute(executor: mutationExecutor, operation: operation)
+  }
+
+  public func afterGraphCommit(_ action: @escaping @Sendable () -> Void) throws {
+    try graphSaveCoordinator.afterCommit(action)
+  }
+
+  public func afterGraphRollback(_ action: @escaping @Sendable () -> Void) throws {
+    try graphSaveCoordinator.afterRollback(action)
+  }
+
+  public var fixTime: Date { graphSaveCoordinator.fixTime() ?? Date() }
+  public func recordFixEvidence(_ evidence: FixEvidence) { graphSaveCoordinator.recordFixEvidence(evidence) }
+  public var lastFixEvidence: [FixEvidence] { graphSaveCoordinator.lastFixEvidence() }
 
   public func requireActiveRoot(_ expectedType: String) throws -> ContextEntityRef {
     guard let activeRoot else {
@@ -884,7 +1069,7 @@ public struct UserContext: Sendable {
     validated.actor = actor
     if let checker = runtime.checker(named: validated.entity.name) {
       let violations = translateCheckResults(
-        try checker.checkAndFix(context: self, mutation: &validated, now: Date()))
+        try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
       if let ledgerRoot, let ledgerKey {
         for (field, value) in validated.values { ledgerRoot.set(ledgerKey, field: field, value: value) }
       }
@@ -925,5 +1110,23 @@ public struct UserContext: Sendable {
       }
     }
     return result
+  }
+
+  public func preflightMutation(
+    _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil
+  ) throws -> Mutation {
+    var validated = try mutation.validatedForExecution()
+    validated.actor = actor
+    if let checker = runtime.checker(named: validated.entity.name) {
+      let violations = translateCheckResults(
+        try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
+      if let ledgerRoot, let ledgerKey {
+        for (field, value) in validated.values {
+          ledgerRoot.set(ledgerKey, field: field, value: value)
+        }
+      }
+      if !violations.isEmpty { throw CheckException(violations) }
+    }
+    return validated
   }
 }

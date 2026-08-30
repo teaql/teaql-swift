@@ -13,6 +13,7 @@ public struct ObjectLocation: Sendable, Hashable, CustomStringConvertible {
   public static func property(_ name: String) -> Self { Self().property(name) }
   public func property(_ name: String) -> Self { Self(segments: segments + [.property(name)]) }
   public func index(_ index: Int) -> Self { Self(segments: segments + [.index(index)]) }
+  public func prefixed(by prefix: Self) -> Self { Self(segments: prefix.segments + segments) }
 
   public var modelPath: String { render { $0 } }
   public var nativePath: String { render(Self.lowerCamel) }

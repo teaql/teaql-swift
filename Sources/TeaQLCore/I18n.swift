@@ -8,7 +8,12 @@ public struct UnsupportedLocaleError:Error,Equatable,Sendable{public let localeC
 public struct CheckResult:Sendable{public let ruleID:String;public let location:ObjectLocation;public let inputValue:String?;public let systemValue:String?;public var message:String?;public init(ruleID:String,location:ObjectLocation,inputValue:String?=nil,systemValue:String?=nil,message:String?=nil){self.ruleID=ruleID;self.location=location;self.inputValue=inputValue;self.systemValue=systemValue;self.message=message}}
 private struct CatalogLocale:Codable,Sendable{let messages:[String:String];let vocabulary:[String:String]}
 private struct CatalogFile:Codable,Sendable{let schema:String;let defaultLocale:String;let locales:[String:CatalogLocale]}
-public struct I18nCatalog:Sendable{
+/// Immutable catalog shared by every context unless an application supplies
+/// an override.  This is deliberately a reference type: Swift 6.3 on Linux
+/// can race while copying a lazily initialized static value-type catalog from
+/// concurrent default-argument evaluation.  An immutable final instance keeps
+/// the shared default both cheap and safe to publish.
+public final class I18nCatalog:@unchecked Sendable{
   private let file:CatalogFile;private let fallback:CatalogFile?
   public static let builtin:I18nCatalog={let url=Bundle.module.url(forResource:"builtin-messages-v1",withExtension:"json")!;return try! I18nCatalog(data:Data(contentsOf:url))}()
   public init(data:Data,fallback:I18nCatalog?=nil)throws{let value=try JSONDecoder().decode(CatalogFile.self,from:data);guard value.schema=="teaql.i18n/v1" else{throw CocoaError(.fileReadCorruptFile)};for code in value.locales.keys{_ = try TeaQLLocale.parse(code)};file=value;self.fallback=fallback?.file}

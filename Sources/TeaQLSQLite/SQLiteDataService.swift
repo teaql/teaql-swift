@@ -48,10 +48,11 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor, RelationTopNPlanning {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
+  private var graphTransactionActive = false
   public let path: String
   public nonisolated var idSetDataSourceIdentity: String { "sqlite:\(path)" }
   public nonisolated var relationTopNPolicy: RelationTopNPolicy { .alwaysProbe }
@@ -179,6 +180,10 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor,
     guard floor >= 0 else {
       throw TeaQLError.execution("Invalid ID space floor \(floor) for \(typeName)")
     }
+    if graphTransactionActive {
+      try ensureIDFloorInCurrentTransaction(typeName: typeName, floor: floor)
+      return
+    }
     try executeSQL("BEGIN IMMEDIATE")
     do {
       try ensureIDFloorInCurrentTransaction(typeName: typeName, floor: floor)
@@ -278,6 +283,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor,
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {
     let mutation = try mutation.validatedForExecution()
+    if graphTransactionActive {
+      let result = try performMutation(mutation)
+      try insertAudit(mutation, generatedValues: result.generatedValues)
+      return result
+    }
     try executeSQL("BEGIN IMMEDIATE")
     do {
       let result = try performMutation(mutation)
@@ -288,6 +298,26 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor,
       try? executeSQL("ROLLBACK")
       throw error
     }
+  }
+
+  public func beginGraphTransaction() async throws {
+    guard !graphTransactionActive else {
+      throw TeaQLError.execution("A graph transaction is already active")
+    }
+    try executeSQL("BEGIN IMMEDIATE")
+    graphTransactionActive = true
+  }
+
+  public func commitGraphTransaction() async throws {
+    guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
+    try executeSQL("COMMIT")
+    graphTransactionActive = false
+  }
+
+  public func rollbackGraphTransaction() async throws {
+    guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
+    defer { graphTransactionActive = false }
+    try executeSQL("ROLLBACK")
   }
 
   public func auditEvents() throws -> [TeaQLRecord] {
@@ -626,7 +656,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, SchemaExecutor,
     default:
       let text = String(cString: sqlite3_column_text(statement, index))
       if type == .decimal, let decimal = Decimal(string: text) { return .decimal(decimal) }
-      if type == .date { return .calendarDate(text) }
+      if type == .date {
+        // `.date` is used by generated Swift `Date` properties for both
+        // calendar dates and audit instants. Preserve a full ISO-8601 instant
+        // as a typed Date; only the date-only storage form is a calendar date.
+        if let instant = ISO8601DateFormatter().date(from: text) { return .date(instant) }
+        return .calendarDate(text)
+      }
       if type == .localDateTime { return .localDateTime(text) }
       if type == .timestamp {
         if let date = ISO8601DateFormatter().date(from: text) { return .date(date) }
