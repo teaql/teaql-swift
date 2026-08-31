@@ -96,6 +96,30 @@ public protocol RuntimeTelemetrySink: Sendable {
   func record(_ metadata: SQLExecutionMetadata) async
 }
 
+/// Explicit value-bearing SQL diagnostic destination. It is never installed
+/// by default and is intentionally separate from safe RuntimeTelemetry.
+public protocol DiagnosticSQLLogSink: Sendable {
+  func write(_ metadata: SQLExecutionMetadata) async
+}
+
+public actor TextDiagnosticSQLLogSink: DiagnosticSQLLogSink {
+  private let writer: @Sendable (String) -> Void
+  private var lines: [String] = []
+
+  public init(writer: @escaping @Sendable (String) -> Void = { print($0) }) {
+    self.writer = writer
+  }
+
+  public func write(_ metadata: SQLExecutionMetadata) {
+    let text = "[TeaQL SQL][\(metadata.operation.rawValue)][\(metadata.elapsedMicros)us] "
+      + "\(metadata.resultSummary)\n\(metadata.debugSQL)"
+    lines.append(text)
+    writer(text)
+  }
+
+  public func snapshot() -> [String] { lines }
+}
+
 public actor SQLExecutionEvidenceStore: RuntimeTelemetrySink {
   public enum Mode: Sendable, Equatable { case all, select, mutation, disabled }
   private var mode: Mode = .all
@@ -571,6 +595,7 @@ public struct UserContext: Sendable {
   public let requestPolicy: RequestPolicy
   public let auditSink: (any AuditSink)?
   public let telemetrySink: (any RuntimeTelemetrySink)?
+  public let diagnosticSQLLogSink: (any DiagnosticSQLLogSink)?
   public let runtimeTelemetry: any RuntimeTelemetry
   public private(set) var locale: TeaQLLocale
   public private(set) var i18nCatalog: I18nCatalog
@@ -591,6 +616,7 @@ public struct UserContext: Sendable {
     requestPolicy: RequestPolicy,
     auditSink: (any AuditSink)? = nil,
     telemetrySink: (any RuntimeTelemetrySink)? = nil,
+    diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = nil,
     runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry(),
     idSetStore: any IdSetStore = InMemoryIdSetStore.shared,
     locale: TeaQLLocale = .en,
@@ -607,6 +633,7 @@ public struct UserContext: Sendable {
     self.requestPolicy = requestPolicy
     self.auditSink = auditSink
     self.telemetrySink = telemetrySink
+    self.diagnosticSQLLogSink = diagnosticSQLLogSink
     self.runtimeTelemetry = runtimeTelemetry
     self.idSetStore = idSetStore
     self.locale = locale
@@ -729,7 +756,10 @@ public struct UserContext: Sendable {
     } else {
       result = rawResult
     }
-    if let metadata = result.metadata { await telemetrySink?.record(metadata) }
+    if let metadata = result.metadata {
+      await telemetrySink?.record(metadata)
+      await diagnosticSQLLogSink?.write(metadata)
+    }
     await registerContinuousPage(prepared.execution, rows: result.records)
     var facets: [String: SmartList<TeaQLRecord>] = [:]
     for facet in validated.facets {
@@ -1086,7 +1116,10 @@ public struct UserContext: Sendable {
     ) {
       try await mutationExecutor.execute(validated)
     }
-    if let metadata = result.metadata { await telemetrySink?.record(metadata) }
+    if let metadata = result.metadata {
+      await telemetrySink?.record(metadata)
+      await diagnosticSQLLogSink?.write(metadata)
+    }
     if let auditSink, let reason = validated.auditReason {
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(

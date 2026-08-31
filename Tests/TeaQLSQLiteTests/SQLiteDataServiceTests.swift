@@ -505,7 +505,8 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
 private func context(
   _ service: SQLiteDataService,
   auditSink: (any AuditSink)? = nil,
-  telemetrySink: (any RuntimeTelemetrySink)? = nil
+  telemetrySink: (any RuntimeTelemetrySink)? = nil,
+  diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = nil
 ) -> UserContext
 {
   UserContext(
@@ -519,7 +520,8 @@ private func context(
       return query
     },
     auditSink: auditSink,
-    telemetrySink: telemetrySink
+    telemetrySink: telemetrySink,
+    diagnosticSQLLogSink: diagnosticSQLLogSink
   )
 }
 
@@ -635,6 +637,32 @@ private func context(
   #expect(await evidence.snapshot().isEmpty)
   await evidence.disable()
   #expect(await evidence.snapshot().isEmpty)
+}
+
+@Test func sqliteDiagnosticSQLLogIsExplicitAndValueBearing() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-diagnostic-\(UUID().uuidString).db").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  try await context(service).ensureSchema(RuntimeModule(name: "diagnostic", entities: [order]))
+  let sink = TextDiagnosticSQLLogSink(writer: { _ in })
+  let enabled = context(service, diagnosticSQLLogSink: sink)
+  _ = try await enabled.execute(Mutation(
+    kind: .create, entity: order,
+    values: ["id": .int(101), "version": .int(1),
+      "orderNumber": .string("O'Brien 学校"), "orderDate": .date(Date()), "tenantID": .int(7)],
+    auditReason: "diagnostic SQL fixture"))
+  var query = SelectQuery(entity: order)
+  query.filter = .equal("orderNumber", .string("O'Brien 学校"))
+  query.comment = "what: diagnostic copy paste"
+  query.purpose = "why: operator reproduction"
+  _ = try await enabled.execute(query)
+  let lines = await sink.snapshot()
+  #expect(lines.contains { $0.contains("[select]") && $0.contains("O''Brien 学校") })
+
+  let disabled = context(service)
+  _ = try await disabled.execute(query)
+  #expect(await sink.snapshot().count == lines.count)
 }
 
 @Test func sqliteTemporalPreparedAndDebugSQLShareStorageSemantics() async throws {
