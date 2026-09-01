@@ -3,11 +3,11 @@ import Foundation
 import TeaQLCore
 
 public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
-    public var platform: Int64 = 0
+    public var platform: Int64? = nil
     public var id: Int64 = 0
     public var name: String? = nil
     public var code: String? = nil
-    public var displayOrder: Decimal = 0
+    public var displayOrder: Decimal? = nil
     public var version: Int64 = 0
     public var platformEntity: Platform?
     public var schoolList: [School] = []
@@ -17,6 +17,7 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "SchoolType", id: .int(id == 0 ? teaqlLedgerID : id)) }
+    var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
 
     private enum CodingKeys: String, CodingKey {
         case platform
@@ -37,27 +38,27 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "SchoolType",
         table: "school_type_data",
         properties: [
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: true, isID: true, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "code", modelName: "code", column: "code", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "displayOrder", modelName: "display_order", column: "display_order", type: .decimal, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: true, isID: false, isVersion: true)
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "code", modelName: "code", column: "code", type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "displayOrder", modelName: "display_order", column: "display_order", type: .decimal, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ]
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
         var entity = Self()
         entity._loadedFields.removeAll()
-        entity.platform = record["platform"]?.int64Value ?? 0
+        entity.platform = record["platform"]?.int64Value
         if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.name = record["name"]?.stringValue ?? nil
+        entity.name = record["name"]?.stringValue
         if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.code = record["code"]?.stringValue ?? nil
+        entity.code = record["code"]?.stringValue
         if record.keys.contains("code") { entity._loadedFields.insert("code") }
-        entity.displayOrder = record["displayOrder"]?.decimalValue ?? 0
+        entity.displayOrder = record["displayOrder"]?.decimalValue
         if record.keys.contains("displayOrder") { entity._loadedFields.insert("displayOrder") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
@@ -109,11 +110,11 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "platform": .int(platform),
+            "platform": platform.map { .int($0) } ?? .null,
             "id": .int(id),
-            "name": name.map(TeaQLValue.string) ?? .null,
-            "code": code.map(TeaQLValue.string) ?? .null,
-            "displayOrder": .decimal(displayOrder),
+            "name": name.map { .string($0) } ?? .null,
+            "code": code.map { .string($0) } ?? .null,
+            "displayOrder": displayOrder.map { .decimal($0) } ?? .null,
             "version": .int(version)
         ]
     }
@@ -121,19 +122,19 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
         if _loadedFields.contains("platform") {
-            record["platform"] = .int(platform)
+            record["platform"] = platform.map { .int($0) } ?? .null
         }
         if _loadedFields.contains("id") {
             record["id"] = .int(id)
         }
         if _loadedFields.contains("name") {
-            record["name"] = name.map(TeaQLValue.string) ?? .null
+            record["name"] = name.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("code") {
-            record["code"] = code.map(TeaQLValue.string) ?? .null
+            record["code"] = code.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("displayOrder") {
-            record["display_order"] = .decimal(displayOrder)
+            record["display_order"] = displayOrder.map { .decimal($0) } ?? .null
         }
         if _loadedFields.contains("version") {
             record["version"] = .int(version)
@@ -150,10 +151,10 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     @discardableResult
-    public mutating func updatePlatform(_ value: Int64) -> Self {
+    public mutating func updatePlatform(_ value: Int64?) -> Self {
         self.platform = value
         self._loadedFields.insert("platform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: .int(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -171,7 +172,7 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
         self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -180,16 +181,16 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateCode(_ value: String?) -> Self {
         self.code = value
         self._loadedFields.insert("code")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "code", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "code", value: value.map { .string($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateDisplayOrder(_ value: Decimal) -> Self {
+    public mutating func updateDisplayOrder(_ value: Decimal?) -> Self {
         self.displayOrder = value
         self._loadedFields.insert("displayOrder")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "display_order", value: .decimal(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "display_order", value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -203,15 +204,14 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
 
+    public func auditAs(_ reason: String) -> SchoolTypeAudited {
+        SchoolTypeAudited(entity: self, reason: reason)
+    }
 
+    @discardableResult
     public mutating func markForDeletion() -> Self {
         teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
         return self
-    }
-
-
-    public func auditAs(_ reason: String) -> SchoolTypeAudited {
-        SchoolTypeAudited(entity: self, reason: reason)
     }
 }
 
@@ -220,12 +220,66 @@ public struct SchoolTypeAudited: Sendable {
     public let reason: String
 
     public func save(_ context: UserContext) async throws -> SchoolType {
+        try await context.executeGraphSave {
+        try teaqlPreflightGraph(context)
         let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
-        for var child in entity.schoolList {
-            child.teaqlAttachRoot(context.entityRoot)
+        for (index, var child) in entity.schoolList.enumerated() {
+            child.teaqlAttachRoot(entity.teaqlEntityRoot)
             child.updateSchoolType(saved.id)
-            _ = try await child.auditAs(reason).save(context)
+            do { _ = try await child.auditAs(reason).save(context) }
+            catch let error as CheckException {
+                let prefix = ObjectLocation.property("school_list").index(index)
+                throw CheckException(error.violations.map { violation in
+                    CheckResult(
+                        ruleID: violation.ruleID,
+                        location: violation.location.prefixed(by: prefix),
+                        inputValue: violation.inputValue,
+                        systemValue: violation.systemValue,
+                        message: violation.message)
+                })
+            }
         }
         return saved
+        }
+    }
+
+    func teaqlPreflightGraph(_ context: UserContext) throws {
+        if entity.id != 0 {
+            if !entity.isLoaded("platform") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("id") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("name") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("code") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("code"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("displayOrder") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("display_order"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("version") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+            }
+        }
+        try AuditedEntity(entity: entity, reason: reason).preflight(context)
+        for (index, var child) in entity.schoolList.enumerated() {
+            child.teaqlAttachRoot(entity.teaqlEntityRoot)
+            child.updateSchoolType(entity.teaqlPreflightID)
+            do { try child.auditAs(reason).teaqlPreflightGraph(context) }
+            catch let error as CheckException {
+                let prefix = ObjectLocation.property("school_list").index(index)
+                throw CheckException(error.violations.map { violation in
+                    CheckResult(
+                        ruleID: violation.ruleID,
+                        location: violation.location.prefixed(by: prefix),
+                        inputValue: violation.inputValue,
+                        systemValue: violation.systemValue,
+                        message: violation.message)
+                })
+            }
+        }
     }
 }

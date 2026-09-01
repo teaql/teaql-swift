@@ -23,6 +23,11 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func topNProbeParentThreshold(_ value: Int) -> Self {
+        var copy = self; copy.query.topNProbeParentThreshold(value); return copy
+    }
+
+    @discardableResult
     public func hardLimit(_ value: Int) -> Self {
         var copy = self; copy.query.hardLimit = value; return copy
     }
@@ -30,6 +35,34 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     @discardableResult
     public func offset(_ value: Int) -> Self {
         var copy = self; copy.query.offset = value; return copy
+    }
+
+    @discardableResult
+    public func optimizeForContinuousPageFetch() -> Self {
+        optimizeForContinuousPageFetch(namespace: "default", ttlSeconds: 600)
+    }
+
+    @discardableResult
+    public func optimizeForContinuousPageFetch(namespace: String, ttlSeconds: Int) -> Self {
+        var copy = self
+        copy.query.continuousPage = ContinuousPageFetchOptions(
+            namespace: namespace, ttlSeconds: ttlSeconds)
+        return copy
+    }
+
+    @discardableResult
+    public func optimizePaginationWithIdSet() -> Self {
+        optimizePaginationWithIdSet(namespace: "default", ttlSeconds: 600, maxIds: 3_000_000)
+    }
+
+    @discardableResult
+    public func optimizePaginationWithIdSet(
+        namespace: String, ttlSeconds: Int, maxIds: Int
+    ) -> Self {
+        var copy = self
+        copy.query.idSetPagination = IdSetPaginationOptions(
+            namespace: namespace, ttlSeconds: ttlSeconds, maxIds: maxIds)
+        return copy
     }
 
     public func toQuery() -> SelectQuery { query }
@@ -218,6 +251,236 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func countSchoolTypes() -> Self {
+        countSchoolTypesAs("countSchoolTypes")
+    }
+
+    @discardableResult
+    public func countSchoolTypesAs(_ alias: String) -> Self {
+        countSchoolTypesWith(alias, Q.schoolTypes())
+    }
+
+    @discardableResult
+    public func countSchoolTypesWith<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        copy.query.relationAggregate(
+            "schoolTypeList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+    @discardableResult
+    public func minDisplayOrderOfSchoolTypes() -> Self {
+        minDisplayOrderOfSchoolTypesAs(
+            "minOfDisplayOrderOfSchoolTypes",
+            Q.schoolTypes())
+    }
+
+    @discardableResult
+    public func minDisplayOrderOfSchoolTypesAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.min, field: "displayOrder", alias: "min_displayOrder"))
+        copy.query.relationAggregate(
+            "schoolTypeList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+    @discardableResult
+    public func maxDisplayOrderOfSchoolTypes() -> Self {
+        maxDisplayOrderOfSchoolTypesAs(
+            "maxOfDisplayOrderOfSchoolTypes",
+            Q.schoolTypes())
+    }
+
+    @discardableResult
+    public func maxDisplayOrderOfSchoolTypesAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.max, field: "displayOrder", alias: "max_displayOrder"))
+        copy.query.relationAggregate(
+            "schoolTypeList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+    @discardableResult
+    public func sumDisplayOrderOfSchoolTypes() -> Self {
+        sumDisplayOrderOfSchoolTypesAs(
+            "sumOfDisplayOrderOfSchoolTypes",
+            Q.schoolTypes())
+    }
+
+    @discardableResult
+    public func sumDisplayOrderOfSchoolTypesAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.sum, field: "displayOrder", alias: "sum_displayOrder"))
+        copy.query.relationAggregate(
+            "schoolTypeList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+    @discardableResult
+    public func avgDisplayOrderOfSchoolTypes() -> Self {
+        avgDisplayOrderOfSchoolTypesAs(
+            "avgOfDisplayOrderOfSchoolTypes",
+            Q.schoolTypes())
+    }
+
+    @discardableResult
+    public func avgDisplayOrderOfSchoolTypesAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.avg, field: "displayOrder", alias: "avg_displayOrder"))
+        copy.query.relationAggregate(
+            "schoolTypeList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+
+
+
+
+    @discardableResult
+    public func countSchools() -> Self {
+        countSchoolsAs("countSchools")
+    }
+
+    @discardableResult
+    public func countSchoolsAs(_ alias: String) -> Self {
+        countSchoolsWith(alias, Q.schools())
+    }
+
+    @discardableResult
+    public func countSchoolsWith<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        copy.query.relationAggregate(
+            "schoolList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+    @discardableResult
+    public func minStudentCapacityOfSchools() -> Self {
+        minStudentCapacityOfSchoolsAs(
+            "minOfStudentCapacityOfSchools",
+            Q.schools())
+    }
+
+    @discardableResult
+    public func minStudentCapacityOfSchoolsAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.min, field: "studentCapacity", alias: "min_studentCapacity"))
+        copy.query.relationAggregate(
+            "schoolList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+    @discardableResult
+    public func maxStudentCapacityOfSchools() -> Self {
+        maxStudentCapacityOfSchoolsAs(
+            "maxOfStudentCapacityOfSchools",
+            Q.schools())
+    }
+
+    @discardableResult
+    public func maxStudentCapacityOfSchoolsAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.max, field: "studentCapacity", alias: "max_studentCapacity"))
+        copy.query.relationAggregate(
+            "schoolList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+    @discardableResult
+    public func sumStudentCapacityOfSchools() -> Self {
+        sumStudentCapacityOfSchoolsAs(
+            "sumOfStudentCapacityOfSchools",
+            Q.schools())
+    }
+
+    @discardableResult
+    public func sumStudentCapacityOfSchoolsAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.sum, field: "studentCapacity", alias: "sum_studentCapacity"))
+        copy.query.relationAggregate(
+            "schoolList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+    @discardableResult
+    public func avgStudentCapacityOfSchools() -> Self {
+        avgStudentCapacityOfSchoolsAs(
+            "avgOfStudentCapacityOfSchools",
+            Q.schools())
+    }
+
+    @discardableResult
+    public func avgStudentCapacityOfSchoolsAs<ChildState: Sendable>(
+        _ alias: String, _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        var childQuery = child.toQuery()
+        childQuery.aggregates.append(
+            QueryAggregate(.avg, field: "studentCapacity", alias: "avg_studentCapacity"))
+        copy.query.relationAggregate(
+            "schoolList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true)
+        return copy
+    }
+
+
+
+
+
+
+    @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
         adding(.equal("id", .int(value)))
     }
@@ -357,6 +620,11 @@ public struct PlatformRequest<State: Sendable>: Sendable {
         adding(.notEndsWith("name", value))
     }
 
+    @discardableResult
+    public func withNameSoundingLike(_ value: String) -> Self {
+        adding(.soundingLike("name", value))
+    }
+
 
     @discardableResult
     public func withBaseUrlIs(_ value: String) -> Self {
@@ -440,6 +708,11 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     @discardableResult
     public func withBaseUrlNotEndingWith(_ value: String) -> Self {
         adding(.notEndsWith("baseUrl", value))
+    }
+
+    @discardableResult
+    public func withBaseUrlSoundingLike(_ value: String) -> Self {
+        adding(.soundingLike("baseUrl", value))
     }
 
 
@@ -611,6 +884,113 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     }
 
 
+
+    @discardableResult
+    public func haveSchoolTypes() -> Self {
+        withSchoolTypeListMatching(SchoolTypeRequest<RequestDraft>(
+            query: SelectQuery(entity: SchoolType.descriptor)))
+    }
+
+    @discardableResult
+    public func haveNoSchoolTypes() -> Self {
+        withoutSchoolTypeListMatching(SchoolTypeRequest<RequestDraft>(
+            query: SelectQuery(entity: SchoolType.descriptor)))
+    }
+
+    @discardableResult
+    public func withSchoolTypeListMatching<ChildState: Sendable>(
+        _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        adding(.inSubquery("id", RelationQueryPlan(child.toQuery()), "platform"))
+    }
+
+    @discardableResult
+    public func withoutSchoolTypeListMatching<ChildState: Sendable>(
+        _ child: SchoolTypeRequest<ChildState>
+    ) -> Self {
+        adding(.notInSubquery("id", RelationQueryPlan(child.toQuery()), "platform"))
+    }
+
+    @discardableResult
+    public func haveSchools() -> Self {
+        withSchoolListMatching(SchoolRequest<RequestDraft>(
+            query: SelectQuery(entity: School.descriptor)))
+    }
+
+    @discardableResult
+    public func haveNoSchools() -> Self {
+        withoutSchoolListMatching(SchoolRequest<RequestDraft>(
+            query: SelectQuery(entity: School.descriptor)))
+    }
+
+    @discardableResult
+    public func withSchoolListMatching<ChildState: Sendable>(
+        _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        adding(.inSubquery("id", RelationQueryPlan(child.toQuery()), "platform"))
+    }
+
+    @discardableResult
+    public func withoutSchoolListMatching<ChildState: Sendable>(
+        _ child: SchoolRequest<ChildState>
+    ) -> Self {
+        adding(.notInSubquery("id", RelationQueryPlan(child.toQuery()), "platform"))
+    }
+
+
+    @discardableResult
+    public func count() -> Self { countAs("count") }
+
+    @discardableResult
+    public func countAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.aggregates.append(QueryAggregate(.count, field: "*", alias: alias))
+        return copy
+    }
+
+
+    @discardableResult
+    public func groupById() -> Self {
+        var copy = self
+        copy.query.groupBy.append("id")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByName() -> Self {
+        var copy = self
+        copy.query.groupBy.append("name")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByBaseUrl() -> Self {
+        var copy = self
+        copy.query.groupBy.append("baseUrl")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCreateTime() -> Self {
+        var copy = self
+        copy.query.groupBy.append("createTime")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByUpdateTime() -> Self {
+        var copy = self
+        copy.query.groupBy.append("updateTime")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersion() -> Self {
+        var copy = self
+        copy.query.groupBy.append("version")
+        return copy
+    }
+
     private func adding(_ expression: TeaQLExpression) -> Self {
         var copy = self
         copy.query.filter = copy.query.filter.map { .and([$0, expression]) } ?? expression
@@ -645,14 +1025,22 @@ public extension PlatformRequest where State == RequestExecutable {
 
     func newEntity(_ context: UserContext) throws -> Platform {
         try ensureIntent()
-        var entity = context.initializeEntity("Platform", Platform())
-        entity.teaqlAttachRoot(context.entityRoot)
-        return entity
+        return context.initializeEntity("Platform", Platform())
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Platform> {
         try ensureIntent()
-        return SmartList(try await context.execute(query).records.map { try Platform.from(record: $0, root: context.entityRoot) })
+        let result = try await context.execute(query)
+        let queryRoot = EntityRoot()
+        return SmartList(
+            try result.records.map { try Platform.from(record: $0, root: queryRoot) },
+            facets: result.facets)
+    }
+
+    func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
+        try ensureIntent()
+        let result = try await context.execute(query)
+        return SmartList(result.records, facets: result.facets)
     }
 
     func executeForPage(
@@ -662,9 +1050,17 @@ public extension PlatformRequest where State == RequestExecutable {
         var pageQuery = query
         pageQuery.offset = offset
         pageQuery.limit = limit
-        let total = try await context.count(pageQuery)
+        let result = try await context.execute(pageQuery)
+        let observation = await context.idSetPaginationObservation()
+        let total: Int
+        if pageQuery.idSetPagination != nil && observation.countAccuracy == "EXACT" {
+            total = observation.count
+        } else {
+            total = try await context.count(pageQuery)
+        }
+        let queryRoot = EntityRoot()
         let items = SmartList(
-            try await context.execute(pageQuery).records.map { try Platform.from(record: $0, root: context.entityRoot) },
+            try result.records.map { try Platform.from(record: $0, root: queryRoot) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

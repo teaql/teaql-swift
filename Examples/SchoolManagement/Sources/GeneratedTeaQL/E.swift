@@ -283,7 +283,7 @@ public struct SchoolExpression: Sendable {
         return ValueExpression(value.establishedDate)
     }
 
-    public func studentCapacity() -> ValueExpression<String> {
+    public func studentCapacity() -> ValueExpression<Int64> {
         if let notLoaded { return .notLoaded(notLoaded) }
         guard let value else { return .missing() }
         let accessPath = path.isEmpty ? "studentCapacity" : path + ".studentCapacity"

@@ -41,7 +41,7 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     school.updateName("Riverside Primary School")
     school.updateAddress("12 River Road, Springfield")
     school.updateEstablishedDate(Date(timeIntervalSince1970: 810_950_400))
-    school.updateStudentCapacity("800")
+    school.updateStudentCapacity(800)
     school.updateActive(true)
     school.updateCreateTime(now)
     school.updateUpdateTime(now)
@@ -76,8 +76,8 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
       ("negative starts with", Q.schools().withNameNotStartingWith("Lakeside"), 1),
       ("ends with", Q.schools().withNameEndingWith("School"), 1),
       ("negative ends with", Q.schools().withNameNotEndingWith("Academy"), 1),
-      ("number range", Q.schools().withStudentCapacityBetween("700", "900"), 1),
-      ("strict comparison", Q.schools().withStudentCapacityGreaterThan("799").withStudentCapacityLessThan("801"), 1),
+      ("number range", Q.schools().withStudentCapacityBetween(700, 900), 1),
+      ("strict comparison", Q.schools().withStudentCapacityGreaterThan(799).withStudentCapacityLessThan(801), 1),
       ("date range", Q.schools().withEstablishedDateBetween(
         Date(timeIntervalSince1970: 788_918_400), Date(timeIntervalSince1970: 820_454_400)), 1),
       ("known", Q.schools().withAddressIsKnown(), 1),

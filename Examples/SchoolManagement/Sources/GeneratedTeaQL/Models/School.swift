@@ -4,15 +4,15 @@ import TeaQLCore
 
 public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public var id: Int64 = 0
-    public var platform: Int64 = 0
-    public var schoolType: Int64 = 0
+    public var platform: Int64? = nil
+    public var schoolType: Int64? = nil
     public var name: String? = nil
     public var address: String? = nil
-    public var establishedDate: Date = Date(timeIntervalSince1970: 0)
-    public var studentCapacity: String = ""
-    public var active: Bool = false
-    public var createTime: Date = Date(timeIntervalSince1970: 0)
-    public var updateTime: Date = Date(timeIntervalSince1970: 0)
+    public var establishedDate: Date? = nil
+    public var studentCapacity: Int64? = nil
+    public var active: Bool? = nil
+    public var createTime: Date? = nil
+    public var updateTime: Date? = nil
     public var version: Int64 = 0
     public var platformEntity: Platform?
     public var schoolTypeEntity: SchoolType?
@@ -22,6 +22,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "School", id: .int(id == 0 ? teaqlLedgerID : id)) }
+    var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -47,17 +48,17 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "School",
         table: "school_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: true, isID: true, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "address", modelName: "address", column: "address", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "establishedDate", modelName: "established_date", column: "established_date", type: .date, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "studentCapacity", modelName: "student_capacity", column: "student_capacity", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "active", modelName: "active", column: "active", type: .bool, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .date, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .date, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: true, isID: false, isVersion: true)
+            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "address", modelName: "address", column: "address", type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "establishedDate", modelName: "established_date", column: "established_date", type: .date, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "studentCapacity", modelName: "student_capacity", column: "student_capacity", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "active", modelName: "active", column: "active", type: .bool, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ]
     )
 
@@ -66,23 +67,23 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.platform = record["platform"]?.int64Value ?? 0
+        entity.platform = record["platform"]?.int64Value
         if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
-        entity.schoolType = record["schoolType"]?.int64Value ?? 0
+        entity.schoolType = record["schoolType"]?.int64Value
         if record.keys.contains("schoolType") { entity._loadedFields.insert("schoolType") }
-        entity.name = record["name"]?.stringValue ?? nil
+        entity.name = record["name"]?.stringValue
         if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.address = record["address"]?.stringValue ?? nil
+        entity.address = record["address"]?.stringValue
         if record.keys.contains("address") { entity._loadedFields.insert("address") }
-        entity.establishedDate = record["establishedDate"]?.dateValue ?? Date(timeIntervalSince1970: 0)
+        entity.establishedDate = record["establishedDate"]?.dateValue
         if record.keys.contains("establishedDate") { entity._loadedFields.insert("establishedDate") }
-        entity.studentCapacity = record["studentCapacity"]?.stringValue ?? ""
+        entity.studentCapacity = record["studentCapacity"]?.int64Value
         if record.keys.contains("studentCapacity") { entity._loadedFields.insert("studentCapacity") }
-        entity.active = record["active"]?.boolValue ?? false
+        entity.active = record["active"]?.boolValue
         if record.keys.contains("active") { entity._loadedFields.insert("active") }
-        entity.createTime = record["createTime"]?.dateValue ?? Date(timeIntervalSince1970: 0)
+        entity.createTime = record["createTime"]?.dateValue
         if record.keys.contains("createTime") { entity._loadedFields.insert("createTime") }
-        entity.updateTime = record["updateTime"]?.dateValue ?? Date(timeIntervalSince1970: 0)
+        entity.updateTime = record["updateTime"]?.dateValue
         if record.keys.contains("updateTime") { entity._loadedFields.insert("updateTime") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
@@ -129,15 +130,15 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public func toRecord() -> TeaQLRecord {
         [
             "id": .int(id),
-            "platform": .int(platform),
-            "schoolType": .int(schoolType),
-            "name": name.map(TeaQLValue.string) ?? .null,
-            "address": address.map(TeaQLValue.string) ?? .null,
-            "establishedDate": .date(establishedDate),
-            "studentCapacity": .string(studentCapacity),
-            "active": .bool(active),
-            "createTime": .date(createTime),
-            "updateTime": .date(updateTime),
+            "platform": platform.map { .int($0) } ?? .null,
+            "schoolType": schoolType.map { .int($0) } ?? .null,
+            "name": name.map { .string($0) } ?? .null,
+            "address": address.map { .string($0) } ?? .null,
+            "establishedDate": establishedDate.map { .date($0) } ?? .null,
+            "studentCapacity": studentCapacity.map { .int($0) } ?? .null,
+            "active": active.map { .bool($0) } ?? .null,
+            "createTime": createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            "updateTime": updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
             "version": .int(version)
         ]
     }
@@ -148,31 +149,31 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             record["id"] = .int(id)
         }
         if _loadedFields.contains("platform") {
-            record["platform"] = .int(platform)
+            record["platform"] = platform.map { .int($0) } ?? .null
         }
         if _loadedFields.contains("schoolType") {
-            record["school_type"] = .int(schoolType)
+            record["school_type"] = schoolType.map { .int($0) } ?? .null
         }
         if _loadedFields.contains("name") {
-            record["name"] = name.map(TeaQLValue.string) ?? .null
+            record["name"] = name.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("address") {
-            record["address"] = address.map(TeaQLValue.string) ?? .null
+            record["address"] = address.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("establishedDate") {
-            record["established_date"] = .date(establishedDate)
+            record["established_date"] = establishedDate.map { .date($0) } ?? .null
         }
         if _loadedFields.contains("studentCapacity") {
-            record["student_capacity"] = .string(studentCapacity)
+            record["student_capacity"] = studentCapacity.map { .int($0) } ?? .null
         }
         if _loadedFields.contains("active") {
-            record["active"] = .bool(active)
+            record["active"] = active.map { .bool($0) } ?? .null
         }
         if _loadedFields.contains("createTime") {
-            record["create_time"] = .date(createTime)
+            record["create_time"] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
         if _loadedFields.contains("updateTime") {
-            record["update_time"] = .date(updateTime)
+            record["update_time"] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
         if _loadedFields.contains("version") {
             record["version"] = .int(version)
@@ -198,19 +199,19 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
 
 
     @discardableResult
-    public mutating func updatePlatform(_ value: Int64) -> Self {
+    public mutating func updatePlatform(_ value: Int64?) -> Self {
         self.platform = value
         self._loadedFields.insert("platform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: .int(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: value.map { .int($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateSchoolType(_ value: Int64) -> Self {
+    public mutating func updateSchoolType(_ value: Int64?) -> Self {
         self.schoolType = value
         self._loadedFields.insert("schoolType")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_type", value: .int(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_type", value: value.map { .int($0) } ?? .null)
         return self
     }
     @discardableResult
@@ -226,7 +227,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
         self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -235,52 +236,52 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateAddress(_ value: String?) -> Self {
         self.address = value
         self._loadedFields.insert("address")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "address", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "address", value: value.map { .string($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateEstablishedDate(_ value: Date) -> Self {
+    public mutating func updateEstablishedDate(_ value: Date?) -> Self {
         self.establishedDate = value
         self._loadedFields.insert("establishedDate")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "established_date", value: .date(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "established_date", value: value.map { .date($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateStudentCapacity(_ value: String) -> Self {
+    public mutating func updateStudentCapacity(_ value: Int64?) -> Self {
         self.studentCapacity = value
         self._loadedFields.insert("studentCapacity")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "student_capacity", value: .string(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "student_capacity", value: value.map { .int($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateActive(_ value: Bool) -> Self {
+    public mutating func updateActive(_ value: Bool?) -> Self {
         self.active = value
         self._loadedFields.insert("active")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "active", value: .bool(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "active", value: value.map { .bool($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateCreateTime(_ value: Date) -> Self {
+    public mutating func updateCreateTime(_ value: Date?) -> Self {
         self.createTime = value
         self._loadedFields.insert("createTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "create_time", value: .date(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "create_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updateUpdateTime(_ value: Date) -> Self {
+    public mutating func updateUpdateTime(_ value: Date?) -> Self {
         self.updateTime = value
         self._loadedFields.insert("updateTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "update_time", value: .date(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "update_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -294,15 +295,14 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
 
+    public func auditAs(_ reason: String) -> SchoolAudited {
+        SchoolAudited(entity: self, reason: reason)
+    }
 
+    @discardableResult
     public mutating func markForDeletion() -> Self {
         teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
         return self
-    }
-
-
-    public func auditAs(_ reason: String) -> SchoolAudited {
-        SchoolAudited(entity: self, reason: reason)
     }
 }
 
@@ -311,7 +311,49 @@ public struct SchoolAudited: Sendable {
     public let reason: String
 
     public func save(_ context: UserContext) async throws -> School {
+        try await context.executeGraphSave {
+        try teaqlPreflightGraph(context)
         let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
         return saved
+        }
+    }
+
+    func teaqlPreflightGraph(_ context: UserContext) throws {
+        if entity.id != 0 {
+            if !entity.isLoaded("id") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("platform") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("schoolType") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("name") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("address") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("address"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("establishedDate") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("established_date"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("studentCapacity") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("student_capacity"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("active") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("createTime") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("updateTime") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("version") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+            }
+        }
+        try AuditedEntity(entity: entity, reason: reason).preflight(context)
     }
 }

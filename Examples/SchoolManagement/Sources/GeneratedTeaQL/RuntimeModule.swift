@@ -7,10 +7,19 @@ private struct PlatformChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) { mutation.values["create_time"] = .date(now) }
+        if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
+            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
+            context.recordFixEvidence(FixEvidence(entityType: "Platform", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+        }
 
-        if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) { mutation.values["update_time"] = .date(now) }
-        if mutation.kind == .update { mutation.values["update_time"] = .date(now) }
+        if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
+            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
+            context.recordFixEvidence(FixEvidence(entityType: "Platform", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+        }
+        if mutation.kind == .update {
+            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
+            context.recordFixEvidence(FixEvidence(entityType: "Platform", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+        }
 
 
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
@@ -54,10 +63,19 @@ private struct SchoolChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) { mutation.values["create_time"] = .date(now) }
+        if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
+            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
+            context.recordFixEvidence(FixEvidence(entityType: "School", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+        }
 
-        if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) { mutation.values["update_time"] = .date(now) }
-        if mutation.kind == .update { mutation.values["update_time"] = .date(now) }
+        if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
+            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
+            context.recordFixEvidence(FixEvidence(entityType: "School", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+        }
+        if mutation.kind == .update {
+            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
+            context.recordFixEvidence(FixEvidence(entityType: "School", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+        }
 
 
         if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"))) }
