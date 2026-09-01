@@ -171,6 +171,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var facets: [FacetRequest] = []
   public var comment: String?
   public var purpose: String?
+  public var tracePath: [TraceNode] = []
   public var continuousPage: ContinuousPageFetchOptions?
   public var idSetPagination: IdSetPaginationOptions?
   public var topNProbeParentThreshold: Int?
@@ -308,11 +309,20 @@ public struct TeaQLPage<Entity: Sendable>: Sendable {
 }
 
 public struct TraceNode: Sendable, Hashable, Codable {
+  public let level: Int
+  public let kind: String
+  public let name: String
   public let entity: String
   public let comment: String
   public let purpose: String
 
-  public init(entity: String, comment: String, purpose: String) {
+  public init(
+    entity: String, comment: String, purpose: String,
+    level: Int = 0, kind: String = "request", name: String? = nil
+  ) {
+    self.level = level
+    self.kind = kind
+    self.name = name ?? entity
     self.entity = entity
     self.comment = comment
     self.purpose = purpose

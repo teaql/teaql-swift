@@ -64,6 +64,16 @@ enum ConformanceApp {
         try require(queried.title == "Verify Swift runtime", "Q API returned the wrong title")
         print("PASS Q API (typed SmartList<WorkItem>)")
 
+        let related = try await Q.workItems().selectSelfFields()
+            .selectPlatformWith(Q.platformsWithMinimalFields().selectName())
+            .withIdIs(created.id)
+            .comment("what: load work item with platform")
+            .purpose("why: prove generated relation trace inheritance")
+            .executeForList(context)
+        try require(related.count == 1 && related[0].platformEntity?.name == "Runtime Example",
+                    "Forward Platform relation was not loaded")
+        print("PASS relation query (typed Platform and inherited trace intent)")
+
         try require(try E.workItem(queried).title().eval() == "Verify Swift runtime",
                     "E loaded scalar mismatch")
         try require(try E.workItem(queried).description().orElse("N/A") == "N/A",

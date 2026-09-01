@@ -620,6 +620,11 @@ private func context(
   query.filter = .equal("orderNumber", .string("secret-customer-value"))
   query.comment = "Read SQL evidence fixture"
   query.purpose = "Prove parameterized execution"
+  query.tracePath = [
+    TraceNode(entity: "Organization", comment: query.comment!, purpose: query.purpose!, level: 2, kind: "relation", name: "Order.organization"),
+    TraceNode(entity: "Region", comment: query.comment!, purpose: query.purpose!, level: 3, kind: "relation", name: "Organization.region"),
+    TraceNode(entity: "Country", comment: query.comment!, purpose: query.purpose!, level: 4, kind: "relation", name: "Region.country"),
+  ]
   _ = try await context.execute(query)
 
   let entries = await evidence.snapshot()
@@ -630,6 +635,14 @@ private func context(
   #expect(entries.contains { $0.debugSQL.contains("'secret-customer-value'") })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
+  let selectEntry = try #require(entries.first { $0.operation == .select })
+  #expect(selectEntry.comment == "Read SQL evidence fixture")
+  #expect(selectEntry.purpose == "Prove parameterized execution")
+  #expect(selectEntry.tracePath.map(\.kind) == [
+    "operation", "request", "relation", "relation", "relation", "provider", "sql"
+  ])
+  let insertEntry = try #require(entries.first { $0.operation == .insert })
+  #expect(insertEntry.auditReason == "Seed SQL evidence")
 
   await evidence.enableSelect()
   #expect(await evidence.snapshot().isEmpty)
@@ -639,7 +652,7 @@ private func context(
   #expect(await evidence.snapshot().isEmpty)
 }
 
-@Test func sqliteDiagnosticSQLLogIsExplicitAndValueBearing() async throws {
+@Test func sqliteDiagnosticSQLLogDefaultsOnAndIsValueBearing() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-diagnostic-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
@@ -647,6 +660,8 @@ private func context(
   try await context(service).ensureSchema(RuntimeModule(name: "diagnostic", entities: [order]))
   let sink = TextDiagnosticSQLLogSink(writer: { _ in })
   let enabled = context(service, diagnosticSQLLogSink: sink)
+  #expect(enabled.querySQLLogEnabled)
+  #expect(enabled.mutationSQLLogEnabled)
   _ = try await enabled.execute(Mutation(
     kind: .create, entity: order,
     values: ["id": .int(101), "version": .int(1),
@@ -660,7 +675,9 @@ private func context(
   let lines = await sink.snapshot()
   #expect(lines.contains { $0.contains("[select]") && $0.contains("O''Brien 学校") })
 
-  let disabled = context(service)
+  var disabled = context(service, diagnosticSQLLogSink: sink)
+  disabled.querySQLLogEnabled = false
+  #expect(disabled.mutationSQLLogEnabled)
   _ = try await disabled.execute(query)
   #expect(await sink.snapshot().count == lines.count)
 }

@@ -13,6 +13,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "Platform", id: .int(id == 0 ? teaqlLedgerID : id)) }
+    var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -30,9 +31,9 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "Platform",
         table: "platform_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: true, isID: true, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: true, isID: false, isVersion: true)
+            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ]
     )
 
@@ -41,7 +42,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.name = record["name"]?.stringValue ?? nil
+        entity.name = record["name"]?.stringValue
         if record.keys.contains("name") { entity._loadedFields.insert("name") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
@@ -83,7 +84,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     public func toRecord() -> TeaQLRecord {
         [
             "id": .int(id),
-            "name": name.map(TeaQLValue.string) ?? .null,
+            "name": name.map { .string($0) } ?? .null,
             "version": .int(version)
         ]
     }
@@ -94,7 +95,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             record["id"] = .int(id)
         }
         if _loadedFields.contains("name") {
-            record["name"] = name.map(TeaQLValue.string) ?? .null
+            record["name"] = name.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("version") {
             record["version"] = .int(version)
@@ -123,7 +124,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
         self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -137,15 +138,14 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
 
+    public func auditAs(_ reason: String) -> PlatformAudited {
+        PlatformAudited(entity: self, reason: reason)
+    }
 
+    @discardableResult
     public mutating func markForDeletion() -> Self {
         teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
         return self
-    }
-
-
-    public func auditAs(_ reason: String) -> PlatformAudited {
-        PlatformAudited(entity: self, reason: reason)
     }
 }
 
@@ -154,12 +154,57 @@ public struct PlatformAudited: Sendable {
     public let reason: String
 
     public func save(_ context: UserContext) async throws -> Platform {
+        try await context.executeGraphSave {
+        try teaqlPreflightGraph(context)
         let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
-        for var child in entity.workItemList {
+        for (index, var child) in entity.workItemList.enumerated() {
             child.teaqlAttachRoot(entity.teaqlEntityRoot)
             child.updatePlatform(saved.id)
-            _ = try await child.auditAs(reason).save(context)
+            do { _ = try await child.auditAs(reason).save(context) }
+            catch let error as CheckException {
+                let prefix = ObjectLocation.property("work_item_list").index(index)
+                throw CheckException(error.violations.map { violation in
+                    CheckResult(
+                        ruleID: violation.ruleID,
+                        location: violation.location.prefixed(by: prefix),
+                        inputValue: violation.inputValue,
+                        systemValue: violation.systemValue,
+                        message: violation.message)
+                })
+            }
         }
         return saved
+        }
+    }
+
+    func teaqlPreflightGraph(_ context: UserContext) throws {
+        if entity.id != 0 {
+            if !entity.isLoaded("id") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("name") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("version") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+            }
+        }
+        try AuditedEntity(entity: entity, reason: reason).preflight(context)
+        for (index, var child) in entity.workItemList.enumerated() {
+            child.teaqlAttachRoot(entity.teaqlEntityRoot)
+            child.updatePlatform(entity.teaqlPreflightID)
+            do { try child.auditAs(reason).teaqlPreflightGraph(context) }
+            catch let error as CheckException {
+                let prefix = ObjectLocation.property("work_item_list").index(index)
+                throw CheckException(error.violations.map { violation in
+                    CheckResult(
+                        ruleID: violation.ruleID,
+                        location: violation.location.prefixed(by: prefix),
+                        inputValue: violation.inputValue,
+                        systemValue: violation.systemValue,
+                        message: violation.message)
+                })
+            }
+        }
     }
 }

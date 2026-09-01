@@ -44,6 +44,10 @@ public enum GeneratedRuntimeModule {
         checkers: [
            "Platform": PlatformChecker(),
            "WorkItem": WorkItemChecker()
+        ],
+        rootEntities: [.init(entity: "Platform", id: 1, values: ["name": .string("Runtime Example")])],
+        constantEntities: [
+            
         ]
     )
 }

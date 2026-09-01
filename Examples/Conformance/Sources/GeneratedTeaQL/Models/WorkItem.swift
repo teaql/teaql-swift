@@ -6,7 +6,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public var id: Int64 = 0
     public var title: String? = nil
     public var description: String? = nil
-    public var platform: Int64 = 0
+    public var platform: Int64? = nil
     public var version: Int64 = 0
     public var platformEntity: Platform?
     private var _loadedFields: Set<String> = []
@@ -15,6 +15,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "WorkItem", id: .int(id == 0 ? teaqlLedgerID : id)) }
+    var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -34,11 +35,11 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "WorkItem",
         table: "work_item_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: true, isID: true, isVersion: false),
-            PropertyDescriptor(name: "title", modelName: "title", column: "title", type: .string, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: "title", modelName: "title", column: "title", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "description", modelName: "description", column: "description", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: true, isID: false, isVersion: true)
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ]
     )
 
@@ -47,11 +48,11 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.title = record["title"]?.stringValue ?? nil
+        entity.title = record["title"]?.stringValue
         if record.keys.contains("title") { entity._loadedFields.insert("title") }
-        entity.description = record["description"]?.stringValue ?? nil
+        entity.description = record["description"]?.stringValue
         if record.keys.contains("description") { entity._loadedFields.insert("description") }
-        entity.platform = record["platform"]?.int64Value ?? 0
+        entity.platform = record["platform"]?.int64Value
         if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
@@ -87,9 +88,9 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public func toRecord() -> TeaQLRecord {
         [
             "id": .int(id),
-            "title": title.map(TeaQLValue.string) ?? .null,
-            "description": description.map(TeaQLValue.string) ?? .null,
-            "platform": .int(platform),
+            "title": title.map { .string($0) } ?? .null,
+            "description": description.map { .string($0) } ?? .null,
+            "platform": platform.map { .int($0) } ?? .null,
             "version": .int(version)
         ]
     }
@@ -100,13 +101,13 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
             record["id"] = .int(id)
         }
         if _loadedFields.contains("title") {
-            record["title"] = title.map(TeaQLValue.string) ?? .null
+            record["title"] = title.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("description") {
-            record["description"] = description.map(TeaQLValue.string) ?? .null
+            record["description"] = description.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("platform") {
-            record["platform"] = .int(platform)
+            record["platform"] = platform.map { .int($0) } ?? .null
         }
         if _loadedFields.contains("version") {
             record["version"] = .int(version)
@@ -135,7 +136,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateTitle(_ value: String?) -> Self {
         self.title = value
         self._loadedFields.insert("title")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "title", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "title", value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -144,16 +145,16 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateDescription(_ value: String?) -> Self {
         self.description = value
         self._loadedFields.insert("description")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "description", value: value.map(TeaQLValue.string) ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "description", value: value.map { .string($0) } ?? .null)
         return self
     }
 
 
     @discardableResult
-    public mutating func updatePlatform(_ value: Int64) -> Self {
+    public mutating func updatePlatform(_ value: Int64?) -> Self {
         self.platform = value
         self._loadedFields.insert("platform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: .int(value))
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -167,15 +168,14 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
 
+    public func auditAs(_ reason: String) -> WorkItemAudited {
+        WorkItemAudited(entity: self, reason: reason)
+    }
 
+    @discardableResult
     public mutating func markForDeletion() -> Self {
         teaqlEntityRoot.markAsDeleted(teaqlEntityKey)
         return self
-    }
-
-
-    public func auditAs(_ reason: String) -> WorkItemAudited {
-        WorkItemAudited(entity: self, reason: reason)
     }
 }
 
@@ -184,7 +184,31 @@ public struct WorkItemAudited: Sendable {
     public let reason: String
 
     public func save(_ context: UserContext) async throws -> WorkItem {
+        try await context.executeGraphSave {
+        try teaqlPreflightGraph(context)
         let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
         return saved
+        }
+    }
+
+    func teaqlPreflightGraph(_ context: UserContext) throws {
+        if entity.id != 0 {
+            if !entity.isLoaded("id") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("title") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("title"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("description") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("description"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("platform") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity")])
+            }
+            if !entity.isLoaded("version") {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+            }
+        }
+        try AuditedEntity(entity: entity, reason: reason).preflight(context)
     }
 }

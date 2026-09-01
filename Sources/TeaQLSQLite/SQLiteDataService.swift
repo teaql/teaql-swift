@@ -256,12 +256,21 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       ],
       metadata: SQLExecutionMetadata(
         operation: .select,
+        comment: query.comment,
+        purpose: query.purpose,
+        tracePath: [
+          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 0, kind: "operation", name: "query"),
+          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 1, kind: "request", name: query.entity.name),
+        ] + query.tracePath + [
+          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: query.tracePath.count + 2, kind: "provider", name: "sqlite"),
+          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: query.tracePath.count + 3, kind: "sql", name: "select"),
+        ],
         parameterizedSQL: compiled.sql,
         parameters: compiled.parameters,
         debugSQL: compiled.debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         resultCount: records.count,
-        resultSummary: "Fetched \(records.count) rows")
+        resultSummary: "\(records.count) rows returned")
     )
   }
 
@@ -385,12 +394,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       ),
       metadata: SQLExecutionMetadata(
         operation: .insert,
+        auditReason: mutation.auditReason,
+        tracePath: mutationSQLTrace(mutation, operation: "insert"),
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: CompiledSQL(sql: sql, parameters: values).debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: affected,
-        resultSummary: "Affected \(affected) rows"))
+        resultSummary: "\(affected) rows affected"))
   }
 
   private func allocateID(typeName: String) throws -> Int64 {
@@ -470,12 +481,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id),
       metadata: SQLExecutionMetadata(
         operation: .update,
+        auditReason: mutation.auditReason,
+        tracePath: mutationSQLTrace(mutation, operation: "update"),
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: CompiledSQL(sql: sql, parameters: values).debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
-        resultSummary: "Affected \(changed) rows"))
+        resultSummary: "\(changed) rows affected"))
   }
 
   private func delete(_ mutation: Mutation) throws -> MutationResult {
@@ -504,12 +517,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id),
       metadata: SQLExecutionMetadata(
         operation: .delete,
+        auditReason: mutation.auditReason,
+        tracePath: mutationSQLTrace(mutation, operation: "delete"),
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: CompiledSQL(sql: sql, parameters: values).debugSQL(),
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
-        resultSummary: "Affected \(changed) rows"))
+        resultSummary: "\(changed) rows affected"))
   }
 
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {
@@ -575,6 +590,16 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   private func executeSQL(_ sql: String) throws { try run(sql, parameters: []) }
+
+  private func mutationSQLTrace(_ mutation: Mutation, operation: String) -> [TraceNode] {
+    let reason = mutation.auditReason ?? ""
+    return [
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 0, kind: "operation", name: "mutation"),
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 1, kind: "entity", name: mutation.entity.name),
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 2, kind: "provider", name: "sqlite"),
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 3, kind: "sql", name: operation),
+    ]
+  }
 
   private func elapsedMicros(since startedAt: UInt64) -> UInt64 {
     (DispatchTime.now().uptimeNanoseconds - startedAt) / 1_000

@@ -63,6 +63,10 @@ public enum SQLExecutionOperation: String, Sendable, Codable {
 
 public struct SQLExecutionMetadata: Sendable {
   public let operation: SQLExecutionOperation
+  public let comment: String?
+  public let purpose: String?
+  public let auditReason: String?
+  public let tracePath: [TraceNode]
   public let parameterizedSQL: String
   public let parameters: [TeaQLValue]
   public let debugSQL: String
@@ -73,6 +77,10 @@ public struct SQLExecutionMetadata: Sendable {
 
   public init(
     operation: SQLExecutionOperation,
+    comment: String? = nil,
+    purpose: String? = nil,
+    auditReason: String? = nil,
+    tracePath: [TraceNode] = [],
     parameterizedSQL: String,
     parameters: [TeaQLValue],
     debugSQL: String,
@@ -82,6 +90,10 @@ public struct SQLExecutionMetadata: Sendable {
     resultSummary: String
   ) {
     self.operation = operation
+    self.comment = comment
+    self.purpose = purpose
+    self.auditReason = auditReason
+    self.tracePath = tracePath
     self.parameterizedSQL = parameterizedSQL
     self.parameters = parameters
     self.debugSQL = debugSQL
@@ -96,8 +108,8 @@ public protocol RuntimeTelemetrySink: Sendable {
   func record(_ metadata: SQLExecutionMetadata) async
 }
 
-/// Explicit value-bearing SQL diagnostic destination. It is never installed
-/// by default and is intentionally separate from safe RuntimeTelemetry.
+/// Value-bearing SQL diagnostic destination. The text sink is installed by
+/// default and remains separate from safe RuntimeTelemetry.
 public protocol DiagnosticSQLLogSink: Sendable {
   func write(_ metadata: SQLExecutionMetadata) async
 }
@@ -112,7 +124,11 @@ public actor TextDiagnosticSQLLogSink: DiagnosticSQLLogSink {
 
   public func write(_ metadata: SQLExecutionMetadata) {
     let text = "[TeaQL SQL][\(metadata.operation.rawValue)][\(metadata.elapsedMicros)us] "
-      + "\(metadata.resultSummary)\n\(metadata.debugSQL)"
+      + "\(metadata.resultSummary) comment=\(metadata.comment ?? "") "
+      + "purpose=\(metadata.purpose ?? "") auditReason=\(metadata.auditReason ?? "") "
+      + "tracePath=\(metadata.tracePath)\n"
+      + "Parameterized SQL: \(metadata.parameterizedSQL) params=\(metadata.parameters)\n"
+      + "Debug SQL: \(metadata.debugSQL)"
     lines.append(text)
     writer(text)
   }
@@ -596,6 +612,8 @@ public struct UserContext: Sendable {
   public let auditSink: (any AuditSink)?
   public let telemetrySink: (any RuntimeTelemetrySink)?
   public let diagnosticSQLLogSink: (any DiagnosticSQLLogSink)?
+  public var querySQLLogEnabled: Bool
+  public var mutationSQLLogEnabled: Bool
   public let runtimeTelemetry: any RuntimeTelemetry
   public private(set) var locale: TeaQLLocale
   public private(set) var i18nCatalog: I18nCatalog
@@ -616,7 +634,9 @@ public struct UserContext: Sendable {
     requestPolicy: RequestPolicy,
     auditSink: (any AuditSink)? = nil,
     telemetrySink: (any RuntimeTelemetrySink)? = nil,
-    diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = nil,
+    diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = TextDiagnosticSQLLogSink(),
+    querySQLLogEnabled: Bool = true,
+    mutationSQLLogEnabled: Bool = true,
     runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry(),
     idSetStore: any IdSetStore = InMemoryIdSetStore.shared,
     locale: TeaQLLocale = .en,
@@ -633,7 +653,9 @@ public struct UserContext: Sendable {
     self.requestPolicy = requestPolicy
     self.auditSink = auditSink
     self.telemetrySink = telemetrySink
-    self.diagnosticSQLLogSink = diagnosticSQLLogSink
+    self.diagnosticSQLLogSink = diagnosticSQLLogSink ?? TextDiagnosticSQLLogSink()
+    self.querySQLLogEnabled = querySQLLogEnabled
+    self.mutationSQLLogEnabled = mutationSQLLogEnabled
     self.runtimeTelemetry = runtimeTelemetry
     self.idSetStore = idSetStore
     self.locale = locale
@@ -758,7 +780,7 @@ public struct UserContext: Sendable {
     }
     if let metadata = result.metadata {
       await telemetrySink?.record(metadata)
-      await diagnosticSQLLogSink?.write(metadata)
+      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(metadata) }
     }
     await registerContinuousPage(prepared.execution, rows: result.records)
     var facets: [String: SmartList<TeaQLRecord>] = [:]
@@ -812,6 +834,10 @@ public struct UserContext: Sendable {
       let parentIDs = records.compactMap { $0[parentID.name] }
       guard !parentIDs.isEmpty else { continue }
       var child = aggregate.query.makeQuery()
+      child.tracePath = validated.tracePath + [TraceNode(
+        entity: child.entity.name, comment: validated.comment ?? "",
+        purpose: validated.purpose ?? "", level: validated.tracePath.count + 2,
+        kind: "relation", name: "\(validated.entity.name).\(aggregate.relationName)")]
       guard let foreignKey = child.entity.property(named: aggregate.foreignKey) else {
         throw TeaQLError.unknownProperty(
           entity: child.entity.name, property: aggregate.foreignKey)
@@ -871,6 +897,10 @@ public struct UserContext: Sendable {
         let localValues = records.compactMap { $0[relation.localKey] }
         guard !localValues.isEmpty else { return }
         var child = relation.query.makeQuery()
+        child.tracePath = validated.tracePath + [TraceNode(
+          entity: child.entity.name, comment: validated.comment ?? "",
+          purpose: validated.purpose ?? "", level: validated.tracePath.count + 2,
+          kind: "relation", name: "\(validated.entity.name).\(relation.name)")]
         // Relation assembly groups child rows by the foreign key. A generated
         // child projection may select only business fields, so the runtime must
         // retain this structural key even when the caller did not request it.
@@ -1118,7 +1148,7 @@ public struct UserContext: Sendable {
     }
     if let metadata = result.metadata {
       await telemetrySink?.record(metadata)
-      await diagnosticSQLLogSink?.write(metadata)
+      if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(metadata) }
     }
     if let auditSink, let reason = validated.auditReason {
       try await runtimeTelemetry.withOperation(
