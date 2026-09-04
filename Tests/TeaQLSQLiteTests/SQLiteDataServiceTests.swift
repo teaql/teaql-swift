@@ -454,52 +454,49 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
   #expect(saved.version == 1)
 }
 
-@Test func schoolBootstrapIsIdempotentPreservesRootAndReconcilesConstants() async throws {
+@Test func generatedBootstrapRunsAfterDDLThroughTypedMutation() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-school-bootstrap-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
-  let platform = EntityDescriptor(name: "Platform", table: "platform_data", properties: [
-    PropertyDescriptor(name: "id", type: .int, isID: true),
-    PropertyDescriptor(name: "name", type: .string),
-    PropertyDescriptor(name: "version", type: .int, isVersion: true),
-  ])
-  let schoolType = EntityDescriptor(name: "SchoolType", table: "school_type_data", properties: [
-    PropertyDescriptor(name: "id", type: .int, isID: true),
-    PropertyDescriptor(name: "name", type: .string),
-    PropertyDescriptor(name: "code", type: .string),
-    PropertyDescriptor(name: "version", type: .int, isVersion: true),
-  ])
-  let module = RuntimeModule(name: "school", entities: [platform, schoolType],
-    rootEntities: [.init(entity: "Platform", id: 1, values: ["name": .string("Campus Learning Platform")])],
-    constantEntities: [
-      .init(entity: "SchoolType", id: 1001, values: ["name": .string("Primary"), "code": .string("PRIMARY")]),
-      .init(entity: "SchoolType", id: 1002, values: ["name": .string("Secondary"), "code": .string("SECONDARY")]),
-    ])
-  try await context(service).ensureSchema(module)
-  _ = try await service.execute(Mutation(kind: .update, entity: platform, id: .int(1),
-    values: ["name": .string("Customer Name")], expectedVersion: 1,
-    auditReason: "verify root preservation"))
-  let changed = RuntimeModule(name: "school", entities: [platform, schoolType],
-    rootEntities: module.rootEntities,
-    constantEntities: [
-      .init(entity: "SchoolType", id: 1001, values: ["name": .string("Primary School"), "code": .string("PRIMARY")]),
-      module.constantEntities[1],
-    ])
-  try await context(service).ensureSchema(changed)
-  var rootQuery = SelectQuery(entity: platform); rootQuery.comment = "verify root"; rootQuery.purpose = "bootstrap conformance"
-  var constantQuery = SelectQuery(entity: schoolType); constantQuery.comment = "verify constants"; constantQuery.purpose = "bootstrap conformance"
-  let roots = try await service.execute(rootQuery)
-  let constants = try await service.execute(constantQuery)
-  #expect(roots.records.count == 1)
-  #expect(roots.records[0]["name"] == .string("Customer Name"))
-  #expect(constants.records.count == 2)
-  #expect(constants.records.first { $0["id"] == .int(1001) }?["name"] == .string("Primary School"))
-  #expect(constants.records.first { $0["id"] == .int(1001) }?["version"] == .int(2))
-  #expect(constants.records.first { $0["id"] == .int(1002) }?["version"] == .int(1))
-  let created = try await service.execute(Mutation(kind: .create, entity: schoolType,
-    values: ["name": .string("Other"), "code": .string("OTHER")], auditReason: "verify ID floor"))
-  #expect((created.generatedValues["id"]?.int64Value ?? 0) > 1002)
+  let audit = RecordingAuditSink()
+  let module = RuntimeModule(
+    name: "generated-bootstrap", entities: [SavedWidget.descriptor],
+    generatedBootstrap: { context in
+      let bootstrap = context._generatedBootstrapContext(
+        activeRoot: ContextEntityRef(entity: "SavedWidget", id: .int(1001)))
+      #expect(try bootstrap.requireActiveRoot("SavedWidget").id == .int(1001))
+      var query = SelectQuery(entity: SavedWidget.descriptor)
+      query.filter = TeaQLExpression.equal("id", .int(1001))
+      query.comment = "find generated bootstrap fixture"
+      query.purpose = "ensure idempotent typed bootstrap"
+      if try await bootstrap.execute(query).records.isEmpty {
+        _ = try await SavedWidget(id: 1001, name: "Primary", version: 0)
+          .auditAs("create model constant SavedWidget.Primary").save(bootstrap)
+      }
+    })
+  var runtime = TeaQLRuntime()
+  try runtime.install(module)
+  let caller = UserContext(
+    runtime: runtime, actor: "application", queryExecutor: service,
+    mutationExecutor: service, requestPolicy: RequestPolicy { $0 }, auditSink: audit)
+  try await caller.ensureSchema(module)
+  try await caller.ensureSchema(module)
+
+  var query = SelectQuery(entity: SavedWidget.descriptor)
+  query.comment = "verify generated bootstrap rows"
+  query.purpose = "prove provider is DDL-only"
+  let records = try await caller.execute(query).records
+  #expect(records.count == 1)
+  #expect(records[0]["id"] == .int(1001))
+  #expect(records[0]["name"] == .string("Primary"))
+  let events = await audit.events()
+  #expect(events.count == 1)
+  #expect(events[0].actor == "teaql-generated-bootstrap")
+  #expect(events[0].category == "runtime-bootstrap")
+  let created = try await SavedWidget(name: "next", version: 0)
+    .auditAs("verify generated bootstrap ID floor").save(caller)
+  #expect(created.id == 1002)
 }
 
 private func context(

@@ -100,12 +100,21 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     try require(projected.count == 1 && projected[0].name == "Riverside Primary School",
                 "projection/order query did not preserve typed School result")
 
-    var values = module.constantEntities[0].values
-    values["name"] = .string("Primary School")
     let changedModule = RuntimeModule(
       name: module.name, entities: module.entities, checkers: module.checkers,
-      rootEntities: module.rootEntities,
-      constantEntities: [BootstrapEntity(entity: "SchoolType", id: 1001, values: values), module.constantEntities[1]])
+      generatedBootstrap: { context in
+        let bootstrap = context._generatedBootstrapContext(
+          activeRoot: ContextEntityRef(entity: "Platform", id: .int(1)))
+        let rows = try await Q.schoolTypes().selectSelfFields().withIdIs(1001)
+          .comment("find PRIMARY for reconciliation")
+          .purpose("verify changed generated constant data")
+          .executeForList(bootstrap)
+        if var primary = rows.first, primary.name != "Primary School" {
+          primary.updateName("Primary School")
+          _ = try await primary.auditAs("reconcile model constant SchoolType.PRIMARY")
+            .save(bootstrap)
+        }
+      })
     try await context.ensureSchema(changedModule)
     let changed = try await Q.schoolTypes().withIdIs(1001)
       .comment("verify constant reconciliation").purpose("local runtime verification")

@@ -474,6 +474,7 @@ public struct AuditEvent: Sendable, Codable {
   public let operation: MutationKind
   public let reason: String
   public let actor: String?
+  public let category: String?
   public let occurredAt: Date
 }
 
@@ -602,6 +603,7 @@ private enum IdSetBuildError: Error { case limitExceeded(Int) }
 public struct UserContext: Sendable {
   public let runtime: TeaQLRuntime
   public let actor: String?
+  public let auditCategory: String?
   /// Application-owned tenant identity. It is never populated from generated
   /// query or federation payloads.
   public let trustedTenant: String?
@@ -627,6 +629,7 @@ public struct UserContext: Sendable {
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
     actor: String? = nil,
+    auditCategory: String? = nil,
     trustedTenant: String? = nil,
     activeRoot: ContextEntityRef? = nil,
     queryExecutor: any QueryExecutor,
@@ -646,6 +649,7 @@ public struct UserContext: Sendable {
   ) {
     self.runtime = runtime
     self.actor = actor
+    self.auditCategory = auditCategory
     self.trustedTenant = trustedTenant
     self.activeRoot = activeRoot
     self.queryExecutor = queryExecutor
@@ -702,6 +706,36 @@ public struct UserContext: Sendable {
         "Ensure Schema requires a schema-aware provider; configured provider is \(queryExecutor.providerKind)")
     }
     try await provider.ensureSchema(module, context: self)
+    try await module.generatedBootstrap?(self)
+  }
+
+  /// SPI for generated modules. Bootstrap mutations use an isolated graph-save
+  /// coordinator while retaining the caller's provider, installed checkers,
+  /// policies, sinks, and trusted application context.
+  public func _generatedBootstrapContext(
+    actor: String = "teaql-generated-bootstrap",
+    activeRoot: ContextEntityRef? = nil
+  ) -> UserContext {
+    UserContext(
+      runtime: runtime,
+      actor: actor,
+      auditCategory: "runtime-bootstrap",
+      trustedTenant: trustedTenant,
+      activeRoot: activeRoot,
+      queryExecutor: queryExecutor,
+      mutationExecutor: mutationExecutor,
+      requestPolicy: requestPolicy,
+      auditSink: auditSink,
+      telemetrySink: telemetrySink,
+      diagnosticSQLLogSink: diagnosticSQLLogSink,
+      querySQLLogEnabled: querySQLLogEnabled,
+      mutationSQLLogEnabled: mutationSQLLogEnabled,
+      runtimeTelemetry: runtimeTelemetry,
+      idSetStore: idSetStore,
+      locale: locale,
+      i18nCatalog: i18nCatalog,
+      entityInitializers: entityInitializers,
+      entityCreationObserver: entityCreationObserver)
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
@@ -1168,6 +1202,7 @@ public struct UserContext: Sendable {
             operation: validated.kind,
             reason: reason,
             actor: actor,
+            category: auditCategory,
             occurredAt: Date()
           ))
       }

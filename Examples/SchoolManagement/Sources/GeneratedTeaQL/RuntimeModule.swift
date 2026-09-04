@@ -117,10 +117,60 @@ public enum GeneratedRuntimeModule {
            "SchoolType": SchoolTypeChecker(),
            "School": SchoolChecker()
         ],
-        rootEntities: [.init(entity: "Platform", id: 1, values: ["name": .string("Campus Learning Platform"), "base_url": .string("https://campus.example.com"), "create_time": .date(Date()), "update_time": .date(Date())])],
-        constantEntities: [
-            .init(entity: "SchoolType", id: 1001, values: ["platform": .int(1), "name": .string("Primary"), "code": .string("PRIMARY"), "display_order": .decimal(Decimal(string: "1")!)]),
-            .init(entity: "SchoolType", id: 1002, values: ["platform": .int(1), "name": .string("Secondary"), "code": .string("SECONDARY"), "display_order": .decimal(Decimal(string: "2")!)])
-        ]
+        generatedBootstrap: { context in
+            let bootstrap = context._generatedBootstrapContext(
+                activeRoot: ContextEntityRef(entity: "Platform", id: .int(1)))
+            let roots = try await Q.platforms().selectSelfFields().withIdIs(1)
+                .comment("find generated Platform root")
+                .purpose("preserve or create the model-defined root")
+                .executeForList(bootstrap)
+            if roots.isEmpty {
+                var root = try Q.platforms()
+                    .comment("create generated Platform root")
+                    .purpose("bootstrap model-defined data")
+                    .newEntity(bootstrap)
+                root.updateId(1)
+                root.updateName("Campus Learning Platform")
+                root.updateBaseUrl("https://campus.example.com")
+                _ = try await root.auditAs("create model root Platform").save(bootstrap)
+            }
+            try await ensureSchoolType(
+                id: 1001, name: "Primary", code: "PRIMARY", displayOrder: 1,
+                context: bootstrap)
+            try await ensureSchoolType(
+                id: 1002, name: "Secondary", code: "SECONDARY", displayOrder: 2,
+                context: bootstrap)
+        }
     )
+
+    private static func ensureSchoolType(
+        id: Int64, name: String, code: String, displayOrder: Decimal,
+        context: UserContext
+    ) async throws {
+        let rows = try await Q.schoolTypes().selectSelfFields().withIdIs(id)
+            .comment("find generated SchoolType constant")
+            .purpose("create or reconcile the model-defined constant")
+            .executeForList(context)
+        if rows.isEmpty {
+            var value = try Q.schoolTypes()
+                .comment("create generated SchoolType constant")
+                .purpose("bootstrap model-defined data")
+                .newEntity(context)
+            value.updateId(id)
+            value.updatePlatform(1)
+            value.updateName(name)
+            value.updateCode(code)
+            value.updateDisplayOrder(displayOrder)
+            _ = try await value.auditAs("create model constant SchoolType.\(code)").save(context)
+            return
+        }
+        var value = rows[0]
+        guard value.platform != 1 || value.name != name || value.code != code
+            || value.displayOrder != displayOrder else { return }
+        value.updatePlatform(1)
+        value.updateName(name)
+        value.updateCode(code)
+        value.updateDisplayOrder(displayOrder)
+        _ = try await value.auditAs("reconcile model constant SchoolType.\(code)").save(context)
+    }
 }

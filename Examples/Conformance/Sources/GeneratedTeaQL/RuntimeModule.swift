@@ -45,9 +45,22 @@ public enum GeneratedRuntimeModule {
            "Platform": PlatformChecker(),
            "WorkItem": WorkItemChecker()
         ],
-        rootEntities: [.init(entity: "Platform", id: 1, values: ["name": .string("Runtime Example")])],
-        constantEntities: [
-            
-        ]
+        generatedBootstrap: { context in
+            let bootstrap = context._generatedBootstrapContext(
+                activeRoot: ContextEntityRef(entity: "Platform", id: .int(1)))
+            let existing = try await Q.platforms().selectSelfFields().withIdIs(1)
+                .comment("find generated Platform root")
+                .purpose("preserve or create the model-defined root")
+                .executeForList(bootstrap)
+            if existing.isEmpty {
+                var platform = try Q.platforms()
+                    .comment("create generated Platform root")
+                    .purpose("bootstrap model-defined data")
+                    .newEntity(bootstrap)
+                platform.updateId(1)
+                platform.updateName("Runtime Example")
+                _ = try await platform.auditAs("create model root Platform").save(bootstrap)
+            }
+        }
     )
 }

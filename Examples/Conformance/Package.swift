@@ -5,7 +5,7 @@ let package = Package(
     name: "runtime-example-conformance-service-swift-console",
     platforms: [.macOS(.v14)],
     dependencies: [
-        .package(path: "../..")
+        .package(name: "teaql-swift", path: "../..")
     ],
     targets: [
         .target(

@@ -5,7 +5,7 @@ let package = Package(
     name: "teaql-order-management-example",
     platforms: [.macOS(.v14)],
     dependencies: [
-        .package(path: "../.."),
+        .package(name: "teaql-swift", path: "../.."),
         .package(path: "Generated"),
     ],
     targets: [

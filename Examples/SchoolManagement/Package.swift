@@ -8,7 +8,7 @@ let package = Package(
     dependencies: [
         // Local runtime verification comes before publication. Replace this
         // with the released package URL only for published-artifact verification.
-        .package(path: "../..")
+        .package(name: "teaql-swift", path: "../..")
     ],
     targets: [
         .target(

@@ -107,8 +107,6 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   package func ensureSchema(_ module: RuntimeModule, context: UserContext) throws {
     try ensureSoundexFunction()
     try ensureEntitySchemas(module.entities)
-    for seed in module.rootEntities { try ensureBootstrap(seed, module: module, reconcile: false) }
-    for seed in module.constantEntities { try ensureBootstrap(seed, module: module, reconcile: true) }
   }
 
   private func ensureSoundexFunction() throws {
@@ -124,54 +122,6 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     guard status == SQLITE_OK else {
       throw SQLiteError.sqlite(code: status, message: String(cString: sqlite3_errmsg(database)), sql: nil)
     }
-  }
-
-  private func ensureBootstrap(_ seed: BootstrapEntity, module: RuntimeModule, reconcile: Bool) throws {
-    guard let entity = module.entities.first(where: { $0.name == seed.entity }) else {
-      throw TeaQLError.execution("Bootstrap entity \(seed.entity) is not registered")
-    }
-    let table = quote(entity.table)
-    let idColumn = quote(entity.properties.first(where: { $0.isID })?.column ?? "id")
-    let existing = try fetch(
-      CompiledSQL(sql: "SELECT * FROM \(table) WHERE \(idColumn) = ?", parameters: [.int(seed.id)]),
-      entity: entity).first
-    var propertyByName: [String: PropertyDescriptor] = [:]
-    for property in entity.properties {
-      propertyByName[property.name] = property
-      if let modelName = property.modelName { propertyByName[modelName] = property }
-      propertyByName[property.column] = property
-    }
-    if existing == nil {
-      var values = seed.values; values["id"] = .int(seed.id); values["version"] = .int(1)
-      let fields = values.keys.sorted()
-      let columns = fields.map { quote(propertyByName[$0]?.column ?? $0) }.joined(separator: ", ")
-      try run("INSERT INTO \(table) (\(columns)) VALUES (\(fields.map { _ in "?" }.joined(separator: ", ")))",
-              parameters: fields.compactMap { values[$0] })
-    } else if reconcile, let existing {
-      let fields = seed.values.keys.filter {
-        $0 != "id" && $0 != "version"
-          && !storageValuesEqual(existing[propertyByName[$0]?.name ?? $0], seed.values[$0])
-      }.sorted()
-      if !fields.isEmpty {
-        let versionColumn = quote(entity.properties.first(where: { $0.isVersion })?.column ?? "version")
-        let assignments = (fields.map { quote(propertyByName[$0]?.column ?? $0) + " = ?" }
-          + [versionColumn + " = " + versionColumn + " + 1"]).joined(separator: ", ")
-        try run("UPDATE \(table) SET \(assignments) WHERE \(idColumn) = ?",
-                parameters: fields.compactMap { seed.values[$0] } + [.int(seed.id)])
-      }
-    }
-    try ensureIDFloor(typeName: seed.entity, floor: seed.id)
-  }
-
-  private func storageValuesEqual(_ stored: TeaQLValue?, _ expected: TeaQLValue?) -> Bool {
-    guard let stored, let expected else { return stored == nil && expected == nil }
-    if stored == expected { return true }
-    if let left = stored.decimalValue, let right = expected.decimalValue { return left == right }
-    if let left = stored.int64Value, let right = expected.int64Value { return left == right }
-    if let left = stored.dateValue, let right = expected.dateValue {
-      return Int64(left.timeIntervalSince1970 * 1_000) == Int64(right.timeIntervalSince1970 * 1_000)
-    }
-    return false
   }
 
   /// Advances an ID space after model-defined roots or constants are seeded.
