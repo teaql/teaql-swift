@@ -7,12 +7,14 @@ public struct RuntimeModule: Sendable {
   public let checkers: [String: any EntityChecker]
   public let rootEntities: [BootstrapEntity]
   public let constantEntities: [BootstrapEntity]
+  public let wireMetadata: [String: WireEntityMetadata]
 
   public init(
     name: String, entities: [EntityDescriptor],
     checkers: [String: any EntityChecker] = [:],
     rootEntities: [BootstrapEntity] = [],
-    constantEntities: [BootstrapEntity] = []
+    constantEntities: [BootstrapEntity] = [],
+    wireMetadata: [String: WireEntityMetadata] = [:]
   ) {
     precondition(!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     self.name = name
@@ -20,6 +22,7 @@ public struct RuntimeModule: Sendable {
     self.checkers = checkers
     self.rootEntities = rootEntities
     self.constantEntities = constantEntities
+    self.wireMetadata = wireMetadata
   }
 }
 
@@ -36,6 +39,7 @@ public struct BootstrapEntity: Sendable, Equatable {
 public struct TeaQLRuntime: Sendable {
   private var descriptorsByName: [String: EntityDescriptor] = [:]
   private var checkersByName: [String: any EntityChecker] = [:]
+  private var wireMetadataByName: [String: WireEntityMetadata] = [:]
 
   public init() {}
 
@@ -48,6 +52,7 @@ public struct TeaQLRuntime: Sendable {
       descriptorsByName[descriptor.name] = descriptor
     }
     for (name, checker) in module.checkers { checkersByName[name] = checker }
+    for (name, metadata) in module.wireMetadata { wireMetadataByName[name] = metadata }
   }
 
   public var entities: [EntityDescriptor] {
@@ -59,4 +64,5 @@ public struct TeaQLRuntime: Sendable {
   }
 
   public func checker(named name: String) -> (any EntityChecker)? { checkersByName[name] }
+  public func wireMetadata(named name: String) -> WireEntityMetadata? { wireMetadataByName[name] }
 }
