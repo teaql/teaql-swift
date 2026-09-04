@@ -1202,7 +1202,8 @@ public struct UserContext: Sendable {
         try await auditSink.record(
           AuditEvent(
             entity: validated.entity.name,
-            entityID: validated.id ?? result.generatedValues["id"],
+            entityID: validated.id ?? result.generatedValues["id"]
+              ?? validated.entity.idProperty.flatMap { validated.values[$0.name] },
             operation: validated.kind,
             reason: reason,
             actor: actor,

@@ -487,6 +487,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {
     let id = mutation.id ?? generatedValues["id"]
+      ?? mutation.entity.idProperty.flatMap { mutation.values[$0.name] }
     try run(
       "INSERT INTO teaql_row_audit_event (entity_type, entity_id, operation, reason, actor, category, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       parameters: [
