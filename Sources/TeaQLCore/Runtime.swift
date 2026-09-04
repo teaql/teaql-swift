@@ -165,6 +165,7 @@ public struct Mutation: Sendable, Codable {
   public var expectedVersion: Int64?
   public var auditReason: String?
   public var actor: String?
+  public var auditCategory: String?
 
   public init(
     kind: MutationKind,
@@ -173,7 +174,8 @@ public struct Mutation: Sendable, Codable {
     values: TeaQLRecord = [:],
     expectedVersion: Int64? = nil,
     auditReason: String? = nil,
-    actor: String? = nil
+    actor: String? = nil,
+    auditCategory: String? = nil
   ) {
     self.kind = kind
     self.entity = entity
@@ -182,6 +184,7 @@ public struct Mutation: Sendable, Codable {
     self.expectedVersion = expectedVersion
     self.auditReason = auditReason
     self.actor = actor
+    self.auditCategory = auditCategory
   }
 
   public func validatedForExecution() throws -> Self {
@@ -1161,6 +1164,7 @@ public struct UserContext: Sendable {
   ) async throws -> MutationResult {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
+    validated.auditCategory = auditCategory
     if let checker = runtime.checker(named: validated.entity.name) {
       let violations = translateCheckResults(
         try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
@@ -1215,6 +1219,7 @@ public struct UserContext: Sendable {
   ) throws -> Mutation {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
+    validated.auditCategory = auditCategory
     if let checker = runtime.checker(named: validated.entity.name) {
       let violations = translateCheckResults(
         try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))

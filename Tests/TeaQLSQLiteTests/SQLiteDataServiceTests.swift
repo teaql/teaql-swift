@@ -494,6 +494,8 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
   #expect(events.count == 1)
   #expect(events[0].actor == "teaql-generated-bootstrap")
   #expect(events[0].category == "runtime-bootstrap")
+  let rowAudit = try await service.auditEvents()
+  #expect(rowAudit.first?["category"] == .string("runtime-bootstrap"))
   let created = try await SavedWidget(name: "next", version: 0)
     .auditAs("verify generated bootstrap ID floor").save(caller)
   #expect(created.id == 1002)

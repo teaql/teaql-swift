@@ -91,9 +91,16 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
           operation TEXT NOT NULL,
           reason TEXT NOT NULL,
           actor TEXT,
+          category TEXT,
           occurred_at TEXT NOT NULL
       )
       """)
+    if try scalarInt64(
+      "SELECT COUNT(*) FROM pragma_table_info('teaql_row_audit_event') WHERE name = 'category'",
+      parameters: []) == 0
+    {
+      try executeSQL("ALTER TABLE teaql_row_audit_event ADD COLUMN category TEXT")
+    }
     try executeSQL(
       """
       CREATE TABLE IF NOT EXISTS teaql_id_space (
@@ -289,6 +296,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         PropertyDescriptor(name: "operation", type: .string),
         PropertyDescriptor(name: "reason", type: .string),
         PropertyDescriptor(name: "actor", type: .string, nullable: true),
+        PropertyDescriptor(name: "category", type: .string, nullable: true),
         PropertyDescriptor(name: "occurredAt", column: "occurred_at", type: .timestamp),
       ])
     var query = SelectQuery(entity: descriptor)
@@ -480,13 +488,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {
     let id = mutation.id ?? generatedValues["id"]
     try run(
-      "INSERT INTO teaql_row_audit_event (entity_type, entity_id, operation, reason, actor, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO teaql_row_audit_event (entity_type, entity_id, operation, reason, actor, category, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       parameters: [
         .string(mutation.entity.name),
         id.map { .string(render($0)) } ?? .null,
         .string(mutation.kind.rawValue),
         .string(mutation.auditReason!),
         mutation.actor.map(TeaQLValue.string) ?? .null,
+        mutation.auditCategory.map(TeaQLValue.string) ?? .null,
         .string(ISO8601DateFormatter().string(from: Date())),
       ]
     )
