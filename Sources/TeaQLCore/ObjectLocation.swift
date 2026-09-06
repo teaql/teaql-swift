@@ -1,5 +1,18 @@
 import Foundation
 
+public enum JsonFieldNamingProfile: String, Sendable, Codable {
+  case camelCase, snakeCase = "snake_case", pascalCase = "PascalCase"
+  public func render(_ canonicalName: String) -> String {
+    switch self {
+    case .snakeCase: canonicalName
+    case .camelCase: ObjectLocation.lowerCamel(canonicalName)
+    case .pascalCase:
+      ObjectLocation.lowerCamel(canonicalName).prefix(1).uppercased()
+        + ObjectLocation.lowerCamel(canonicalName).dropFirst()
+    }
+  }
+}
+
 public enum ObjectLocationSegment: Sendable, Hashable {
   case property(String)
   case index(Int)
@@ -18,9 +31,12 @@ public struct ObjectLocation: Sendable, Hashable, CustomStringConvertible {
   public var modelPath: String { render { $0 } }
   public var nativePath: String { render(Self.lowerCamel) }
   public var instancePath: String {
+    instancePath(profile: .camelCase)
+  }
+  public func instancePath(profile: JsonFieldNamingProfile) -> String {
     segments.map { segment in
       switch segment {
-      case .property(let name): return "/\(Self.escapePointer(Self.lowerCamel(name)))"
+      case .property(let name): return "/\(Self.escapePointer(profile.render(name)))"
       case .index(let index): return "/\(index)"
       }
     }.joined()
@@ -38,7 +54,7 @@ public struct ObjectLocation: Sendable, Hashable, CustomStringConvertible {
     return result
   }
 
-  private static func lowerCamel(_ name: String) -> String {
+  fileprivate static func lowerCamel(_ name: String) -> String {
     let parts = name.split(separator: "_", omittingEmptySubsequences: false).map(String.init)
     return (parts.first ?? "") + parts.dropFirst().map {
       guard let first = $0.first else { return "" }
