@@ -67,6 +67,32 @@ Human/non-human predicate wording and plural names are produced by the generator
 
 ## Verify
 
+### Local dynamic-search schema drift
+
+`DynamicSearch.normalize(_:entity:models:maxClauses:warn:)` accepts a local UI
+search envelope such as
+`{"filter":{"name":{"$contains":"Campus"}},"orderBy":[{"field":"id","direction":"desc"}]}`.
+`SearchModel` metadata must come from trusted application setup. Unknown fields
+and relation paths remove the whole clause and return structured
+`DYNAMIC_SEARCH_UNKNOWN_FIELD` warnings without submitted values. Warnings go to
+stderr by default, or to the supplied logging callback.
+
+`DynamicSearch.merge(_:source:models:filterBinding:orderBinding:warn:)` composes
+native `TeaQLExpression` and `OrderBy` values with a copy of an already-scoped
+query. It retains existing filters, ordering, limits and intent. Trusted bindings
+must also preserve authorization inside related queries. Warnings are emitted
+only after all validation and bindings succeed; the original query is unchanged.
+
+Supported metadata types: `string`, `integer`, `number`, `boolean`, `date`
+(`yyyy-MM-dd`), `timestamp` (integer epoch milliseconds), and `decimal` (use a
+string for exact digits). Operators: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`,
+`$in`, `$notIn`, and string `$contains`. Limits default to 100 clauses, 16 path
+segments and 1,000 IN-list values. Malformed input, invalid operators/types and
+trusted-context injection remain errors. TFP stays strict. Automatic generated
+bindings are not provided by this local adapter.
+
+### Runtime and example gates
+
 ```bash
 swift test
 ```
