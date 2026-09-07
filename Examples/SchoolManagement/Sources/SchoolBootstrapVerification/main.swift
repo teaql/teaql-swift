@@ -9,6 +9,19 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
 
 @main enum SchoolBootstrapVerification {
   static func main() async throws {
+    let orderKey = EntityKey(entity: "Order", id: .int(1))
+    let executionKey = EntityKey(entity: "InferenceExecution", id: .int(1))
+    let targetLedger = EntityRoot()
+    let sourceLedger = EntityRoot()
+    targetLedger.setOriginalVersion(orderKey, version: 3)
+    sourceLedger.setOriginalVersion(executionKey, version: 9)
+    sourceLedger.set(executionKey, field: "execution_status", value: .string("COMPLETED"))
+    targetLedger.merge(from: sourceLedger)
+    try require(targetLedger.originalVersion(orderKey) == 3, "Order#1 version was overwritten")
+    try require(targetLedger.originalVersion(executionKey) == 9,
+                "InferenceExecution#1 version was resolved through Order#1")
+    print("PASS Mutation ledger identity (same ID, different entity types keep versions 3/9)")
+
     let path = FileManager.default.temporaryDirectory
       .appendingPathComponent("teaql-school-swift-\(UUID().uuidString).sqlite").path
     defer { try? FileManager.default.removeItem(atPath: path) }
