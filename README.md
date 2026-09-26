@@ -59,6 +59,26 @@ It creates its SQLite file and schema automatically, seeds one audited order, ru
 
 List queries have a default hard limit of 10,000 rows. Local application code may lower or override it through a query, but requests above the hard limit fail instead of loading an unsafe amount. The hard limit is never transported through federation. Most applications should keep the default unless a carefully reviewed local workload requires otherwise.
 
+## Security Boundary
+
+Swift's federation profile is a client. It sends bounded, governed requests to
+a trusted TeaQL backend but cannot supply or override server tenant, role,
+field, purpose, or optimistic-lock policy. Local SQLite remains application
+storage; it does not make the device a public TFP server.
+
+An opaque entity reference returned by a Java, Rust, Go, or .NET backend is an
+indivisible transport value. Swift code must not parse, rewrite, log, or mint
+it, and must not replace it with a raw internal ID/version pair. The current
+Swift profile intentionally does not keep backend AES keys or expose local
+opaque-reference encode/decode APIs. That is a supported client boundary, not a
+runtime gap.
+
+Local SQL output should remain parameterized and value-free by default;
+copy/paste SQL and submitted values require an explicit restricted diagnostic
+surface. The server-side envelope, shared golden vector, stable errors, and
+development-only raw-reference acknowledgement are maintained in the canonical
+[opaque entity reference contract](https://github.com/teaql/teaql-conformance/blob/main/design/opaque-entity-references.md).
+
 ## Generation and customization
 
 The `swift-lib-core` scope in `teaql-code-gen` generates standard SwiftPM source: models, staged requests, `Q`, and package metadata. Generated files say `Do not edit directly`. Customize behavior by composing `UserContext`, `RequestPolicy`, `AuditSink`, transports, or application services—not by patching generated source.
