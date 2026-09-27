@@ -108,8 +108,8 @@ public protocol RuntimeTelemetrySink: Sendable {
   func record(_ metadata: SQLExecutionMetadata) async
 }
 
-/// Value-bearing SQL diagnostic destination. The text sink is installed by
-/// default and remains separate from safe RuntimeTelemetry.
+/// SQL diagnostic destination. Values are redacted unless explicitly enabled
+/// by the runtime's exact plaintext acknowledgement environment setting.
 public protocol DiagnosticSQLLogSink: Sendable {
   func write(_ metadata: SQLExecutionMetadata) async
 }
@@ -123,6 +123,7 @@ public actor TextDiagnosticSQLLogSink: DiagnosticSQLLogSink {
   }
 
   public func write(_ metadata: SQLExecutionMetadata) {
+    let metadata = LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())
     let text = "[TeaQL SQL][\(metadata.operation.rawValue)][\(metadata.elapsedMicros)us] "
       + "\(metadata.resultSummary) comment=\(metadata.comment ?? "") "
       + "purpose=\(metadata.purpose ?? "") auditReason=\(metadata.auditReason ?? "") "
@@ -147,7 +148,7 @@ public actor SQLExecutionEvidenceStore: RuntimeTelemetrySink {
     let isSelect = metadata.operation == .select
     guard mode == .all || (mode == .select && isSelect) || (mode == .mutation && !isSelect)
     else { return }
-    entries.append(metadata)
+    entries.append(LogPrivacy.project(metadata))
   }
 
   public func enableAll() { mode = .all; entries.removeAll() }
@@ -816,8 +817,8 @@ public struct UserContext: Sendable {
       result = rawResult
     }
     if let metadata = result.metadata {
-      await telemetrySink?.record(metadata)
-      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(metadata) }
+      await telemetrySink?.record(LogPrivacy.project(metadata))
+      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())) }
     }
     await registerContinuousPage(prepared.execution, rows: result.records)
     var facets: [String: SmartList<TeaQLRecord>] = [:]
@@ -1185,8 +1186,8 @@ public struct UserContext: Sendable {
       try await mutationExecutor.execute(validated)
     }
     if let metadata = result.metadata {
-      await telemetrySink?.record(metadata)
-      if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(metadata) }
+      await telemetrySink?.record(LogPrivacy.project(metadata))
+      if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())) }
     }
     if let auditSink, let reason = validated.auditReason {
       try await runtimeTelemetry.withOperation(
@@ -1205,7 +1206,7 @@ public struct UserContext: Sendable {
             entityID: validated.id ?? result.generatedValues["id"]
               ?? validated.entity.idProperty.flatMap { validated.values[$0.name] },
             operation: validated.kind,
-            reason: reason,
+            reason: LogPrivacy.scrub(reason, values: Array(validated.values.values)),
             actor: actor,
             category: auditCategory,
             occurredAt: Date()
