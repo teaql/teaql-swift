@@ -16,7 +16,12 @@ final class LogPrivacyTests: XCTestCase {
       let handle = try FileHandle(forWritingTo: file)
       let process = Process()
       process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+      #if os(macOS)
+      process.arguments = ["-XCTest", "TeaQLCoreTests.LogPrivacyTests/testEnvironmentChild",
+        Bundle(for: LogPrivacyTests.self).bundleURL.path]
+      #else
       process.arguments = ["TeaQLCoreTests.LogPrivacyTests/testEnvironmentChild"]
+      #endif
       var environment = ProcessInfo.processInfo.environment
       environment["TEAQL_LOG_PRIVACY_TEST_CHILD"] = "1"
       environment[LogPrivacy.environmentName] = setting
