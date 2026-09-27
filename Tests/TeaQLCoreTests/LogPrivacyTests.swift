@@ -7,9 +7,13 @@ final class LogPrivacyTests: XCTestCase {
     let sink = TextDiagnosticSQLLogSink()
     await sink.write(entry(field: "name", value: "PRIVATE-CUSTOMER-CANARY"))
     await sink.write(entry(field: "password", value: "PASSWORD-CANARY"))
+    print("TEAQL_LOG_PRIVACY_CHILD_DONE")
   }
 
   func testRealProcessEnvironmentAndFileOutput() throws {
+    // Xcode can inherit a test configuration that overrides command-line
+    // selection. Never recursively spawn if a child runs the whole suite.
+    guard ProcessInfo.processInfo.environment["TEAQL_LOG_PRIVACY_TEST_CHILD"] != "1" else { return }
     for setting: String? in [nil, "true", LogPrivacy.acknowledgement + " ", LogPrivacy.acknowledgement] {
       let file = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-process-\(UUID().uuidString).log")
       XCTAssertTrue(FileManager.default.createFile(atPath: file.path, contents: nil))
@@ -25,14 +29,23 @@ final class LogPrivacyTests: XCTestCase {
       var environment = ProcessInfo.processInfo.environment
       environment["TEAQL_LOG_PRIVACY_TEST_CHILD"] = "1"
       environment[LogPrivacy.environmentName] = setting
+      environment.removeValue(forKey: "XCTestConfigurationFilePath")
       process.environment = environment
       process.standardOutput = handle
       process.standardError = handle
       try process.run()
-      process.waitUntilExit()
+      let deadline = Date().addingTimeInterval(30)
+      while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+      if process.isRunning {
+        process.terminate()
+        try handle.close()
+        XCTFail("Privacy child did not terminate within 30 seconds")
+        return
+      }
       try handle.close()
       let text = try String(contentsOf: file, encoding: .utf8)
       XCTAssertEqual(process.terminationStatus, 0, text)
+      XCTAssertTrue(text.contains("TEAQL_LOG_PRIVACY_CHILD_DONE"), text)
       XCTAssertEqual(text.contains("PRIVATE-CUSTOMER-CANARY"), setting == LogPrivacy.acknowledgement, text)
       XCTAssertEqual(text.contains("may be written to disk"), setting == LogPrivacy.acknowledgement, text)
       XCTAssertFalse(text.contains("PASSWORD-CANARY"), text)
