@@ -633,7 +633,8 @@ private func context(
   #expect(entries.contains { $0.operation == .select })
   #expect(entries.allSatisfy { !$0.parameterizedSQL.contains("secret-customer-value") })
   #expect(entries.contains { !$0.parameters.isEmpty })
-  #expect(entries.contains { $0.debugSQL.contains("'secret-customer-value'") })
+  #expect(entries.allSatisfy { !$0.debugSQL.contains("secret-customer-value") })
+  #expect(entries.allSatisfy { $0.parameters.allSatisfy { $0 == .null } })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
   let selectEntry = try #require(entries.first { $0.operation == .select })
@@ -674,7 +675,8 @@ private func context(
   query.purpose = "why: operator reproduction"
   _ = try await enabled.execute(query)
   let lines = await sink.snapshot()
-  #expect(lines.contains { $0.contains("[select]") && $0.contains("O''Brien 学校") })
+  #expect(lines.contains { $0.contains("[select]") })
+  #expect(lines.allSatisfy { !$0.contains("O''Brien 学校") && !$0.contains("O'Brien 学校") })
 
   var disabled = context(service, diagnosticSQLLogSink: sink)
   disabled.querySQLLogEnabled = false
@@ -719,8 +721,8 @@ private func context(
   #expect(result.records[0]["localDateTime"] == .localDateTime("2026-08-19 09:30:00.123"))
   #expect(result.records[0]["instant"] == .timestamp(1_787_110_200_123))
   let entries = await evidence.snapshot()
-  #expect(entries.contains { $0.debugSQL.contains("'2024-02-29'") })
-  #expect(entries.contains { $0.debugSQL.contains("1787110200123") })
+  #expect(entries.allSatisfy { !$0.debugSQL.contains("2024-02-29") })
+  #expect(entries.allSatisfy { !$0.debugSQL.contains("1787110200123") })
 }
 
 @Test func sqliteCountsThePolicyFilteredSetWithoutPagination() async throws {
