@@ -1,6 +1,9 @@
 import Foundation
 import TeaQLCore
 import TeaQLSQLite
+#if canImport(GeneratedTeaQL)
+import GeneratedTeaQL
+#endif
 
 actor ConsoleAuditSink: AuditSink {
   func record(_ event: AuditEvent) async throws {
