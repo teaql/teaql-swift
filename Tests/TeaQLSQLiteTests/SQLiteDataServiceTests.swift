@@ -797,8 +797,11 @@ private func context(
       id: .int(100),
       values: ["orderNumber": .string("A-101")],
       expectedVersion: 1,
-      auditReason: "Correct order number"
+      auditReason: "Correct order 100"
     ))
+  let updatedAudit = await appAudit.events()
+  #expect(updatedAudit.last?.entityID == .int(100))
+  #expect(updatedAudit.last?.reason == "Correct order [REDACTED]")
   await #expect(
     throws: TeaQLError.optimisticLock(entity: "CustomerOrder", id: .int(100), expectedVersion: 1)
   ) {

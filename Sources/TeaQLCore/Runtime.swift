@@ -1243,6 +1243,9 @@ public struct UserContext: Sendable {
       if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())) }
     }
     if let auditSink, let reason = validated.auditReason {
+      let auditID = validated.id ?? result.generatedValues["id"]
+        ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
+      let auditValues = Array(validated.values.values) + (auditID.map { [$0] } ?? [])
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(
           family: "audit", name: "\(validated.entity.name).event",
@@ -1256,10 +1259,9 @@ public struct UserContext: Sendable {
         try await auditSink.record(
           AuditEvent(
             entity: validated.entity.name,
-            entityID: validated.id ?? result.generatedValues["id"]
-              ?? validated.entity.idProperty.flatMap { validated.values[$0.name] },
+            entityID: auditID,
             operation: validated.kind,
-            reason: LogPrivacy.scrub(reason, values: Array(validated.values.values)),
+            reason: LogPrivacy.scrub(reason, values: auditValues),
             actor: actor,
             category: auditCategory,
             occurredAt: Date()
