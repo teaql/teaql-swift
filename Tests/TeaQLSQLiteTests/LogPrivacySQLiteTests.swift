@@ -16,7 +16,7 @@ import TeaQLSQLite
     PropertyDescriptor(name: "id", type: .int, isID: true),
     PropertyDescriptor(name: "name", type: .string),
     PropertyDescriptor(name: "version", type: .int, isVersion: true),
-  ])
+  ], auditMaskFields: ["name"])
   let evidence = SQLExecutionEvidenceStore()
   let sink = TextDiagnosticSQLLogSink(writer: { text in
     handle.write(Data((text + "\n").utf8))
@@ -60,4 +60,6 @@ import TeaQLSQLite
   #expect(!text.isEmpty)
   let logs = text + String(describing: entries)
   for marker in markers { #expect(!logs.contains(marker)) }
+  #expect(text.contains("PR*****************RY"))
+  #expect(entries.allSatisfy { $0.sqlOmissionReason == nil })
 }

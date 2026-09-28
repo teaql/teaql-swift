@@ -13,7 +13,7 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "orderNumber", column: "order_number", type: .string),
     PropertyDescriptor(name: "orderDate", column: "order_date", type: .date),
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
-  ])
+  ], auditMaskFields: ["orderNumber"])
 
 @Test func topNRelationPlansAreEquivalentAndCanonicalIndexIsIdempotent() async throws {
   let parent = EntityDescriptor(name: "TopNParent", table: "topn_parent", properties: [
@@ -634,7 +634,9 @@ private func context(
   #expect(entries.allSatisfy { !$0.parameterizedSQL.contains("secret-customer-value") })
   #expect(entries.contains { !$0.parameters.isEmpty })
   #expect(entries.allSatisfy { !$0.debugSQL.contains("secret-customer-value") })
-  #expect(entries.allSatisfy { $0.parameters.allSatisfy { $0 == .null } })
+  #expect(entries.allSatisfy { !$0.parameters.contains(.string("secret-customer-value")) })
+  #expect(entries.contains { $0.debugSQL.contains("se*****************ue") })
+  #expect(entries.allSatisfy { $0.sqlOmissionReason == nil })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
   let selectEntry = try #require(entries.first { $0.operation == .select })
@@ -695,7 +697,7 @@ private func context(
       PropertyDescriptor(name: "localDateTime", column: "local_date_time", type: .localDateTime),
       PropertyDescriptor(name: "instant", column: "instant_ms", type: .timestamp),
       PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
-    ])
+    ], auditMaskFields: ["calendarDate", "localDateTime", "instant"])
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-temporal-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }

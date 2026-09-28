@@ -62,12 +62,12 @@ final class LogPrivacyTests: XCTestCase {
   func testProjectionPreservesExecutionValuesAndAlwaysHidesCredentials() {
     let source = entry(field: "name", value: "PRIVATE-CUSTOMER-CANARY")
     let safe = LogPrivacy.project(source)
-    XCTAssertEqual(safe.parameters, [.null])
+    XCTAssertEqual(safe.parameters, [.string(LogPrivacy.maskAuditValue("PRIVATE-CUSTOMER-CANARY"))])
     XCTAssertFalse(safe.comment!.contains("PRIVATE-CUSTOMER-CANARY"))
     XCTAssertEqual(source.parameters, [.string("PRIVATE-CUSTOMER-CANARY")])
     XCTAssertEqual(LogPrivacy.project(source, allowPlaintext: true).parameters, source.parameters)
     let password = LogPrivacy.project(entry(field: "password", value: "PASSWORD-CANARY"), allowPlaintext: true)
-    XCTAssertEqual(password.parameters, [.null])
+    XCTAssertEqual(password.parameters, [.string("[REDACTED]")])
     XCTAssertFalse(password.debugSQL.contains("PASSWORD-CANARY"))
   }
 
@@ -83,13 +83,14 @@ final class LogPrivacyTests: XCTestCase {
     let evidence = SQLExecutionEvidenceStore()
     await evidence.record(source)
     let entries = await evidence.snapshot()
-    XCTAssertEqual(entries[0].parameters, [.null])
+    XCTAssertEqual(entries[0].parameters, [.string("[REDACTED]")])
   }
 
   private func entry(field: String, value: String) -> SQLExecutionMetadata {
     SQLExecutionMetadata(operation: .select, comment: "load \(value)", purpose: "test privacy",
       parameterizedSQL: "select * from customer where \(field) = ?", parameters: [.string(value)],
       debugSQL: "select * from customer where \(field) = '\(value)'", elapsedMicros: 1,
-      resultCount: 1, resultSummary: "one row")
+      resultCount: 1, resultSummary: "one row",
+      parameterLogPolicies: [field == "password" ? .credential : .masked])
   }
 }

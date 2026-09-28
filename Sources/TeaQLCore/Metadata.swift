@@ -36,11 +36,18 @@ public struct EntityDescriptor: Sendable, Hashable, Codable {
   public let name: String
   public let table: String
   public let properties: [PropertyDescriptor]
+  /// Canonical KSML field names. Optional for decoding older descriptor snapshots.
+  public let auditMaskFields: [String]?
 
   public init(name: String, table: String, properties: [PropertyDescriptor]) {
+    self.init(name: name, table: table, properties: properties, auditMaskFields: [])
+  }
+
+  public init(name: String, table: String, properties: [PropertyDescriptor], auditMaskFields: [String]) {
     self.name = name
     self.table = table
     self.properties = properties
+    self.auditMaskFields = auditMaskFields
   }
 
   public var idProperty: PropertyDescriptor? { properties.first(where: \.isID) }

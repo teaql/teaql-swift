@@ -62,6 +62,9 @@ public enum SQLExecutionOperation: String, Sendable, Codable {
 }
 
 public struct SQLExecutionMetadata: Sendable {
+  // Immutable value copies retain the already-safe fallback, never raw provenance.
+  var maskedAlternative: SQLMaskedAlternative?
+  var isSafeProjection = false
   public let operation: SQLExecutionOperation
   public let comment: String?
   public let purpose: String?
@@ -74,6 +77,12 @@ public struct SQLExecutionMetadata: Sendable {
   public let resultCount: Int?
   public let affectedRows: Int?
   public let resultSummary: String
+  public let parameterLogPolicies: [SQLParameterLogPolicy]
+  public let maskedParameters: [Bool]
+  public let generatedSQL: Bool
+  public let sqlOmissionReason: String?
+  /// Statement completion, not graph/transaction commit.
+  public let executionOutcome: String?
 
   public init(
     operation: SQLExecutionOperation,
@@ -87,7 +96,12 @@ public struct SQLExecutionMetadata: Sendable {
     elapsedMicros: UInt64,
     resultCount: Int? = nil,
     affectedRows: Int? = nil,
-    resultSummary: String
+    resultSummary: String,
+    parameterLogPolicies: [SQLParameterLogPolicy] = [],
+    maskedParameters: [Bool] = [],
+    generatedSQL: Bool = false,
+    sqlOmissionReason: String? = nil,
+    executionOutcome: String? = nil
   ) {
     self.operation = operation
     self.comment = comment
@@ -101,6 +115,11 @@ public struct SQLExecutionMetadata: Sendable {
     self.resultCount = resultCount
     self.affectedRows = affectedRows
     self.resultSummary = resultSummary
+    self.parameterLogPolicies = parameterLogPolicies
+    self.maskedParameters = maskedParameters
+    self.generatedSQL = generatedSQL
+    self.sqlOmissionReason = sqlOmissionReason
+    self.executionOutcome = executionOutcome
   }
 }
 
@@ -125,11 +144,10 @@ public actor TextDiagnosticSQLLogSink: DiagnosticSQLLogSink {
   public func write(_ metadata: SQLExecutionMetadata) {
     let metadata = LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())
     let text = "[TeaQL SQL][\(metadata.operation.rawValue)][\(metadata.elapsedMicros)us] "
-      + "\(metadata.resultSummary) comment=\(metadata.comment ?? "") "
+      + "\(metadata.resultSummary) outcome=\(metadata.executionOutcome ?? "unknown") comment=\(metadata.comment ?? "") "
       + "purpose=\(metadata.purpose ?? "") auditReason=\(metadata.auditReason ?? "") "
-      + "tracePath=\(metadata.tracePath)\n"
-      + "Parameterized SQL: \(metadata.parameterizedSQL) params=\(metadata.parameters)\n"
-      + "Debug SQL: \(metadata.debugSQL)"
+      + "tracePath=\(metadata.tracePath) parameterCount=\(metadata.parameters.count)\n"
+      + "SQL: \(metadata.debugSQL)"
     lines.append(text)
     writer(text)
   }
@@ -764,6 +782,10 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
+    try await execute(query, inheritedIntent: nil)
+  }
+
+  private func execute(_ query: SelectQuery, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
     try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "query", name: "\(query.entity.name).list",
@@ -771,7 +793,7 @@ public struct UserContext: Sendable {
       ), completion: { result in
       ["teaql.result.cardinality": .integer(Int64(result.records.count))]
     }) {
-      try await executeQuery(query)
+      try await executeQuery(query, inheritedIntent: inheritedIntent)
     }
   }
 
@@ -783,7 +805,7 @@ public struct UserContext: Sendable {
     await idSetObservationState.current()
   }
 
-  private func executeQuery(_ query: SelectQuery) async throws -> QueryResult {
+  private func executeQuery(_ query: SelectQuery, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
     let validated = try requestPolicy.apply(query).validatedForExecution()
     let idSetPrepared = try await prepareIdSetPagination(validated)
     let prepared = await prepareContinuousPage(idSetPrepared.query)
@@ -800,7 +822,22 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await queryExecutor.execute(base)
+      do {
+        if let diagnosed = queryExecutor as? any SQLDiagnosticExecutor {
+          return try await diagnosed.executeDiagnosed(base)
+        }
+        return try await queryExecutor.execute(base)
+      } catch let failure as SQLExecutionFailure {
+        for diagnostic in failure.diagnostics {
+          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: inheritedIntent)
+          await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: source))
+          if querySQLLogEnabled {
+            await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
+              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source))
+          }
+        }
+        throw failure.cause
+      }
     }
     let result: QueryResult
     if let execution = idSetPrepared.execution {
@@ -817,8 +854,9 @@ public struct UserContext: Sendable {
       result = rawResult
     }
     if let metadata = result.metadata {
-      await telemetrySink?.record(LogPrivacy.project(metadata))
-      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())) }
+      await telemetrySink?.record(LogPrivacy.project(metadata, intentSource: inheritedIntent))
+      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata,
+        allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: inheritedIntent)) }
     }
     await registerContinuousPage(prepared.execution, rows: result.records)
     var facets: [String: SmartList<TeaQLRecord>] = [:]
@@ -865,6 +903,7 @@ public struct UserContext: Sendable {
     }
 
     var records = result.records
+    let childIntent = LogPrivacy.inheritIntent(result.metadata, inherited: inheritedIntent)
     for aggregate in validated.relationAggregates {
       guard let parentID = validated.entity.idProperty else {
         throw TeaQLError.unknownProperty(entity: validated.entity.name, property: "id")
@@ -895,7 +934,7 @@ public struct UserContext: Sendable {
       child.purpose = validated.purpose
       let membership = TeaQLExpression.inList(foreignKey.name, parentIDs)
       child.filter = child.filter.map { .and([$0, membership]) } ?? membership
-      let rows = try await execute(child).records
+      let rows = try await execute(child, inheritedIntent: childIntent).records
       let pairs: [(TeaQLValue, TeaQLValue)] = rows.compactMap { row in
         guard let key = row[foreignKey.name], let value = row[valueAlias] else { return nil }
         return (normalizedRelationIdentity(key), value)
@@ -963,13 +1002,13 @@ public struct UserContext: Sendable {
             probe.partitionBy = nil
             let join = TeaQLExpression.equal(relation.foreignKey, localValue)
             probe.filter = probe.filter.map { .and([$0, join]) } ?? join
-            children.append(contentsOf: try await execute(probe).records)
+            children.append(contentsOf: try await execute(probe, inheritedIntent: childIntent).records)
           }
         } else {
           if child.limit != nil { child.partitionBy = relation.foreignKey }
           let join = TeaQLExpression.inList(relation.foreignKey, localValues)
           child.filter = child.filter.map { .and([$0, join]) } ?? join
-          children = try await execute(child).records
+          children = try await execute(child, inheritedIntent: childIntent).records
         }
         let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
         for index in records.indices {
@@ -1183,7 +1222,21 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await mutationExecutor.execute(validated)
+      do {
+        if let diagnosed = mutationExecutor as? any SQLDiagnosticExecutor {
+          return try await diagnosed.executeDiagnosed(validated)
+        }
+        return try await mutationExecutor.execute(validated)
+      } catch let failure as SQLExecutionFailure {
+        for diagnostic in failure.diagnostics {
+          await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: diagnostic.intentSource))
+          if mutationSQLLogEnabled {
+            await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
+              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: diagnostic.intentSource))
+          }
+        }
+        throw failure.cause
+      }
     }
     if let metadata = result.metadata {
       await telemetrySink?.record(LogPrivacy.project(metadata))
