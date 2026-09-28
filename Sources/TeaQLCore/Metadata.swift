@@ -40,7 +40,10 @@ public struct EntityDescriptor: Sendable, Hashable, Codable {
   public let auditMaskFields: [String]?
 
   public init(name: String, table: String, properties: [PropertyDescriptor]) {
-    self.init(name: name, table: table, properties: properties, auditMaskFields: [])
+    self.name = name
+    self.table = table
+    self.properties = properties
+    self.auditMaskFields = nil
   }
 
   public init(name: String, table: String, properties: [PropertyDescriptor], auditMaskFields: [String]) {

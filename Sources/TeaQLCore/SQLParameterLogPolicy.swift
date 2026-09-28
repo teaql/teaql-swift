@@ -7,6 +7,7 @@ public enum SQLParameterLogPolicy: String, Sendable, Equatable, Codable {
     guard let property = entity.property(named: name) else { return .unknown }
     if LogPrivacy.credential(property.name) || LogPrivacy.credential(property.modelName ?? property.name)
       || LogPrivacy.credential(property.column) { return .credential }
-    return entity.auditMaskFields?.contains(property.modelName ?? property.name) == true ? .masked : .plain
+    guard let maskFields = entity.auditMaskFields else { return .unknown }
+    return maskFields.contains(property.modelName ?? property.name) ? .masked : .plain
   }
 }
