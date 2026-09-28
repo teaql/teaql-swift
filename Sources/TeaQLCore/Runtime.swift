@@ -1213,6 +1213,7 @@ public struct UserContext: Sendable {
       }
       if !violations.isEmpty { throw CheckException(violations) }
     }
+    let submittedID = validated.id ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
     let result = try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(mutationExecutor.providerKind).mutation",
@@ -1229,22 +1230,25 @@ public struct UserContext: Sendable {
         return try await mutationExecutor.execute(validated)
       } catch let failure as SQLExecutionFailure {
         for diagnostic in failure.diagnostics {
-          await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: diagnostic.intentSource))
+          await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata,
+            intentSource: diagnostic.intentSource, intentValues: submittedID.map { [$0] } ?? []))
           if mutationSQLLogEnabled {
             await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
-              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: diagnostic.intentSource))
+              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: diagnostic.intentSource,
+              intentValues: submittedID.map { [$0] } ?? []))
           }
         }
         throw failure.cause
       }
     }
+    let auditID = validated.id ?? result.generatedValues["id"]
+      ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
     if let metadata = result.metadata {
-      await telemetrySink?.record(LogPrivacy.project(metadata))
-      if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata, allowPlaintext: LogPrivacy.plaintextEnabled())) }
+      await telemetrySink?.record(LogPrivacy.project(metadata, intentValues: auditID.map { [$0] } ?? []))
+      if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata,
+        allowPlaintext: LogPrivacy.plaintextEnabled(), intentValues: auditID.map { [$0] } ?? [])) }
     }
     if let auditSink, let reason = validated.auditReason {
-      let auditID = validated.id ?? result.generatedValues["id"]
-        ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
       let auditValues = Array(validated.values.values) + (auditID.map { [$0] } ?? [])
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(

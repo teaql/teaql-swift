@@ -32,7 +32,7 @@ func sqliteFailureProducesMaskedDiagnostic(operation: String) async throws {
       let kind: MutationKind = operation == "insert" ? .create : operation == "update" ? .update : .delete
       _ = try await context.execute(Mutation(kind: kind, entity: missing, id: .int(1),
         values: ["id": .int(1), "name": .string("Riverside"), "address": .string("1 Runtime Road"), "password": .string("PASSWORD-CANARY")],
-        expectedVersion: 1, auditReason: "what: failure mutation"))
+        expectedVersion: 1, auditReason: "what: failure mutation 1"))
     }
     Issue.record("missing table unexpectedly succeeded")
   } catch let error as SQLiteError {
@@ -45,6 +45,8 @@ func sqliteFailureProducesMaskedDiagnostic(operation: String) async throws {
     #expect(entries.first?.tracePath.map(\.level) == [0, 1, 2, 3])
     #expect(entries.first?.comment == "what: inspect customer")
     #expect(entries.first?.purpose == "why: failure regression")
+  } else {
+    #expect(entries.first?.auditReason == "what: failure mutation [REDACTED]")
   }
   let text = await sink.snapshot().joined(separator: "\n")
   #expect(text.contains("outcome=failure"))
@@ -66,12 +68,14 @@ func optimisticConflictHasSafeDiagnostic(kind: MutationKind) async throws {
   try await context.ensureSchema(RuntimeModule(name: "lifecycle", entities: [entity]))
   do {
     _ = try await context.execute(Mutation(kind: kind, entity: entity, id: .int(123),
-      values: ["name": .string("Riverside")], expectedVersion: 1, auditReason: "what: conflict regression"))
+      values: ["name": .string("Riverside")], expectedVersion: 1, auditReason: "what: conflict regression 123"))
     Issue.record("missing versioned entity unexpectedly succeeded")
   } catch let error as TeaQLError {
     guard case .optimisticLock = error else { Issue.record("wrong error"); return }
   }
-  #expect(await evidence.snapshot().count == 1)
+  let conflictEvidence = await evidence.snapshot()
+  #expect(conflictEvidence.count == 1)
+  #expect(conflictEvidence.first?.auditReason == "what: conflict regression [REDACTED]")
   let text = await sink.snapshot().joined(separator: "\n")
   // SQL executed successfully but matched no expected version; the mutation
   // still throws optimisticLock. Do not equate SQL success with business success.

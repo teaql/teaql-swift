@@ -123,8 +123,14 @@ enum LogPrivacy {
 
   static func project(_ source: SQLExecutionMetadata, allowPlaintext: Bool = false,
                       intentSource: SQLExecutionMetadata? = nil) -> SQLExecutionMetadata {
+    project(source, allowPlaintext: allowPlaintext, intentSource: intentSource, intentValues: [])
+  }
+
+  static func project(_ source: SQLExecutionMetadata, allowPlaintext: Bool = false,
+                      intentSource: SQLExecutionMetadata? = nil,
+                      intentValues: [TeaQLValue]) -> SQLExecutionMetadata {
     let allowPlaintext = allowPlaintext && !source.isSafeProjection
-    if !allowPlaintext, let alternative = source.maskedAlternative { return alternative.metadata }
+    if !allowPlaintext, intentValues.isEmpty, let alternative = source.maskedAlternative { return alternative.metadata }
     let count = source.parameters.count
     let invalidPolicies = !source.parameterLogPolicies.isEmpty && source.parameterLogPolicies.count != count
     let invalidFlags = !source.maskedParameters.isEmpty && source.maskedParameters.count != count
@@ -148,13 +154,16 @@ enum LogPrivacy {
         }
       }
     }
+    let intentHidden = hidden + intentValues
     // A manually reconstructed debug record can lose private provenance. Its
     // own ID bindings cannot prove inherited free-form intent safe.
     let orphanedDebug = !allowPlaintext && source.maskedAlternative == nil &&
       source.debugSQL.hasPrefix("-- TeaQL DEBUG PLAINTEXT; EXPLICIT OPT-IN")
-    func safe(_ text: String) -> String {
-      orphanedDebug && !text.isEmpty ? "[REDACTED]" : scrub(text, values: hidden)
+    func safe(_ text: String, values: [TeaQLValue]) -> String {
+      orphanedDebug && !text.isEmpty ? "[REDACTED]" : scrub(text, values: values)
     }
+    func safeIntent(_ text: String) -> String { safe(text, values: intentHidden) }
+    func safeSummary(_ text: String) -> String { safe(text, values: hidden) }
     var omission = source.sqlOmissionReason
     if invalidPolicies { omission = "policy_count_mismatch" }
     if invalidFlags { omission = "mask_count_mismatch" }
@@ -170,19 +179,19 @@ enum LogPrivacy {
     let debug = "-- TeaQL " + label + status + "\n"
       + (omission == nil ? rendered : "[SQL OMITTED; NOT REPLAYABLE]")
     var result = SQLExecutionMetadata(
-      operation: source.operation, comment: source.comment.map(safe), purpose: source.purpose.map(safe),
-      auditReason: source.auditReason.map(safe),
-      tracePath: source.tracePath.map { TraceNode(entity: safe($0.entity), comment: safe($0.comment),
-        purpose: safe($0.purpose), level: $0.level, kind: safe($0.kind), name: safe($0.name)) },
+      operation: source.operation, comment: source.comment.map(safeIntent), purpose: source.purpose.map(safeIntent),
+      auditReason: source.auditReason.map(safeIntent),
+      tracePath: source.tracePath.map { TraceNode(entity: safeIntent($0.entity), comment: safeIntent($0.comment),
+        purpose: safeIntent($0.purpose), level: $0.level, kind: safeIntent($0.kind), name: safeIntent($0.name)) },
       parameterizedSQL: omission == nil ? source.parameterizedSQL : redactedSQL,
       parameters: values, debugSQL: debug, elapsedMicros: source.elapsedMicros,
-      resultCount: source.resultCount, affectedRows: source.affectedRows, resultSummary: safe(source.resultSummary),
+      resultCount: source.resultCount, affectedRows: source.affectedRows, resultSummary: safeSummary(source.resultSummary),
       parameterLogPolicies: policies, maskedParameters: flags, generatedSQL: source.generatedSQL,
       sqlOmissionReason: omission, executionOutcome: source.executionOutcome)
     result.isSafeProjection = !allowPlaintext
     if allowPlaintext {
       result.maskedAlternative = source.maskedAlternative ?? SQLMaskedAlternative(
-        project(source, allowPlaintext: false, intentSource: intentSource))
+        project(source, allowPlaintext: false, intentSource: intentSource, intentValues: intentValues))
     }
     return result
   }

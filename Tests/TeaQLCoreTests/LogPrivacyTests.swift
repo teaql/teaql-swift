@@ -71,6 +71,22 @@ final class LogPrivacyTests: XCTestCase {
     XCTAssertFalse(password.debugSQL.contains("PASSWORD-CANARY"))
   }
 
+  func testTargetIDOnlyScrubsIntentAndPreservesStructuralCounts() {
+    let source = SQLExecutionMetadata(operation: .update, comment: "update order 1",
+      purpose: "verify order 1", auditReason: "update order 1",
+      parameterizedSQL: "update order_data set version = ? where id = ?",
+      parameters: [.int(2), .int(1)], debugSQL: "", elapsedMicros: 1,
+      affectedRows: 1, resultSummary: "1 rows affected",
+      parameterLogPolicies: [.plain, .plain], generatedSQL: true)
+    let safe = LogPrivacy.project(source, intentValues: [.int(1)])
+    XCTAssertEqual(safe.auditReason, "update order [REDACTED]")
+    XCTAssertEqual(safe.comment, "update order [REDACTED]")
+    XCTAssertEqual(safe.purpose, "verify order [REDACTED]")
+    XCTAssertEqual(safe.resultSummary, "1 rows affected")
+    XCTAssertEqual(safe.parameters, [.int(2), .int(1)])
+    XCTAssertEqual(source.auditReason, "update order 1")
+  }
+
   func testDirectSinkAndEvidenceStoreAreSafe() async throws {
     let path = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-privacy-\(UUID().uuidString).log")
     let sink = TextDiagnosticSQLLogSink(writer: { text in
