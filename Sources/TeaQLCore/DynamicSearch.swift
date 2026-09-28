@@ -21,6 +21,10 @@ public struct DynamicSearchWarning: Sendable, Equatable, Codable {
     self.clause = clause
     self.fieldPath = fieldPath
   }
+
+  func defaultLogProjection() -> DynamicSearchWarning {
+    DynamicSearchWarning(entity: entity, clause: clause, fieldPath: "<omitted>")
+  }
 }
 
 public struct DynamicSearchFilter: Sendable {
@@ -187,7 +191,7 @@ public enum DynamicSearch {
   private static func emit(_ warnings: [DynamicSearchWarning], warn: ((DynamicSearchWarning) -> Void)?) {
     for warning in warnings {
       if let warn { warn(warning) }
-      else if var data = try? JSONEncoder().encode(warning) {
+      else if var data = try? JSONEncoder().encode(warning.defaultLogProjection()) {
         data.append(10)
         FileHandle.standardError.write(data)
       }

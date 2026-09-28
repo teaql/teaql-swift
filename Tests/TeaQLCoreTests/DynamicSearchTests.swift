@@ -1,5 +1,5 @@
 import Foundation
-import TeaQLCore
+@testable import TeaQLCore
 import XCTest
 
 final class DynamicSearchTests: XCTestCase {
@@ -22,6 +22,20 @@ final class DynamicSearchTests: XCTestCase {
     let json = String(decoding: try JSONEncoder().encode(warnings), as: UTF8.self)
     XCTAssertFalse(json.contains("secret"))
     XCTAssertTrue(json.contains("fieldPath"))
+  }
+
+  func testDefaultLogProjectionOmitsUntrustedFieldPath() throws {
+    let path = "CLIENT_SECRET_FIELD_PATH_91"
+    let result = try DynamicSearch.normalize(
+      #"{"filter":{"CLIENT_SECRET_FIELD_PATH_91":"SECRET_VALUE_99"}}"#,
+      entity: "School", models: models, warn: { _ in })
+    let warning = try XCTUnwrap(result.warnings.first)
+    XCTAssertEqual(warning.fieldPath, path)
+    let json = String(decoding: try JSONEncoder().encode(warning.defaultLogProjection()), as: UTF8.self)
+    XCTAssertTrue(json.contains("DYNAMIC_SEARCH_UNKNOWN_FIELD"))
+    XCTAssertTrue(json.contains("<omitted>"))
+    XCTAssertFalse(json.contains(path))
+    XCTAssertFalse(json.contains("SECRET_VALUE_99"))
   }
 
   func testInvalidInputIsFatal() {
