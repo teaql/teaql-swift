@@ -13,6 +13,41 @@ private func lifecycleEntity(table: String = "customer_data") -> EntityDescripto
   ], auditMaskFields: ["name"])
 }
 
+@Test
+func sqliteUnknownFieldPolicyKeepsTypedRowCounts() async throws {
+  let service = try SQLiteDataService(path: ":memory:")
+  let evidence = SQLExecutionEvidenceStore()
+  let sink = TextDiagnosticSQLLogSink(writer: { _ in })
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 }, telemetrySink: evidence, diagnosticSQLLogSink: sink)
+  // Older generated descriptors do not declare auditMaskFields. Unknown
+  // parameters are masked, but their value must not erase typed row counts.
+  let entity = EntityDescriptor(name: "Customer", table: "customer_data", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "name", type: .string),
+  ])
+  try await context.ensureSchema(RuntimeModule(name: "unknown-policy", entities: [entity]))
+  _ = try await context.execute(Mutation(kind: .create, entity: entity, id: .int(1),
+    values: ["id": .int(1), "version": .int(1), "name": .string("Riverside")],
+    auditReason: "create customer 1"))
+  let written = await evidence.snapshot()
+  #expect(written.count == 1)
+  #expect(written.first?.auditReason == "create customer [REDACTED]")
+  #expect(written.first?.affectedRows == 1)
+  #expect(written.first?.resultSummary == "1 rows affected")
+
+  var query = SelectQuery(entity: entity)
+  query.filter = .equal("id", .int(1))
+  query.limit = 1; query.comment = "read customer"; query.purpose = "verify typed count"
+  let result = try await context.execute(query)
+  #expect(result.records.count == 1)
+  let logText = await sink.snapshot().joined(separator: "\n")
+  #expect(logText.contains("1 rows affected"))
+  #expect(logText.contains("1 rows returned"))
+  #expect(!logText.contains("create customer 1"))
+}
+
 @Test(arguments: ["query", "insert", "update", "delete"])
 func sqliteFailureProducesMaskedDiagnostic(operation: String) async throws {
   let service = try SQLiteDataService(path: ":memory:")

@@ -87,6 +87,27 @@ final class LogPrivacyTests: XCTestCase {
     XCTAssertEqual(source.auditReason, "update order 1")
   }
 
+  func testUnknownShortBindingCannotEraseStructuredRowCounts() {
+    let write = SQLExecutionMetadata(operation: .update, comment: "update order 1",
+      auditReason: "update order 1", parameterizedSQL: "update order_data set version = ? where id = ?",
+      parameters: [.int(2), .int(1)], debugSQL: "", elapsedMicros: 1,
+      affectedRows: 1, resultSummary: "1 rows affected; customer 1",
+      parameterLogPolicies: [.unknown, .unknown], generatedSQL: true)
+    let safeWrite = LogPrivacy.project(write)
+    XCTAssertEqual(safeWrite.resultSummary, "1 rows affected; customer [REDACTED]")
+    XCTAssertEqual(safeWrite.affectedRows, 1)
+    XCTAssertEqual(safeWrite.auditReason, "update order [REDACTED]")
+
+    let read = SQLExecutionMetadata(operation: .select,
+      parameterizedSQL: "select * from order_data where id = ?",
+      parameters: [.int(1)], debugSQL: "", elapsedMicros: 1,
+      resultCount: 1, resultSummary: "1 rows returned; persisted snapshot rejected",
+      parameterLogPolicies: [.unknown], generatedSQL: true)
+    let safeRead = LogPrivacy.project(read)
+    XCTAssertEqual(safeRead.resultSummary, "1 rows returned; persisted snapshot rejected")
+    XCTAssertEqual(safeRead.resultCount, 1)
+  }
+
   func testDirectSinkAndEvidenceStoreAreSafe() async throws {
     let path = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-privacy-\(UUID().uuidString).log")
     let sink = TextDiagnosticSQLLogSink(writer: { text in

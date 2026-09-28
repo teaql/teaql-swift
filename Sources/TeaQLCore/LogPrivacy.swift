@@ -163,7 +163,20 @@ enum LogPrivacy {
       orphanedDebug && !text.isEmpty ? "[REDACTED]" : scrub(text, values: values)
     }
     func safeIntent(_ text: String) -> String { safe(text, values: intentHidden) }
-    func safeSummary(_ text: String) -> String { safe(text, values: hidden) }
+    func safeSummary(_ text: String) -> String {
+      // Counts come from typed execution metadata, not SQL parameters. Keep
+      // only a matching canonical prefix; scrub any free-form suffix normally.
+      for (count, label) in [(source.affectedRows, " rows affected"),
+                             (source.resultCount, " rows returned")] {
+        guard let count else { continue }
+        let prefix = "\(count)\(label)"
+        guard text.hasPrefix(prefix) else { continue }
+        let suffix = String(text.dropFirst(prefix.count))
+        guard suffix.isEmpty || suffix.first == ";" || suffix.first == " " || suffix.first == "," else { continue }
+        return prefix + safe(suffix, values: hidden)
+      }
+      return safe(text, values: hidden)
+    }
     var omission = source.sqlOmissionReason
     if invalidPolicies { omission = "policy_count_mismatch" }
     if invalidFlags { omission = "mask_count_mismatch" }
