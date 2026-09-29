@@ -13,7 +13,7 @@ private let order = EntityDescriptor(
     PropertyDescriptor(name: "orderNumber", column: "order_number", type: .string),
     PropertyDescriptor(name: "orderDate", column: "order_date", type: .date),
     PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
-  ])
+  ], auditMaskFields: ["orderNumber"])
 
 @Test func topNRelationPlansAreEquivalentAndCanonicalIndexIsIdempotent() async throws {
   let parent = EntityDescriptor(name: "TopNParent", table: "topn_parent", properties: [
@@ -634,7 +634,9 @@ private func context(
   #expect(entries.allSatisfy { !$0.parameterizedSQL.contains("secret-customer-value") })
   #expect(entries.contains { !$0.parameters.isEmpty })
   #expect(entries.allSatisfy { !$0.debugSQL.contains("secret-customer-value") })
-  #expect(entries.allSatisfy { $0.parameters.allSatisfy { $0 == .null } })
+  #expect(entries.allSatisfy { !$0.parameters.contains(.string("secret-customer-value")) })
+  #expect(entries.contains { $0.debugSQL.contains("se*****************ue") })
+  #expect(entries.allSatisfy { $0.sqlOmissionReason == nil })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
   let selectEntry = try #require(entries.first { $0.operation == .select })
@@ -695,7 +697,7 @@ private func context(
       PropertyDescriptor(name: "localDateTime", column: "local_date_time", type: .localDateTime),
       PropertyDescriptor(name: "instant", column: "instant_ms", type: .timestamp),
       PropertyDescriptor(name: "tenantID", column: "tenant_id", type: .int),
-    ])
+    ], auditMaskFields: ["calendarDate", "localDateTime", "instant"])
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-temporal-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
@@ -757,7 +759,8 @@ private func context(
   let service = try SQLiteDataService(path: path)
   try await context(service).ensureSchema(RuntimeModule(name: "order-sql-evidence", entities: [order]))
   let appAudit = RecordingAuditSink()
-  let context = context(service, auditSink: appAudit)
+  let evidence = SQLExecutionEvidenceStore()
+  let context = context(service, auditSink: appAudit, telemetrySink: evidence)
 
   _ = try await context.execute(
     Mutation(
@@ -767,8 +770,12 @@ private func context(
         "id": .int(100), "version": .int(1), "orderNumber": .string("A-100"),
         "orderDate": .date(Date(timeIntervalSince1970: 1_700_000_000)), "tenantID": .int(7),
       ],
-      auditReason: "Create order fixture"
+      auditReason: "Create order 100"
     ))
+  let createdAudit = await appAudit.events()
+  #expect(createdAudit.last?.entityID == .int(100))
+  #expect(createdAudit.last?.reason == "Create order [REDACTED]")
+  #expect((await evidence.snapshot()).contains { $0.auditReason == "Create order [REDACTED]" })
   _ = try await context.execute(
     Mutation(
       kind: .create,
@@ -777,8 +784,11 @@ private func context(
         "id": .int(200), "version": .int(1), "orderNumber": .string("OTHER"),
         "orderDate": .date(Date(timeIntervalSince1970: 1_700_000_000)), "tenantID": .int(8),
       ],
-      auditReason: "Create isolated tenant fixture"
+      auditReason: "Create isolated tenant 200"
     ))
+  let isolatedAudit = await appAudit.events()
+  #expect(isolatedAudit.last?.entityID == .int(200))
+  #expect(isolatedAudit.last?.reason == "Create isolated tenant [REDACTED]")
 
   var query = SelectQuery(entity: order)
   query.comment = "Search tenant orders"
@@ -795,8 +805,12 @@ private func context(
       id: .int(100),
       values: ["orderNumber": .string("A-101")],
       expectedVersion: 1,
-      auditReason: "Correct order number"
+      auditReason: "Correct order 100"
     ))
+  let updatedAudit = await appAudit.events()
+  #expect(updatedAudit.last?.entityID == .int(100))
+  #expect(updatedAudit.last?.reason == "Correct order [REDACTED]")
+  #expect((await evidence.snapshot()).contains { $0.auditReason == "Correct order [REDACTED]" })
   await #expect(
     throws: TeaQLError.optimisticLock(entity: "CustomerOrder", id: .int(100), expectedVersion: 1)
   ) {
@@ -817,9 +831,13 @@ private func context(
       entity: order,
       id: .int(100),
       expectedVersion: 2,
-      auditReason: "Soft delete order"
+      auditReason: "Soft delete order 100"
     ))
   #expect(deleted.generatedValues["version"] == .int(-3))
+  let deletedAudit = await appAudit.events()
+  #expect(deletedAudit.last?.entityID == .int(100))
+  #expect(deletedAudit.last?.reason == "Soft delete order [REDACTED]")
+  #expect((await evidence.snapshot()).contains { $0.auditReason == "Soft delete order [REDACTED]" })
   var activeQuery = SelectQuery(entity: order)
   activeQuery.filter = .greaterThanOrEqual("version", .int(1))
   activeQuery.comment = "Read active order"
@@ -846,7 +864,7 @@ private func context(
   }
   let audit = try await service.auditEvents()
   #expect(audit.count == 4)
-  #expect(audit.last?["reason"] == .string("Soft delete order"))
+  #expect(audit.last?["reason"] == .string("Soft delete order 100"))
   #expect(await appAudit.events().count == 4)
 
   _ = try await service.transaction([

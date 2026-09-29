@@ -2,9 +2,11 @@
 
 ## Sensitive log data
 
-Runtime diagnostic logs redact payload values by default, before delivery to
-file, console, buffers, or custom logging sinks. Selecting a diagnostic sink
-alone does not authorize plaintext. For controlled troubleshooting only:
+Runtime diagnostic logs show expanded SQL, with masked parameters substituted
+in place before delivery to files, console, buffers, or custom logging sinks.
+Known ordinary fields remain visible; canonical fields in `EntityDescriptor.auditMaskFields`
+use the shared mask algorithm. Credentials and unknown bindings are completely hidden.
+Selecting a diagnostic sink alone does not authorize plaintext. For controlled troubleshooting only:
 
 ```bash
 export TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS=I_UNDERSTAND_SENSITIVE_DATA_MAY_BE_WRITTEN_TO_DISK
@@ -12,7 +14,9 @@ export TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS=I_UNDERSTAND_SENSITIVE_DATA_MAY_BE_W
 
 Only this exact value enables plaintext permission; empty values, `true`, and
 whitespace variants do not. Enabling it emits a warning. Credential-classified
-fields remain redacted. The flag does not force every sink to expose values.
+fields and unknown bindings remain redacted. Each debug record carries
+`DEBUG PLAINTEXT; EXPLICIT OPT-IN`; masked SQL is marked `MASKED; NOT REPLAYABLE`.
+The flag does not force every sink to expose values.
 SQL without reliable field/literal provenance may be suppressed and marked
 `NOT REPLAYABLE`. Execution parameters and persisted business data are unchanged.
 
@@ -95,9 +99,10 @@ Swift profile intentionally does not keep backend AES keys or expose local
 opaque-reference encode/decode APIs. That is a supported client boundary, not a
 runtime gap.
 
-Local SQL output should remain parameterized and value-free by default;
-copy/paste SQL and submitted values require an explicit restricted diagnostic
-surface. The server-side envelope, shared golden vector, stable errors, and
+Database execution remains parameterized; diagnostic SQL is expanded after
+field-aware masking, not a placeholder string plus an array. Plaintext for
+masked business fields requires the explicit debug acknowledgement above.
+The server-side envelope, shared golden vector, stable errors, and
 development-only raw-reference acknowledgement are maintained in the canonical
 [opaque entity reference contract](https://github.com/teaql/teaql-conformance/blob/main/design/opaque-entity-references.md).
 

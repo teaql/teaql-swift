@@ -62,13 +62,50 @@ final class LogPrivacyTests: XCTestCase {
   func testProjectionPreservesExecutionValuesAndAlwaysHidesCredentials() {
     let source = entry(field: "name", value: "PRIVATE-CUSTOMER-CANARY")
     let safe = LogPrivacy.project(source)
-    XCTAssertEqual(safe.parameters, [.null])
+    XCTAssertEqual(safe.parameters, [.string(LogPrivacy.maskAuditValue("PRIVATE-CUSTOMER-CANARY"))])
     XCTAssertFalse(safe.comment!.contains("PRIVATE-CUSTOMER-CANARY"))
     XCTAssertEqual(source.parameters, [.string("PRIVATE-CUSTOMER-CANARY")])
     XCTAssertEqual(LogPrivacy.project(source, allowPlaintext: true).parameters, source.parameters)
     let password = LogPrivacy.project(entry(field: "password", value: "PASSWORD-CANARY"), allowPlaintext: true)
-    XCTAssertEqual(password.parameters, [.null])
+    XCTAssertEqual(password.parameters, [.string("[REDACTED]")])
     XCTAssertFalse(password.debugSQL.contains("PASSWORD-CANARY"))
+  }
+
+  func testTargetIDOnlyScrubsIntentAndPreservesStructuralCounts() {
+    let source = SQLExecutionMetadata(operation: .update, comment: "update order 1",
+      purpose: "verify order 1", auditReason: "update order 1",
+      parameterizedSQL: "update order_data set version = ? where id = ?",
+      parameters: [.int(2), .int(1)], debugSQL: "", elapsedMicros: 1,
+      affectedRows: 1, resultSummary: "1 rows affected",
+      parameterLogPolicies: [.plain, .plain], generatedSQL: true)
+    let safe = LogPrivacy.project(source, intentValues: [.int(1)])
+    XCTAssertEqual(safe.auditReason, "update order [REDACTED]")
+    XCTAssertEqual(safe.comment, "update order [REDACTED]")
+    XCTAssertEqual(safe.purpose, "verify order [REDACTED]")
+    XCTAssertEqual(safe.resultSummary, "1 rows affected")
+    XCTAssertEqual(safe.parameters, [.int(2), .int(1)])
+    XCTAssertEqual(source.auditReason, "update order 1")
+  }
+
+  func testUnknownShortBindingCannotEraseStructuredRowCounts() {
+    let write = SQLExecutionMetadata(operation: .update, comment: "update order 1",
+      auditReason: "update order 1", parameterizedSQL: "update order_data set version = ? where id = ?",
+      parameters: [.int(2), .int(1)], debugSQL: "", elapsedMicros: 1,
+      affectedRows: 1, resultSummary: "1 rows affected; customer 1",
+      parameterLogPolicies: [.unknown, .unknown], generatedSQL: true)
+    let safeWrite = LogPrivacy.project(write)
+    XCTAssertEqual(safeWrite.resultSummary, "1 rows affected; customer [REDACTED]")
+    XCTAssertEqual(safeWrite.affectedRows, 1)
+    XCTAssertEqual(safeWrite.auditReason, "update order [REDACTED]")
+
+    let read = SQLExecutionMetadata(operation: .select,
+      parameterizedSQL: "select * from order_data where id = ?",
+      parameters: [.int(1)], debugSQL: "", elapsedMicros: 1,
+      resultCount: 1, resultSummary: "1 rows returned; persisted snapshot rejected",
+      parameterLogPolicies: [.unknown], generatedSQL: true)
+    let safeRead = LogPrivacy.project(read)
+    XCTAssertEqual(safeRead.resultSummary, "1 rows returned; persisted snapshot rejected")
+    XCTAssertEqual(safeRead.resultCount, 1)
   }
 
   func testDirectSinkAndEvidenceStoreAreSafe() async throws {
@@ -83,13 +120,14 @@ final class LogPrivacyTests: XCTestCase {
     let evidence = SQLExecutionEvidenceStore()
     await evidence.record(source)
     let entries = await evidence.snapshot()
-    XCTAssertEqual(entries[0].parameters, [.null])
+    XCTAssertEqual(entries[0].parameters, [.string("[REDACTED]")])
   }
 
   private func entry(field: String, value: String) -> SQLExecutionMetadata {
     SQLExecutionMetadata(operation: .select, comment: "load \(value)", purpose: "test privacy",
       parameterizedSQL: "select * from customer where \(field) = ?", parameters: [.string(value)],
       debugSQL: "select * from customer where \(field) = '\(value)'", elapsedMicros: 1,
-      resultCount: 1, resultSummary: "one row")
+      resultCount: 1, resultSummary: "one row",
+      parameterLogPolicies: [field == "password" ? .credential : .masked])
   }
 }

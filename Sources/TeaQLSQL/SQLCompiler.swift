@@ -4,77 +4,29 @@ import TeaQLCore
 public struct CompiledSQL: Sendable, Equatable {
   public let sql: String
   public let parameters: [TeaQLValue]
+  public let parameterLogPolicies: [SQLParameterLogPolicy]
+  public let generatedSQL: Bool
 
-  public init(sql: String, parameters: [TeaQLValue]) {
+  public init(sql: String, parameters: [TeaQLValue],
+              parameterLogPolicies: [SQLParameterLogPolicy] = [], generatedSQL: Bool = false) {
     self.sql = sql
     self.parameters = parameters
+    self.parameterLogPolicies = parameterLogPolicies
+    self.generatedSQL = generatedSQL
   }
 
-  /// Returns a diagnostic statement whose parameters are SQL literals, suitable for copy/paste.
+  /// Explicit diagnostic utility; normal runtime logging first projects safe values.
   public func debugSQL() -> String {
-    var result = ""
-    var parameterIndex = 0
-    var state = SQLScanState.sql
-    var index = sql.startIndex
-    while index < sql.endIndex {
-      let character = sql[index]
-      let nextIndex = sql.index(after: index)
-      let next = nextIndex < sql.endIndex ? sql[nextIndex] : nil
-      if state == .sql, character == "'" { result.append(character); state = .singleQuote }
-      else if state == .sql, character == "\"" { result.append(character); state = .doubleQuote }
-      else if state == .sql, character == "-", next == "-" {
-        result += "--"; index = nextIndex; state = .lineComment
-      } else if state == .sql, character == "/", next == "*" {
-        result += "/*"; index = nextIndex; state = .blockComment
-      } else if state == .singleQuote {
-        result.append(character)
-        if character == "'", next == "'" { result.append("'"); index = nextIndex }
-        else if character == "'" { state = .sql }
-      } else if state == .doubleQuote {
-        result.append(character)
-        if character == "\"", next == "\"" { result.append("\""); index = nextIndex }
-        else if character == "\"" { state = .sql }
-      } else if state == .lineComment {
-        result.append(character)
-        if character == "\n" || character == "\r" { state = .sql }
-      } else if state == .blockComment {
-        result.append(character)
-        if character == "*", next == "/" { result.append("/"); index = nextIndex; state = .sql }
-      } else if character == "?", parameterIndex < parameters.count {
-        result += sqlLiteral(parameters[parameterIndex])
-        parameterIndex += 1
-      } else {
-        result.append(character)
-      }
-      index = sql.index(after: index)
-    }
-    return result
+    (try? SQLLogRenderer.render(sql, parameters: parameters)) ?? "[SQL OMITTED; NOT REPLAYABLE]"
   }
 }
 
-private enum SQLScanState { case sql, singleQuote, doubleQuote, lineComment, blockComment }
-
-private func sqlLiteral(_ value: TeaQLValue) -> String {
-  switch value {
-  case .null: "NULL"
-  case .bool(let value): value ? "TRUE" : "FALSE"
-  case .int(let value): String(value)
-  case .uint(let value): String(value)
-  case .double(let value): String(value)
-  case .decimal(let value): NSDecimalNumber(decimal: value).stringValue
-  case .string(let value): quoteSQLString(value)
-  case .calendarDate(let value): quoteSQLString(value)
-  case .localDateTime(let value): quoteSQLString(value)
-  case .timestamp(let value): String(value)
-  case .date(let value): quoteSQLString(ISO8601DateFormatter().string(from: value))
-  case .data(let value): "X'" + value.map { String(format: "%02x", $0) }.joined() + "'"
-  case .array, .object:
-    quoteSQLString(String(data: try! JSONEncoder().encode(value), encoding: .utf8)!)
-  }
-}
-
-private func quoteSQLString(_ value: String) -> String {
-  "'" + value.replacingOccurrences(of: "'", with: "''") + "'"
+private struct SQLBindings {
+  var values: [TeaQLValue] = []
+  var policies: [SQLParameterLogPolicy] = []
+  var policy: SQLParameterLogPolicy = .plain
+  mutating func append(_ value: TeaQLValue) { values.append(value); policies.append(policy) }
+  mutating func append(contentsOf values: [TeaQLValue]) { for value in values { append(value) } }
 }
 
 public struct SQLiteCompiler: Sendable {
@@ -83,7 +35,7 @@ public struct SQLiteCompiler: Sendable {
   public func compile(_ rawQuery: SelectQuery) throws -> CompiledSQL {
     let query = try rawQuery.validatedForExecution()
     let columns = try projection(query)
-    var parameters: [TeaQLValue] = []
+    var parameters = SQLBindings()
     var sql = "SELECT \(columns) FROM \(quote(query.entity.table))"
     if let filter = query.filter {
       sql += " WHERE " + (try expression(filter, entity: query.entity, parameters: &parameters))
@@ -115,7 +67,7 @@ public struct SQLiteCompiler: Sendable {
       sql = "SELECT \(columns) FROM (\(ranked)) AS \(quote("__teaql_partitioned")) WHERE \(quote("__teaql_partition_rank")) > ? AND \(quote("__teaql_partition_rank")) <= ? ORDER BY \(quote("__teaql_partition_rank"))"
       parameters.append(.int(Int64(query.offset)))
       parameters.append(.int(Int64(query.offset + limit)))
-      return CompiledSQL(sql: sql, parameters: parameters)
+      return CompiledSQL(sql: sql, parameters: parameters.values, parameterLogPolicies: parameters.policies, generatedSQL: true)
     }
     if !query.orderBy.isEmpty {
       let orders = try query.orderBy.map { item in
@@ -131,17 +83,17 @@ public struct SQLiteCompiler: Sendable {
       sql += " OFFSET ?"
       parameters.append(.int(Int64(query.offset)))
     }
-    return CompiledSQL(sql: sql, parameters: parameters)
+    return CompiledSQL(sql: sql, parameters: parameters.values, parameterLogPolicies: parameters.policies, generatedSQL: true)
   }
 
   public func compileCount(_ rawQuery: SelectQuery) throws -> CompiledSQL {
     let query = try rawQuery.validatedForExecution()
-    var parameters: [TeaQLValue] = []
+    var parameters = SQLBindings()
     var sql = "SELECT COUNT(*) FROM \(quote(query.entity.table))"
     if let filter = query.filter {
       sql += " WHERE " + (try expression(filter, entity: query.entity, parameters: &parameters))
     }
-    return CompiledSQL(sql: sql, parameters: parameters)
+    return CompiledSQL(sql: sql, parameters: parameters.values, parameterLogPolicies: parameters.policies, generatedSQL: true)
   }
 
   public func createTable(_ entity: EntityDescriptor) throws -> String {
@@ -193,8 +145,21 @@ public struct SQLiteCompiler: Sendable {
   private func expression(
     _ expression: TeaQLExpression,
     entity: EntityDescriptor,
-    parameters: inout [TeaQLValue]
+    parameters: inout SQLBindings
   ) throws -> String {
+    let previous = parameters.policy
+    defer { parameters.policy = previous }
+    switch expression {
+    case .equal(let field, _), .notEqual(let field, _),
+         .greaterThan(let field, _), .greaterThanOrEqual(let field, _),
+         .lessThan(let field, _), .lessThanOrEqual(let field, _),
+         .between(let field, _, _), .contains(let field, _), .notContains(let field, _),
+         .startsWith(let field, _), .notStartsWith(let field, _),
+         .endsWith(let field, _), .notEndsWith(let field, _),
+         .soundingLike(let field, _), .inList(let field, _), .notInList(let field, _):
+      parameters.policy = .field(field, in: entity)
+    default: parameters.policy = .unknown
+    }
     switch expression {
     case .equal(let field, let value):
       parameters.append(value)
@@ -278,7 +243,7 @@ public struct SQLiteCompiler: Sendable {
     projectedField: String,
     operatorSQL: String,
     entity: EntityDescriptor,
-    parameters: inout [TeaQLValue]
+    parameters: inout SQLBindings
   ) throws -> String {
     let left = quote(try requireProperty(field, in: entity).column)
     let child = plan.makeQuery()

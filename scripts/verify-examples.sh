@@ -9,7 +9,10 @@ if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   exit 1
 fi
 
-(cd "$repo/Examples/Conformance" && swift run TeaQLConsole)
-(cd "$repo/Examples/SchoolManagement" && swift run SchoolBootstrapVerification)
-(cd "$repo/Examples/OrderManagement" && swift run teaql-order-management)
+# Local runtime dependencies may gain source files without changing Package.swift.
+# Refresh the build plan so old manifests cannot omit newly added runtime code.
+# Keep compiled artifacts and databases; this is not a clean-build workaround.
+(cd "$repo/Examples/Conformance" && swift run --disable-build-manifest-caching TeaQLConsole)
+(cd "$repo/Examples/SchoolManagement" && swift run --disable-build-manifest-caching SchoolBootstrapVerification)
+(cd "$repo/Examples/OrderManagement" && swift run --disable-build-manifest-caching teaql-order-management)
 echo "PASS: all Swift examples"

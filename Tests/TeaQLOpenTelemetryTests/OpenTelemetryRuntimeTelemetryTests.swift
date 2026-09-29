@@ -58,6 +58,23 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     XCTAssertNil(queryLog.attributes["teaql.entity.id"])
     XCTAssertEqual(queryLog.spanContext?.traceId, query.traceId)
     XCTAssertEqual(queryLog.spanContext?.spanId, query.spanId)
+
+    XCTAssertThrowsError(try telemetry.withSynchronousOperation(
+      RuntimeOperation(family: "provider", name: "sqlite.query"),
+      completion: { (_: Int) in [:] }
+    ) { throw DriverCanaryError() }) { error in
+      XCTAssertTrue(error is DriverCanaryError)
+    }
+    provider.forceFlush()
+
+    let failureSpan = try XCTUnwrap(exporter.getFinishedSpanItems().last)
+    let failureLog = try XCTUnwrap(logExporter.records.last)
+    XCTAssertEqual(failureSpan.attributes["teaql.error.category"], .string("internal"))
+    XCTAssertEqual(failureLog.attributes["teaql.operation.outcome"], .string("failure"))
+    let exported = "\(failureSpan.attributes) \(failureSpan.status) \(failureSpan.events) "
+      + "\(String(describing: failureLog.body)) \(failureLog.attributes)"
+    XCTAssertFalse(exported.contains("OTEL-FAILURE-CANARY"))
+    XCTAssertFalse(exported.contains("password="))
   }
 
 
@@ -95,6 +112,12 @@ final class OpenTelemetryRuntimeTelemetryTests: XCTestCase {
     await telemetry.shutdown()
 
     XCTAssertEqual(calls.values, ["flush", "shutdown"])
+  }
+}
+
+private struct DriverCanaryError: LocalizedError {
+  var errorDescription: String? {
+    "SQL failed for password=OTEL-FAILURE-CANARY"
   }
 }
 

@@ -10,6 +10,7 @@ func require(_ condition: Bool, _ message: String) throws {
 @main
 enum ConformanceApp {
     static func main() async throws {
+        try await verifyFieldAwareSQLMasking()
         let directory = FileManager.default.currentDirectoryPath + "/.local"
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
         let path = directory + "/conformance.sqlite"

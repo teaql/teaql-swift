@@ -1,5 +1,5 @@
 import Foundation
-import TeaQLCore
+@testable import TeaQLCore
 import XCTest
 
 final class DynamicSearchTests: XCTestCase {
@@ -22,6 +22,60 @@ final class DynamicSearchTests: XCTestCase {
     let json = String(decoding: try JSONEncoder().encode(warnings), as: UTF8.self)
     XCTAssertFalse(json.contains("secret"))
     XCTAssertTrue(json.contains("fieldPath"))
+  }
+
+  func testDefaultLogProjectionOmitsUntrustedFieldPath() throws {
+    let path = "CLIENT_SECRET_FIELD_PATH_91"
+    let result = try DynamicSearch.normalize(
+      #"{"filter":{"CLIENT_SECRET_FIELD_PATH_91":"SECRET_VALUE_99"}}"#,
+      entity: "School", models: models, warn: { _ in })
+    let warning = try XCTUnwrap(result.warnings.first)
+    XCTAssertEqual(warning.fieldPath, path)
+    let json = String(decoding: try JSONEncoder().encode(warning.defaultLogProjection()), as: UTF8.self)
+    XCTAssertTrue(json.contains("DYNAMIC_SEARCH_UNKNOWN_FIELD"))
+    XCTAssertTrue(json.contains("<omitted>"))
+    XCTAssertFalse(json.contains(path))
+    XCTAssertFalse(json.contains("SECRET_VALUE_99"))
+  }
+
+  func testDefaultLogChild() throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_DYNAMIC_LOG_CHILD"] == "1" else { return }
+    _ = try DynamicSearch.normalize(
+      #"{"filter":{"CLIENT_SECRET_FIELD_PATH_91":"SECRET_VALUE_99"}}"#,
+      entity: "School", models: models)
+  }
+
+  func testDefaultLogStderrOmitsUntrustedFieldPath() throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_DYNAMIC_LOG_CHILD"] != "1" else { return }
+    let path = FileManager.default.temporaryDirectory.appendingPathComponent("dynamic-warning-\(UUID().uuidString).log")
+    defer { try? FileManager.default.removeItem(at: path) }
+    XCTAssertTrue(FileManager.default.createFile(atPath: path.path, contents: nil))
+    let handle = try FileHandle(forWritingTo: path)
+    defer { try? handle.close() }
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+    #if os(macOS)
+    process.arguments = ["-XCTest", "TeaQLCoreTests.DynamicSearchTests/testDefaultLogChild",
+      Bundle(for: DynamicSearchTests.self).bundleURL.path]
+    #else
+    process.arguments = ["TeaQLCoreTests.DynamicSearchTests/testDefaultLogChild"]
+    #endif
+    var environment = ProcessInfo.processInfo.environment
+    environment["TEAQL_DYNAMIC_LOG_CHILD"] = "1"
+    environment.removeValue(forKey: "XCTestConfigurationFilePath")
+    process.environment = environment
+    process.standardOutput = handle
+    process.standardError = handle
+    try process.run()
+    let deadline = Date().addingTimeInterval(30)
+    while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+    if process.isRunning { process.terminate(); XCTFail("Dynamic warning child timed out"); return }
+    let log = try String(contentsOf: path, encoding: .utf8)
+    XCTAssertEqual(process.terminationStatus, 0, log)
+    XCTAssertTrue(log.contains("DYNAMIC_SEARCH_UNKNOWN_FIELD"), log)
+    XCTAssertTrue(log.contains("<omitted>"), log)
+    XCTAssertFalse(log.contains("CLIENT_SECRET_FIELD_PATH_91"), log)
+    XCTAssertFalse(log.contains("SECRET_VALUE_99"), log)
   }
 
   func testInvalidInputIsFatal() {
