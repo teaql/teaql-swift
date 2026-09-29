@@ -7,6 +7,27 @@ func require(_ condition: Bool, _ message: String) throws {
     guard condition else { throw TeaQLError.execution(message) }
 }
 
+struct ConformanceMutationPolicy: MutationPolicy {
+    let identity = MutationPolicyIdentity(
+        policyID: "swift-conformance", version: "1", fingerprint: "sha256:swift-conformance-v1")
+
+    func review(context: UserContext, plan: MutationPlan) throws -> MutationPolicyDecision {
+        let blocked = plan.operations.contains {
+            $0.changedValues["title"] == .string("Blocked by policy")
+        }
+        return blocked
+            ? MutationPolicyDecision(
+                verdict: .deny, code: "WORK_ITEM_DENIED", message: "blocked conformance title")
+            : MutationPolicyDecision(verdict: .allow)
+    }
+}
+
+actor ConformanceAuditSink: AuditSink {
+    private var stored: [AuditEvent] = []
+    func record(_ event: AuditEvent) async throws { stored.append(event) }
+    func events() -> [AuditEvent] { stored }
+}
+
 @main
 enum ConformanceApp {
     static func main() async throws {
@@ -21,13 +42,22 @@ enum ConformanceApp {
         try runtime.install(GeneratedRuntimeModule.module)
 
         let evidence = SQLExecutionEvidenceStore()
+        let audit = ConformanceAuditSink()
         let context = UserContext(
             runtime: runtime,
             actor: "swift-conformance",
             queryExecutor: database,
             mutationExecutor: database,
             requestPolicy: RequestPolicy { $0 },
-            telemetrySink: evidence
+            auditSink: audit,
+            telemetrySink: evidence,
+            mutationPolicyRegistry: DelegatingMutationPolicyRegistry { _ in
+                ConformanceMutationPolicy()
+            },
+            mutationPolicyApprovalProvider: DelegatingMutationPolicyApprovalProvider { identity in
+                MutationPolicyApproval(
+                    policy: identity, approvedBy: "swift-conformance-owner", approvedAt: Date())
+            }
         )
         try await context.ensureSchema(GeneratedRuntimeModule.module)
         print("PASS ensureSchema (context-scoped SQLite DDL from Runtime Module)")
@@ -48,11 +78,27 @@ enum ConformanceApp {
                     "Checker must run before mutation SQL")
         print("PASS Checker (canonical title key, rejected before SQL)")
 
+        var denied = WorkItem()
+        denied.updateTitle("Blocked by policy")
+        denied.updatePlatform(1)
+        let evidenceBeforePolicy = await evidence.snapshot().count
+        do {
+            _ = try await denied.auditAs("Prove Mutation Policy denial").save(context)
+            throw TeaQLError.execution("Mutation Policy accepted a denied graph")
+        } catch MutationPolicyError.denied(let code, _) {
+            try require(code == "WORK_ITEM_DENIED", "Mutation Policy returned the wrong code")
+        }
+        try require(await evidence.snapshot().count == evidenceBeforePolicy,
+                    "Mutation Policy denial reached SQLite")
+        print("PASS Mutation Policy (whole graph denied before provider SQL)")
+
         var item = WorkItem()
         item.updateTitle("Verify Swift runtime")
         item.updatePlatform(1)
         let created = try await item.auditAs("Create conformance work item").save(context)
         try require(created.id > 0 && created.version == 1, "Create did not return ID/version")
+        try require(await audit.events().last?.mutationGovernance?.approvalStatus == .approved,
+                    "Approved Mutation Policy evidence was not attached to audit")
         print("PASS Create (id=\(created.id), version=\(created.version))")
 
         let queriedList = try await Q.workItems().selectSelfFields()
@@ -103,6 +149,6 @@ enum ConformanceApp {
             .executeForList(context)
         try require(remaining.isEmpty, "Default Q returned a deleted row")
         print("PASS Delete (default Q excludes deleted rows)")
-        print("PASS Swift minimum runtime conformance: 7/7")
+        print("PASS Swift minimum runtime conformance: 9/9")
     }
 }

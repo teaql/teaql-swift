@@ -282,6 +282,7 @@ private final class GraphSaveCoordinator: @unchecked Sendable {
 
   func execute<T: Sendable>(
     executor: any MutationExecutor,
+    mutationPolicy: MutationPolicyCoordinator,
     operation: @escaping @Sendable () async throws -> T
   ) async throws -> T {
     if let ambient = GraphSaveTaskContext.session, isActive(ambient) {
@@ -293,17 +294,27 @@ private final class GraphSaveCoordinator: @unchecked Sendable {
     }
     let session = UUID()
     await acquire(session)
+    var transactionStarted = false
+    var mutationPolicyStarted = false
     do {
+      try mutationPolicy.beginGraph()
+      mutationPolicyStarted = true
       try await transaction.beginGraphTransaction()
+      transactionStarted = true
       let result = try await GraphSaveTaskContext.$session.withValue(session) {
         try await operation()
       }
+      try mutationPolicy.ensureGraphComplete()
       try await transaction.commitGraphTransaction()
+      transactionStarted = false
+      mutationPolicy.endGraph()
+      mutationPolicyStarted = false
       let actions = finish(session, committed: true)
       actions.forEach { $0() }
       return result
     } catch {
-      try? await transaction.rollbackGraphTransaction()
+      if transactionStarted { try? await transaction.rollbackGraphTransaction() }
+      if mutationPolicyStarted { mutationPolicy.endGraph() }
       let actions = finish(session, committed: false)
       actions.reversed().forEach { $0() }
       throw error
@@ -498,6 +509,22 @@ public struct AuditEvent: Sendable, Codable {
   public let actor: String?
   public let category: String?
   public let occurredAt: Date
+  public let mutationGovernance: MutationGovernanceSnapshot?
+
+  public init(
+    entity: String, entityID: TeaQLValue?, operation: MutationKind,
+    reason: String, actor: String?, category: String? = nil, occurredAt: Date,
+    mutationGovernance: MutationGovernanceSnapshot? = nil
+  ) {
+    self.entity = entity
+    self.entityID = entityID
+    self.operation = operation
+    self.reason = reason
+    self.actor = actor
+    self.category = category
+    self.occurredAt = occurredAt
+    self.mutationGovernance = mutationGovernance
+  }
 }
 
 public struct RequestPolicy: Sendable {
@@ -647,6 +674,7 @@ public struct UserContext: Sendable {
   private let idSetObservationState: IdSetObservationState
   private let idSetStore: any IdSetStore
   private let graphSaveCoordinator: GraphSaveCoordinator
+  private let mutationPolicyCoordinator: MutationPolicyCoordinator
 
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
@@ -667,7 +695,10 @@ public struct UserContext: Sendable {
     locale: TeaQLLocale = .en,
     i18nCatalog: I18nCatalog = .builtin,
     entityInitializers: [EntityInitializer] = [],
-    entityCreationObserver: EntityCreationObserver? = nil
+    entityCreationObserver: EntityCreationObserver? = nil,
+    mutationPolicyRegistry: (any MutationPolicyRegistry)? = nil,
+    mutationPolicyApprovalProvider: (any MutationPolicyApprovalProvider)? = nil,
+    mutationGovernanceSink: (any MutationGovernanceSink)? = nil
   ) {
     self.runtime = runtime
     self.actor = actor
@@ -691,12 +722,19 @@ public struct UserContext: Sendable {
     self.continuousPageState = ContinuousPageState()
     self.idSetObservationState = IdSetObservationState()
     self.graphSaveCoordinator = GraphSaveCoordinator()
+    self.mutationPolicyCoordinator = MutationPolicyCoordinator(
+      registry: mutationPolicyRegistry,
+      approvalProvider: mutationPolicyApprovalProvider,
+      warningSink: mutationGovernanceSink)
   }
 
   public func executeGraphSave<T: Sendable>(
     _ operation: @escaping @Sendable () async throws -> T
   ) async throws -> T {
-    try await graphSaveCoordinator.execute(executor: mutationExecutor, operation: operation)
+    try await graphSaveCoordinator.execute(
+      executor: mutationExecutor,
+      mutationPolicy: mutationPolicyCoordinator,
+      operation: operation)
   }
 
   public func afterGraphCommit(_ action: @escaping @Sendable () -> Void) throws {
@@ -710,6 +748,14 @@ public struct UserContext: Sendable {
   public var fixTime: Date { graphSaveCoordinator.fixTime() ?? Date() }
   public func recordFixEvidence(_ evidence: FixEvidence) { graphSaveCoordinator.recordFixEvidence(evidence) }
   public var lastFixEvidence: [FixEvidence] { graphSaveCoordinator.lastFixEvidence() }
+
+  public var lastMutationGovernance: MutationGovernanceSnapshot? {
+    mutationPolicyCoordinator.lastSnapshot
+  }
+
+  public func reviewMutationPlan(_ plan: MutationPlan) throws -> MutationGovernanceSnapshot {
+    try mutationPolicyCoordinator.review(context: self, plan: plan)
+  }
 
   public func requireActiveRoot(_ expectedType: String) throws -> ContextEntityRef {
     guard let activeRoot else {
@@ -1202,18 +1248,12 @@ public struct UserContext: Sendable {
   private func executeMutation(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {
-    var validated = try mutation.validatedForExecution()
-    validated.actor = actor
-    validated.auditCategory = auditCategory
-    if let checker = runtime.checker(named: validated.entity.name) {
-      let violations = translateCheckResults(
-        try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
-      if let ledgerRoot, let ledgerKey {
-        for (field, value) in validated.values { ledgerRoot.set(ledgerKey, field: field, value: value) }
-      }
-      if !violations.isEmpty { throw CheckException(violations) }
-    }
-    let submittedID = validated.id ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
+    let validated = try checkAndFixMutation(
+      mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    let mutationGovernance = try mutationPolicyCoordinator.enter(
+      context: self, mutation: validated, ledgerKey: ledgerKey)
+    let submittedID = validated.id
+      ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
     let result = try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(mutationExecutor.providerKind).mutation",
@@ -1268,7 +1308,8 @@ public struct UserContext: Sendable {
             reason: LogPrivacy.scrub(reason, values: auditValues),
             actor: actor,
             category: auditCategory,
-            occurredAt: Date()
+            occurredAt: Date(),
+            mutationGovernance: mutationGovernance
           ))
       }
     }
@@ -1277,6 +1318,15 @@ public struct UserContext: Sendable {
 
   public func preflightMutation(
     _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil
+  ) throws -> Mutation {
+    let validated = try checkAndFixMutation(
+      mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey)
+    return validated
+  }
+
+  private func checkAndFixMutation(
+    _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) throws -> Mutation {
     var validated = try mutation.validatedForExecution()
     validated.actor = actor
