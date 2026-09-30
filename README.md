@@ -53,7 +53,9 @@ let context = UserContext(
     requestPolicy: RequestPolicy { query in
         // Inject trusted tenant and authorization policy here.
         query
-    }
+    },
+    mutationPolicyRegistry: mutationPolicyRegistry,
+    mutationPolicyApprovalProvider: approvalProvider
 )
 
 let orders = try await Q.customerOrders()
@@ -81,7 +83,19 @@ It creates its SQLite file and schema automatically, seeds one audited order, ru
 
 ## Governance
 
-`executeForList` accepts only `UserContext`. Runtime services, tenant/permission policy, actor, and application audit sink are installed when that trusted context is created. Dynamic or federated payloads cannot override them. A non-empty comment and purpose are required for queries; every save requires an audit reason.
+`executeForList` accepts only `UserContext`. Runtime services, tenant/permission
+policy, actor, application audit sink, and Mutation Policy are installed when
+that trusted context is created. Dynamic or federated payloads cannot override
+them. A non-empty comment and purpose are required for queries; every save
+requires an audit reason.
+
+Generated graph saves run Checker/Fix for every reachable mutation, freeze one
+complete `MutationPlan`, and review it before the first provider mutation. An
+explicit denial reaches neither SQLite nor a `FederalDataService`. A missing
+customer policy or exact policy approval emits the stable
+`MUTATION-POLICY-001` / `MUTATION-POLICY-002` warning and remains fail-open;
+explicit denial and incomplete reviewed graphs fail closed. The same governance
+snapshot is attached to every application audit event in the graph.
 
 List queries have a default hard limit of 10,000 rows. Local application code may lower or override it through a query, but requests above the hard limit fail instead of loading an unsafe amount. The hard limit is never transported through federation. Most applications should keep the default unless a carefully reviewed local workload requires otherwise.
 

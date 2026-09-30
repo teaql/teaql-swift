@@ -64,6 +64,15 @@ private struct FailingTransport: FederalTransport {
   func send(_ request: FederalHTTPRequest) async throws -> FederalHTTPResponse { throw error }
 }
 
+private struct DenyFederalMutationPolicy: MutationPolicy {
+  let identity = MutationPolicyIdentity(
+    policyID: "deny-federal", version: "1", fingerprint: "sha256:deny-federal")
+  func review(context: UserContext, plan: MutationPlan) throws -> MutationPolicyDecision {
+    MutationPolicyDecision(
+      verdict: .deny, code: "FEDERAL_DENIED", message: "prove client boundary")
+  }
+}
+
 @Test func queryUsesCanonicalTFPShapeWithoutTrustedContext() async throws {
   let transport = RecordingTransport(
     json: #"{"data":[{"id":7}],"resultCode":0,"status":"YES","execution":{}}"#)
@@ -171,6 +180,33 @@ private struct FailingTransport: FederalTransport {
   let payload = try #require(try JSONSerialization.jsonObject(with: request.body) as? [String: Any])
   #expect(payload["limitValue"] as? Int == 1)
   #expect(payload["hardLimit"] == nil)
+}
+
+@Test func contextMutationPolicyDeniesBeforeFederalTransport() async throws {
+  let transport = RecordingTransport(
+    json: #"{"affectedRows":1,"data":[{"id":9}],"resultCode":0,"status":"YES"}"#)
+  let service = FederalDataService(client: TeaQLFederalClient(
+    baseURL: URL(string: "https://example.test/")!, transport: transport))
+  let task = EntityDescriptor(
+    name: "Task", table: "task_data",
+    properties: [PropertyDescriptor(name: "id", type: .int, isID: true)])
+  let context = UserContext(
+    queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 },
+    mutationPolicyRegistry: DelegatingMutationPolicyRegistry { _ in
+      DenyFederalMutationPolicy()
+    },
+    mutationPolicyApprovalProvider: DelegatingMutationPolicyApprovalProvider { identity in
+      MutationPolicyApproval(policy: identity, approvedBy: "owner", approvedAt: Date())
+    })
+
+  await #expect(throws: MutationPolicyError.denied(
+    code: "FEDERAL_DENIED", message: "prove client boundary")) {
+    _ = try await context.execute(Mutation(
+      kind: .create, entity: task,
+      values: ["name": .string("must not send")], auditReason: "deny remote mutation"))
+  }
+  #expect(await transport.requests.isEmpty)
 }
 
 @Test func IDSET_015_federationPayloadCannotInjectRetentionControls() async throws {
