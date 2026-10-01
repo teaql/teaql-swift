@@ -32,8 +32,28 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     let context = UserContext(
       runtime: runtime, actor: "conformance", queryExecutor: service,
       mutationExecutor: service, requestPolicy: RequestPolicy { $0 })
+    let quietContext = UserContext(
+      runtime: runtime, actor: "conformance", queryExecutor: service,
+      mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+      querySQLLogEnabled: false, mutationSQLLogEnabled: false)
     try await context.ensureSchema(module)
     try await context.ensureSchema(module)
+    do {
+      _ = try await Q.schools().purpose("verify required intent with logging disabled")
+        .executeForList(quietContext)
+      throw TeaQLError.execution("Generated Q accepted a missing comment")
+    } catch let error as RequestIntentError {
+      try require(error.code == "REQUEST_COMMENT_REQUIRED" && error.field == "comment",
+                  "Generated Q did not name the required comment")
+    }
+    do {
+      _ = try await Q.schools().comment("verify required purpose").purpose("\u{0085}")
+        .executeForRows(quietContext)
+      throw TeaQLError.execution("Generated Q accepted a Unicode-blank purpose")
+    } catch let error as RequestIntentError {
+      try require(error.code == "QUERY_PURPOSE_REQUIRED" && error.field == "purpose",
+                  "Generated Q did not name the required purpose")
+    }
     let platforms = try await Q.platforms().comment("verify seeded root")
       .purpose("local runtime verification").executeForList(context)
     let constants = try await Q.schoolTypes().orderByIdAscending()
@@ -58,6 +78,17 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     school.updateActive(true)
     school.updateCreateTime(now)
     school.updateUpdateTime(now)
+    do {
+      _ = try await school.auditAs("\u{0085}").save(quietContext)
+      throw TeaQLError.execution("Generated save accepted a Unicode-blank root comment")
+    } catch let error as RequestIntentError {
+      try require(error.code == "REQUEST_COMMENT_REQUIRED" && error.field == "comment",
+                  "Generated save did not name the required root comment")
+    }
+    let afterRejectedSave = try await Q.schools().comment("check rejected save caused no writes")
+      .purpose("verify missing intent cannot reach SQLite").executeForList(quietContext)
+    try require(afterRejectedSave.isEmpty, "Invalid generated save wrote a School row")
+    print("PASS required Query and Mutation comments, including logging disabled")
     let saved = try await school.auditAs("seed school linked to PRIMARY").save(context)
     try require(saved.schoolType == 1001,
                 "Constant helper did not retain School.schoolType=1001 after save")

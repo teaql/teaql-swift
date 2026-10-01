@@ -243,14 +243,14 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
     self.warningSink = warningSink ?? ConsoleMutationGovernanceSink()
   }
 
-  package func beginGraph() throws {
+  package func beginGraph(auditReason: String) throws {
     stateLock.lock(); defer { stateLock.unlock() }
     guard !graphActive else { throw MutationPolicyError.graphAlreadyActive }
     graphActive = true
     graphReviewed = false
     preflight = []
     rootEntity = nil
-    auditReason = nil
+    self.auditReason = auditReason
     remaining = [:]
     graphSnapshot = nil
   }

@@ -45,22 +45,41 @@ public enum GeneratedRuntimeModule {
            "Platform": PlatformChecker(),
            "WorkItem": WorkItemChecker()
         ],
-        generatedBootstrap: { context in
-            let bootstrap = context._generatedBootstrapContext(
-                activeRoot: ContextEntityRef(entity: "Platform", id: .int(1)))
-            let existing = try await Q.platforms().selectSelfFields().withIdIs(1)
-                .comment("find generated Platform root")
-                .purpose("preserve or create the model-defined root")
-                .executeForList(bootstrap)
-            if existing.isEmpty {
-                var platform = try Q.platforms()
-                    .comment("create generated Platform root")
-                    .purpose("bootstrap model-defined data")
-                    .newEntity(bootstrap)
-                platform.updateId(1)
-                platform.updateName("Runtime Example")
-                _ = try await platform.auditAs("create model root Platform").save(bootstrap)
-            }
-        }
+        generatedBootstrap: ensureGeneratedBootstrap,
+
+        wireMetadata: [
+            "Platform": try! WireEntityMetadata(entityType: "Platform", canonicalFields: ["id", "name", "version"], aliases: ["id": ["id"], "name": ["name"], "version": ["version"]]),
+            "WorkItem": try! WireEntityMetadata(entityType: "WorkItem", canonicalFields: ["id", "title", "description", "platform", "version"], aliases: ["id": ["id"], "title": ["title"], "description": ["description"], "platform": ["platform"], "version": ["version"]])
+        ]
     )
+
+    private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
+        var lastError: Error?
+        for attempt in 0..<5 {
+            do { try await ensureGeneratedBootstrapOnce(callerContext); return }
+            catch { lastError = error; if attempt < 4 { try await Task.sleep(nanoseconds: UInt64(attempt + 1) * 10_000_000) } }
+        }
+        throw lastError!
+    }
+
+    private static func ensureGeneratedBootstrapOnce(_ callerContext: UserContext) async throws {
+        let bootstrapContext = callerContext._generatedBootstrapContext()
+        var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
+        if domainRoot == nil {
+            var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            created.teaqlInitializeGeneratedBootstrapId(1)
+            created.updateName("Runtime Example")
+            do { domainRoot = try await created.auditAs("create generated Domain Root Platform").save(bootstrapContext) }
+            catch { domainRoot = try await Q.platforms().withIdIs(1).comment("what: recover concurrent Domain Root bootstrap").purpose("why: make bootstrap idempotent").executeForList(bootstrapContext).first; if domainRoot == nil { throw error } }
+        }
+        guard let domainRoot else { throw TeaQLError.execution("Generated Domain Root bootstrap failed") }
+        let rootedContext = callerContext._generatedBootstrapContext(activeRoot: ContextEntityRef(entity: "Platform", id: .int(domainRoot.id)))
+    }
+
+    private static func generatedBootstrapDate(_ value: String) throws -> Date {
+        if let date = ISO8601DateFormatter().date(from: value) { return date }
+        let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = TimeZone(secondsFromGMT: 0); formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: value) else { throw TeaQLError.execution("Invalid generated bootstrap date: \(value)") }; return date
+    }
+
 }

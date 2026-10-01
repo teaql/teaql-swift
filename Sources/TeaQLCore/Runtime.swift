@@ -2,8 +2,8 @@ import Foundation
 
 public protocol QueryExecutor: Sendable {
   var idSetDataSourceIdentity: String { get }
-  func execute(_ query: SelectQuery) async throws -> QueryResult
-  func count(_ query: SelectQuery) async throws -> Int
+  func execute(_ request: QueryRequest) async throws -> QueryResult
+  func count(_ request: QueryRequest) async throws -> Int
 }
 
 public enum RelationTopNPolicy: Sendable { case window, alwaysProbe }
@@ -21,9 +21,17 @@ public extension QueryExecutor {
   var providerKind: String { String(describing: type(of: self)) }
   var idSetDataSourceIdentity: String { providerKind }
 
+  func execute(_ query: SelectQuery) async throws -> QueryResult {
+    try await execute(QueryRequest(query: query))
+  }
+
   func count(_ query: SelectQuery) async throws -> Int {
+    try await count(QueryRequest(query: query))
+  }
+
+  func count(_ request: QueryRequest) async throws -> Int {
     throw TeaQLError.execution(
-      "Exact count is not supported by the configured query executor for \(query.entity.name)")
+      "Exact count is not supported by the configured query executor for \(request.query.entity.name)")
   }
 }
 
@@ -207,10 +215,7 @@ public struct Mutation: Sendable, Codable {
   }
 
   public func validatedForExecution() throws -> Self {
-    guard let auditReason, !auditReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    else {
-      throw TeaQLError.missingAuditReason
-    }
+    _ = try MutationIntent(comment: auditReason)
     return self
   }
 }
@@ -236,7 +241,7 @@ public struct MutationResult: Sendable {
 }
 
 public protocol MutationExecutor: Sendable {
-  func execute(_ mutation: Mutation) async throws -> MutationResult
+  func execute(_ request: MutationRequest) async throws -> MutationResult
 }
 
 public protocol GraphTransactionExecutor: MutationExecutor {
@@ -247,6 +252,9 @@ public protocol GraphTransactionExecutor: MutationExecutor {
 
 public extension MutationExecutor {
   var providerKind: String { String(describing: type(of: self)) }
+  func execute(_ mutation: Mutation) async throws -> MutationResult {
+    try await execute(MutationRequest(mutation: mutation))
+  }
 }
 
 private enum GraphSaveTaskContext {
@@ -283,6 +291,7 @@ private final class GraphSaveCoordinator: @unchecked Sendable {
   func execute<T: Sendable>(
     executor: any MutationExecutor,
     mutationPolicy: MutationPolicyCoordinator,
+    intent: MutationIntent,
     operation: @escaping @Sendable () async throws -> T
   ) async throws -> T {
     if let ambient = GraphSaveTaskContext.session, isActive(ambient) {
@@ -297,7 +306,7 @@ private final class GraphSaveCoordinator: @unchecked Sendable {
     var transactionStarted = false
     var mutationPolicyStarted = false
     do {
-      try mutationPolicy.beginGraph()
+      try mutationPolicy.beginGraph(auditReason: intent.auditReason)
       mutationPolicyStarted = true
       try await transaction.beginGraphTransaction()
       transactionStarted = true
@@ -393,7 +402,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   }
 
   public func save(_ context: UserContext) async throws -> Entity {
-    try await context.executeGraphSave {
+    _ = try MutationIntent(comment: reason)
+    return try await context.executeGraphSave(comment: reason) {
       try await saveWithinGraph(context)
     }
   }
@@ -729,11 +739,20 @@ public struct UserContext: Sendable {
   }
 
   public func executeGraphSave<T: Sendable>(
+    comment: String,
+    _ operation: @escaping @Sendable () async throws -> T
+  ) async throws -> T {
+    try await executeGraphSave(GraphMutationRequest(comment: comment), operation)
+  }
+
+  public func executeGraphSave<T: Sendable>(
+    _ request: GraphMutationRequest,
     _ operation: @escaping @Sendable () async throws -> T
   ) async throws -> T {
     try await graphSaveCoordinator.execute(
       executor: mutationExecutor,
       mutationPolicy: mutationPolicyCoordinator,
+      intent: request.intent,
       operation: operation)
   }
 
@@ -754,7 +773,8 @@ public struct UserContext: Sendable {
   }
 
   public func reviewMutationPlan(_ plan: MutationPlan) throws -> MutationGovernanceSnapshot {
-    try mutationPolicyCoordinator.review(context: self, plan: plan)
+    _ = try MutationIntent(comment: plan.auditReason)
+    return try mutationPolicyCoordinator.review(context: self, plan: plan)
   }
 
   public func requireActiveRoot(_ expectedType: String) throws -> ContextEntityRef {
@@ -828,18 +848,23 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
-    try await execute(query, inheritedIntent: nil)
+    try await execute(QueryRequest(query: query))
+  }
+
+  public func execute(_ request: QueryRequest) async throws -> QueryResult {
+    try await execute(request.query, inheritedIntent: nil)
   }
 
   private func execute(_ query: SelectQuery, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
-    try await runtimeTelemetry.withOperation(
+    let request = try QueryRequest(query: query)
+    return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "query", name: "\(query.entity.name).list",
         attributes: ["teaql.entity.type": .string(query.entity.name)]
       ), completion: { result in
       ["teaql.result.cardinality": .integer(Int64(result.records.count))]
     }) {
-      try await executeQuery(query, inheritedIntent: inheritedIntent)
+      try await executeQuery(request, inheritedIntent: inheritedIntent)
     }
   }
 
@@ -851,8 +876,8 @@ public struct UserContext: Sendable {
     await idSetObservationState.current()
   }
 
-  private func executeQuery(_ query: SelectQuery, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
-    let validated = try requestPolicy.apply(query).validatedForExecution()
+  private func executeQuery(_ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
+    let validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
     let idSetPrepared = try await prepareIdSetPagination(validated)
     let prepared = await prepareContinuousPage(idSetPrepared.query)
     var base = prepared.query
@@ -1204,7 +1229,11 @@ public struct UserContext: Sendable {
   }
 
   public func count(_ query: SelectQuery) async throws -> Int {
-    var validated = try requestPolicy.apply(query).validatedForExecution()
+    try await count(QueryRequest(query: query))
+  }
+
+  public func count(_ request: QueryRequest) async throws -> Int {
+    var validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
     validated.orderBy = []
     validated.offset = 0
     validated.limit = nil
@@ -1226,13 +1255,18 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ mutation: Mutation) async throws -> MutationResult {
-    try await execute(mutation, ledgerRoot: nil, ledgerKey: nil)
+    try await execute(MutationRequest(mutation: mutation))
+  }
+
+  public func execute(_ request: MutationRequest) async throws -> MutationResult {
+    try await execute(request.mutation, ledgerRoot: nil, ledgerKey: nil)
   }
 
   public func execute(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {
-    try await runtimeTelemetry.withOperation(
+    let request = try MutationRequest(mutation: mutation)
+    return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "mutation", name: "\(mutation.entity.name).\(mutation.kind.rawValue)",
         attributes: [
@@ -1241,7 +1275,7 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await executeMutation(mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+      try await executeMutation(request.mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
     }
   }
 
@@ -1328,7 +1362,8 @@ public struct UserContext: Sendable {
   private func checkAndFixMutation(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) throws -> Mutation {
-    var validated = try mutation.validatedForExecution()
+    let request = try MutationRequest(mutation: mutation)
+    var validated = request.mutation
     validated.actor = actor
     validated.auditCategory = auditCategory
     if let checker = runtime.checker(named: validated.entity.name) {
@@ -1341,6 +1376,6 @@ public struct UserContext: Sendable {
       }
       if !violations.isEmpty { throw CheckException(violations) }
     }
-    return validated
+    return request.withMutation(validated).mutation
   }
 }

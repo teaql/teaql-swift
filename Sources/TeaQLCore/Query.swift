@@ -209,12 +209,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   }
 
   public func validatedForExecution() throws -> Self {
-    guard let comment, !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      throw TeaQLError.missingComment
-    }
-    guard let purpose, !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      throw TeaQLError.missingPurpose
-    }
+    _ = try QueryIntent(comment: comment, purpose: purpose)
     guard hardLimit > 0, hardLimit <= Self.defaultHardLimit else {
       throw TeaQLError.invalidHardLimit(hardLimit)
     }

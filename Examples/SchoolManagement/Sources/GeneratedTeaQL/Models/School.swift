@@ -59,7 +59,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
-        ]
+        ],
+        auditMaskFields: []
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
@@ -182,6 +183,16 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
+
+    /// Generator-only fixed identity initialization for schema bootstrap.
+    /// Application code must use the ordinary ID generator.
+    mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) {
+        let oldKey = teaqlEntityKey
+        id = value
+        _loadedFields.insert("id")
+        teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+        teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+    }
 
     @discardableResult
     public mutating func markLoadedOnly(_ fields: String...) -> Self {
@@ -311,11 +322,19 @@ public struct SchoolAudited: Sendable {
     public let reason: String
 
     public func save(_ context: UserContext) async throws -> School {
-        try await context.executeGraphSave {
-        try teaqlPreflightGraph(context)
+        _ = try MutationIntent(comment: reason)
+        return try await context.executeGraphSave(comment: reason) {
+            try teaqlPreflightGraph(context)
+            return try await teaqlSavePreflighted(context)
+        }
+    }
+
+    /// Executes a node whose complete aggregate graph was already preflighted
+    /// by the public save entry point. Generated cascade code must use this
+    /// path so policy review remains a strict preflight-then-mutate sequence.
+    func teaqlSavePreflighted(_ context: UserContext) async throws -> School {
         let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
         return saved
-        }
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {

@@ -168,7 +168,7 @@ private actor TopNRelationFixtureExecutor: QueryExecutor, RelationTopNPlanning {
   func usedPartitionedLimit() -> Bool { partitioned }
   func childQueryCount() -> Int { childQueries }
 
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult { let query = request.query;
     if query.entity.name == "Parent" {
       return QueryResult(records: [["id": .int(1)], ["id": .int(2)], ["id": .int(3)]], backend: "fixture")
     }
@@ -198,7 +198,7 @@ private actor RelationAggregateFixtureExecutor: QueryExecutor {
 
   func aggregateQueries() -> Int { queries }
 
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult { let query = request.query;
     if query.entity.name == "Parent" {
       return QueryResult(records: [["id": .int(1)], ["id": .int(2)]], backend: "fixture")
     }
@@ -217,7 +217,7 @@ private actor RelationAggregateFixtureExecutor: QueryExecutor {
 private actor RelationFixtureExecutor: QueryExecutor {
   private var childQueries = 0
 
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult { let query = request.query;
     if query.entity.name == "Parent" {
       return QueryResult(records: [["id": .int(1), "organization": .int(9)]], backend: "fixture")
     }
@@ -239,7 +239,7 @@ private actor RelationFixtureExecutor: QueryExecutor {
 }
 
 private struct RejectingMutationExecutor: MutationExecutor {
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
     throw TeaQLError.execution("mutation is not part of this test")
   }
 }

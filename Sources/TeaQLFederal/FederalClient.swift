@@ -158,8 +158,9 @@ public struct TeaQLFederalClient: Sendable {
   }
 
   public func execute(_ query: FederalQuery) async throws -> FederalQueryResponse {
-    guard let comment = nonBlank(query.comment) else { throw FederalError.missingComment }
-    guard let purpose = nonBlank(query.purpose) else { throw FederalError.missingPurpose }
+    let intent = try QueryIntent(comment: query.comment, purpose: query.purpose)
+    let comment = intent.comment
+    let purpose = intent.purpose
     if let limit = query.limit, limit < 1 {
       throw TeaQLError.execution("Federation limit must be positive")
     }
@@ -202,7 +203,7 @@ public struct TeaQLFederalClient: Sendable {
   }
 
   public func execute(_ mutation: FederalMutation) async throws -> FederalMutationResponse {
-    guard let reason = nonBlank(mutation.auditReason) else { throw FederalError.missingAuditReason }
+    let reason = try MutationIntent(comment: mutation.auditReason).auditReason
     var payload: [String: TeaQLValue] = [
       "entity": .string(mutation.entity),
       "action": .string(actionName(mutation.action)),
@@ -288,7 +289,8 @@ public struct FederalDataService: QueryExecutor, MutationExecutor, Sendable {
 
   public init(client: TeaQLFederalClient) { self.client = client }
 
-  public func execute(_ query: SelectQuery) async throws -> QueryResult {
+  public func execute(_ request: QueryRequest) async throws -> QueryResult {
+    let query = request.query
     var federal = FederalQuery(entity: query.entity.name)
     if let filter = query.filter { federal.filters = [filter] }
     federal.limit = query.limit
@@ -311,7 +313,8 @@ public struct FederalDataService: QueryExecutor, MutationExecutor, Sendable {
     )
   }
 
-  public func execute(_ mutation: Mutation) async throws -> MutationResult {
+  public func execute(_ request: MutationRequest) async throws -> MutationResult {
+    let mutation = request.mutation
     let response = try await client.execute(
       FederalMutation(
         entity: mutation.entity.name,

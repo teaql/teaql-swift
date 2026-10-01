@@ -117,60 +117,105 @@ public enum GeneratedRuntimeModule {
            "SchoolType": SchoolTypeChecker(),
            "School": SchoolChecker()
         ],
-        generatedBootstrap: { context in
-            let bootstrap = context._generatedBootstrapContext(
-                activeRoot: ContextEntityRef(entity: "Platform", id: .int(1)))
-            let roots = try await Q.platforms().selectSelfFields().withIdIs(1)
-                .comment("find generated Platform root")
-                .purpose("preserve or create the model-defined root")
-                .executeForList(bootstrap)
-            if roots.isEmpty {
-                var root = try Q.platforms()
-                    .comment("create generated Platform root")
-                    .purpose("bootstrap model-defined data")
-                    .newEntity(bootstrap)
-                root.updateId(1)
-                root.updateName("Campus Learning Platform")
-                root.updateBaseUrl("https://campus.example.com")
-                _ = try await root.auditAs("create model root Platform").save(bootstrap)
-            }
-            try await ensureSchoolType(
-                id: 1001, name: "Primary", code: "PRIMARY", displayOrder: 1,
-                context: bootstrap)
-            try await ensureSchoolType(
-                id: 1002, name: "Secondary", code: "SECONDARY", displayOrder: 2,
-                context: bootstrap)
-        }
+        generatedBootstrap: ensureGeneratedBootstrap,
+
+        wireMetadata: [
+            "Platform": try! WireEntityMetadata(entityType: "Platform", canonicalFields: ["id", "name", "base_url", "create_time", "update_time", "version"], aliases: ["id": ["id"], "name": ["name"], "base_url": ["base_url"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]]),
+            "SchoolType": try! WireEntityMetadata(entityType: "SchoolType", canonicalFields: ["platform", "id", "name", "code", "display_order", "version"], aliases: ["platform": ["platform"], "id": ["id"], "name": ["name"], "code": ["code"], "display_order": ["display_order"], "version": ["version"]]),
+            "School": try! WireEntityMetadata(entityType: "School", canonicalFields: ["id", "platform", "school_type", "name", "address", "established_date", "student_capacity", "active", "create_time", "update_time", "version"], aliases: ["id": ["id"], "platform": ["platform"], "school_type": ["school_type"], "name": ["name"], "address": ["address"], "established_date": ["established_date"], "student_capacity": ["student_capacity"], "active": ["active"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]])
+        ]
     )
 
-    private static func ensureSchoolType(
-        id: Int64, name: String, code: String, displayOrder: Decimal,
-        context: UserContext
-    ) async throws {
-        let rows = try await Q.schoolTypes().selectSelfFields().withIdIs(id)
-            .comment("find generated SchoolType constant")
-            .purpose("create or reconcile the model-defined constant")
-            .executeForList(context)
-        if rows.isEmpty {
-            var value = try Q.schoolTypes()
-                .comment("create generated SchoolType constant")
-                .purpose("bootstrap model-defined data")
-                .newEntity(context)
-            value.updateId(id)
-            value.updatePlatform(1)
-            value.updateName(name)
-            value.updateCode(code)
-            value.updateDisplayOrder(displayOrder)
-            _ = try await value.auditAs("create model constant SchoolType.\(code)").save(context)
-            return
+    private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
+        var lastError: Error?
+        for attempt in 0..<5 {
+            do { try await ensureGeneratedBootstrapOnce(callerContext); return }
+            catch { lastError = error; if attempt < 4 { try await Task.sleep(nanoseconds: UInt64(attempt + 1) * 10_000_000) } }
         }
-        var value = rows[0]
-        guard value.platform != 1 || value.name != name || value.code != code
-            || value.displayOrder != displayOrder else { return }
-        value.updatePlatform(1)
-        value.updateName(name)
-        value.updateCode(code)
-        value.updateDisplayOrder(displayOrder)
-        _ = try await value.auditAs("reconcile model constant SchoolType.\(code)").save(context)
+        throw lastError!
     }
+
+    private static func ensureGeneratedBootstrapOnce(_ callerContext: UserContext) async throws {
+        let bootstrapContext = callerContext._generatedBootstrapContext()
+        var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
+        if domainRoot == nil {
+            var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            created.teaqlInitializeGeneratedBootstrapId(1)
+            created.updateName("Campus Learning Platform")
+            created.updateBaseUrl("https://campus.example.com")
+            do { domainRoot = try await created.auditAs("create generated Domain Root Platform").save(bootstrapContext) }
+            catch { domainRoot = try await Q.platforms().withIdIs(1).comment("what: recover concurrent Domain Root bootstrap").purpose("why: make bootstrap idempotent").executeForList(bootstrapContext).first; if domainRoot == nil { throw error } }
+        }
+        guard let domainRoot else { throw TeaQLError.execution("Generated Domain Root bootstrap failed") }
+        let rootedContext = callerContext._generatedBootstrapContext(activeRoot: ContextEntityRef(entity: "Platform", id: .int(domainRoot.id)))
+        var constantSchoolType1001 = try await Q.schoolTypes().withIdIs(1001).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
+        if constantSchoolType1001 == nil {
+            var created = try Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            created.teaqlInitializeGeneratedBootstrapId(1001)
+            created.updatePlatform(domainRoot.id)
+            created.updateName("Primary")
+            created.updateCode("PRIMARY")
+            created.updateDisplayOrder(Decimal(string: "1")!)
+            do { constantSchoolType1001 = try await created.auditAs("create model constant SchoolType(1001)").save(rootedContext) }
+            catch { constantSchoolType1001 = try await Q.schoolTypes().withIdIs(1001).comment("what: recover concurrent constant bootstrap").purpose("why: make bootstrap idempotent").executeForList(rootedContext).first; if constantSchoolType1001 == nil { throw error } }
+        } else {
+            var current = constantSchoolType1001!
+            var changed = false
+            if current.platform != domainRoot.id {
+                current.updatePlatform(domainRoot.id)
+                changed = true
+            }
+            if current.name != "Primary" {
+                current.updateName("Primary")
+                changed = true
+            }
+            if current.code != "PRIMARY" {
+                current.updateCode("PRIMARY")
+                changed = true
+            }
+            if current.displayOrder != Decimal(string: "1")! {
+                current.updateDisplayOrder(Decimal(string: "1")!)
+                changed = true
+            }
+            if changed { constantSchoolType1001 = try await current.auditAs("reconcile model constant SchoolType(1001)").save(rootedContext) }
+        }
+        var constantSchoolType1002 = try await Q.schoolTypes().withIdIs(1002).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
+        if constantSchoolType1002 == nil {
+            var created = try Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            created.teaqlInitializeGeneratedBootstrapId(1002)
+            created.updatePlatform(domainRoot.id)
+            created.updateName("Secondary")
+            created.updateCode("SECONDARY")
+            created.updateDisplayOrder(Decimal(string: "2")!)
+            do { constantSchoolType1002 = try await created.auditAs("create model constant SchoolType(1002)").save(rootedContext) }
+            catch { constantSchoolType1002 = try await Q.schoolTypes().withIdIs(1002).comment("what: recover concurrent constant bootstrap").purpose("why: make bootstrap idempotent").executeForList(rootedContext).first; if constantSchoolType1002 == nil { throw error } }
+        } else {
+            var current = constantSchoolType1002!
+            var changed = false
+            if current.platform != domainRoot.id {
+                current.updatePlatform(domainRoot.id)
+                changed = true
+            }
+            if current.name != "Secondary" {
+                current.updateName("Secondary")
+                changed = true
+            }
+            if current.code != "SECONDARY" {
+                current.updateCode("SECONDARY")
+                changed = true
+            }
+            if current.displayOrder != Decimal(string: "2")! {
+                current.updateDisplayOrder(Decimal(string: "2")!)
+                changed = true
+            }
+            if changed { constantSchoolType1002 = try await current.auditAs("reconcile model constant SchoolType(1002)").save(rootedContext) }
+        }
+    }
+
+    private static func generatedBootstrapDate(_ value: String) throws -> Date {
+        if let date = ISO8601DateFormatter().date(from: value) { return date }
+        let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.timeZone = TimeZone(secondsFromGMT: 0); formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: value) else { throw TeaQLError.execution("Invalid generated bootstrap date: \(value)") }; return date
+    }
+
 }

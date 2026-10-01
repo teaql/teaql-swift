@@ -202,12 +202,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
   }
 
-  public func execute(_ query: SelectQuery) async throws -> QueryResult {
-    do { return try await executeDiagnosed(query) }
+  public func execute(_ request: QueryRequest) async throws -> QueryResult {
+    do { return try await executeDiagnosed(request) }
     catch let failure as SQLExecutionFailure { throw failure.cause }
   }
 
-  package func executeDiagnosed(_ query: SelectQuery) async throws -> QueryResult {
+  package func executeDiagnosed(_ request: QueryRequest) async throws -> QueryResult {
+    let query = request.query
     let compiled = try compiler.compile(query)
     let startedAt = DispatchTime.now().uptimeNanoseconds
     let records: [TeaQLRecord]
@@ -254,7 +255,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     )
   }
 
-  public func count(_ query: SelectQuery) async throws -> Int {
+  public func count(_ request: QueryRequest) async throws -> Int {
+    let query = request.query
     let compiled = try compiler.compileCount(query)
     var prepared: OpaquePointer?
     guard sqlite3_prepare_v2(database, compiled.sql, -1, &prepared, nil) == SQLITE_OK,
@@ -270,13 +272,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     return Int(sqlite3_column_int64(statement, 0))
   }
 
-  public func execute(_ mutation: Mutation) async throws -> MutationResult {
-    do { return try await executeDiagnosed(mutation) }
+  public func execute(_ request: MutationRequest) async throws -> MutationResult {
+    do { return try await executeDiagnosed(request) }
     catch let failure as SQLExecutionFailure { throw failure.cause }
   }
 
-  package func executeDiagnosed(_ mutation: Mutation) async throws -> MutationResult {
-    let mutation = try mutation.validatedForExecution()
+  package func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult {
+    let mutation = request.mutation
     if graphTransactionActive {
       let result = try performMutation(mutation)
       try insertAudit(mutation, generatedValues: result.generatedValues)
@@ -611,9 +613,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       }
       return records[0]
     } catch {
-      let read = SQLExecutionMetadata(operation: .select, auditReason: write.auditReason,
+      let intent = try MutationIntent(comment: write.auditReason).readbackIntent()
+      let read = SQLExecutionMetadata(operation: .select, comment: intent.comment,
+        purpose: intent.purpose, auditReason: write.auditReason,
         tracePath: write.tracePath + [TraceNode(entity: entity.name, comment: write.auditReason ?? "",
-          purpose: "", level: write.tracePath.count, kind: "sql", name: "readback")],
+          purpose: intent.purpose, level: write.tracePath.count, kind: "sql", name: "readback")],
         parameterizedSQL: compiled.sql, parameters: compiled.parameters,
         debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
         resultSummary: resultCount.map { "\($0) rows returned; persisted snapshot rejected" }

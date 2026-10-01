@@ -89,6 +89,34 @@ that trusted context is created. Dynamic or federated payloads cannot override
 them. A non-empty comment and purpose are required for queries; every save
 requires an audit reason.
 
+`QueryRequest` owns an immutable, validated `QueryIntent` (`comment` and
+`purpose`). `MutationRequest` owns `MutationIntent`: its required `comment` is
+the existing audit reason, not an additional input. These envelopes are required
+by the provider SPI. Legacy builder/command convenience calls construct a
+validated envelope before invoking the provider.
+
+Missing, null, empty and Unicode-whitespace-only values fail with
+`REQUEST_COMMENT_REQUIRED` at `comment`, or `QUERY_PURPOSE_REQUIRED` at
+`purpose`, before Policy, Checker, transaction start or provider access. Neither
+Context nor optional trace frames supply a default. Disabling SQL logs does not
+disable this gate; Policy and Checker may change payloads but cannot replace
+the captured intent.
+
+Custom graph callbacks must also declare their root reason:
+
+```swift
+try await context.executeGraphSave(comment: "apply the reviewed order changes") {
+    // Execute the graph's audited mutations here.
+}
+```
+
+A child's reason cannot fill a missing root reason. Generated
+`.comment(...).purpose(...)` and `.auditAs(...).save(context)` calls keep their
+existing spelling. Regenerate libraries after adopting the changed provider
+SPI; providers must implement `QueryRequest` / `MutationRequest` methods. These
+request guards do not by themselves implement hierarchical per-entity audit
+lineage or defer application audit events until graph commit.
+
 Generated graph saves run Checker/Fix for every reachable mutation, freeze one
 complete `MutationPlan`, and review it before the first provider mutation. An
 explicit denial reaches neither SQLite nor a `FederalDataService`. A missing
@@ -156,7 +184,14 @@ bindings are not provided by this local adapter.
 
 ```bash
 swift test
+./scripts/verify-examples.sh
 ```
+
+The School example includes required-comment and purpose failures with SQL
+logging disabled, and proves that an invalid audited save writes no School row.
+The example script uses local runtime source and locked dependency versions;
+all three retained examples must pass. Shared request-intent construction
+vectors are retained in `test-vectors/request-intent-v1.json`.
 
 The live Swift-to-Rust federation test is enabled when `TEAQL_TFP_BASE_URL` points to the deterministic test endpoint:
 

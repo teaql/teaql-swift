@@ -55,6 +55,8 @@ func missingReadbackRetainsWriteAndSafeIntent(kind: MutationKind, mode: Int) asy
   #expect(entries.first?.affectedRows == 1)
   #expect(entries.first?.executionOutcome == "success")
   #expect(entries.last?.operation == .select)
+  #expect(entries.last?.comment == entries.last?.auditReason)
+  #expect(entries.last?.purpose == "verify the persisted mutation result")
   #expect(entries.last?.executionOutcome == "success")
   #expect(entries.last?.resultCount == 0)
   #expect(entries.last?.tracePath.last?.name == "readback")

@@ -41,7 +41,7 @@ final class FacetTests: XCTestCase {
 }
 
 private struct FacetFixtureExecutor: QueryExecutor {
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult { let query = request.query;
     switch query.entity.name {
     case "School":
       guard query.filter == .contains("name", "Riverside") else {
@@ -63,7 +63,7 @@ private struct FacetFixtureExecutor: QueryExecutor {
 }
 
 private struct FacetRejectingMutationExecutor: MutationExecutor {
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
     throw TeaQLError.execution("mutation is not part of this test")
   }
 }
