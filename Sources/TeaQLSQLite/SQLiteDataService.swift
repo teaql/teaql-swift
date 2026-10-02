@@ -348,6 +348,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
       operation: operation, auditReason: mutation.auditReason,
       tracePath: mutationSQLTrace(mutation, operation: operation.rawValue),
+      mutationLineage: mutation.mutationLineage ?? [],
       parameterizedSQL: sql, parameters: values, debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt),
       affectedRows: affectedRows,
       resultSummary: affectedRows.map { "\($0) rows affected" } ?? "statement failed; row count unknown",
@@ -355,6 +356,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   private func insert(_ mutation: Mutation) throws -> MutationResult {
+    var mutation = mutation
     var insertValues = try normalizedValues(mutation.values, for: mutation.entity)
     if let id = mutation.entity.idProperty {
       if insertValues[id.name] == nil {
@@ -365,6 +367,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
     if let version = mutation.entity.versionProperty {
       insertValues[version.name] = .int(1)
+    }
+    if let id = mutation.entity.idProperty.flatMap({ insertValues[$0.name] }) {
+      mutation.id = id
+      mutation.mutationLineage = TraceChain.assignedLineage(mutation.mutationLineage ?? [],
+        key: EntityKey(entity: mutation.entity.name, id: id))
     }
     let properties = try insertValues.keys.sorted().map {
       try requireProperty($0, mutation.entity)
@@ -388,6 +395,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .insert,
         auditReason: mutation.auditReason,
         tracePath: mutationSQLTrace(mutation, operation: "insert"),
+        mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: "",
@@ -486,6 +494,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .update,
         auditReason: mutation.auditReason,
         tracePath: mutationSQLTrace(mutation, operation: "update"),
+        mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: "",
@@ -528,6 +537,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .delete,
         auditReason: mutation.auditReason,
         tracePath: mutationSQLTrace(mutation, operation: "delete"),
+        mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: "",
@@ -613,6 +623,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       let read = SQLExecutionMetadata(operation: .select, comment: intent.comment,
         purpose: intent.purpose, auditReason: write.auditReason,
         tracePath: TraceChain.readback(write.tracePath),
+        mutationLineage: write.mutationLineage,
         parameterizedSQL: compiled.sql, parameters: compiled.parameters,
         debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
         resultSummary: resultCount.map { "\($0) rows returned; persisted snapshot rejected" }
@@ -628,9 +639,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func mutationSQLTrace(_ mutation: Mutation, operation: String) -> [TraceNode] {
     let reason = mutation.auditReason ?? ""
-    return TraceChain.canonical([
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", kind: "auditReason"),
-      TraceNode(entity: mutation.entity.name, comment: "", purpose: "", kind: "entity"),
+    return TraceChain.canonical((mutation.mutationLineage ?? [
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", kind: "auditReason")
+    ]) + [
+      TraceNode(entity: mutation.entity.name, comment: "", purpose: "", kind: "entity",
+        entityID: mutation.id ?? mutation.entity.idProperty.flatMap { mutation.values[$0.name] }),
     ], backend: "sqlite", operation: operation)
   }
 

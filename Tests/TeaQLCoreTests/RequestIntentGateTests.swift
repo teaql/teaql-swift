@@ -70,7 +70,7 @@ final class RequestIntentGateTests: XCTestCase {
       requestPolicy: RequestPolicy { $0 }, querySQLLogEnabled: false, mutationSQLLogEnabled: false)
     let child = Mutation(kind: .create, entity: descriptor, auditReason: "valid child reason")
     do {
-      _ = try await context.executeGraphSave(comment: "\u{85}") { try await context.execute(child) }
+      _ = try await context.executeGraphSave(comment: "\u{85}") { context, _ in try await context.execute(child) }
       XCTFail("blank graph root accepted")
     } catch let error as RequestIntentError {
       XCTAssertEqual(error.code, "REQUEST_COMMENT_REQUIRED")

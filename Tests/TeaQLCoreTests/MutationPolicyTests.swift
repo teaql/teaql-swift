@@ -31,7 +31,7 @@ struct MutationPolicyTests {
     let orderKey = EntityKey(entity: "Order", id: .int(-1))
     let lineKey = EntityKey(entity: "OrderLine", id: .int(-2))
 
-    try await context.executeGraphSave(comment: "verify graph save request") {
+    try await context.executeGraphSave(comment: "verify graph save request") { context, _ in
       _ = try context.preflightMutation(orderMutation, ledgerKey: orderKey)
       _ = try context.preflightMutation(lineMutation, ledgerKey: lineKey)
       _ = try await context.execute(orderMutation, ledgerRoot: nil, ledgerKey: orderKey)
@@ -58,7 +58,7 @@ struct MutationPolicyTests {
     let deniedMutation = mutation(.create, order, values: ["name": .string("denied")])
     let deniedKey = EntityKey(entity: "Order", id: .int(-1))
     await #expect(throws: MutationPolicyError.denied(code: "ORDER_DENIED", message: "closed")) {
-      try await deniedContext.executeGraphSave(comment: "verify graph save request") {
+      try await deniedContext.executeGraphSave(comment: "verify graph save request") { deniedContext, _ in
         _ = try deniedContext.preflightMutation(deniedMutation, ledgerKey: deniedKey)
         _ = try await deniedContext.execute(deniedMutation, ledgerRoot: nil, ledgerKey: deniedKey)
       }
@@ -76,7 +76,7 @@ struct MutationPolicyTests {
     let firstKey = EntityKey(entity: "Order", id: .int(-1))
     let secondKey = EntityKey(entity: "OrderLine", id: .int(-2))
     await #expect(throws: MutationPolicyError.incompleteReviewedPlan) {
-      try await incomplete.executeGraphSave(comment: "verify graph save request") {
+      try await incomplete.executeGraphSave(comment: "verify graph save request") { incomplete, _ in
         _ = try incomplete.preflightMutation(first, ledgerKey: firstKey)
         _ = try incomplete.preflightMutation(second, ledgerKey: secondKey)
         _ = try await incomplete.execute(first, ledgerRoot: nil, ledgerKey: firstKey)
@@ -96,7 +96,7 @@ struct MutationPolicyTests {
     let command = mutation(.create, order, values: ["name": .string("unreviewed")])
 
     await #expect(throws: MutationPolicyError.missingGraphPreflight) {
-      try await context.executeGraphSave(comment: "verify graph save request") {
+      try await context.executeGraphSave(comment: "verify graph save request") { context, _ in
         _ = try await context.execute(command)
       }
     }
@@ -171,7 +171,7 @@ struct MutationPolicyTests {
     let childAfter = mutation(.create, line, values: ["order": .int(1)])
     let parentKey = EntityKey(entity: "Order", id: .int(-1))
     let childKey = EntityKey(entity: "OrderLine", id: .int(-2))
-    try await context.executeGraphSave(comment: "verify graph save request") {
+    try await context.executeGraphSave(comment: "verify graph save request") { context, _ in
       _ = try context.preflightMutation(parent, ledgerKey: parentKey)
       _ = try context.preflightMutation(childBefore, ledgerKey: childKey)
       _ = try await context.execute(parent, ledgerRoot: nil, ledgerKey: parentKey)

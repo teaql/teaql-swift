@@ -17,6 +17,8 @@ public final class EntityRoot: @unchecked Sendable {
   private var originalVersions: [EntityKey: Int64] = [:]
   private var newKeys: Set<EntityKey> = []
   private var deletedKeys: Set<EntityKey> = []
+  private var traceChains: [EntityKey: [TraceNode]] = [:]
+  private var localAuditReasons: [EntityKey: String] = [:]
 
   public init() {}
 
@@ -42,10 +44,12 @@ public final class EntityRoot: @unchecked Sendable {
     for (key, values) in state.changes { for (field, value) in values { changes[key, default: [:]][field] = value } }
     for (key, version) in state.versions { originalVersions[key] = version }
     newKeys.formUnion(state.newKeys); deletedKeys.formUnion(state.deletedKeys)
+    for (key, chain) in state.traces { traceChains[key] = chain }
+    for (key, reason) in state.reasons { localAuditReasons[key] = reason }
   }
 
-  private func fullSnapshot() -> (changes: [EntityKey: TeaQLRecord], versions: [EntityKey: Int64], newKeys: Set<EntityKey>, deletedKeys: Set<EntityKey>) {
-    lock.lock(); defer { lock.unlock() }; return (changes, originalVersions, newKeys, deletedKeys)
+  private func fullSnapshot() -> (changes: [EntityKey: TeaQLRecord], versions: [EntityKey: Int64], newKeys: Set<EntityKey>, deletedKeys: Set<EntityKey>, traces: [EntityKey: [TraceNode]], reasons: [EntityKey: String]) {
+    lock.lock(); defer { lock.unlock() }; return (changes, originalVersions, newKeys, deletedKeys, traceChains, localAuditReasons)
   }
 
   public func rekey(_ oldKey: EntityKey, to newKey: EntityKey) {
@@ -55,10 +59,34 @@ public final class EntityRoot: @unchecked Sendable {
     if let version = originalVersions.removeValue(forKey: oldKey) { originalVersions[newKey] = version }
     if newKeys.remove(oldKey) != nil { newKeys.insert(newKey) }
     if deletedKeys.remove(oldKey) != nil { deletedKeys.insert(newKey) }
+    if let chain = traceChains.removeValue(forKey: oldKey) { traceChains[newKey] = chain }
+    for (key, chain) in traceChains {
+      traceChains[key] = chain.map { node in
+        guard node.name == oldKey.entity, node.entityID == oldKey.id else { return node }
+        return TraceNode(entity: node.entity, comment: node.comment, purpose: node.purpose,
+          level: node.level, kind: node.kind, name: node.name, entityID: newKey.id)
+      }
+    }
+    if let reason = localAuditReasons.removeValue(forKey: oldKey) { localAuditReasons[newKey] = reason }
   }
 
   public func clearEntity(_ key: EntityKey) {
-    lock.lock(); defer { lock.unlock() }; changes.removeValue(forKey: key); newKeys.remove(key); deletedKeys.remove(key)
+    lock.lock(); defer { lock.unlock() }; changes.removeValue(forKey: key); newKeys.remove(key); deletedKeys.remove(key); traceChains.removeValue(forKey: key); localAuditReasons.removeValue(forKey: key)
+  }
+
+  public func setLocalAuditReason(_ key: EntityKey, reason: String) {
+    lock.withLock { localAuditReasons[key] = reason }
+  }
+  public func localAuditReason(_ key: EntityKey) -> String? { lock.withLock { localAuditReasons[key] } }
+
+  public func setTraceChain(_ key: EntityKey, chain: [TraceNode]) {
+    lock.withLock { traceChains[key] = chain }
+  }
+  public func traceChain(_ key: EntityKey, fallback: TraceScopeToken) -> [TraceNode] {
+    lock.withLock {
+      if let chain = traceChains[key], !chain.isEmpty { return chain }
+      return fallback.recover()
+    }
   }
 
   public func setOriginalVersion(_ key: EntityKey, version: Int64) {
@@ -79,6 +107,6 @@ public final class EntityRoot: @unchecked Sendable {
 
   public func clearCommitted() {
     lock.lock(); defer { lock.unlock() }
-    changes.removeAll(); newKeys.removeAll(); deletedKeys.removeAll()
+    changes.removeAll(); newKeys.removeAll(); deletedKeys.removeAll(); traceChains.removeAll(); localAuditReasons.removeAll()
   }
 }

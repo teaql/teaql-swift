@@ -108,6 +108,11 @@ public struct MutationRequest: Sendable {
   public var mutation: Mutation {
     var value = payload
     value.auditReason = intent.auditReason
+    if value.mutationLineage?.isEmpty != false {
+      value.mutationLineage = [TraceNode(entity: value.entity.name, comment: intent.auditReason,
+        purpose: "", kind: "auditReason", entityID: value.id
+          ?? value.entity.idProperty.flatMap { value.values[$0.name] })]
+    }
     return value
   }
   public func withMutation(_ mutation: Mutation) -> Self { Self(mutation: mutation, intent: intent) }

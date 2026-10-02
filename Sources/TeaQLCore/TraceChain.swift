@@ -8,6 +8,26 @@ public struct TraceIntentFields: Sendable, Equatable {
 }
 
 public enum TraceChain {
+  public static func assignedLineage(_ lineage: [TraceNode], key: EntityKey) -> [TraceNode] {
+    let leaf = lineage.lastIndex { node in
+      node.kind.lowercased() == "auditreason" && node.name == key.entity
+        && (node.entityID == nil || (node.entityID?.int64Value ?? 0) <= 0)
+    }
+    return lineage.enumerated().map { index, node in
+      guard index == leaf else { return node }
+      return TraceNode(entity: node.entity, comment: node.comment, purpose: node.purpose,
+        level: node.level, kind: node.kind, name: node.name, entityID: key.id)
+    }
+  }
+
+  package static func maskLineage(_ lineage: [TraceNode], values: [TeaQLValue]) -> [TraceNode] {
+    lineage.map { node in
+      TraceNode(entity: node.entity, comment: LogPrivacy.scrub(node.comment, values: values),
+        purpose: LogPrivacy.scrub(node.purpose, values: values), level: node.level,
+        kind: node.kind, name: node.name, entityID: node.entityID)
+    }
+  }
+
   private static func isIntent(_ node: TraceNode) -> Bool {
     ["comment", "purpose", "auditreason"].contains(node.kind.lowercased())
   }

@@ -105,17 +105,34 @@ the captured intent.
 Custom graph callbacks must also declare their root reason:
 
 ```swift
-try await context.executeGraphSave(comment: "apply the reviewed order changes") {
-    // Execute the graph's audited mutations here.
+try await context.executeGraphSave(comment: "apply the reviewed order changes") { graphContext, session in
+    // Preflight and execute this graph using graphContext.
+    // Generated child traversal passes session and an immutable parent scope.
 }
 ```
 
 A child's reason cannot fill a missing root reason. Generated
 `.comment(...).purpose(...)` and `.auditAs(...).save(context)` calls keep their
 existing spelling. Regenerate libraries after adopting the changed provider
-SPI; providers must implement `QueryRequest` / `MutationRequest` methods. These
-request guards do not by themselves implement hierarchical per-entity audit
-lineage or defer application audit events until graph commit.
+SPI; providers must implement `QueryRequest` / `MutationRequest` methods.
+
+Each graph invocation owns a `GraphMutationSession`, Checker/Fix clock, policy
+state, callbacks and pending audit events. Context provides an invocation view;
+it does not own a mutable trace stack. Independent nested roots are rejected
+instead of silently joining an existing transaction. Generated traversal shares
+immutable `TraceScopeToken` ancestors, inherits unannotated children, preserves
+local child/deletion reasons and resolves ledger-specific complete chains by
+typed `EntityKey`. SQL paths and structured mutation lineage are separate.
+
+Application audit events are delivered only after graph commit and discarded
+on rollback. `GraphCommittedError.committed` reports a downstream audit delivery
+failure after successful commit; remaining events are still attempted. Do not
+retry that mutation as if it had rolled back. This is not a durable audit outbox.
+
+The local native suite covers the six-item graph, typed identities, assigned
+IDs, concurrent independent graph saves and failure outcomes. Full unchanged
+generated six-entity graph acceptance and internal Registry replay remain open;
+these native tests are not a release or complete conformance claim.
 
 Generated graph saves run Checker/Fix for every reachable mutation, freeze one
 complete `MutationPlan`, and review it before the first provider mutation. An

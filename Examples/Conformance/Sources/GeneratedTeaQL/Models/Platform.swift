@@ -150,7 +150,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
 
 
     public func auditAs(_ reason: String) -> PlatformAudited {
-        PlatformAudited(entity: self, reason: reason)
+        teaqlEntityRoot.setLocalAuditReason(teaqlEntityKey, reason: reason)
+        return PlatformAudited(entity: self, reason: reason)
     }
 
     @discardableResult
@@ -166,21 +167,32 @@ public struct PlatformAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> Platform {
         _ = try MutationIntent(comment: reason)
-        return try await context.executeGraphSave(comment: reason) {
+        return try await context.executeGraphSave(comment: reason) { context, session in
             try teaqlPreflightGraph(context)
-            return try await teaqlSavePreflighted(context)
+            return try await teaqlSavePreflighted(context, session: session,
+                scope: session.scope(key: entity.teaqlEntityKey))
         }
     }
 
     /// Executes a node whose complete aggregate graph was already preflighted
     /// by the public save entry point. Generated cascade code must use this
     /// path so policy review remains a strict preflight-then-mutate sequence.
-    func teaqlSavePreflighted(_ context: UserContext) async throws -> Platform {
-        let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
+    func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
+                            scope: TraceScopeToken) async throws -> Platform {
+        let saved = try await AuditedEntity(entity: entity, reason: reason)
+            .saveInGraph(context, session: session, scope: scope)
+        let activeScope = try scope.assigning(entity.teaqlEntityKey,
+            to: EntityKey(entity: "Platform", id: .int(saved.id)))
         for (index, var child) in entity.workItemList.enumerated() {
             child.teaqlAttachRoot(entity.teaqlEntityRoot)
             child.updatePlatform(saved.id)
-            do { _ = try await child.auditAs(reason).teaqlSavePreflighted(context) }
+            let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
+            let childScope = try session.scope(key: child.teaqlEntityKey,
+                localReason: localReason, parent: activeScope)
+            do {
+                _ = try await WorkItemAudited(entity: child, reason: localReason ?? reason)
+                    .teaqlSavePreflighted(context, session: session, scope: childScope)
+            }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("work_item_list").index(index)
                 throw CheckException(error.violations.map { violation in
@@ -212,7 +224,8 @@ public struct PlatformAudited: Sendable {
         for (index, var child) in entity.workItemList.enumerated() {
             child.teaqlAttachRoot(entity.teaqlEntityRoot)
             child.updatePlatform(entity.teaqlPreflightID)
-            do { try child.auditAs(reason).teaqlPreflightGraph(context) }
+            let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            do { try WorkItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("work_item_list").index(index)
                 throw CheckException(error.violations.map { violation in

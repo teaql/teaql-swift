@@ -197,6 +197,7 @@ enum LogPrivacy {
       tracePath: source.tracePath.map { TraceNode(entity: safeIntent($0.entity), comment: safeIntent($0.comment),
         purpose: safeIntent($0.purpose), level: $0.level, kind: safeIntent($0.kind), name: safeIntent($0.name),
         entityID: $0.entityID) },
+      mutationLineage: TraceChain.maskLineage(source.mutationLineage, values: intentHidden),
       parameterizedSQL: omission == nil ? source.parameterizedSQL : redactedSQL,
       parameters: values, debugSQL: debug, elapsedMicros: source.elapsedMicros,
       resultCount: source.resultCount, affectedRows: source.affectedRows, resultSummary: safeSummary(source.resultSummary),

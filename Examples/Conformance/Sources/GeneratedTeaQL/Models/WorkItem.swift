@@ -180,7 +180,8 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
 
 
     public func auditAs(_ reason: String) -> WorkItemAudited {
-        WorkItemAudited(entity: self, reason: reason)
+        teaqlEntityRoot.setLocalAuditReason(teaqlEntityKey, reason: reason)
+        return WorkItemAudited(entity: self, reason: reason)
     }
 
     @discardableResult
@@ -196,17 +197,22 @@ public struct WorkItemAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> WorkItem {
         _ = try MutationIntent(comment: reason)
-        return try await context.executeGraphSave(comment: reason) {
+        return try await context.executeGraphSave(comment: reason) { context, session in
             try teaqlPreflightGraph(context)
-            return try await teaqlSavePreflighted(context)
+            return try await teaqlSavePreflighted(context, session: session,
+                scope: session.scope(key: entity.teaqlEntityKey))
         }
     }
 
     /// Executes a node whose complete aggregate graph was already preflighted
     /// by the public save entry point. Generated cascade code must use this
     /// path so policy review remains a strict preflight-then-mutate sequence.
-    func teaqlSavePreflighted(_ context: UserContext) async throws -> WorkItem {
-        let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
+    func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
+                            scope: TraceScopeToken) async throws -> WorkItem {
+        let saved = try await AuditedEntity(entity: entity, reason: reason)
+            .saveInGraph(context, session: session, scope: scope)
+        let activeScope = try scope.assigning(entity.teaqlEntityKey,
+            to: EntityKey(entity: "WorkItem", id: .int(saved.id)))
         return saved
     }
 
