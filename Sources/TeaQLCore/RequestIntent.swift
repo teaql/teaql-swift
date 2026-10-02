@@ -68,12 +68,17 @@ public struct MutationIntent: Sendable, Hashable, Codable, CustomStringConvertib
 public struct QueryRequest: Sendable {
   private let payload: SelectQuery
   public let intent: QueryIntent
+  public let originEntity: String
   public init(query: SelectQuery) throws {
     self.init(query: query, intent: try QueryIntent(comment: query.comment, purpose: query.purpose))
   }
   public init(query: SelectQuery, intent: QueryIntent) {
+    self.init(query: query, intent: intent, originEntity: query.entity.name)
+  }
+  private init(query: SelectQuery, intent: QueryIntent, originEntity: String) {
     self.payload = query
     self.intent = intent
+    self.originEntity = originEntity
   }
   public var query: SelectQuery {
     var value = payload
@@ -81,7 +86,9 @@ public struct QueryRequest: Sendable {
     value.purpose = intent.purpose
     return value
   }
-  public func withQuery(_ query: SelectQuery) -> Self { Self(query: query, intent: intent) }
+  public func withQuery(_ query: SelectQuery) -> Self {
+    Self(query: query, intent: intent, originEntity: originEntity)
+  }
 }
 
 /// The root comment is the audit reason; no second required purpose is added.

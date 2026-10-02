@@ -111,10 +111,14 @@ func derivedRelationMasksAncestorIntent(shape: String, failure: Bool) async thro
   #expect(entry.purpose == "why: verify derived query intent")
   #expect(!entries.description.contains("Riverside"))
   #expect(!entries.description.contains("PASSWORD-CANARY"))
-  if shape == "nested" { #expect(entry.comment?.contains("Lakeside") == false) }
+  if shape == "nested" {
+    #expect(entries.allSatisfy { $0.comment?.contains("Lakeside") == false })
+    #expect(entry.comment?.contains("Lakeside") == false)
+  }
   let text = await sink.snapshot().dropFirst(before).joined(separator: "\n")
   #expect(!text.contains("PASSWORD-CANARY"))
   #expect(text.contains("Riverside") == debug)
+  if shape == "nested" { #expect(text.contains("Lakeside") == debug) }
   #expect(text.contains(debug ? "EXPLICIT OPT-IN" : "SAFE"))
   // SQLite binds FK + limit; a window also binds its lower rank bound.
   #expect(entry.parameters.count == (shape == "window" ? 3 : 2))
@@ -131,9 +135,9 @@ func derivedRelationMasksAncestorIntent(shape: String, failure: Bool) async thro
   #expect(await evidence.snapshot().last?.comment == "what: independent Riverside")
 }
 
-// Retain the discovered failing capability probe rather than disguising it as
-// successful masking coverage. RelationQueryPlan currently discards nested loads.
-@Test(.disabled("Nested relation hydration is explicitly unsupported by RelationQueryPlan; separate capability design needed"), arguments: [false, true])
+// Nested plans now execute; inspect every parent/descendant destination, not just
+// the final child, because root prose may mention a child's private binding.
+@Test(arguments: [false, true])
 func nestedRelationMaskingCapability(failure: Bool) async throws {
   try await derivedRelationMasksAncestorIntent(shape: "nested", failure: failure)
 }

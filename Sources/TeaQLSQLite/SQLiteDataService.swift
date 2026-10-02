@@ -48,7 +48,7 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, QueryIntentProvenanceExecutor {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
@@ -207,6 +207,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     catch let failure as SQLExecutionFailure { throw failure.cause }
   }
 
+  package func queryIntentProvenance(_ request: QueryRequest) throws -> SQLExecutionMetadata {
+    let compiled = try compiler.compile(request.query)
+    return SQLExecutionMetadata(operation: .select, parameterizedSQL: compiled.sql,
+      parameters: compiled.parameters, debugSQL: "", elapsedMicros: 0, resultSummary: "",
+      parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL)
+  }
+
   package func executeDiagnosed(_ request: QueryRequest) async throws -> QueryResult {
     let query = request.query
     let compiled = try compiler.compile(query)
@@ -216,13 +223,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     catch {
       throw SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
         operation: .select, comment: query.comment, purpose: query.purpose,
-        tracePath: [
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 0, kind: "operation", name: "query"),
-          TraceNode(entity: query.entity.name, comment: "", purpose: "", level: 1, kind: "request", name: query.entity.name),
-        ] + query.tracePath + [
-          TraceNode(entity: query.entity.name, comment: "", purpose: "", level: query.tracePath.count + 2, kind: "provider", name: "sqlite"),
-          TraceNode(entity: query.entity.name, comment: "", purpose: "", level: query.tracePath.count + 3, kind: "sql", name: "select"),
-        ], parameterizedSQL: compiled.sql, parameters: compiled.parameters, debugSQL: "",
+        tracePath: querySQLTrace(request),
+        parameterizedSQL: compiled.sql, parameters: compiled.parameters, debugSQL: "",
         elapsedMicros: elapsedMicros(since: startedAt), resultSummary: "statement failed; row count unknown",
         parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL,
         executionOutcome: "failure"))
@@ -231,19 +233,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       records: records,
       backend: "sqlite",
       trace: [
-        TraceNode(entity: query.entity.name, comment: query.comment!, purpose: query.purpose!)
+        TraceNode(entity: request.originEntity, comment: request.intent.comment, purpose: request.intent.purpose)
       ],
       metadata: SQLExecutionMetadata(
         operation: .select,
         comment: query.comment,
         purpose: query.purpose,
-        tracePath: [
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 0, kind: "operation", name: "query"),
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 1, kind: "request", name: query.entity.name),
-        ] + query.tracePath + [
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: query.tracePath.count + 2, kind: "provider", name: "sqlite"),
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: query.tracePath.count + 3, kind: "sql", name: "select"),
-        ],
+        tracePath: querySQLTrace(request),
         parameterizedSQL: compiled.sql,
         parameters: compiled.parameters,
         debugSQL: "",
@@ -616,8 +612,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       let intent = try MutationIntent(comment: write.auditReason).readbackIntent()
       let read = SQLExecutionMetadata(operation: .select, comment: intent.comment,
         purpose: intent.purpose, auditReason: write.auditReason,
-        tracePath: write.tracePath + [TraceNode(entity: entity.name, comment: write.auditReason ?? "",
-          purpose: intent.purpose, level: write.tracePath.count, kind: "sql", name: "readback")],
+        tracePath: TraceChain.readback(write.tracePath),
         parameterizedSQL: compiled.sql, parameters: compiled.parameters,
         debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
         resultSummary: resultCount.map { "\($0) rows returned; persisted snapshot rejected" }
@@ -633,12 +628,19 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func mutationSQLTrace(_ mutation: Mutation, operation: String) -> [TraceNode] {
     let reason = mutation.auditReason ?? ""
-    return [
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 0, kind: "operation", name: "mutation"),
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 1, kind: "entity", name: mutation.entity.name),
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 2, kind: "provider", name: "sqlite"),
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 3, kind: "sql", name: operation),
-    ]
+    return TraceChain.canonical([
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", kind: "auditReason"),
+      TraceNode(entity: mutation.entity.name, comment: "", purpose: "", kind: "entity"),
+    ], backend: "sqlite", operation: operation)
+  }
+
+  private func querySQLTrace(_ request: QueryRequest) -> [TraceNode] {
+    // Origin and intent belong to the request, not supplied diagnostic frames.
+    return TraceChain.canonical([
+      TraceNode(entity: request.originEntity, comment: request.intent.comment, purpose: "", kind: "comment"),
+      TraceNode(entity: request.originEntity, comment: request.intent.purpose, purpose: "", kind: "purpose"),
+    ] + request.query.tracePath.filter { $0.kind.lowercased() == "relation" },
+      backend: "sqlite", operation: "select")
   }
 
   private func elapsedMicros(since startedAt: UInt64) -> UInt64 {

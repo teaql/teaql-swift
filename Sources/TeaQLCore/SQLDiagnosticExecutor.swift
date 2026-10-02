@@ -5,6 +5,11 @@ package protocol SQLDiagnosticExecutor: QueryExecutor, MutationExecutor {
   func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult
 }
 
+/// Compile declarations only; never executes SQL or publishes raw provenance.
+package protocol QueryIntentProvenanceExecutor: QueryExecutor {
+  func queryIntentProvenance(_ request: QueryRequest) async throws -> SQLExecutionMetadata
+}
+
 package extension SQLDiagnosticExecutor {
   func executeDiagnosed(_ query: SelectQuery) async throws -> QueryResult {
     try await executeDiagnosed(QueryRequest(query: query))

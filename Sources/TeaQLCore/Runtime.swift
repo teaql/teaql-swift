@@ -852,11 +852,11 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ request: QueryRequest) async throws -> QueryResult {
-    try await execute(request.query, inheritedIntent: nil)
+    try await execute(request, inheritedIntent: nil)
   }
 
-  private func execute(_ query: SelectQuery, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
-    let request = try QueryRequest(query: query)
+  private func execute(_ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
+    let query = request.query
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "query", name: "\(query.entity.name).list",
@@ -878,6 +878,11 @@ public struct UserContext: Sendable {
 
   private func executeQuery(_ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
     let validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
+    // Root prose can mention a masked value bound only by a descendant. Capture
+    // declared bindings before emitting parent logs, without fetching children.
+    let invocationIntent: SQLExecutionMetadata?
+    if let inheritedIntent { invocationIntent = inheritedIntent }
+    else { invocationIntent = try await queryIntentProvenance(request.withQuery(validated)) }
     let idSetPrepared = try await prepareIdSetPagination(validated)
     let prepared = await prepareContinuousPage(idSetPrepared.query)
     var base = prepared.query
@@ -895,12 +900,12 @@ public struct UserContext: Sendable {
     ) {
       do {
         if let diagnosed = queryExecutor as? any SQLDiagnosticExecutor {
-          return try await diagnosed.executeDiagnosed(base)
+          return try await diagnosed.executeDiagnosed(request.withQuery(base))
         }
-        return try await queryExecutor.execute(base)
+        return try await queryExecutor.execute(request.withQuery(base))
       } catch let failure as SQLExecutionFailure {
         for diagnostic in failure.diagnostics {
-          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: inheritedIntent)
+          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: invocationIntent)
           await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: source))
           if querySQLLogEnabled {
             await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
@@ -925,9 +930,9 @@ public struct UserContext: Sendable {
       result = rawResult
     }
     if let metadata = result.metadata {
-      await telemetrySink?.record(LogPrivacy.project(metadata, intentSource: inheritedIntent))
+      await telemetrySink?.record(LogPrivacy.project(metadata, intentSource: invocationIntent))
       if querySQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata,
-        allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: inheritedIntent)) }
+        allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: invocationIntent)) }
     }
     await registerContinuousPage(prepared.execution, rows: result.records)
     var facets: [String: SmartList<TeaQLRecord>] = [:]
@@ -940,7 +945,7 @@ public struct UserContext: Sendable {
       membership.offset = 0
       membership.limit = nil
       membership.projection = [facet.relationName]
-      let membershipRows = try await execute(membership).records
+      let membershipRows = try await execute(request.withQuery(membership), inheritedIntent: invocationIntent).records
       var counts: [TeaQLValue: Int64] = [:]
       for row in membershipRows {
         guard let value = row[facet.relationName], value != .null else { continue }
@@ -950,7 +955,7 @@ public struct UserContext: Sendable {
       var child = facet.query.makeQuery()
       child.comment = validated.comment
       child.purpose = validated.purpose
-      var childRows = try await execute(child).records.map { row in
+      var childRows = try await execute(request.withQuery(child), inheritedIntent: invocationIntent).records.map { row in
         var copy = row
         if let id = row["id"] {
           copy["count"] = .int(counts[normalizedRelationIdentity(id)] ?? 0)
@@ -974,7 +979,7 @@ public struct UserContext: Sendable {
     }
 
     var records = result.records
-    let childIntent = LogPrivacy.inheritIntent(result.metadata, inherited: inheritedIntent)
+    let childIntent = LogPrivacy.inheritIntent(result.metadata, inherited: invocationIntent)
     for aggregate in validated.relationAggregates {
       guard let parentID = validated.entity.idProperty else {
         throw TeaQLError.unknownProperty(entity: validated.entity.name, property: "id")
@@ -983,9 +988,9 @@ public struct UserContext: Sendable {
       guard !parentIDs.isEmpty else { continue }
       var child = aggregate.query.makeQuery()
       child.tracePath = validated.tracePath + [TraceNode(
-        entity: child.entity.name, comment: validated.comment ?? "",
-        purpose: validated.purpose ?? "", level: validated.tracePath.count + 2,
-        kind: "relation", name: "\(validated.entity.name).\(aggregate.relationName)")]
+        entity: child.entity.name, comment: "\(validated.entity.name).\(aggregate.relationName)",
+        purpose: "", level: validated.tracePath.count + 2,
+        kind: "relation", name: aggregate.relationName)]
       guard let foreignKey = child.entity.property(named: aggregate.foreignKey) else {
         throw TeaQLError.unknownProperty(
           entity: child.entity.name, property: aggregate.foreignKey)
@@ -1005,7 +1010,7 @@ public struct UserContext: Sendable {
       child.purpose = validated.purpose
       let membership = TeaQLExpression.inList(foreignKey.name, parentIDs)
       child.filter = child.filter.map { .and([$0, membership]) } ?? membership
-      let rows = try await execute(child, inheritedIntent: childIntent).records
+      let rows = try await execute(request.withQuery(child), inheritedIntent: childIntent).records
       let pairs: [(TeaQLValue, TeaQLValue)] = rows.compactMap { row in
         guard let key = row[foreignKey.name], let value = row[valueAlias] else { return nil }
         return (normalizedRelationIdentity(key), value)
@@ -1046,9 +1051,9 @@ public struct UserContext: Sendable {
         guard !localValues.isEmpty else { return }
         var child = relation.query.makeQuery()
         child.tracePath = validated.tracePath + [TraceNode(
-          entity: child.entity.name, comment: validated.comment ?? "",
-          purpose: validated.purpose ?? "", level: validated.tracePath.count + 2,
-          kind: "relation", name: "\(validated.entity.name).\(relation.name)")]
+          entity: child.entity.name, comment: "\(validated.entity.name).\(relation.name)",
+          purpose: "", level: validated.tracePath.count + 2,
+          kind: "relation", name: relation.name)]
         // Relation assembly groups child rows by the foreign key. A generated
         // child projection may select only business fields, so the runtime must
         // retain this structural key even when the caller did not request it.
@@ -1073,13 +1078,13 @@ public struct UserContext: Sendable {
             probe.partitionBy = nil
             let join = TeaQLExpression.equal(relation.foreignKey, localValue)
             probe.filter = probe.filter.map { .and([$0, join]) } ?? join
-            children.append(contentsOf: try await execute(probe, inheritedIntent: childIntent).records)
+            children.append(contentsOf: try await execute(request.withQuery(probe), inheritedIntent: childIntent).records)
           }
         } else {
           if child.limit != nil { child.partitionBy = relation.foreignKey }
           let join = TeaQLExpression.inList(relation.foreignKey, localValues)
           child.filter = child.filter.map { .and([$0, join]) } ?? join
-          children = try await execute(child, inheritedIntent: childIntent).records
+          children = try await execute(request.withQuery(child), inheritedIntent: childIntent).records
         }
         let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
         for index in records.indices {
@@ -1093,6 +1098,20 @@ public struct UserContext: Sendable {
     return QueryResult(
       records: records, backend: result.backend, trace: result.trace,
       metadata: result.metadata, facets: facets)
+  }
+
+  private func queryIntentProvenance(_ request: QueryRequest) async throws -> SQLExecutionMetadata? {
+    guard let provider = queryExecutor as? any QueryIntentProvenanceExecutor else { return nil }
+    var source: SQLExecutionMetadata? = try await provider.queryIntentProvenance(request)
+    let query = request.query
+    let children = query.relations.map { $0.query.makeQuery() }
+      + query.relationAggregates.map { $0.query.makeQuery() }
+      + query.facets.map { $0.query.makeQuery() }
+    for child in children {
+      source = LogPrivacy.inheritIntent(
+        try await queryIntentProvenance(request.withQuery(child)), inherited: source)
+    }
+    return source
   }
 
   private func prepareIdSetPagination(
@@ -1250,7 +1269,7 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await queryExecutor.count(validated)
+      try await queryExecutor.count(request.withQuery(validated))
     }
   }
 

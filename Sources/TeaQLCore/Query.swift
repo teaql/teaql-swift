@@ -90,8 +90,8 @@ public struct RelationAggregateLoad: Sendable, Hashable, Codable {
   }
 }
 
-/// A non-recursive child-query snapshot. Runtime hydration deliberately loads
-/// one relation level per plan so SelectQuery remains a value type.
+/// An owned child-query snapshot. Arrays break the recursive value layout while
+/// preserving nested loading plans; no ambient Context graph is retained.
 public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let entity: EntityDescriptor
   public let filter: TeaQLExpression?
@@ -104,6 +104,9 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let aggregates: [QueryAggregate]
   public let partitionBy: String?
   public let topNProbeParentThreshold: Int?
+  private let relations: [RelationLoad]?
+  private let relationAggregates: [RelationAggregateLoad]?
+  private let facets: [FacetRequest]?
 
   public init(_ query: SelectQuery) {
     entity = query.entity
@@ -117,6 +120,9 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     aggregates = query.aggregates
     partitionBy = query.partitionBy
     topNProbeParentThreshold = query.topNProbeParentThreshold
+    relations = query.relations
+    relationAggregates = query.relationAggregates
+    facets = query.facets
   }
 
   public func makeQuery() -> SelectQuery {
@@ -131,6 +137,9 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.aggregates = aggregates
     query.partitionBy = partitionBy
     query.topNProbeParentThreshold = topNProbeParentThreshold
+    query.relations = relations ?? []
+    query.relationAggregates = relationAggregates ?? []
+    query.facets = facets ?? []
     return query
   }
 }
@@ -310,10 +319,12 @@ public struct TraceNode: Sendable, Hashable, Codable {
   public let entity: String
   public let comment: String
   public let purpose: String
+  public let entityID: TeaQLValue?
 
   public init(
     entity: String, comment: String, purpose: String,
-    level: Int = 0, kind: String = "request", name: String? = nil
+    level: Int = 0, kind: String = "request", name: String? = nil,
+    entityID: TeaQLValue? = nil
   ) {
     self.level = level
     self.kind = kind
@@ -321,5 +332,6 @@ public struct TraceNode: Sendable, Hashable, Codable {
     self.entity = entity
     self.comment = comment
     self.purpose = purpose
+    self.entityID = entityID
   }
 }
