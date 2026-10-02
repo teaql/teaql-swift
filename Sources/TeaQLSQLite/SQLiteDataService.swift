@@ -48,7 +48,7 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, QueryIntentProvenanceExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
@@ -233,20 +233,36 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   public func count(_ request: QueryRequest) async throws -> Int {
+    do { return try await countDiagnosed(request).count }
+    catch let failure as SQLExecutionFailure { throw failure.cause }
+  }
+
+  package func countDiagnosed(_ request: QueryRequest) async throws -> SQLCountResult {
     let query = request.query
     let compiled = try compiler.compileCount(query)
-    var prepared: OpaquePointer?
-    guard sqlite3_prepare_v2(database, compiled.sql, -1, &prepared, nil) == SQLITE_OK,
-      let statement = prepared
-    else {
-      throw currentError(sql: compiled.sql)
+    let startedAt = DispatchTime.now().uptimeNanoseconds
+    func metadata(count: Int? = nil) -> SQLExecutionMetadata {
+      SQLExecutionMetadata(operation: .select, comment: query.comment, purpose: query.purpose,
+        tracePath: querySQLTrace(request), parameterizedSQL: compiled.sql,
+        parameters: compiled.parameters, debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt),
+        resultCount: count == nil ? nil : 1,
+        resultSummary: count.map { "\($0) records counted" } ?? "statement failed; count unknown",
+        parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL,
+        executionOutcome: count == nil ? "failure" : "success")
     }
-    defer { sqlite3_finalize(statement) }
-    try bind(compiled.parameters, to: statement)
-    guard sqlite3_step(statement) == SQLITE_ROW else {
-      throw currentError(sql: compiled.sql)
+    do {
+      var prepared: OpaquePointer?
+      guard sqlite3_prepare_v2(database, compiled.sql, -1, &prepared, nil) == SQLITE_OK,
+        let statement = prepared
+      else { throw currentError(sql: compiled.sql) }
+      defer { sqlite3_finalize(statement) }
+      try bind(compiled.parameters, to: statement)
+      guard sqlite3_step(statement) == SQLITE_ROW else { throw currentError(sql: compiled.sql) }
+      let count = Int(sqlite3_column_int64(statement, 0))
+      return SQLCountResult(count: count, metadata: metadata(count: count))
+    } catch {
+      throw SQLExecutionFailure(cause: error, metadata: metadata())
     }
-    return Int(sqlite3_column_int64(statement, 0))
   }
 
   public func execute(_ request: MutationRequest) async throws -> MutationResult {

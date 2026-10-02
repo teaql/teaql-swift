@@ -5,6 +5,19 @@ package protocol SQLDiagnosticExecutor: QueryExecutor, MutationExecutor {
   func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult
 }
 
+/// Exact-count diagnostics stay inside the package, like query/mutation handoff.
+package protocol SQLCountDiagnosticExecutor: QueryExecutor {
+  func countDiagnosed(_ request: QueryRequest) async throws -> SQLCountResult
+}
+
+package struct SQLCountResult: Sendable {
+  package let count: Int
+  package let metadata: SQLExecutionMetadata
+  package init(count: Int, metadata: SQLExecutionMetadata) {
+    self.count = count; self.metadata = metadata
+  }
+}
+
 /// Compile declarations only; never executes SQL or publishes raw provenance.
 package protocol QueryIntentProvenanceExecutor: QueryExecutor {
   func queryIntentProvenance(_ request: QueryRequest) async throws -> SQLExecutionMetadata

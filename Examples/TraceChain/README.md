@@ -39,6 +39,8 @@ No public package is claimed to contain these changes.
 | Scoped child adoption | Only the reached changed child is imported and written; foreign-root and sibling pending values remain in their original ledger, and Q/E verifies the changed FK |
 | Clean ancestors | Saving a clean parent writes only its changed descendant; its root reason is retained in the child lineage, while the parent version remains unchanged |
 | Mixed loaded versions | Two independently loaded versions of one child reject before business SQL, committed audit or policy review; both pending values survive |
+| Generated paginated graphs | Offset 1 / limit 2 returns two independent roots with versions 2/1 from a three-root filtered set; saving one leaves the other's changes pending and unpersisted |
+| Pagination and descendant lineage | Row, forward/reverse relation and exact-count SQL inherit one page comment/purpose; a clean paginated parent saves only its changed child with root/local responsibility |
 | Actual child SQL failure | Duplicate Payment ID raises SQLite UNIQUE; preceding parent statement remains successful, failed child retains lineage, graph rolls back and emits no committed audit |
 | Rejected write readback | A test-only SQLite trigger removes the inserted Payment; two writes succeed but a zero-row SELECT fails persisted-snapshot acceptance; both write paths and a separate SELECT survive, while the graph rolls back |
 
@@ -73,6 +75,16 @@ no pending mutations. Swift value-copy access cannot modify its immutable stored
 record. Generated scalar and Q/E APIs remain unchanged. Independent transactions
 serialize at the existing Context gate; this is not parallel SQLite writers.
 
+`PaginationProofs.swift` uses current list-page Assist and generated Q/E/save.
+Its four `PAGE_OBSERVED` records retain real physical SQL (including COUNT),
+mutation commands, reviewed plans and committed audits. SQLite's current
+AlwaysProbe policy emits one row SELECT, two bounded Platform probes, two child
+probes and one exact-count SELECT for the initial page. Sharing immutable loaded
+records is not a promise to deduplicate physical relation queries. The count
+uses the full active filter without the page's offset/limit. Native SQLite
+tests also retain count failure diagnostics, descendant-value redaction and
+isolation of redaction provenance between independent requests.
+
 ## Producer and API discovery
 
 The original model, generated application `AGENTS.md`, evaluation and only the
@@ -84,6 +96,8 @@ local source. Never patch `Generated/Sources` to repair a test.
 ## Remaining scope
 
 This is local generated acceptance, not immutable Registry consumer replay.
+Generated list and page ownership have executed coverage; stream ownership is
+not proved by the page test.
 Prepared batches, all low-level/request-decoding entry points, complete privacy
 coverage, persisted audit-row privacy/lineage, successful-readback diagnostic
 events, cancellation and independent-Context/shared-provider coordination still

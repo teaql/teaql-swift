@@ -1215,6 +1215,8 @@ public struct UserContext: Sendable {
 
   public func count(_ request: QueryRequest) async throws -> Int {
     var validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
+    // Count strips eager loads, not the original invocation's redaction sources.
+    let invocationIntent = try await queryIntentProvenance(request.withQuery(validated))
     validated.orderBy = []
     validated.offset = 0
     validated.limit = nil
@@ -1231,7 +1233,28 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await queryExecutor.count(request.withQuery(validated))
+      if let diagnosed = queryExecutor as? any SQLCountDiagnosticExecutor {
+        do {
+          let result = try await diagnosed.countDiagnosed(request.withQuery(validated))
+          await telemetrySink?.record(LogPrivacy.project(result.metadata, intentSource: invocationIntent))
+          if querySQLLogEnabled {
+            await diagnosticSQLLogSink?.write(LogPrivacy.project(result.metadata,
+              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: invocationIntent))
+          }
+          return result.count
+        } catch let failure as SQLExecutionFailure {
+          for diagnostic in failure.diagnostics {
+            let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: invocationIntent)
+            await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: source))
+            if querySQLLogEnabled {
+              await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
+                allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source))
+            }
+          }
+          throw failure.cause
+        }
+      }
+      return try await queryExecutor.count(request.withQuery(validated))
     }
   }
 

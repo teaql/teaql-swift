@@ -138,6 +138,15 @@ mixed-version rejection before business SQL. Actual commands, SQL, audits and
 reviewed Mutation Policy operations are observed. All examples must pass through
 `scripts/verify-examples.sh`; Registry replay remains a separate release gate.
 
+Generated pages retain an independent mutation ledger per root, including
+eagerly loaded children and shared immutable references. The Trace Chain example
+checks a nonzero offset, exact filtered total, deferred saves of separate roots,
+and a changed child under a clean parent. Exact-count SELECTs keep the originating
+comment/purpose, canonical SQL path and safe expanded SQL on success or failure.
+Disabling query text logs does not disable intent validation or captured telemetry.
+Provider diagnostic handoff remains package-only; custom executors are not given
+fabricated SQL metadata.
+
 One generated query may share a `LoadedEntitySnapshot`, never a mutable ledger.
 The query-scoped pool reuses only equal records with equal typed identities and
 versions. Partial entity projections retain ID/version and relation assembly
