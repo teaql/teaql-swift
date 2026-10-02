@@ -18,6 +18,14 @@ private actor FailingOnceGraphAudit: AuditSink {
   func count() -> Int { attempts }
 }
 
+private final class GraphCompletionProbe: @unchecked Sendable {
+  private let lock = NSLock()
+  private var successfulCallbacks = 0, rollbacks = 0
+  func completed() { lock.withLock { successfulCallbacks += 1 } }
+  func rolledBack() { lock.withLock { rollbacks += 1 } }
+  func counts() -> (completed: Int, rolledBack: Int) { lock.withLock { (successfulCallbacks, rollbacks) } }
+}
+
 @Test
 func swiftGraphRollbackDoesNotEmitCommittedAudits() async throws {
   let root = EntityDescriptor(name: "CustomerOrder", table: "rollback_order", properties: [
@@ -222,4 +230,42 @@ func swiftPostcommitAuditFailureKeepsCommittedDataAndAttemptsRemainingEvents() a
     _ = try await context.execute(Mutation(kind: .create, entity: entity,
       values: ["id": .int(3)], auditReason: "submit next order"))
   }
+}
+
+@Test
+func swiftPostcommitCleanupFailureKeepsDataAndAttemptsOtherCallbacksAndAudit() async throws {
+  let entity = EntityDescriptor(name: "CustomerOrder", table: "cleanup_failure_order", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let service = try SQLiteDataService(path: FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-cleanup-failure-\(UUID()).sqlite").path)
+  let audit = CommittedGraphAudit(), probe = GraphCompletionProbe()
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 }, auditSink: audit,
+    diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }))
+  try await context.ensureSchema(RuntimeModule(name: "cleanup failure", entities: [entity]))
+  do {
+    try await context.executeGraphSave(comment: "submit first order") { context, session in
+      try session.afterCommit { throw TeaQLError.execution("injected ledger cleanup failure") }
+      try session.afterCommit { probe.completed() }
+      try session.afterRollback { probe.rolledBack() }
+      _ = try await context.execute(Mutation(kind: .create, entity: entity,
+        values: ["id": .int(1)], auditReason: "submit first order"))
+    }
+    Issue.record("cleanup failure must report committed state")
+  } catch let failure as GraphCommittedError {
+    #expect(failure.committed && failure.causes.count == 1)
+  }
+  #expect(probe.counts().completed == 1 && probe.counts().rolledBack == 0)
+  #expect(await audit.snapshot().count == 1)
+  var query = SelectQuery(entity: entity); query.limit = 2
+  query.comment = "inspect cleanup failure"; query.purpose = "verify committed write is not replayed"
+  #expect(try await context.execute(query).records.count == 1)
+  try await context.executeGraphSave(comment: "submit independent order") { context, _ in
+    _ = try await context.execute(Mutation(kind: .create, entity: entity,
+      values: ["id": .int(2)], auditReason: "submit independent order"))
+  }
+  #expect(try await context.execute(query).records.count == 2)
+  #expect(await audit.snapshot().count == 2)
 }

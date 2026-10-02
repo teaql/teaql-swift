@@ -1,38 +1,52 @@
 <!-- ephemeral -->
+# Swift Assist — Expression `Order Item`
 
-# Swift Assist — Soft delete `Order Item`
-
-Load the current generated value so its stored ID and original optimistic
-version participate in deletion. Never construct a mutation or physically
-delete a row.
+The generated E facade preserves Value, loaded Null, and NotLoaded. `eval()`
+returns a native optional for the first two and throws `TeaQLNotLoadedError` for
+the third. `orElse` applies only to loaded Null and never hides NotLoaded.
 
 ```swift
+import Foundation
 import TeaQLCore
 
-public func deleteOrderItem(
-    _ context: UserContext,
-    entityId: Int64
-) async throws -> Bool {
-    guard var entity = try await Q.orderItems()
-        .withIdIs(entityId)
-        .comment("what: load current Order Item for soft delete")
-        .purpose("why: preserve original version and authorize deletion")
-        .executeForList(context)
-        .first
-    else { return false }
-
-    entity.markForDeletion()
-    _ = try await entity
-        .auditAs("business reason: soft delete authorized Order Item")
-        .save(context)
-    return true
+public func extractOrderItemId(_ entity: OrderItem) throws -> Int64? {
+    try E.orderItem(entity).id().eval()
 }
+
+public func extractOrderItemIdOrElse(_ entity: OrderItem, fallback: Int64) throws -> Int64 {
+    try E.orderItem(entity).id().orElse(fallback)
+}
+
+public func extractOrderItemName(_ entity: OrderItem) throws -> String? {
+    try E.orderItem(entity).name().eval()
+}
+
+public func extractOrderItemNameOrElse(_ entity: OrderItem, fallback: String) throws -> String {
+    try E.orderItem(entity).name().orElse(fallback)
+}
+
+public func extractOrderItemVersion(_ entity: OrderItem) throws -> Int64? {
+    try E.orderItem(entity).version().eval()
+}
+
+public func extractOrderItemVersionOrElse(_ entity: OrderItem, fallback: Int64) throws -> Int64 {
+    try E.orderItem(entity).version().orElse(fallback)
+}
+
+public func extractOrderItemCustomerOrderId(_ entity: OrderItem) throws -> Int64? {
+    try E.orderItem(entity).customerOrderId().eval()
+}
+
+public func traverseOrderItemCustomerOrder(_ entity: OrderItem) throws -> CustomerOrder? {
+    try E.orderItem(entity).customerOrder().eval()
+}
+
+
 ```
 
-Compile and execute this source unchanged. Prove normal queries hide the row,
-`deletedRowsOnly()` retains it with a negative version, an independently loaded
-stale copy conflicts, missing rows return false, and missing/blank audit or
-invented physical-delete APIs fail.
+Select every traversed field and relation. Never catch `TeaQLNotLoadedError`
+merely to supply a default, and never replace generated E accessors with
+optional chaining.
 
 ---
 
@@ -64,9 +78,9 @@ model-aware Assist. Do not inspect generated domain-library source.
   stop and report LARGE_REWRITE_REQUEST with the file, exact diagnostic, reason, and
   estimated scope. Initial creation and model-driven regeneration are not repairs.
 
-Capability: `delete`.
+Capability: `expression`.
 
-- Load the policy-scoped current entity, mark it for deletion, then use audited
-  save with the same UserContext. Do not invent a physical-delete API.
-- Require an audit reason and optimistic version. Test missing audit and stale
-  version as explicit failures.
+- Distinguish a loaded null from a field or relation that was not projected. A
+  NotLoaded/coding error must remain visible; do not turn it into an ordinary null.
+- Select every traversed relation first and use the generated E/expression API for
+  scalar, object, and list traversal. Do not translate Java accessor names by guess.

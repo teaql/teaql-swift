@@ -11,6 +11,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public var platformEntity: Platform?
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
+    public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -45,7 +46,14 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
+        try from(record: record, root: EntityRoot())
+    }
+
+    public static func from(record: TeaQLRecord, root: EntityRoot,
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
         var entity = Self()
+        // Discard the constructor's new-entity ledger during hydration.
+        entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -57,10 +65,15 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
         if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.teaqlLedgerID = entity.id
+        try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
+        entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
+            version: entity.version, record: record)
         if let relationValue = record["platformEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.platformEntity = try Platform.from(record: relatedRecord)
+                entity.platformEntity = try Platform.from(record: relatedRecord,
+                    root: EntityRoot(), snapshots: snapshots)
             case .null:
                 entity.platformEntity = nil
             default:
@@ -68,22 +81,14 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
             }
             entity._loadedFields.insert("platformEntity")
         }
-        let temporaryKey = entity.teaqlEntityKey
-        entity.teaqlLedgerID = entity.id
-        entity.teaqlEntityRoot.rekey(temporaryKey, to: entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.markAsPersisted(entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         return entity
     }
 
-    public static func from(record: TeaQLRecord, root: EntityRoot) throws -> Self {
-        var entity = try from(record: record)
-        entity.teaqlAttachRoot(root)
-        return entity
-    }
-
-    public mutating func teaqlAttachRoot(_ root: EntityRoot) {
-        if teaqlEntityRoot !== root { root.merge(from: teaqlEntityRoot); teaqlEntityRoot = root }
+    public mutating func teaqlAttachRoot(_ root: EntityRoot) throws {
+        if teaqlEntityRoot !== root && teaqlEntityRoot.hasPending(teaqlEntityKey) {
+            try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
+            teaqlEntityRoot = root
+        }
     }
 
     public func toRecord() -> TeaQLRecord {
@@ -120,11 +125,11 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
 
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.
-    mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) {
+    mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
         id = value
         _loadedFields.insert("id")
-        teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -211,13 +216,11 @@ public struct WorkItemAudited: Sendable {
                             scope: TraceScopeToken) async throws -> WorkItem {
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
-        let activeScope = try scope.assigning(entity.teaqlEntityKey,
-            to: EntityKey(entity: "WorkItem", id: .int(saved.id)))
         return saved
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.id != 0 {
+        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

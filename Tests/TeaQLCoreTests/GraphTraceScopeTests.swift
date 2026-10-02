@@ -85,7 +85,7 @@ final class GraphTraceScopeTests: XCTestCase {
     let orderScope = try TraceScopeToken(key: order, reason: "submit order")
     let paymentScope = try TraceScopeToken(parent: orderScope, key: payment, reason: "authorize payment")
     ledger.setTraceChain(payment, chain: paymentScope.recover())
-    ledger.rekey(order, to: EntityKey(entity: "CustomerOrder", id: .int(100)))
+    try ledger.rekey(order, to: EntityKey(entity: "CustomerOrder", id: .int(100)))
     let output = ledger.traceChain(payment, fallback: paymentScope)
     XCTAssertEqual(output.map(\.entityID), [.int(100), .int(-1)])
     XCTAssertEqual(output.map(\.name), ["CustomerOrder", "Payment"])

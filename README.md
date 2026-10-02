@@ -43,8 +43,6 @@ Requirements: Swift 6 and SQLite development headers (`libsqlite3-dev` on Ubuntu
 
 ```swift
 let database = try SQLiteDataService(path: "app.sqlite")
-try await context.ensureSchema(RuntimeModule(
-  name: "OrderManagement", entities: [CustomerOrder.descriptor]))
 
 let context = UserContext(
     actor: "current-user",
@@ -57,6 +55,8 @@ let context = UserContext(
     mutationPolicyRegistry: mutationPolicyRegistry,
     mutationPolicyApprovalProvider: approvalProvider
 )
+try await context.ensureSchema(RuntimeModule(
+  name: "OrderManagement", entities: [CustomerOrder.descriptor]))
 
 let orders = try await Q.customerOrders()
     .withOrderNumberContaining("SWIFT")
@@ -125,14 +125,26 @@ local child/deletion reasons and resolves ledger-specific complete chains by
 typed `EntityKey`. SQL paths and structured mutation lineage are separate.
 
 Application audit events are delivered only after graph commit and discarded
-on rollback. `GraphCommittedError.committed` reports a downstream audit delivery
-failure after successful commit; remaining events are still attempted. Do not
+on rollback. `GraphCommittedError.committed` reports a cleanup callback or audit
+delivery failure after successful commit; remaining callbacks and events are
+still attempted, and the transaction gate is released. Do not
 retry that mutation as if it had rolled back. This is not a durable audit outbox.
 
-The local native suite covers the six-item graph, typed identities, assigned
-IDs, concurrent independent graph saves and failure outcomes. Full unchanged
-generated six-entity graph acceptance and internal Registry replay remain open;
-these native tests are not a release or complete conformance claim.
+The [generated Trace Chain example](Examples/TraceChain/README.md) runs the
+six-item graph, typed identities, assigned IDs, concurrent graph saves and real
+SQLite failures. It also proves pointer-shared immutable Platform snapshots with
+independent ledgers, reached-key imports, clean-parent/changed-child saves and
+mixed-version rejection before business SQL. Actual commands, SQL, audits and
+reviewed Mutation Policy operations are observed. All examples must pass through
+`scripts/verify-examples.sh`; Registry replay remains a separate release gate.
+
+One generated query may share a `LoadedEntitySnapshot`, never a mutable ledger.
+The query-scoped pool reuses only equal records with equal typed identities and
+versions. Partial entity projections retain ID/version and relation assembly
+keys; aggregates are not expanded. Loaded-version registration, merge and rekey
+throw on conflicting versions instead of overwriting pending state. Custom code
+using these lower-level methods must handle that error with `try`. A committed
+version can advance only after its pending state has been cleared.
 
 Generated graph saves run Checker/Fix for every reachable mutation, freeze one
 complete `MutationPlan`, and review it before the first provider mutation. An

@@ -1024,9 +1024,9 @@ public extension PlatformRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<Platform> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try Platform.from(record: $0, root: queryRoot) },
+            try result.records.map { try Platform.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             facets: result.facets)
     }
 
@@ -1051,9 +1051,9 @@ public extension PlatformRequest where State == RequestExecutable {
         } else {
             total = try await context.count(QueryRequest(query: pageQuery))
         }
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try Platform.from(record: $0, root: queryRoot) },
+            try result.records.map { try Platform.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

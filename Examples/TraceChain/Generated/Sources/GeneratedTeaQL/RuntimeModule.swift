@@ -139,7 +139,7 @@ public enum GeneratedRuntimeModule {
         var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
             var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
-            created.teaqlInitializeGeneratedBootstrapId(1)
+            try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Trace Chain Verification")
             do { domainRoot = try await created.auditAs("create generated Domain Root Platform").save(bootstrapContext) }
             catch { domainRoot = try await Q.platforms().withIdIs(1).comment("what: recover concurrent Domain Root bootstrap").purpose("why: make bootstrap idempotent").executeForList(bootstrapContext).first; if domainRoot == nil { throw error } }

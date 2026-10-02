@@ -140,7 +140,7 @@ public enum GeneratedRuntimeModule {
         var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
             var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
-            created.teaqlInitializeGeneratedBootstrapId(1)
+            try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Campus Learning Platform")
             created.updateBaseUrl("https://campus.example.com")
             do { domainRoot = try await created.auditAs("create generated Domain Root Platform").save(bootstrapContext) }
@@ -151,7 +151,7 @@ public enum GeneratedRuntimeModule {
         var constantSchoolType1001 = try await Q.schoolTypes().withIdIs(1001).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantSchoolType1001 == nil {
             var created = try Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
-            created.teaqlInitializeGeneratedBootstrapId(1001)
+            try created.teaqlInitializeGeneratedBootstrapId(1001)
             created.updatePlatform(domainRoot.id)
             created.updateName("Primary")
             created.updateCode("PRIMARY")
@@ -182,7 +182,7 @@ public enum GeneratedRuntimeModule {
         var constantSchoolType1002 = try await Q.schoolTypes().withIdIs(1002).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantSchoolType1002 == nil {
             var created = try Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
-            created.teaqlInitializeGeneratedBootstrapId(1002)
+            try created.teaqlInitializeGeneratedBootstrapId(1002)
             created.updatePlatform(domainRoot.id)
             created.updateName("Secondary")
             created.updateCode("SECONDARY")

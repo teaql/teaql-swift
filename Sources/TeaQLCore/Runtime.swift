@@ -308,6 +308,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   /// the first mutation of the graph is sent to the provider.
   public func preflight(_ context: UserContext) throws {
     let rooted = entity as? any TeaQLMutationRootedEntity
+    if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return }
     _ = try context.preflightMutation(
       makeMutation(rooted: rooted),
       ledgerRoot: rooted?.teaqlEntityRoot,
@@ -320,6 +321,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
                           scope: TraceScopeToken) async throws -> Entity {
     try context.requireGraphSession(session)
     let rooted = entity as? any TeaQLMutationRootedEntity
+    if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return entity }
     var mutation = try makeMutation(rooted: rooted)
     mutation.auditReason = session.intent.auditReason
     mutation.mutationLineage = rooted.map { $0.teaqlEntityRoot.traceChain($0.teaqlEntityKey, fallback: scope) }
@@ -331,9 +333,9 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
       let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
       let root = rooted.teaqlEntityRoot
       try session.afterCommit {
-        root.rekey(originalKey, to: savedKey)
+        try root.rekey(originalKey, to: savedKey)
         root.clearEntity(savedKey)
-        root.setOriginalVersion(savedKey, version: saved.version)
+        try root.acceptCommittedVersion(savedKey, version: saved.version)
       }
     }
     return saved
@@ -341,6 +343,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
 
   private func makeMutation(rooted: (any TeaQLMutationRootedEntity)?) throws -> Mutation {
     var values = entity.toMutationRecord()
+    let originalVersion = rooted.flatMap { $0.teaqlEntityRoot.originalVersion($0.teaqlEntityKey) } ?? entity.version
     if let rooted {
       if entity.id != 0 {
         let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
@@ -356,7 +359,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         kind: .delete,
         entity: Entity.descriptor,
         id: .int(entity.id),
-        expectedVersion: entity.version,
+        expectedVersion: originalVersion,
         auditReason: reason
       )
     } else if entity.version == 0 {
@@ -380,7 +383,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         entity: Entity.descriptor,
         id: .int(entity.id),
         values: values,
-        expectedVersion: entity.version,
+        expectedVersion: originalVersion,
         auditReason: reason
       )
     }
@@ -693,18 +696,21 @@ public struct UserContext: Sendable {
       policy.endGraph()
       let (actions, _, evidence) = session.finish(committed: false)
       retainedEvidence = evidence
-      actions.forEach { $0() }
+      for action in actions { try? action() }
       mutationPolicyCoordinator.retain(policy.lastSnapshot)
       throw error
     }
     let (actions, events, evidence) = session.finish(committed: true)
     retainedEvidence = evidence
-    actions.forEach { $0() }
+    var deliveryFailures: [any Error] = []
+    for action in actions {
+      do { try action() }
+      catch { deliveryFailures.append(error) }
+    }
     mutationPolicyCoordinator.retain(policy.lastSnapshot)
     graphTransactionGate.release(evidence: retainedEvidence)
     gateReleased = true
     // Commit already succeeded: a sink failure must never trigger rollback.
-    var deliveryFailures: [any Error] = []
     for event in events {
       do { try await auditSink?.record(event) }
       catch { deliveryFailures.append(error) }

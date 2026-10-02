@@ -131,7 +131,7 @@ public struct PaymentRequest<State: Sendable>: Sendable {
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("customerOrder") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customerOrder") {
             copy.query.projection.append("customerOrder")
         }
         copy.query.relationQuery(
@@ -580,9 +580,9 @@ public extension PaymentRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<Payment> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try Payment.from(record: $0, root: queryRoot) },
+            try result.records.map { try Payment.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             facets: result.facets)
     }
 
@@ -607,9 +607,9 @@ public extension PaymentRequest where State == RequestExecutable {
         } else {
             total = try await context.count(QueryRequest(query: pageQuery))
         }
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try Payment.from(record: $0, root: queryRoot) },
+            try result.records.map { try Payment.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

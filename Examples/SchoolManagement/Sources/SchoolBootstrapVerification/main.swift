@@ -13,10 +13,10 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     let executionKey = EntityKey(entity: "InferenceExecution", id: .int(1))
     let targetLedger = EntityRoot()
     let sourceLedger = EntityRoot()
-    targetLedger.setOriginalVersion(orderKey, version: 3)
-    sourceLedger.setOriginalVersion(executionKey, version: 9)
+    try targetLedger.setOriginalVersion(orderKey, version: 3)
+    try sourceLedger.setOriginalVersion(executionKey, version: 9)
     sourceLedger.set(executionKey, field: "execution_status", value: .string("COMPLETED"))
-    targetLedger.merge(from: sourceLedger)
+    try targetLedger.merge(from: sourceLedger)
     try require(targetLedger.originalVersion(orderKey) == 3, "Order#1 version was overwritten")
     try require(targetLedger.originalVersion(executionKey) == 9,
                 "InferenceExecution#1 version was resolved through Order#1")

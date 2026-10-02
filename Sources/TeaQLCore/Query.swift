@@ -234,7 +234,17 @@ public struct SelectQuery: Sendable, Hashable, Codable {
       }
     }
     guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }
-    return self
+    var validated = self
+    // Entity projections preserve persistence identity and relation assembly
+    // keys. Aggregate/group results are not entity rows and must stay unchanged.
+    if !validated.projection.isEmpty && aggregates.isEmpty && groupBy.isEmpty {
+      let structural = entity.properties.filter { $0.isID || $0.isVersion }.map(\.name)
+        + relations.map(\.localKey)
+      for field in structural where !validated.projection.contains(field) {
+        validated.projection.append(field)
+      }
+    }
+    return validated
   }
 }
 

@@ -35,6 +35,10 @@ No public package is claimed to contain these changes.
 | Ledger replacement | A typed per-Payment complete chain replaces graph fallback, rather than concatenating the two |
 | Same numeric ID | CustomerOrder and Payment keep distinct versions 2/1, update successfully, and retain their own typed lineages |
 | Concurrent graphs | Overlapping Tasks reuse one Context while its provider serializes transactions; graph reasons do not cross branches |
+| Shared read-only references | One bounded two-root Q query shares an actual immutable Platform snapshot reference while root and forward-reference wrappers retain independent mutation ledgers; two overlapping saves issue only two root UPDATEs using versions 2/1 |
+| Scoped child adoption | Only the reached changed child is imported and written; foreign-root and sibling pending values remain in their original ledger, and Q/E verifies the changed FK |
+| Clean ancestors | Saving a clean parent writes only its changed descendant; its root reason is retained in the child lineage, while the parent version remains unchanged |
+| Mixed loaded versions | Two independently loaded versions of one child reject before business SQL, committed audit or policy review; both pending values survive |
 | Actual child SQL failure | Duplicate Payment ID raises SQLite UNIQUE; preceding parent statement remains successful, failed child retains lineage, graph rolls back and emits no committed audit |
 | Rejected write readback | A test-only SQLite trigger removes the inserted Payment; two writes succeed but a zero-row SELECT fails persisted-snapshot acceptance; both write paths and a separate SELECT survive, while the graph rolls back |
 
@@ -54,6 +58,20 @@ The command observer delegates unchanged to SQLite. Fault probes use a separate
 Context with the native SQLite provider, preserving its package-only failure
 diagnostic handoff. The only handwritten SQL creates a narrowly scoped fault
 trigger; no business query, seed or mutation is expressed in application SQL.
+
+`SharedReferences.swift` uses a customer Mutation Policy to observe the actual
+reviewed operations, not only emitted writes. Hydration cannot invent a pending
+create or policy operation for a read-only reference. Its four
+`OWNERSHIP_OBSERVED` JSON records retain real commands, optimistic versions,
+SQL paths, per-entity lineage, audits and reviewed plans. A local fixture policy
+without approval still produces the normal governance warning.
+
+The runtime's query-scoped `LoadedEntitySnapshots` pool reuses only equal
+records with the same typed identity and version. Different projections and
+versions remain separate; the pool is never stored on `UserContext` and contains
+no pending mutations. Swift value-copy access cannot modify its immutable stored
+record. Generated scalar and Q/E APIs remain unchanged. Independent transactions
+serialize at the existing Context gate; this is not parallel SQLite writers.
 
 ## Producer and API discovery
 

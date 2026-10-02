@@ -193,7 +193,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("platform") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
             copy.query.projection.append("platform")
         }
         copy.query.relationQuery(
@@ -201,7 +201,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
             localKey: "platform",
             foreignKey: "id",
             many: false,
-            query: child.toQuery())
+            query: child.toQuery(),
+            traceName: "platform")
         return copy
     }
 
@@ -215,7 +216,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         _ child: SchoolTypeRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("schoolType") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("schoolType") {
             copy.query.projection.append("schoolType")
         }
         copy.query.relationQuery(
@@ -223,7 +224,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
             localKey: "schoolType",
             foreignKey: "id",
             many: false,
-            query: child.toQuery())
+            query: child.toQuery(),
+            traceName: "schoolType")
         return copy
     }
 
@@ -1153,9 +1155,9 @@ public extension SchoolRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<School> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try School.from(record: $0, root: queryRoot) },
+            try result.records.map { try School.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             facets: result.facets)
     }
 
@@ -1180,9 +1182,9 @@ public extension SchoolRequest where State == RequestExecutable {
         } else {
             total = try await context.count(QueryRequest(query: pageQuery))
         }
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try School.from(record: $0, root: queryRoot) },
+            try result.records.map { try School.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

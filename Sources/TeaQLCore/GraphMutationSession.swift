@@ -1,11 +1,11 @@
 import Foundation
 
-/// Persistence succeeded; downstream audit delivery failed. Retrying the
+/// Persistence succeeded; downstream cleanup or audit delivery failed. Retrying the
 /// mutation itself would be wrong. Causes remain available to trusted code.
 public struct GraphCommittedError: Error, Sendable, CustomStringConvertible {
   public let committed = true
   public let causes: [any Error]
-  public var description: String { "Graph committed; \(causes.count) audit deliveries failed" }
+  public var description: String { "Graph committed; \(causes.count) completion callbacks or audit deliveries failed" }
   package init(causes: [any Error]) { self.causes = causes }
 }
 
@@ -52,8 +52,8 @@ public final class GraphMutationSession: @unchecked Sendable {
   package let policy: MutationPolicyCoordinator
   private let lock = NSLock()
   private var active = true
-  private var commitActions: [@Sendable () -> Void] = []
-  private var rollbackActions: [@Sendable () -> Void] = []
+  private var commitActions: [@Sendable () throws -> Void] = []
+  private var rollbackActions: [@Sendable () throws -> Void] = []
   private var auditEvents: [(AuditEvent, [TeaQLValue])] = []
   private var privacyValues: [TeaQLValue] = []
   private var fixEvidence: [FixEvidence] = []
@@ -79,14 +79,14 @@ public final class GraphMutationSession: @unchecked Sendable {
     return try TraceScopeToken(parent: parent, key: key, reason: localReason, owner: id)
   }
 
-  public func afterCommit(_ action: @escaping @Sendable () -> Void) throws {
+  public func afterCommit(_ action: @escaping @Sendable () throws -> Void) throws {
     try lock.withLock {
       guard active else { throw TeaQLError.execution("Graph Mutation Session is already closed") }
       commitActions.append(action)
     }
   }
 
-  public func afterRollback(_ action: @escaping @Sendable () -> Void) throws {
+  public func afterRollback(_ action: @escaping @Sendable () throws -> Void) throws {
     try lock.withLock {
       guard active else { throw TeaQLError.execution("Graph Mutation Session is already closed") }
       rollbackActions.append(action)
@@ -108,7 +108,7 @@ public final class GraphMutationSession: @unchecked Sendable {
         parameterLogPolicies: Array(repeating: .unknown, count: privacyValues.count), generatedSQL: true)
     }
   }
-  package func finish(committed: Bool) -> ([@Sendable () -> Void], [AuditEvent], [FixEvidence]) {
+  package func finish(committed: Bool) -> ([@Sendable () throws -> Void], [AuditEvent], [FixEvidence]) {
     lock.withLock {
       precondition(active)
       active = false

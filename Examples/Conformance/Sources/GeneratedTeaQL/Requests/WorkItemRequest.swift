@@ -141,7 +141,7 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("platform") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
             copy.query.projection.append("platform")
         }
         copy.query.relationQuery(
@@ -149,7 +149,8 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
             localKey: "platform",
             foreignKey: "id",
             many: false,
-            query: child.toQuery())
+            query: child.toQuery(),
+            traceName: "platform")
         return copy
     }
 
@@ -628,9 +629,9 @@ public extension WorkItemRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<WorkItem> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try WorkItem.from(record: $0, root: queryRoot) },
+            try result.records.map { try WorkItem.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             facets: result.facets)
     }
 
@@ -655,9 +656,9 @@ public extension WorkItemRequest where State == RequestExecutable {
         } else {
             total = try await context.count(QueryRequest(query: pageQuery))
         }
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try WorkItem.from(record: $0, root: queryRoot) },
+            try result.records.map { try WorkItem.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }
