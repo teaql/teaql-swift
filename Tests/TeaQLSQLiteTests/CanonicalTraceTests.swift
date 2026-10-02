@@ -36,16 +36,21 @@ func swiftNativeThreeRelationPathsRemainCanonical(deepestFailure: Bool) async th
   await evidence.enableAll()
   var regionQuery = SelectQuery(entity: region); regionQuery.limit = 2
   var organizationQuery = SelectQuery(entity: organization); organizationQuery.limit = 2
-  organizationQuery.relationQuery("region", localKey: "regionId", foreignKey: "id", many: false, query: regionQuery)
+  organizationQuery.relationQuery("regionEntity", localKey: "regionId", foreignKey: "id", many: false,
+    query: regionQuery, traceName: "region")
   var platformQuery = SelectQuery(entity: platform); platformQuery.limit = 2
-  platformQuery.relationQuery("organization", localKey: "organizationId", foreignKey: "id", many: false, query: organizationQuery)
+  platformQuery.relationQuery("organizationEntity", localKey: "organizationId", foreignKey: "id", many: false,
+    query: organizationQuery, traceName: "organization")
   var query = SelectQuery(entity: order); query.limit = 2
   query.comment = "what: inspect the native order graph"; query.purpose = "why: verify real relation routing"
-  query.relationQuery("platform", localKey: "platformId", foreignKey: "id", many: false, query: platformQuery)
+  query.relationQuery("platformEntity", localKey: "platformId", foreignKey: "id", many: false,
+    query: platformQuery, traceName: "platform")
   do {
     let result = try await context.execute(query)
     #expect(!deepestFailure)
     #expect(result.records.count == 1)
+    #expect(result.records.first?["platformEntity"] != nil)
+    #expect(result.records.first?["platform"] == nil)
   } catch is SQLiteError {
     #expect(deepestFailure)
   }

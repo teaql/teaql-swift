@@ -1007,9 +1007,9 @@ public struct UserContext: Sendable {
         guard !localValues.isEmpty else { return }
         var child = relation.query.makeQuery()
         child.tracePath = validated.tracePath + [TraceNode(
-          entity: child.entity.name, comment: "\(validated.entity.name).\(relation.name)",
+          entity: child.entity.name, comment: "\(validated.entity.name).\(relation.traceName ?? relation.name)",
           purpose: "", level: validated.tracePath.count + 2,
-          kind: "relation", name: relation.name)]
+          kind: "relation", name: relation.traceName ?? relation.name)]
         // Relation assembly groups child rows by the foreign key. A generated
         // child projection may select only business fields, so the runtime must
         // retain this structural key even when the caller did not request it.

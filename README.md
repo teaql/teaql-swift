@@ -207,8 +207,16 @@ swift test
 The School example includes required-comment and purpose failures with SQL
 logging disabled, and proves that an invalid audited save writes no School row.
 The example script uses local runtime source and locked dependency versions;
-all three retained examples must pass. Shared request-intent construction
+all four retained examples must pass. Shared request-intent construction
 vectors are retained in `test-vectors/request-intent-v1.json`.
+
+The [generated Trace Chain example](Examples/TraceChain/README.md) observes
+six graph mutations at command/SQL/committed-audit boundaries, three relation
+levels through Q/E, allocated and same-ID typed identities, ledger replacement,
+concurrent saves, actual UNIQUE rollback and rejected write readback. Its script
+runs twice on one retained database and checks that the generated library is
+unchanged. Internal Registry replay and the broader privacy/entry-point gates
+remain separate; these local tests do not claim a public release.
 
 The live Swift-to-Rust federation test is enabled when `TEAQL_TFP_BASE_URL` points to the deterministic test endpoint:
 

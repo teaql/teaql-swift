@@ -70,13 +70,15 @@ final class CanonicalTraceTests: XCTestCase {
     let descriptor = EntityDescriptor(name: "Record", table: "records", properties: [])
     let leaf = SelectQuery(entity: descriptor)
     var child = SelectQuery(entity: descriptor)
-    child.relationQuery("leaf", localKey: "id", foreignKey: "id", query: leaf)
+    child.relationQuery("leafEntity", localKey: "id", foreignKey: "id", query: leaf, traceName: "leaf")
     var parent = SelectQuery(entity: descriptor)
     parent.relationQuery("child", localKey: "id", foreignKey: "id", query: child)
     let snapshot = RelationQueryPlan(parent)
     let decoded = try JSONDecoder().decode(RelationQueryPlan.self, from: JSONEncoder().encode(snapshot))
     XCTAssertEqual(decoded, snapshot)
-    XCTAssertEqual(decoded.makeQuery().relations.first?.query.makeQuery().relations.first?.name, "leaf")
+    let relation = decoded.makeQuery().relations.first?.query.makeQuery().relations.first
+    XCTAssertEqual(relation?.name, "leafEntity")
+    XCTAssertEqual(relation?.traceName, "leaf")
     XCTAssertEqual(child.relations.count, 1)
   }
 }

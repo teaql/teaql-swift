@@ -54,16 +54,20 @@ public struct QueryAggregate: Sendable, Hashable, Codable {
 }
 
 public struct RelationLoad: Sendable, Hashable, Codable {
+  /// Hydration result key, which may differ from the logical model relation.
   public let name: String
+  public let traceName: String?
   public let localKey: String
   public let foreignKey: String
   public let many: Bool
   public let query: RelationQueryPlan
 
   public init(
-    name: String, localKey: String, foreignKey: String, many: Bool, query: SelectQuery
+    name: String, localKey: String, foreignKey: String, many: Bool, query: SelectQuery,
+    traceName: String? = nil
   ) {
     self.name = name
+    self.traceName = traceName
     self.localKey = localKey
     self.foreignKey = foreignKey
     self.many = many
@@ -197,11 +201,12 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   @discardableResult
   public mutating func relationQuery(
     _ name: String, localKey: String, foreignKey: String, many: Bool = true,
-    query: SelectQuery
+    query: SelectQuery, traceName: String? = nil
   ) -> Self {
     relations.append(
       RelationLoad(
-        name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query))
+        name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query,
+        traceName: traceName))
     return self
   }
 
