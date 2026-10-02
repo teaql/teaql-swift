@@ -183,25 +183,6 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
   }
 
-  public func transaction(_ mutations: [Mutation]) async throws -> [MutationResult] {
-    try executeSQL("BEGIN IMMEDIATE")
-    do {
-      var results: [MutationResult] = []
-      for mutation in mutations {
-        let validated = try mutation.validatedForExecution()
-        let result = try performMutation(validated)
-        try insertAudit(validated, generatedValues: result.generatedValues)
-        results.append(result)
-      }
-      try executeSQL("COMMIT")
-      return results
-    } catch {
-      try? executeSQL("ROLLBACK")
-      if let failure = error as? SQLExecutionFailure { throw failure.cause }
-      throw error
-    }
-  }
-
   public func execute(_ request: QueryRequest) async throws -> QueryResult {
     do { return try await executeDiagnosed(request) }
     catch let failure as SQLExecutionFailure { throw failure.cause }

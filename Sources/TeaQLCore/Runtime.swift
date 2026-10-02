@@ -1237,6 +1237,20 @@ public struct UserContext: Sendable {
     try await execute(request.mutation, ledgerRoot: nil, ledgerKey: nil)
   }
 
+  /// The provider cannot execute a naked child array. One validated root owns
+  /// preflight, invocation-local privacy, atomic execution and committed audit.
+  public func execute(_ request: MutationBatchRequest) async throws -> [MutationResult] {
+    let mutations = request.mutations
+    guard !mutations.isEmpty else { return [] }
+    return try await executeGraphSave(comment: request.intent.comment) { context, _ in
+      for mutation in mutations { _ = try context.preflightMutation(mutation) }
+      var results: [MutationResult] = []
+      results.reserveCapacity(mutations.count)
+      for mutation in mutations { results.append(try await context.execute(mutation)) }
+      return results
+    }
+  }
+
   public func execute(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {

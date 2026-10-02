@@ -79,6 +79,32 @@ final class RequestIntentGateTests: XCTestCase {
     XCTAssertEqual(calls.value("begin"), 0)
     XCTAssertEqual(calls.value("mutation"), 0)
   }
+
+  func testBatchMissingRootRejectsBeforeCheckerPolicyAndTransactionWithLogsDisabled() async throws {
+    let calls = IntentGateCalls()
+    let provider = IntentGateProvider(calls: calls)
+    var runtime = TeaQLRuntime()
+    try runtime.install(RuntimeModule(name: "intent", entities: [descriptor],
+      checkers: ["School": IntentGateChecker(calls: calls)]))
+    let context = UserContext(runtime: runtime, queryExecutor: provider, mutationExecutor: provider,
+      requestPolicy: RequestPolicy { $0 }, auditSink: IntentGateAudit(calls: calls),
+      telemetrySink: IntentGateTelemetry(calls: calls),
+      querySQLLogEnabled: false, mutationSQLLogEnabled: false,
+      mutationPolicyRegistry: IntentGateRegistry(calls: calls))
+    let items = [Mutation(kind: .create, entity: descriptor, auditReason: "valid child")]
+    for comment in [nil, "", " ", "\u{85}", "\u{2007}"] as [String?] {
+      do {
+        _ = try await context.execute(MutationBatchRequest(mutations: items, comment: comment))
+        XCTFail("missing batch root accepted")
+      } catch let error as RequestIntentError {
+        XCTAssertEqual(error.code, "REQUEST_COMMENT_REQUIRED")
+        XCTAssertEqual(error.field, "comment")
+      }
+    }
+    for name in ["checker", "policy", "begin", "mutation", "commit", "rollback", "sql", "audit"] {
+      XCTAssertEqual(calls.value(name), 0, name)
+    }
+  }
 }
 
 private final class IntentGateCalls: @unchecked Sendable {
@@ -119,4 +145,21 @@ private struct IntentGateChecker: EntityChecker {
   func checkAndFix(context: UserContext, mutation: inout Mutation, now: Date) throws -> [CheckResult] {
     calls.increment("checker"); return []
   }
+}
+
+private struct IntentGateRegistry: MutationPolicyRegistry {
+  let calls: IntentGateCalls
+  func resolve(requestKey: String) -> (any MutationPolicy)? {
+    calls.increment("policy"); return nil
+  }
+}
+
+private struct IntentGateAudit: AuditSink {
+  let calls: IntentGateCalls
+  func record(_ event: AuditEvent) { calls.increment("audit") }
+}
+
+private struct IntentGateTelemetry: RuntimeTelemetrySink {
+  let calls: IntentGateCalls
+  func record(_ metadata: SQLExecutionMetadata) { calls.increment("sql") }
 }

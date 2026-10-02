@@ -23,4 +23,5 @@ scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
 trace_args=()
 if [[ -n "${TEAQL_SWIFT_TRACE_DATABASE:-}" ]]; then trace_args+=("$TEAQL_SWIFT_TRACE_DATABASE"); fi
 TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/TraceChain/verify.sh" "${trace_args[@]}"
+TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/scripts/verify-mutation-batch-api.sh"
 echo "PASS: all Swift examples"

@@ -867,7 +867,7 @@ private func context(
   #expect(audit.last?["reason"] == .string("Soft delete order 100"))
   #expect(await appAudit.events().count == 4)
 
-  _ = try await service.transaction([
+  _ = try await context.execute(MutationBatchRequest(mutations: [
     Mutation(
       kind: .create,
       entity: order,
@@ -886,7 +886,7 @@ private func context(
       ],
       auditReason: "Create second transaction order"
     ),
-  ])
+  ], comment: "Create both transaction orders"))
   var transactionQuery = SelectQuery(entity: order)
   transactionQuery.filter = .inList("id", [.int(300), .int(301)])
   transactionQuery.comment = "Read transaction records"
@@ -894,7 +894,7 @@ private func context(
   #expect(try await context.execute(transactionQuery).records.count == 2)
 
   await #expect(throws: (any Error).self) {
-    try await service.transaction([
+    try await context.execute(MutationBatchRequest(mutations: [
       Mutation(
         kind: .create,
         entity: order,
@@ -913,7 +913,7 @@ private func context(
         ],
         auditReason: "Trigger rollback test"
       ),
-    ])
+    ], comment: "Verify transaction rollback"))
   }
   var rollbackQuery = SelectQuery(entity: order)
   rollbackQuery.filter = .equal("id", .int(400))

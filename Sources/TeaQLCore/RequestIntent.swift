@@ -123,3 +123,54 @@ public struct GraphMutationRequest: Sendable {
   public let intent: MutationIntent
   public init(comment: String?) throws { intent = try MutationIntent(comment: comment) }
 }
+
+/// A batch owns its root intent independently of annotated children. Values
+/// are snapshots; Context executes every item in one explicit graph session.
+public struct MutationBatchRequest: Sendable, Codable, CustomStringConvertible, CustomDebugStringConvertible {
+  private let payload: [Mutation]
+  public let intent: MutationIntent
+
+  public init(mutations: [Mutation], comment: String?) throws {
+    intent = try MutationIntent(comment: comment)
+    payload = mutations
+  }
+
+  private enum CodingKeys: String, CodingKey { case comment, mutations }
+  public init(from decoder: any Decoder) throws {
+    let values = try decoder.container(keyedBy: CodingKeys.self)
+    // Root validation precedes even decoding children. A trace or child reason
+    // cannot substitute for the required property.
+    intent = try MutationIntent(comment: try? values.decode(String.self, forKey: .comment))
+    payload = try values.decode([Mutation].self, forKey: .mutations)
+  }
+  public func encode(to encoder: any Encoder) throws {
+    var values = encoder.container(keyedBy: CodingKeys.self)
+    try values.encode(intent.comment, forKey: .comment)
+    try values.encode(payload, forKey: .mutations)
+  }
+
+  public var mutations: [Mutation] {
+    payload.map { source in
+      let local = (try? MutationIntent(comment: source.auditReason)) ?? intent
+      var item = MutationRequest(mutation: source, intent: local).mutation
+      var lineage = item.mutationLineage ?? []
+      // Like Rust's native batch, a container has no entity identity of its
+      // own. Materialize its reason using the item's first responsibility type.
+      // Repeated root text is one semantic slot and retains the original ID.
+      if let first = lineage.first(where: { $0.kind.lowercased() == "auditreason" }),
+         first.comment != intent.comment {
+        lineage.insert(TraceNode(entity: first.entity, comment: intent.comment,
+          purpose: "", kind: "auditReason", name: first.name), at: 0)
+      }
+      item.mutationLineage = lineage.enumerated().map { index, node in
+        TraceNode(entity: node.entity, comment: node.comment, purpose: node.purpose,
+          level: index, kind: node.kind, name: node.name, entityID: node.entityID)
+      }
+      item.auditReason = intent.comment
+      return item
+    }
+  }
+
+  public var description: String { "MutationBatchRequest(items: \(payload.count), intent: <redacted>)" }
+  public var debugDescription: String { description }
+}

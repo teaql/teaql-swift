@@ -218,6 +218,26 @@ runs twice on one retained database and checks that the generated library is
 unchanged. Internal Registry replay and the broader privacy/entry-point gates
 remain separate; these local tests do not claim a public release.
 
+### Validated native mutation batches
+
+The native SPI executes batches through Context, not a bare provider array:
+
+```swift
+let request = try MutationBatchRequest(mutations: children, comment: "process the selected records")
+let results = try await context.execute(request)
+```
+
+The required root comment is independent of each child's optional local reason.
+Missing or blank root intent is rejected before Checker, Policy or provider
+access, even with logging disabled. One graph session preflights all items,
+preserves their own lineages and sibling redaction provenance, rolls back on
+failure, and delivers application audits after commit. The old public
+`SQLiteDataService.transaction([Mutation])` bypass is removed. The example gate
+typechecks the Context form and verifies that the old form cannot compile.
+This is ordered atomic execution, not a prepared-statement batching claim.
+Codable validates the request's intent; it does not authorize untrusted input
+or enable a public protocol endpoint.
+
 The live Swift-to-Rust federation test is enabled when `TEAQL_TFP_BASE_URL` points to the deterministic test endpoint:
 
 ```bash

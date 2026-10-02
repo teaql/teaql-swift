@@ -92,4 +92,45 @@ final class RequestIntentTests: XCTestCase {
       }
     }
   }
+
+  func testBatchOwnsRootIntentAndRetainsPerItemReasons() throws {
+    let input = [
+      Mutation(kind: .create, entity: entity, values: ["id": .int(1)], auditReason: "batch root"),
+      Mutation(kind: .create, entity: entity, values: ["id": .int(2)], auditReason: "second child"),
+      Mutation(kind: .create, entity: entity, values: ["id": .int(3)]),
+      Mutation(kind: .create, entity: entity, values: ["id": .int(4)], auditReason: "\u{85}"),
+    ]
+    let batch = try MutationBatchRequest(mutations: input, comment: "batch root")
+    let items = batch.mutations
+    XCTAssertEqual(items.map(\.auditReason), Array(repeating: "batch root", count: 4))
+    XCTAssertEqual(items[0].mutationLineage?.map(\.comment), ["batch root"])
+    XCTAssertEqual(items[0].mutationLineage?.map(\.entityID), [.int(1)])
+    XCTAssertEqual(items[1].mutationLineage?.map(\.comment), ["batch root", "second child"])
+    XCTAssertEqual(items[1].mutationLineage?.map(\.entityID), [nil, .int(2)])
+    XCTAssertEqual(items[2].mutationLineage?.map(\.comment), ["batch root"])
+    XCTAssertEqual(items[3].mutationLineage?.map(\.comment), ["batch root"])
+    XCTAssertEqual(input[1].auditReason, "second child")
+    XCTAssertNil(input[2].auditReason)
+    XCTAssertEqual(input[3].auditReason, "\u{85}")
+    XCTAssertFalse(String(reflecting: batch).contains("second child"))
+  }
+
+  func testBatchDecoderValidatesRootBeforeChildrenAndRoundTripsSnapshot() throws {
+    for json in ["{}", "{\"comment\":null}", "{\"comment\":17}",
+        "{\"comment\":\"\\u0085\",\"mutations\":\"PAYLOAD-CANARY\"}"] {
+      XCTAssertThrowsError(try JSONDecoder().decode(MutationBatchRequest.self, from: Data(json.utf8))) {
+        let error = $0 as? RequestIntentError
+        XCTAssertEqual(error?.code, "REQUEST_COMMENT_REQUIRED")
+        XCTAssertEqual(error?.field, "comment")
+        XCTAssertFalse(String(describing: $0).contains("PAYLOAD-CANARY"))
+      }
+    }
+    var source = [Mutation(kind: .create, entity: entity, values: ["id": .int(10)], auditReason: "local child")]
+    let batch = try MutationBatchRequest(mutations: source, comment: " preserved root ")
+    source[0].auditReason = "changed source"; source[0].values["id"] = .int(99)
+    let roundTrip = try JSONDecoder().decode(MutationBatchRequest.self, from: JSONEncoder().encode(batch))
+    XCTAssertEqual(roundTrip.intent.comment, " preserved root ")
+    XCTAssertEqual(roundTrip.mutations[0].values["id"], .int(10))
+    XCTAssertEqual(roundTrip.mutations[0].mutationLineage?.map(\.comment), [" preserved root ", "local child"])
+  }
 }
