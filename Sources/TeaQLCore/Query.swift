@@ -292,6 +292,16 @@ public enum TeaQLError: Error, Sendable, Equatable {
 }
 
 public struct QueryResult: Sendable {
+  // Context-owned handoff for recursive relation assembly only. Not a record
+  // field, projection alias, wire property, or mutation-ledger input.
+  var relationAttachmentKeys: [TeaQLValue] = []
+
+  func attachingRelationKeys(_ keys: [TeaQLValue]) -> Self {
+    var copy = self
+    copy.relationAttachmentKeys = keys
+    return copy
+  }
+
   public let records: [TeaQLRecord]
   public let backend: String
   public let trace: [TraceNode]

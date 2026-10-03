@@ -838,7 +838,9 @@ public struct UserContext: Sendable {
     try await execute(request, inheritedIntent: nil)
   }
 
-  private func execute(_ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
+  private func execute(
+    _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?, attachmentKey: String? = nil
+  ) async throws -> QueryResult {
     let query = request.query
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
@@ -847,7 +849,7 @@ public struct UserContext: Sendable {
       ), completion: { result in
       ["teaql.result.cardinality": .integer(Int64(result.records.count))]
     }) {
-      try await executeQuery(request, inheritedIntent: inheritedIntent)
+      try await executeQuery(request, inheritedIntent: inheritedIntent, attachmentKey: attachmentKey)
     }
   }
 
@@ -859,7 +861,9 @@ public struct UserContext: Sendable {
     await idSetObservationState.current()
   }
 
-  private func executeQuery(_ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?) async throws -> QueryResult {
+  private func executeQuery(
+    _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?, attachmentKey: String?
+  ) async throws -> QueryResult {
     let validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
     // Root prose can mention a masked value bound only by a descendant. Capture
     // declared bindings before emitting parent logs, without fetching children.
@@ -918,6 +922,9 @@ public struct UserContext: Sendable {
         allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: invocationIntent)) }
     }
     await registerContinuousPage(prepared.execution, rows: result.records)
+    // Capture just the requested assembly key, in the final provider row order,
+    // before a to-one load can replace it (including replacement with null).
+    let attachmentKeys = attachmentKey.map { key in result.records.map { $0[key] ?? .null } } ?? []
     var facets: [String: SmartList<TeaQLRecord>] = [:]
     for facet in validated.facets {
       var membership = validated
@@ -958,7 +965,7 @@ public struct UserContext: Sendable {
       !result.records.isEmpty else {
       return QueryResult(
         records: result.records, backend: result.backend, trace: result.trace,
-        metadata: result.metadata, facets: facets)
+        metadata: result.metadata, facets: facets).attachingRelationKeys(attachmentKeys)
     }
 
     var records = result.records
@@ -1006,7 +1013,9 @@ public struct UserContext: Sendable {
       }
     }
     for relation in validated.relations {
-      let relationParentCount = records.compactMap { $0[relation.localKey] }.count
+      // A preceding relation may replace a scalar field with its loaded object.
+      // Membership belongs to the provider snapshot, not the mutable output graph.
+      let relationParentCount = result.records.compactMap { $0[relation.localKey] }.count
       let relationThreshold = relation.query.topNProbeParentThreshold
       let relationLimited = relation.query.limit != nil
       let relationAlwaysProbe =
@@ -1030,7 +1039,7 @@ public struct UserContext: Sendable {
           ]
         }
       ) {
-        let localValues = records.compactMap { $0[relation.localKey] }
+        let localValues = result.records.compactMap { $0[relation.localKey] }
         guard !localValues.isEmpty else { return }
         var child = relation.query.makeQuery()
         child.tracePath = validated.tracePath + [TraceNode(
@@ -1055,23 +1064,37 @@ public struct UserContext: Sendable {
         let useProbes = child.limit != nil && ((alwaysProbe && threshold == nil)
           || (threshold.map { $0 > 0 && localValues.count <= $0 } ?? false))
         var children: [TeaQLRecord] = []
+        var childKeys: [TeaQLValue] = []
         if useProbes {
           for localValue in localValues {
             var probe = child
             probe.partitionBy = nil
             let join = TeaQLExpression.equal(relation.foreignKey, localValue)
             probe.filter = probe.filter.map { .and([$0, join]) } ?? join
-            children.append(contentsOf: try await execute(request.withQuery(probe), inheritedIntent: childIntent).records)
+            let loaded = try await execute(request.withQuery(probe), inheritedIntent: childIntent,
+              attachmentKey: relation.foreignKey)
+            children.append(contentsOf: loaded.records)
+            childKeys.append(contentsOf: loaded.relationAttachmentKeys)
           }
         } else {
           if child.limit != nil { child.partitionBy = relation.foreignKey }
           let join = TeaQLExpression.inList(relation.foreignKey, localValues)
           child.filter = child.filter.map { .and([$0, join]) } ?? join
-          children = try await execute(request.withQuery(child), inheritedIntent: childIntent).records
+          let loaded = try await execute(request.withQuery(child), inheritedIntent: childIntent,
+            attachmentKey: relation.foreignKey)
+          children = loaded.records
+          childKeys = loaded.relationAttachmentKeys
         }
-        let grouped = Dictionary(grouping: children) { $0[relation.foreignKey] ?? .null }
+        guard childKeys.count == children.count else {
+          throw TeaQLError.execution("Relation assembly key count differs from row count")
+        }
+        var grouped: [TeaQLValue: [TeaQLRecord]] = [:]
+        for (key, row) in zip(childKeys, children) {
+          grouped[normalizedRelationIdentity(key), default: []].append(row)
+        }
         for index in records.indices {
-          let matches = grouped[records[index][relation.localKey] ?? .null] ?? []
+          let key = normalizedRelationIdentity(result.records[index][relation.localKey] ?? .null)
+          let matches = grouped[key] ?? []
           records[index][relation.name] = relation.many
             ? .array(matches.map(TeaQLValue.object))
             : matches.first.map(TeaQLValue.object) ?? .null
@@ -1080,7 +1103,7 @@ public struct UserContext: Sendable {
     }
     return QueryResult(
       records: records, backend: result.backend, trace: result.trace,
-      metadata: result.metadata, facets: facets)
+      metadata: result.metadata, facets: facets).attachingRelationKeys(attachmentKeys)
   }
 
   private func queryIntentProvenance(_ request: QueryRequest) async throws -> SQLExecutionMetadata? {

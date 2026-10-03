@@ -248,6 +248,14 @@ runs twice on one retained database and checks that the generated library is
 unchanged. Internal Registry replay and the broader privacy/entry-point gates
 remain separate; these local tests do not claim a public release.
 
+Native SQLite regressions in `RelationAggregateTraceTests` compose related counts
+with nested eager loading, including references keyed by text `code` rather than
+`id`. Assembly retains the original scalar key even when a forward reference is
+hydrated or filtered to null. The temporary keys are runtime-only, not returned
+record fields or mutation inputs. Tests check canonical ancestry, safe intent,
+logging-off execution, independent failure recovery and sibling relation loads.
+This is not yet generated related-count API acceptance.
+
 ### Validated native mutation batches
 
 The native SPI executes batches through Context, not a bare provider array:
