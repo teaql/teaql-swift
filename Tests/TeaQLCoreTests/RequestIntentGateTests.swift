@@ -6,20 +6,40 @@ final class RequestIntentGateTests: XCTestCase {
   private let descriptor = EntityDescriptor(name: "School", table: "school_data",
     properties: [PropertyDescriptor(name: "id", type: .int, isID: true)])
 
-  func testMissingQueryIntentRejectsBeforePolicyWithLogsDisabled() async throws {
+  func testMissingQueryIntentRejectsBeforePolicyAndProvider() async throws {
+    for logging in [false, true] {
     let calls = IntentGateCalls()
     let provider = IntentGateProvider(calls: calls)
     let context = UserContext(queryExecutor: provider, mutationExecutor: provider,
       requestPolicy: RequestPolicy { query in calls.increment("policy"); return query },
-      querySQLLogEnabled: false, mutationSQLLogEnabled: false)
-    let query = SelectQuery(entity: descriptor)
-    do { _ = try await context.execute(query); XCTFail("missing comment was accepted") }
-    catch { XCTAssertTrue(String(describing: error).contains("REQUEST_COMMENT_REQUIRED")) }
-    do { _ = try await context.count(query); XCTFail("missing comment reached count") }
-    catch { XCTAssertTrue(String(describing: error).contains("REQUEST_COMMENT_REQUIRED")) }
+      querySQLLogEnabled: logging, mutationSQLLogEnabled: logging)
+    for blank in [nil, "", " \t\r\n", "\u{85}", "\u{a0}", "\u{2003}"] as [String?] {
+      for field in ["comment", "purpose"] {
+        var query = SelectQuery(entity: descriptor)
+        query.comment = field == "comment" ? blank : "load SECRET-CANARY"
+        query.purpose = field == "purpose" ? blank : "render SECRET-CANARY"
+        do { _ = try await context.execute(query); XCTFail("missing intent was accepted") }
+        catch { checkIntentError(error, field: field, kind: "query") }
+        do { _ = try await context.count(query); XCTFail("missing intent reached count") }
+        catch { checkIntentError(error, field: field, kind: "query") }
+      }
+    }
     XCTAssertEqual(calls.value("policy"), 0)
     XCTAssertEqual(calls.value("query"), 0)
     XCTAssertEqual(calls.value("count"), 0)
+    }
+  }
+
+  private func checkIntentError(_ error: Error, field: String, kind: String,
+    file: StaticString = #filePath, line: UInt = #line) {
+    guard let error = error as? RequestIntentError else {
+      XCTFail("Expected structured request intent error: \(error)", file: file, line: line)
+      return
+    }
+    XCTAssertEqual(error.code, field == "purpose" ? "QUERY_PURPOSE_REQUIRED" : "REQUEST_COMMENT_REQUIRED", file: file, line: line)
+    XCTAssertEqual(error.field, field, file: file, line: line)
+    XCTAssertEqual(error.requestKind, kind, file: file, line: line)
+    XCTAssertFalse(error.description.contains("SECRET-CANARY"), file: file, line: line)
   }
 
   func testMissingMutationIntentRejectsBeforeCheckerWithLogsDisabled() async throws {
@@ -31,7 +51,7 @@ final class RequestIntentGateTests: XCTestCase {
     let context = UserContext(runtime: runtime, queryExecutor: provider, mutationExecutor: provider,
       requestPolicy: RequestPolicy { $0 }, querySQLLogEnabled: false, mutationSQLLogEnabled: false)
     do { _ = try await context.execute(Mutation(kind: .create, entity: descriptor)); XCTFail("missing reason accepted") }
-    catch { XCTAssertTrue(String(describing: error).contains("REQUEST_COMMENT_REQUIRED")) }
+    catch { checkIntentError(error, field: "comment", kind: "mutation") }
     XCTAssertEqual(calls.value("checker"), 0)
     XCTAssertEqual(calls.value("mutation"), 0)
   }
@@ -75,6 +95,7 @@ final class RequestIntentGateTests: XCTestCase {
     } catch let error as RequestIntentError {
       XCTAssertEqual(error.code, "REQUEST_COMMENT_REQUIRED")
       XCTAssertEqual(error.field, "comment")
+      XCTAssertEqual(error.requestKind, "mutation")
     }
     XCTAssertEqual(calls.value("begin"), 0)
     XCTAssertEqual(calls.value("mutation"), 0)
@@ -99,6 +120,7 @@ final class RequestIntentGateTests: XCTestCase {
       } catch let error as RequestIntentError {
         XCTAssertEqual(error.code, "REQUEST_COMMENT_REQUIRED")
         XCTAssertEqual(error.field, "comment")
+        XCTAssertEqual(error.requestKind, "mutation")
       }
     }
     for name in ["checker", "policy", "begin", "mutation", "commit", "rollback", "sql", "audit"] {
