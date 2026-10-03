@@ -943,9 +943,14 @@ public struct UserContext: Sendable {
       }
 
       var child = facet.query.makeQuery()
+      child.tracePath = validated.tracePath + [TraceNode(
+        entity: child.entity.name, comment: "\(validated.entity.name).\(facet.relationName)",
+        purpose: "", level: validated.tracePath.count + 2,
+        kind: "relation", name: facet.relationName)]
       child.comment = validated.comment
       child.purpose = validated.purpose
-      var childRows = try await execute(request.withQuery(child), inheritedIntent: invocationIntent).records.map { row in
+      let childResult = try await execute(request.withQuery(child), inheritedIntent: invocationIntent)
+      var childRows = childResult.records.map { row in
         var copy = row
         if let id = row["id"] {
           copy["count"] = .int(counts[normalizedRelationIdentity(id)] ?? 0)
@@ -958,7 +963,7 @@ public struct UserContext: Sendable {
           return counts[normalizedRelationIdentity(id)] == nil
         }
       }
-      facets[facet.name] = SmartList(childRows)
+      facets[facet.name] = SmartList(childRows, facets: childResult.facets)
     }
 
     guard (!validated.relations.isEmpty || !validated.relationAggregates.isEmpty),
