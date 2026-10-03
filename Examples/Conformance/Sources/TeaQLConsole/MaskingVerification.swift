@@ -166,8 +166,10 @@ private func verifyReadbackFailureMasking(entity: EntityDescriptor) async throws
         guard case .execution(let message) = error, message.contains("Persisted state refresh") else { throw error }
     }
     let partial = await evidence.snapshot()
-    try require(partial.count == 3, "partial graph must retain two writes and one rejected readback")
-    try require(partial.map(\.operation) == [.insert, .insert, .select], "partial graph order changed")
+    try require(partial.count == 4, "partial graph must retain two writes and both readbacks")
+    try require(partial.map(\.operation) == [.insert, .select, .insert, .select], "partial graph order changed")
+    try require(partial[1].resultCount == 1 && partial[3].resultCount == 0,
+        "successful and rejected readback row counts differ")
     let text = await sink.snapshot().joined(separator: "\n")
     try require(!text.contains("Riverside") && !text.contains("PASSWORD-CANARY"), "inherited intent leaked")
     try require(text.contains("Ri*****de") && text.contains("1 Runtime Road"), "normal SQL masked wholesale")

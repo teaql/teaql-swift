@@ -74,9 +74,18 @@ public enum TraceChain {
 
   /// A readback is another physical SELECT, not a second SQL leaf in the write.
   public static func readback(_ write: [TraceNode]) -> [TraceNode] {
-    let root = write.first?.entity ?? "unknown"
-    let nodes = write.filter { $0.kind.lowercased() != "sql" }
-      + [TraceNode(entity: root, comment: "", purpose: "", kind: "sql", name: "select")]
+    let root = write.first { $0.kind.lowercased() == "operation" }?.name ?? "unknown"
+    let nodes = write.map { node in
+      switch node.kind.lowercased() {
+      case "operation":
+        return TraceNode(entity: root, comment: "query", purpose: "", kind: "operation", name: root)
+      case "entity":
+        return TraceNode(entity: root, comment: "", purpose: "", kind: "request", name: root)
+      case "sql":
+        return TraceNode(entity: root, comment: "", purpose: "", kind: "sql", name: "select")
+      default: return node
+      }
+    }
     return nodes.enumerated().map { index, node in
       TraceNode(entity: node.entity, comment: node.comment, purpose: node.purpose,
         level: index, kind: node.kind, name: node.name, entityID: node.entityID)

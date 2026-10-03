@@ -57,8 +57,11 @@ func swiftBatchHasIndependentItemLineageAndSiblingPrivacyAtRealSinks() async thr
   let request = try MutationBatchRequest(mutations: originals, comment: root)
   let results = try await context.execute(request)
   let (commands, prematureAudit) = await probe.snapshot()
-  let entries = await sql.snapshot(), events = await audit.snapshot()
+  let physical = await sql.snapshot(), events = await audit.snapshot()
+  let entries = physical.filter { $0.operation != .select }
+  let reads = physical.filter { $0.operation == .select }
   #expect(results.count == 3 && commands.count == 3 && entries.count == 3 && events.count == 3)
+  #expect(physical.count == 6 && reads.count == 3)
   #expect(!prematureAudit)
   #expect(commands.map(\.auditReason) == [root, root, root])
   #expect(commands[0].mutationLineage?.map(\.comment) == [root])
@@ -67,6 +70,10 @@ func swiftBatchHasIndependentItemLineageAndSiblingPrivacyAtRealSinks() async thr
   #expect(commands[0].mutationLineage?.map(\.entityID) == [.int(101)])
   #expect(commands[1].mutationLineage?.map(\.entityID) == [nil, .int(102)])
   for index in entries.indices {
+    #expect(reads[index].mutationLineage == entries[index].mutationLineage)
+    #expect(reads[index].auditReason == "process batch [REDACTED]")
+    #expect(reads[index].tracePath.map(\.kind) == ["operation", "request", "provider", "sql"])
+    #expect(reads[index].resultCount == 1)
     #expect(entries[index].executionOutcome == "success")
     #expect(entries[index].auditReason == "process batch [REDACTED]")
     #expect(entries[index].mutationLineage == events[index].mutationLineage)
@@ -103,9 +110,11 @@ func swiftBatchProviderFailureRollsBackWithoutDroppingEarlierSQLOrSiblingPrivacy
     Issue.record("duplicate batch item must fail")
   } catch is SQLiteError { }
   let entries = await sql.snapshot()
-  #expect(entries.map(\.executionOutcome) == ["success", "failure"])
+  #expect(entries.map(\.executionOutcome) == ["success", "success", "failure"])
   #expect(entries[0].mutationLineage.map(\.comment) == ["batch [REDACTED]", "first item"])
-  #expect(entries[1].mutationLineage.map(\.comment) == ["batch [REDACTED]", "second item"])
+  #expect(entries[1].mutationLineage == entries[0].mutationLineage)
+  #expect(entries[1].operation == .select)
+  #expect(entries[2].mutationLineage.map(\.comment) == ["batch [REDACTED]", "second item"])
   #expect(await audit.snapshot().isEmpty)
   #expect(try await service.auditEvents().isEmpty)
   var query = SelectQuery(entity: entity); query.limit = 3
@@ -133,7 +142,7 @@ func swiftConcurrentNativeBatchesReuseContextWithoutSharingIntent() async throws
   let results = try await (first, second)
   #expect(results.0.count == 2 && results.1.count == 2)
   let entries = await sql.snapshot(), events = await audit.snapshot()
-  #expect(entries.count == 4 && events.count == 4)
+  #expect(entries.count == 8 && events.count == 4)
   for event in events {
     let id = try #require(event.entityID?.int64Value)
     let own = id < 400 ? "branch-A" : "branch-B", other = id < 400 ? "branch-B" : "branch-A"

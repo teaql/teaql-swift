@@ -70,6 +70,14 @@ public enum SQLExecutionOperation: String, Sendable, Codable {
 }
 
 public struct SQLExecutionMetadata: Sendable {
+  /// Ordered physical children of a logical result; leaves have no children.
+  public private(set) var statements: [SQLExecutionMetadata] = []
+
+  package func includingStatements(_ statements: [SQLExecutionMetadata]) -> Self {
+    var result = self
+    result.statements = statements
+    return result
+  }
   // Immutable value copies retain the already-safe fallback, never raw provenance.
   var maskedAlternative: SQLMaskedAlternative?
   var isSafeProjection = false
@@ -1334,7 +1342,7 @@ public struct UserContext: Sendable {
           let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: graphSession?.intentProvenance)
           await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata,
             intentSource: source, intentValues: submittedID.map { [$0] } ?? []))
-          if mutationSQLLogEnabled {
+          if diagnostic.metadata.operation == .select ? querySQLLogEnabled : mutationSQLLogEnabled {
             await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
               allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source,
               intentValues: submittedID.map { [$0] } ?? []))
@@ -1346,13 +1354,18 @@ public struct UserContext: Sendable {
     let auditID = validated.id ?? result.generatedValues["id"]
       ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
     if let metadata = result.metadata {
-      await telemetrySink?.record(LogPrivacy.project(metadata,
-        intentSource: graphSession?.intentProvenance, intentValues: auditID.map { [$0] } ?? []))
-      if mutationSQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata,
-        allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: graphSession?.intentProvenance,
-        intentValues: auditID.map { [$0] } ?? [])) }
+      let source = LogPrivacy.inheritIntent(metadata, inherited: graphSession?.intentProvenance)
+      for statement in metadata.statements.isEmpty ? [metadata] : metadata.statements {
+        await telemetrySink?.record(LogPrivacy.project(statement,
+          intentSource: source, intentValues: auditID.map { [$0] } ?? []))
+        if statement.operation == .select ? querySQLLogEnabled : mutationSQLLogEnabled {
+          await diagnosticSQLLogSink?.write(LogPrivacy.project(statement,
+            allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source,
+            intentValues: auditID.map { [$0] } ?? []))
+        }
+      }
     }
-    if let auditSink, let reason = validated.auditReason {
+    if result.affectedRows > 0, let auditSink, let reason = validated.auditReason {
       let auditValues = Array(validated.values.values) + (auditID.map { [$0] } ?? [])
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(

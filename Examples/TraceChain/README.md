@@ -30,6 +30,7 @@ No public package is claimed to contain these changes.
 | --- | --- |
 | Required intent | Blank graph comment and missing Query comment cause no transaction start, mutation, SQL log or committed audit |
 | Normative six mutations | Root, unannotated child, locally annotated Payment and Shipment, inherited PaymentAttempt and locally annotated deletion retain separate typed lineage at command, SQL and audit boundaries |
+| Successful write readbacks | Each persisted mutation produces ordered write/SELECT facts; six graph changes mean twelve physical SQL entries but only six committed audits. SELECT keeps the originating root and per-item lineage, with a query/request path and derived purpose |
 | Three-level generated Q/E | PaymentAttempt → Payment → CustomerOrder → Platform; all four statements retain root intent and logical relation names, independent of hydration aliases |
 | Late allocation | Newly allocated root/Payment IDs replace temporary scope identities in physical SQL metadata and committed audits; grandchild inherits the assigned ancestors |
 | Ledger replacement | A typed per-Payment complete chain replaces graph fallback, rather than concatenating the two |
@@ -42,7 +43,7 @@ No public package is claimed to contain these changes.
 | Generated paginated graphs | Offset 1 / limit 2 returns two independent roots with versions 2/1 from a three-root filtered set; saving one leaves the other's changes pending and unpersisted |
 | Pagination and descendant lineage | Row, forward/reverse relation and exact-count SQL inherit one page comment/purpose; a clean paginated parent saves only its changed child with root/local responsibility |
 | Actual child SQL failure | Duplicate Payment ID raises SQLite UNIQUE; preceding parent statement remains successful, failed child retains lineage, graph rolls back and emits no committed audit |
-| Rejected write readback | A test-only SQLite trigger removes the inserted Payment; two writes succeed but a zero-row SELECT fails persisted-snapshot acceptance; both write paths and a separate SELECT survive, while the graph rolls back |
+| Rejected write readback | A test-only SQLite trigger removes the inserted Payment; two writes and the root readback succeed, but the child's zero-row SELECT fails persisted-snapshot acceptance; all four facts survive while the graph rolls back |
 
 The first clean-database graph uses Order#100, OrderItem#201/#202,
 Payment#301, PaymentAttempt#401 and Shipment#501. The actual model names
@@ -99,7 +100,7 @@ This is local generated acceptance, not immutable Registry consumer replay.
 Generated list and page ownership have executed coverage; stream ownership is
 not proved by the page test.
 Prepared batches, all low-level/request-decoding entry points, complete privacy
-coverage, persisted audit-row privacy/lineage, successful-readback diagnostic
-events, cancellation and independent-Context/shared-provider coordination still
+coverage, persisted audit-row privacy/lineage,
+cancellation and independent-Context/shared-provider coordination still
 need their own gates. A zero-row SELECT here is successful SQL with rejected
 snapshot validation, not a simulated SQL driver error or a COMMIT failure.

@@ -203,6 +203,12 @@ enum LogPrivacy {
       resultCount: source.resultCount, affectedRows: source.affectedRows, resultSummary: safeSummary(source.resultSummary),
       parameterLogPolicies: policies, maskedParameters: flags, generatedSQL: source.generatedSQL,
       sqlOmissionReason: omission, executionOutcome: source.executionOutcome)
+    if !source.statements.isEmpty {
+      let provenance = inheritIntent(source, inherited: intentSource)
+      result = result.includingStatements(source.statements.map {
+        project($0, allowPlaintext: allowPlaintext, intentSource: provenance, intentValues: intentValues)
+      })
+    }
     result.isSafeProjection = !allowPlaintext
     if allowPlaintext {
       result.maskedAlternative = source.maskedAlternative ?? SQLMaskedAlternative(

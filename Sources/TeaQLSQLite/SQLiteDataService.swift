@@ -274,13 +274,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     let mutation = request.mutation
     if graphTransactionActive {
       let result = try performMutation(mutation)
-      try insertAudit(mutation, generatedValues: result.generatedValues)
+      if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
       return result
     }
     try executeSQL("BEGIN IMMEDIATE")
     do {
       let result = try performMutation(mutation)
-      try insertAudit(mutation, generatedValues: result.generatedValues)
+      if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
       try executeSQL("COMMIT")
       return result
     } catch {
@@ -400,11 +400,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         affectedRows: affected,
         resultSummary: "\(affected) rows affected",
         parameterLogPolicies: properties.map { .field($0.name, in: mutation.entity) }, generatedSQL: true, executionOutcome: "success")
-    return MutationResult(affectedRows: affected, generatedValues: generated,
-      persistedRecord: try fetchPersistedRecord(entity: mutation.entity,
+    let (record, read) = try fetchPersistedRecord(entity: mutation.entity,
         id: generated[mutation.entity.idProperty?.name ?? "id"]
-          ?? mutation.values[mutation.entity.idProperty?.name ?? "id"], write: metadata),
-      metadata: metadata)
+          ?? mutation.values[mutation.entity.idProperty?.name ?? "id"], write: metadata)
+    return MutationResult(affectedRows: affected, generatedValues: generated,
+      persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
   }
 
   private func allocateID(typeName: String) throws -> Int64 {
@@ -498,9 +498,10 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
         resultSummary: "\(changed) rows affected", parameterLogPolicies: policies, generatedSQL: true, executionOutcome: "success")
-    return MutationResult(affectedRows: changed,
-      persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata),
-      metadata: metadata)
+    guard changed > 0 else { return MutationResult(affectedRows: changed, metadata: metadata) }
+    let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
+    return MutationResult(affectedRows: changed, persistedRecord: record,
+      metadata: metadata.includingStatements([metadata, read]))
   }
 
   private func delete(_ mutation: Mutation) throws -> MutationResult {
@@ -544,9 +545,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         parameterLogPolicies: [.field(versionProperty.name, in: mutation.entity),
           .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)],
         generatedSQL: true, executionOutcome: "success")
+    let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
     return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: .int(deletedVersion)],
-      persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata),
-      metadata: metadata)
+      persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
   }
 
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {
@@ -596,7 +597,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func fetchPersistedRecord(
     entity: EntityDescriptor, id: TeaQLValue?, write: SQLExecutionMetadata
-  ) throws -> TeaQLRecord {
+  ) throws -> (TeaQLRecord, SQLExecutionMetadata) {
     guard let id, let idProperty = entity.idProperty else {
       throw TeaQLError.execution(
         "Persisted state refresh requires entity ID metadata and an ID value")
@@ -608,25 +609,27 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     )
     let startedAt = DispatchTime.now().uptimeNanoseconds
     var resultCount: Int?
+    let intent = try MutationIntent(comment: write.auditReason).readbackIntent()
+    func readMetadata(rejected: Bool = false) -> SQLExecutionMetadata {
+      SQLExecutionMetadata(operation: .select, comment: intent.comment,
+        purpose: intent.purpose, auditReason: write.auditReason,
+        tracePath: TraceChain.readback(write.tracePath), mutationLineage: write.mutationLineage,
+        parameterizedSQL: compiled.sql, parameters: compiled.parameters,
+        debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
+        resultSummary: resultCount.map { "\($0) rows returned" + (rejected ? "; persisted snapshot rejected" : "") }
+          ?? "readback failed; row count unknown",
+        parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: true,
+        executionOutcome: resultCount == nil ? "failure" : "success")
+    }
     do {
       let records = try fetch(compiled, entity: entity)
       resultCount = records.count
       guard records.count == 1 else {
         throw TeaQLError.execution("Persisted state refresh expected one \(entity.name) row; found \(records.count)")
       }
-      return records[0]
+      return (records[0], readMetadata())
     } catch {
-      let intent = try MutationIntent(comment: write.auditReason).readbackIntent()
-      let read = SQLExecutionMetadata(operation: .select, comment: intent.comment,
-        purpose: intent.purpose, auditReason: write.auditReason,
-        tracePath: TraceChain.readback(write.tracePath),
-        mutationLineage: write.mutationLineage,
-        parameterizedSQL: compiled.sql, parameters: compiled.parameters,
-        debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
-        resultSummary: resultCount.map { "\($0) rows returned; persisted snapshot rejected" }
-          ?? "readback failed; row count unknown",
-        parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: true,
-        executionOutcome: resultCount == nil ? "failure" : "success")
+      let read = readMetadata(rejected: true)
       throw SQLExecutionFailure(cause: error, diagnostics: [SQLFailureDiagnostic(metadata: write),
         SQLFailureDiagnostic(metadata: read, intentSource: write)])
     }

@@ -639,7 +639,9 @@ private func context(
   #expect(entries.allSatisfy { $0.sqlOmissionReason == nil })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
-  let selectEntry = try #require(entries.first { $0.operation == .select })
+  #expect(entries.map(\.operation) == [.insert, .select, .select])
+  #expect(entries[1].purpose == "verify the persisted mutation result")
+  let selectEntry = try #require(entries.last { $0.operation == .select })
   #expect(selectEntry.comment == "Read SQL evidence fixture")
   #expect(selectEntry.purpose == "Prove parameterized execution")
   #expect(selectEntry.tracePath.map(\.kind) == [

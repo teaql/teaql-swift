@@ -147,6 +147,15 @@ Disabling query text logs does not disable intent validation or captured telemet
 Provider diagnostic handoff remains package-only; custom executors are not given
 fabricated SQL metadata.
 
+SQLite mutations retain their logical affected-row result plus ordered physical
+`metadata.statements`: the write followed by its actual persisted-row SELECT.
+Readback uses the originating root's query/request path and keeps the per-item
+mutation lineage. No extra query is issued for tracing. Query and mutation log
+switches control their respective physical statements; returned metadata is
+preserved even when both logs are off. Safe sinks redact inherited intent as well
+as bindings; raw result metadata remains a trusted internal surface. A zero-row
+unversioned update has no fabricated readback or committed audit event.
+
 One generated query may share a `LoadedEntitySnapshot`, never a mutable ledger.
 The query-scoped pool reuses only equal records with equal typed identities and
 versions. Partial entity projections retain ID/version and relation assembly

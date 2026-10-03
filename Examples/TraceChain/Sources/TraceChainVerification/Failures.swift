@@ -32,10 +32,12 @@ func generatedFailureProofs(_ context: UserContext, sql: SQLExecutionEvidenceSto
         try require(code == SQLITE_CONSTRAINT, "not an actual SQLite constraint error")
     }
     let failed = await sql.snapshot(), failedAudits = await audit.snapshot()
-    try require(failed.count == 2 && failed.map(\.executionOutcome) == ["success", "failure"]
+    try require(failed.count == 3 && failed.map(\.executionOutcome) == ["success", "success", "failure"]
+        && failed.map(\.operation) == [.insert, .select, .insert]
         && failedAudits.isEmpty, "failure diagnostics or commit barrier lost")
     let parent = NodeExpectation(type: "CustomerOrder", id: root.id, reason: "submit failing order")
-    try checkChain(failed[1].mutationLineage, [parent,
+    try checkChain(failed[1].mutationLineage, [parent], boundary: "successful parent readback before failure")
+    try checkChain(failed[2].mutationLineage, [parent,
         NodeExpectation(type: "Payment", id: base + 201, reason: "authorize failing payment")], boundary: "failed child SQL")
     let after = try await Q.customerOrders().withIdIs(root.id).limit(1)
         .comment("inspect failed graph rollback").purpose("verify parent did not commit").executeForList(context)
@@ -56,20 +58,23 @@ func generatedFailureProofs(_ context: UserContext, sql: SQLExecutionEvidenceSto
         else { throw error }
     }
     let readback = await sql.snapshot(), readbackAudits = await audit.snapshot()
-    try require(readback.count == 3 && readback.map(\.operation) == [.insert, .insert, .select]
+    try require(readback.count == 4 && readback.map(\.operation) == [.insert, .select, .insert, .select]
         && readbackAudits.isEmpty, "readback erased write diagnostics or emitted committed audits")
-    try require(readback[0].executionOutcome == "success" && readback[1].executionOutcome == "success"
-        && readback[2].resultCount == 0 && readback[2].resultSummary.contains("persisted snapshot rejected"),
+    try require(readback.allSatisfy { $0.executionOutcome == "success" }
+        && readback[1].resultCount == 1 && readback[3].resultCount == 0
+        && readback[3].resultSummary.contains("persisted snapshot rejected"),
         "readback validation failure was confused with failed SQL execution")
     let readbackParent = NodeExpectation(type: "CustomerOrder", id: rootID, reason: "submit readback order")
     let expected = [readbackParent, NodeExpectation(type: "Payment", id: paymentID, reason: "authorize readback payment")]
-    try checkChain(readback[1].mutationLineage, expected, boundary: "successful write before readback")
-    try checkChain(readback[2].mutationLineage, expected, boundary: "rejected readback")
-    try require(readback[2].comment == "submit readback order"
-        && readback[2].purpose == "verify the persisted mutation result"
-        && readback[2].tracePath.filter { $0.kind == "sql" }.map(\.name) == ["select"], "readback intent or physical leaf differs")
+    try checkChain(readback[1].mutationLineage, [readbackParent], boundary: "successful root readback")
+    try checkChain(readback[2].mutationLineage, expected, boundary: "successful write before readback")
+    try checkChain(readback[3].mutationLineage, expected, boundary: "rejected readback")
+    try require(readback[3].comment == "submit readback order"
+        && readback[3].purpose == "verify the persisted mutation result"
+        && readback[3].tracePath.map(\.kind) == ["operation", "request", "provider", "sql"]
+        && readback[3].tracePath.filter { $0.kind == "sql" }.map(\.name) == ["select"], "readback intent or physical leaf differs")
     let rolledBack = try await Q.customerOrders().withIdIs(rootID).limit(1)
         .comment("inspect readback rollback").purpose("verify successful statements did not imply commit").executeForList(context)
     try require(rolledBack.isEmpty, "readback failure left a committed parent")
-    print("PASS actual SQLite-triggered readback rejection: two successful writes + separate zero-row SELECT; graph rolls back")
+    print("PASS actual SQLite-triggered readback rejection: two writes, one successful readback + separate zero-row SELECT; graph rolls back")
 }

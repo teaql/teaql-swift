@@ -71,8 +71,11 @@ func checkObservedGraph(
     sql: [SQLExecutionMetadata], audit: [AuditEvent], rootReason: String
 ) throws {
     let writes = sql.filter { $0.operation != .select }
+    let reads = sql.filter { $0.operation == .select }
     try require(commands.count == expected.count && writes.count == expected.count
         && audit.count == expected.count, "graph command/SQL/audit cardinality differs")
+    try require(reads.count == expected.count && sql.count == 2 * expected.count,
+        "each successful mutation must expose its real SELECT readback")
     var commandKeys: Set<String> = []; var sqlKeys: Set<String> = []; var auditKeys: Set<String> = []
     for request in commands {
         let mutation = request.mutation
@@ -85,6 +88,16 @@ func checkObservedGraph(
         try checkChain(lineage, wanted, boundary: "command \(identity)")
     }
     for (index, entry) in writes.enumerated() {
+        let read = reads[index]
+        try require(sql[index * 2].operation == entry.operation && sql[index * 2 + 1].operation == .select,
+            "physical write/readback execution order changed")
+        try require(read.tracePath.map(\.kind) == ["operation", "request", "provider", "sql"]
+            && read.tracePath.first?.name == "CustomerOrder" && read.tracePath.first?.comment == "query"
+            && read.tracePath.last?.name == "select", "readback route lost operation root or query path")
+        try require(read.mutationLineage == entry.mutationLineage && read.resultCount == 1
+            && read.executionOutcome == "success" && read.auditReason == rootReason
+            && read.comment == rootReason && read.purpose == "verify the persisted mutation result",
+            "readback lost lineage, intent, or physical outcome")
         // The frozen Rust-canonical rebuilt route intentionally has no Entity
         // ID. Bind the statement to its real command by execution index and
         // verify statement entity plus per-item lineage; do not change that

@@ -12,8 +12,10 @@ func assignedGraph(_ context: UserContext, commands: CommandCapture, sql: SQLExe
     pay.paymentAttemptList.append(attempt); root.paymentList.append(pay)
     await commands.clear(); await sql.enableAll(); await audit.clear()
     let saved = try await root.auditAs("submit allocated order").save(context)
-    let events = await audit.snapshot(), entries = await sql.snapshot().filter { $0.operation != .select }
-    try require(events.count == 3 && entries.count == 3 && saved.id > 0, "allocated graph did not persist three nodes")
+    let events = await audit.snapshot(), physical = await sql.snapshot()
+    let entries = physical.filter { $0.operation != .select }, reads = physical.filter { $0.operation == .select }
+    try require(events.count == 3 && entries.count == 3 && reads.count == 3 && saved.id > 0,
+        "allocated graph did not persist and read back three nodes")
     guard let paymentID = events.first(where: { $0.entity == "Payment" })?.entityID?.int64Value
     else { throw TeaQLError.execution("allocated payment ID missing") }
     let parent = NodeExpectation(type: "CustomerOrder", id: saved.id, reason: "submit allocated order")
@@ -22,6 +24,8 @@ func assignedGraph(_ context: UserContext, commands: CommandCapture, sql: SQLExe
         let expected = event.entity == "CustomerOrder" ? [parent] : [parent, leaf]
         try checkChain(event.mutationLineage ?? [], expected, boundary: "allocated committed audit")
         try checkChain(entries[index].mutationLineage, expected, boundary: "allocated physical SQL")
+        try checkChain(reads[index].mutationLineage, expected, boundary: "allocated SELECT readback")
+        try require(reads[index].resultCount == 1, "allocated readback did not fetch exactly one row")
     }
     print("PASS assigned identities: generated root, child and grandchild; SQL/audit scopes contain no temporary IDs")
 }
@@ -96,7 +100,7 @@ func concurrentGraphs(_ context: UserContext, commands: CommandCapture, sql: SQL
     async let second: Void = save(base + 4_000, label: "graph-B")
     _ = try await (first, second)
     let events = await audit.snapshot(), entries = await sql.snapshot(), requests = await commands.snapshot()
-    try require(events.count == 4 && entries.count == 4 && requests.count == 4, "concurrent graph cardinality differs")
+    try require(events.count == 4 && entries.count == 8 && requests.count == 4, "concurrent graph cardinality differs")
     for (id, label) in [(base + 3_000, "graph-A"), (base + 4_000, "graph-B")] {
         let parent = NodeExpectation(type: "CustomerOrder", id: id, reason: "submit \(label)")
         let expected = [key("CustomerOrder", id): [parent], key("Payment", id): [parent,

@@ -116,11 +116,18 @@ func swiftNativeGraphLineageIsPerItemAndCommittedOnly(failCommit: Bool) async th
   } catch { #expect(failCommit) }
   let events = Array(await audit.snapshot().dropFirst(oldEvents))
   #expect(events.count == (failCommit ? 0 : 6))
-  let entries = await sql.snapshot()
-  #expect(entries.count == 6)
+  let physical = await sql.snapshot()
+  #expect(physical.count == 12)
+  let entries = physical.filter { $0.operation != .select }
+  let reads = physical.filter { $0.operation == .select }
+  #expect(entries.count == 6 && reads.count == 6)
   let expected = [["CustomerOrder"], ["CustomerOrder"], ["CustomerOrder", "Payment"],
     ["CustomerOrder", "Payment"], ["CustomerOrder", "Shipment"], ["CustomerOrder", "OrderItem"]]
   for (index, entry) in entries.enumerated() {
+    #expect(reads[index].mutationLineage == entry.mutationLineage)
+    #expect(reads[index].tracePath.first?.name == "CustomerOrder")
+    #expect(reads[index].tracePath.map(\.kind) == ["operation", "request", "provider", "sql"])
+    #expect(reads[index].resultCount == 1)
     #expect(entry.mutationLineage.map(\.name) == expected[index])
     #expect(entry.tracePath.first?.name == "CustomerOrder")
     #expect(entry.tracePath.filter { $0.kind == "entity" }.first?.name
@@ -149,10 +156,11 @@ func swiftLateAssignedIDIsPresentInPhysicalAndCommittedLineage() async throws {
       auditReason: session.intent.comment, mutationLineage: scope.recover()))
   }
   let events = await audit.snapshot(); let entries = await sql.snapshot()
-  #expect(events.count == 1 && entries.count == 1)
+  #expect(events.count == 1 && entries.count == 2)
   #expect(events.first?.entityID == .int(1))
   #expect(events.first?.mutationLineage?.first?.entityID == .int(1))
   #expect(entries.first?.mutationLineage.first?.entityID == .int(1))
+  #expect(entries.last?.mutationLineage == entries.first?.mutationLineage)
 }
 
 @Test
@@ -184,7 +192,7 @@ func swiftNativeConcurrentGraphsReuseContextWithoutSharingScopes() async throws 
   async let second: Void = run(2, "graph-B")
   _ = try await (first, second)
   let events = await audit.snapshot(); let entries = await sql.snapshot()
-  #expect(events.count == 4 && entries.count == 4)
+  #expect(events.count == 4 && entries.count == 8)
   for event in events {
     let id = try #require(event.entityID?.int64Value)
     let own = id == 1 ? "graph-A" : "graph-B"

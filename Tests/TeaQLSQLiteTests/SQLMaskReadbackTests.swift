@@ -15,6 +15,69 @@ private func installReadbackTrigger(path: String, update: Bool) throws {
   }
 }
 
+private actor ReadbackAudit: AuditSink {
+  private var events: [AuditEvent] = []
+  func record(_ event: AuditEvent) { events.append(event) }
+  func snapshot() -> [AuditEvent] { events }
+}
+
+@Test
+func unmatchedUnversionedUpdateHasNoReadbackOrCommittedAudit() async throws {
+  let service = try SQLiteDataService(path: ":memory:")
+  let entity = EntityDescriptor(name: "ReadbackCustomer", table: "unmatched_readback", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "name", type: .string),
+  ])
+  let evidence = SQLExecutionEvidenceStore(), audit = ReadbackAudit()
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 }, auditSink: audit, telemetrySink: evidence,
+    diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }))
+  try await context.ensureSchema(RuntimeModule(name: "unmatched", entities: [entity]))
+  let result = try await context.execute(Mutation(kind: .update, entity: entity, id: .int(99),
+    values: ["name": .string("absent")], auditReason: "update missing row"))
+  #expect(result.affectedRows == 0 && result.persistedRecord == nil)
+  #expect(result.metadata?.statements.isEmpty == true)
+  let entries = await evidence.snapshot()
+  #expect(entries.map(\.operation) == [.update])
+  #expect(entries.first?.affectedRows == 0 && entries.first?.executionOutcome == "success")
+  #expect(await audit.snapshot().isEmpty)
+  #expect(try await service.auditEvents().isEmpty)
+}
+
+@Test(arguments: 0..<4)
+func successfulMutationReadbackIsARealSelect(mode: Int) async throws {
+  let service = try SQLiteDataService(path: ":memory:")
+  let entity = EntityDescriptor(name: "ReadbackCustomer", table: "successful_readback", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "name", type: .string),
+  ], auditMaskFields: ["name"])
+  let evidence = SQLExecutionEvidenceStore()
+  let sink = TextDiagnosticSQLLogSink(writer: { _ in })
+  var context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 }, telemetrySink: evidence,
+    diagnosticSQLLogSink: sink)
+  context.mutationSQLLogEnabled = mode & 1 != 0
+  context.querySQLLogEnabled = mode & 2 != 0
+  try await context.ensureSchema(RuntimeModule(name: "success", entities: [entity]))
+  let result = try await context.execute(Mutation(kind: .create, entity: entity,
+    values: ["id": .int(17), "name": .string("PRIVATE-CUSTOMER")], auditReason: "persist PRIVATE-CUSTOMER"))
+  #expect(result.affectedRows == 1)
+  #expect(result.persistedRecord?["name"] == .string("PRIVATE-CUSTOMER"))
+  #expect(result.metadata?.statements.map(\.operation) == [.insert, .select])
+  #expect(result.metadata?.statements.last?.parameters == [.int(17)])
+  #expect(result.metadata?.statements.last?.resultCount == 1)
+  let entries = await evidence.snapshot()
+  #expect(entries.map(\.operation) == [.insert, .select])
+  #expect(entries.last?.resultCount == 1)
+  #expect(entries.last?.tracePath.map(\.kind) == ["operation", "request", "provider", "sql"])
+  #expect(entries.last?.tracePath.first?.comment == "query")
+  #expect(!entries.description.contains("PRIVATE-CUSTOMER"))
+  let lines = await sink.snapshot()
+  #expect(lines.count == (context.mutationSQLLogEnabled ? 1 : 0) + (context.querySQLLogEnabled ? 1 : 0))
+  #expect(!lines.joined().contains("PRIVATE-CUSTOMER"))
+}
+
 @Test(arguments: [MutationKind.create, .update, .delete], 0..<4)
 func missingReadbackRetainsWriteAndSafeIntent(kind: MutationKind, mode: Int) async throws {
   let graph = mode & 1 != 0
@@ -40,6 +103,7 @@ func missingReadbackRetainsWriteAndSafeIntent(kind: MutationKind, mode: Int) asy
   let before = await sink.snapshot().count
   try installReadbackTrigger(path: path, update: kind != .create)
   context.mutationSQLLogEnabled = logs
+  context.querySQLLogEnabled = logs
   if graph { try await service.beginGraphTransaction() }
   do {
     _ = try await context.execute(Mutation(kind: kind, entity: entity, id: kind == .create ? nil : .int(777),
