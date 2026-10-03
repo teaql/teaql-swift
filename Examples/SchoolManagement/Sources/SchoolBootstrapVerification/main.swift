@@ -7,6 +7,12 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
   if !condition() { throw TeaQLError.execution(message) }
 }
 
+private actor BootstrapAuditSink: AuditSink {
+  private var values: [AuditEvent] = []
+  func record(_ event: AuditEvent) async throws { values.append(event) }
+  func snapshot() -> [AuditEvent] { values }
+}
+
 @main enum SchoolBootstrapVerification {
   static func main() async throws {
     let orderKey = EntityKey(entity: "Order", id: .int(1))
@@ -29,15 +35,51 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     let module = GeneratedRuntimeModule.module
     var runtime = TeaQLRuntime()
     try runtime.install(module)
+    let bootstrapAudit = BootstrapAuditSink()
+    let bootstrapSQL = SQLExecutionEvidenceStore()
     let context = UserContext(
       runtime: runtime, actor: "conformance", queryExecutor: service,
-      mutationExecutor: service, requestPolicy: RequestPolicy { $0 })
+      mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+      auditSink: bootstrapAudit, telemetrySink: bootstrapSQL)
     let quietContext = UserContext(
       runtime: runtime, actor: "conformance", queryExecutor: service,
       mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
       querySQLLogEnabled: false, mutationSQLLogEnabled: false)
     try await context.ensureSchema(module)
+    let firstBootstrapSQL = await bootstrapSQL.snapshot()
+    let firstBootstrapAudit = await bootstrapAudit.snapshot()
+    try require(firstBootstrapAudit.count == 3, "Bootstrap must audit one root and two constants")
+    try require(firstBootstrapAudit.allSatisfy {
+      $0.actor == "teaql-generated-bootstrap" && $0.category == "runtime-bootstrap"
+        && !$0.reason.isEmpty && $0.mutationLineage?.last?.comment == $0.reason
+    }, "Generated bootstrap lost its runtime identity or committed lineage")
+    let writes = firstBootstrapSQL.filter { $0.operation == .insert }
+    try require(writes.count == 3, "Bootstrap must execute three real typed INSERTs")
+    for write in writes {
+      try require(write.auditReason?.isEmpty == false
+        && write.tracePath.map(\.kind) == ["operation", "entity", "provider", "sql"],
+        "Generated bootstrap INSERT lost its request intent or canonical SQL path")
+      try require(firstBootstrapAudit.contains {
+        $0.entity == write.tracePath.first(where: { $0.kind == "entity" })?.name
+          && $0.mutationLineage == write.mutationLineage && $0.reason == write.auditReason
+      }, "Bootstrap SQL and committed audit disagree")
+    }
+    for read in firstBootstrapSQL.filter({ $0.operation == .select }) {
+      try require(read.purpose?.isEmpty == false
+        && (read.comment?.isEmpty == false || read.auditReason?.isEmpty == false)
+        && read.tracePath.map(\.kind) == ["operation", "request", "provider", "sql"],
+        "Generated bootstrap lookup/readback lost its intent or SQL path")
+    }
     try await context.ensureSchema(module)
+    let repeatedAudit = await bootstrapAudit.snapshot()
+    let repeatedSQL = Array(await bootstrapSQL.snapshot().dropFirst(firstBootstrapSQL.count))
+    try require(repeatedAudit.count == firstBootstrapAudit.count,
+                "Repeated bootstrap must not add committed mutation audits")
+    try require(repeatedSQL.count == 3 && repeatedSQL.allSatisfy {
+      $0.operation == .select && $0.comment?.isEmpty == false && $0.purpose?.isEmpty == false
+    }, "Repeated bootstrap must perform only its three intent-bearing lookups")
+    try require(context.actor == "conformance", "Bootstrap changed the caller identity")
+    print("PASS generated bootstrap SQL intent, committed lineage and no-op reseeding")
     do {
       _ = try await Q.schools().purpose("verify required intent with logging disabled")
         .executeForList(quietContext)
