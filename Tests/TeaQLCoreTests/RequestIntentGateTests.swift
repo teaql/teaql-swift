@@ -56,6 +56,45 @@ final class RequestIntentGateTests: XCTestCase {
     XCTAssertEqual(calls.value("mutation"), 0)
   }
 
+  func testTraceOnlyMutationCannotSupplyMissingRequestComment() async throws {
+    for logging in [false, true] {
+      let calls = IntentGateCalls()
+      let provider = IntentGateProvider(calls: calls)
+      var runtime = TeaQLRuntime()
+      try runtime.install(RuntimeModule(name: "trace-only intent", entities: [descriptor],
+        checkers: ["School": IntentGateChecker(calls: calls)]))
+      let context = UserContext(runtime: runtime, queryExecutor: provider, mutationExecutor: provider,
+        requestPolicy: RequestPolicy { query in calls.increment("queryPolicy"); return query },
+        auditSink: IntentGateAudit(calls: calls), telemetrySink: IntentGateTelemetry(calls: calls),
+        diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in calls.increment("diagnostic") }),
+        querySQLLogEnabled: logging, mutationSQLLogEnabled: logging,
+        runtimeTelemetry: IntentGateRuntimeTelemetry(calls: calls),
+        mutationPolicyRegistry: IntentGateRegistry(calls: calls),
+        mutationGovernanceSink: DelegatingMutationGovernanceSink { _, _ in calls.increment("governance") })
+      // Real caller input for TC-REQ-12; no explicit mutation comment is set.
+      let lineage = [TraceNode(entity: "School", comment: "SECRET-CANARY trace-only reason",
+        purpose: "", kind: "auditReason", entityID: .int(801))]
+      let mutation = Mutation(kind: .create, entity: descriptor,
+        values: ["id": .int(801)], mutationLineage: lineage)
+      XCTAssertNil(mutation.auditReason)
+      XCTAssertEqual(mutation.mutationLineage, lineage)
+      do { _ = try MutationRequest(mutation: mutation); XCTFail("trace supplied the request comment") }
+      catch { checkIntentError(error, field: "comment", kind: "mutation") }
+      do { _ = try context.preflightMutation(mutation); XCTFail("trace reached preflight") }
+      catch { checkIntentError(error, field: "comment", kind: "mutation") }
+      do { _ = try await context.execute(mutation); XCTFail("trace reached mutation execution") }
+      catch { checkIntentError(error, field: "comment", kind: "mutation") }
+      do { _ = try await provider.execute(mutation); XCTFail("trace reached direct provider execution") }
+      catch { checkIntentError(error, field: "comment", kind: "mutation") }
+      for name in ["checker", "queryPolicy", "policy", "query", "count", "begin", "mutation",
+        "commit", "rollback", "sql", "diagnostic", "audit", "governance", "telemetry"] {
+        XCTAssertEqual(calls.value(name), 0, "\(name), logging=\(logging)")
+      }
+      XCTAssertNil(mutation.auditReason)
+      XCTAssertEqual(mutation.mutationLineage, lineage)
+    }
+  }
+
   func testPolicyCannotReplaceOwnedQueryIntent() async throws {
     let calls = IntentGateCalls()
     let provider = IntentGateProvider(calls: calls)
@@ -184,4 +223,24 @@ private struct IntentGateAudit: AuditSink {
 private struct IntentGateTelemetry: RuntimeTelemetrySink {
   let calls: IntentGateCalls
   func record(_ metadata: SQLExecutionMetadata) { calls.increment("sql") }
+}
+
+private struct IntentGateRuntimeTelemetry: RuntimeTelemetry {
+  let calls: IntentGateCalls
+  func withOperation<Result: Sendable>(
+    _ operation: RuntimeOperation, completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () async throws -> Result
+  ) async rethrows -> Result {
+    calls.increment("telemetry")
+    return try await body()
+  }
+  func withSynchronousOperation<Result>(
+    _ operation: RuntimeOperation, completion: (Result) -> [String: RuntimeTelemetryValue],
+    _ body: () throws -> Result
+  ) rethrows -> Result {
+    calls.increment("telemetry")
+    return try body()
+  }
+  func flush() async {}
+  func shutdown() async {}
 }
