@@ -196,6 +196,11 @@ public actor SQLExecutionEvidenceStore: RuntimeTelemetrySink {
 }
 
 public struct Mutation: Sendable, Codable {
+  // Trusted loaded provenance; never decoded from JSON or included in a write.
+  package var loadedValues: TeaQLRecord = [:]
+  private enum CodingKeys: String, CodingKey {
+    case kind, entity, id, values, expectedVersion, auditReason, actor, auditCategory, mutationLineage
+  }
   public let kind: MutationKind
   public let entity: EntityDescriptor
   public var id: TeaQLValue?
@@ -358,7 +363,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         if !pending.isEmpty { values = pending }
       }
     }
-    let mutation: Mutation
+    var mutation: Mutation
     if let rooted, rooted.teaqlEntityRoot.isDeleted(rooted.teaqlEntityKey) {
       guard entity.id != 0, entity.version != 0 else {
         throw TeaQLError.execution("Deletion requires a loaded entity ID and version")
@@ -394,6 +399,14 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         expectedVersion: originalVersion,
         auditReason: reason
       )
+    }
+    if let snapshot = rooted?.teaqlLoadedSnapshot {
+      for property in Entity.descriptor.properties {
+        if let value = snapshot.record[property.name]
+          ?? property.modelName.flatMap({ snapshot.record[$0] }) ?? snapshot.record[property.column] {
+          mutation.loadedValues[property.name] = value
+        }
+      }
     }
     return mutation
   }
@@ -1319,6 +1332,8 @@ public struct UserContext: Sendable {
     try graphSession?.ensureActive()
     let validated = try checkAndFixMutation(
       mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    let oldProvenance = LogPrivacy.loadedMutationSource(validated)
+    let invocationProvenance = LogPrivacy.inheritIntent(oldProvenance, inherited: graphSession?.intentProvenance)
     let mutationGovernance = try mutationPolicyCoordinator.enter(
       context: self, mutation: validated, ledgerKey: ledgerKey)
     let submittedID = validated.id
@@ -1339,7 +1354,7 @@ public struct UserContext: Sendable {
         return try await mutationExecutor.execute(validated)
       } catch let failure as SQLExecutionFailure {
         for diagnostic in failure.diagnostics {
-          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: graphSession?.intentProvenance)
+          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: invocationProvenance)
           await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata,
             intentSource: source, intentValues: submittedID.map { [$0] } ?? []))
           if diagnostic.metadata.operation == .select ? querySQLLogEnabled : mutationSQLLogEnabled {
@@ -1354,7 +1369,7 @@ public struct UserContext: Sendable {
     let auditID = validated.id ?? result.generatedValues["id"]
       ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
     if let metadata = result.metadata {
-      let source = LogPrivacy.inheritIntent(metadata, inherited: graphSession?.intentProvenance)
+      let source = LogPrivacy.inheritIntent(metadata, inherited: invocationProvenance)
       for statement in metadata.statements.isEmpty ? [metadata] : metadata.statements {
         await telemetrySink?.record(LogPrivacy.project(statement,
           intentSource: source, intentValues: auditID.map { [$0] } ?? []))
@@ -1367,6 +1382,7 @@ public struct UserContext: Sendable {
     }
     if result.affectedRows > 0, let auditSink, let reason = validated.auditReason {
       let auditValues = Array(validated.values.values) + (auditID.map { [$0] } ?? [])
+        + LogPrivacy.privateValues(oldProvenance)
       try await runtimeTelemetry.withOperation(
         RuntimeOperation(
           family: "audit", name: "\(validated.entity.name).event",
@@ -1410,6 +1426,7 @@ public struct UserContext: Sendable {
       mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
     try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey)
     graphSession?.recordProvenance(Array(validated.values.values))
+    graphSession?.recordLoadedProvenance(LogPrivacy.loadedMutationSource(validated))
     return validated
   }
 

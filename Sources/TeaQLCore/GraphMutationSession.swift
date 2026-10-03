@@ -56,6 +56,7 @@ public final class GraphMutationSession: @unchecked Sendable {
   private var rollbackActions: [@Sendable () throws -> Void] = []
   private var auditEvents: [(AuditEvent, [TeaQLValue])] = []
   private var privacyValues: [TeaQLValue] = []
+  private var loadedProvenance: SQLExecutionMetadata?
   private var fixEvidence: [FixEvidence] = []
 
   package init(intent: MutationIntent, policy: MutationPolicyCoordinator) {
@@ -95,6 +96,9 @@ public final class GraphMutationSession: @unchecked Sendable {
 
   package func recordFixEvidence(_ value: FixEvidence) { lock.withLock { fixEvidence.append(value) } }
   package func recordProvenance(_ values: [TeaQLValue]) { lock.withLock { privacyValues.append(contentsOf: values) } }
+  package func recordLoadedProvenance(_ source: SQLExecutionMetadata) {
+    lock.withLock { loadedProvenance = LogPrivacy.inheritIntent(source, inherited: loadedProvenance) }
+  }
   package func bufferAudit(_ event: AuditEvent, values: [TeaQLValue]) throws {
     try lock.withLock {
       guard active else { throw TeaQLError.execution("Graph Mutation Session is already closed") }
@@ -103,24 +107,26 @@ public final class GraphMutationSession: @unchecked Sendable {
   }
   package var intentProvenance: SQLExecutionMetadata {
     lock.withLock {
-      SQLExecutionMetadata(operation: .select, parameterizedSQL: "", parameters: privacyValues,
+      let current = SQLExecutionMetadata(operation: .select, parameterizedSQL: "", parameters: privacyValues,
         debugSQL: "", elapsedMicros: 0, resultSummary: "",
         parameterLogPolicies: Array(repeating: .unknown, count: privacyValues.count), generatedSQL: true)
+      return LogPrivacy.inheritIntent(current, inherited: loadedProvenance)!
     }
   }
   package func finish(committed: Bool) -> ([@Sendable () throws -> Void], [AuditEvent], [FixEvidence]) {
     lock.withLock {
       precondition(active)
       active = false
+      let oldSecrets = loadedProvenance.map(LogPrivacy.privateValues) ?? []
       let events = committed ? auditEvents.map { event, values in
         AuditEvent(entity: event.entity, entityID: event.entityID, operation: event.operation,
-          reason: LogPrivacy.scrub(event.reason, values: privacyValues + values), actor: event.actor,
+          reason: LogPrivacy.scrub(event.reason, values: privacyValues + values + oldSecrets), actor: event.actor,
           category: event.category, occurredAt: event.occurredAt,
           mutationGovernance: event.mutationGovernance,
-          mutationLineage: TraceChain.maskLineage(event.mutationLineage ?? [], values: privacyValues + values))
+          mutationLineage: TraceChain.maskLineage(event.mutationLineage ?? [], values: privacyValues + values + oldSecrets))
       } : []
       let actions = committed ? commitActions : rollbackActions.reversed()
-      commitActions = []; rollbackActions = []; auditEvents = []; privacyValues = []
+      commitActions = []; rollbackActions = []; auditEvents = []; privacyValues = []; loadedProvenance = nil
       return (Array(actions), events, fixEvidence)
     }
   }

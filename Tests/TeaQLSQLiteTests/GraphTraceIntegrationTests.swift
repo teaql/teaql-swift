@@ -9,6 +9,55 @@ private actor CommittedGraphAudit: AuditSink {
   func snapshot() -> [AuditEvent] { events }
 }
 
+@Test(arguments: [false, true])
+func swiftLoadedScalarPrivacySurvivesGraphPreflight(rollback: Bool) async throws {
+  let properties = [PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "name", type: .string)]
+  let root = EntityDescriptor(name: "CustomerOrder", table: "privacy_order", properties: properties, auditMaskFields: [])
+  let child = EntityDescriptor(name: "OrderItem", table: "privacy_item", properties: properties, auditMaskFields: ["name"])
+  let service = try SQLiteDataService(path: FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-old-values-\(UUID()).sqlite").path)
+  let audit = CommittedGraphAudit(), sql = SQLExecutionEvidenceStore()
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 }, auditSink: audit, telemetrySink: sql,
+    diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }))
+  try await context.ensureSchema(RuntimeModule(name: "privacy", entities: [root, child]))
+  _ = try await context.execute(Mutation(kind: .create, entity: child,
+    values: ["id": .int(11), "name": .string("PRIVATEOLDVALUE")], auditReason: "seed private item"))
+  await sql.enableAll()
+  do { try await context.executeGraphSave(comment: "page 1 PRIVATEOLDVALUE to PRIVATENEWVALUE") { context, session in
+    let parent = Mutation(kind: .create, entity: root, values: ["id": .int(22), "name": .string("public parent")], auditReason: session.intent.comment)
+    var item = Mutation(kind: .update, entity: child, id: .int(11),
+      values: ["name": .string("PRIVATENEWVALUE")], expectedVersion: 1, auditReason: session.intent.comment)
+    item.loadedValues = ["version": .int(1), "name": .string("PRIVATEOLDVALUE")]
+    let encoded = try JSONEncoder().encode(item)
+    #expect(!String(decoding: encoded, as: UTF8.self).contains("loadedValues"))
+    #expect(try JSONDecoder().decode(Mutation.self, from: encoded).loadedValues.isEmpty)
+    _ = try context.preflightMutation(parent); _ = try context.preflightMutation(item)
+    _ = try await context.execute(parent); _ = try await context.execute(item)
+    #expect(item.values == ["name": .string("PRIVATENEWVALUE")])
+    if rollback { throw TeaQLError.execution("rollback privacy graph") }
+  }; #expect(!rollback) } catch { #expect(rollback) }
+  let facts = await sql.snapshot()
+  #expect(facts.count == 4)
+  for fact in facts {
+    #expect(fact.auditReason?.contains("PRIVATEOLDVALUE") == false)
+    #expect(fact.auditReason?.contains("PRIVATENEWVALUE") == false)
+    #expect(fact.auditReason?.contains("page 1") == true)
+  }
+  let events = Array(await audit.snapshot().dropFirst())
+  #expect(events.count == (rollback ? 0 : 2))
+  for event in events {
+    #expect(!event.reason.contains("PRIVATEOLDVALUE"))
+    #expect(event.reason.contains("page 1"))
+  }
+  var query = SelectQuery(entity: child)
+  query.limit = 1; query.comment = "inspect committed privacy value"; query.purpose = "verify rollback or commit"
+  let persisted = try await context.execute(query)
+  #expect(persisted.records.first?["name"] == .string(rollback ? "PRIVATEOLDVALUE" : "PRIVATENEWVALUE"))
+}
+
 private actor FailingOnceGraphAudit: AuditSink {
   private var attempts = 0
   func record(_ event: AuditEvent) throws {

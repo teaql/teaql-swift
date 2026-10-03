@@ -56,10 +56,12 @@ import TeaQLSQLite
         try await concurrentGraphs(context, commands: commands, sql: sql, audit: audit, base: base)
         try await sharedOwnershipProofs(runtime: runtime, service: service, base: base)
         try await generatedPaginationProofs(runtime: runtime, service: service, base: base)
-        let native = UserContext(runtime: runtime, actor: "trace-conformance", queryExecutor: service,
+        var native = UserContext(runtime: runtime, actor: "trace-conformance", queryExecutor: service,
             mutationExecutor: service, requestPolicy: RequestPolicy { $0 }, auditSink: audit,
             telemetrySink: sql, diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }))
         try await generatedFailureProofs(native, sql: sql, audit: audit, path: path, base: base)
+        native.querySQLLogEnabled = false; native.mutationSQLLogEnabled = false
+        try await generatedLoadedPrivacy(native, sql: sql, audit: audit, base: base)
         print("PASS: Swift generated Trace Chain example")
     }
 }

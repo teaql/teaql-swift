@@ -73,6 +73,11 @@ public protocol TeaQLEntity: Sendable, Codable {
 public protocol TeaQLMutationRootedEntity: TeaQLEntity {
   var teaqlEntityRoot: EntityRoot { get }
   var teaqlEntityKey: EntityKey { get }
+  var teaqlLoadedSnapshot: LoadedEntitySnapshot? { get }
+}
+
+public extension TeaQLMutationRootedEntity {
+  var teaqlLoadedSnapshot: LoadedEntitySnapshot? { nil }
 }
 
 public extension TeaQLEntity {

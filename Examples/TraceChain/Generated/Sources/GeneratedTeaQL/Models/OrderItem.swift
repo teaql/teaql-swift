@@ -39,7 +39,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
-        auditMaskFields: []
+        auditMaskFields: ["name"]
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {

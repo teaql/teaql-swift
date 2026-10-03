@@ -6,6 +6,26 @@ final class SQLMaskedAlternative: Sendable {
 }
 
 enum LogPrivacy {
+  static func loadedMutationSource(_ mutation: Mutation) -> SQLExecutionMetadata {
+    var values: [TeaQLValue] = [], policies: [SQLParameterLogPolicy] = []
+    for property in mutation.entity.properties {
+      guard let value = mutation.loadedValues[property.name] else { continue }
+      let names = [property.name, property.modelName ?? property.name, property.column]
+      let policy: SQLParameterLogPolicy = names.contains(where: credential) ? .credential
+        : mutation.entity.auditMaskFields.map { fields in
+          names.contains(where: fields.contains) ? .masked : .plain
+        } ?? .unknown
+      values.append(value); policies.append(policy)
+    }
+    return SQLExecutionMetadata(operation: .select, parameterizedSQL: "", parameters: values,
+      debugSQL: "", elapsedMicros: 0, resultSummary: "", parameterLogPolicies: policies, generatedSQL: true)
+  }
+
+  static func privateValues(_ source: SQLExecutionMetadata) -> [TeaQLValue] {
+    zip(source.parameters, policies(source)).compactMap { value, policy in
+      policy == .plain && !hasCredentials(value) ? nil : value
+    }
+  }
   // Count Unicode scalars (not grapheme clusters); only ASCII digits are numeric IDs.
   static func maskAuditValue(_ value: String) -> String {
     let scalars = Array(value.unicodeScalars)
