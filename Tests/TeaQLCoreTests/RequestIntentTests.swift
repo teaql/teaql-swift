@@ -34,9 +34,17 @@ final class RequestIntentTests: XCTestCase {
           XCTAssertEqual(request.intent.purpose, expected?["purpose"], id)
         } else {
           // No trace/child reason can supply the mandatory root property.
-          let request = try MutationRequest(mutation: Mutation(kind: .create, entity: entity),
+          let trace = (input["trace"] as? [[String: Any]] ?? []).map {
+            TraceNode(entity: "School", comment: $0["detail"] as? String ?? "",
+              purpose: "", kind: $0["kind"] as? String ?? "auditReason")
+          }
+          let request = try MutationRequest(mutation: Mutation(kind: .create, entity: entity,
+              mutationLineage: trace),
             comment: input["comment"] as? String)
           comment = request.intent.comment
+          if !trace.isEmpty {
+            XCTAssertEqual(request.mutation.mutationLineage, trace, id)
+          }
         }
         XCTAssertNil(test["error"], id)
         XCTAssertEqual(comment, (test["expected"] as? [String: String])?["comment"], id)
@@ -46,6 +54,41 @@ final class RequestIntentTests: XCTestCase {
         XCTAssertEqual(error.field, expected["field"], id)
         XCTAssertEqual(error.requestKind, kind, id)
       }
+    }
+  }
+
+  func testExplicitMutationCommentSurvivesEveryBlankTypedRouteTail() throws {
+    let comment = "  explicit mutation request reason  "
+    for kind in ["entity", "provider", "sql"] {
+      let trace = [
+        TraceNode(entity: "School", comment: "different lineage reason", purpose: "",
+          kind: "auditReason", entityID: .int(801)),
+        TraceNode(entity: "School", comment: "", purpose: "", kind: kind),
+      ]
+      var mutation = Mutation(kind: .create, entity: entity, values: ["id": .int(801)],
+        mutationLineage: trace)
+      let request = try MutationRequest(mutation: mutation, comment: comment)
+      XCTAssertEqual(request.mutation.mutationLineage, trace, kind)
+      XCTAssertEqual(request.mutation.mutationLineage?.last?.kind, kind)
+      XCTAssertEqual(request.mutation.mutationLineage?.last?.comment, "", kind)
+      XCTAssertEqual(request.intent.comment, comment, kind)
+      XCTAssertEqual(request.mutation.auditReason, comment, kind)
+      XCTAssertEqual(try request.intent.readbackIntent().comment, comment, kind)
+      for missing in [nil, "", " \t\r\n"] as [String?] {
+        XCTAssertThrowsError(try MutationRequest(mutation: mutation, comment: missing)) {
+          let error = $0 as? RequestIntentError
+          XCTAssertEqual(error?.code, "REQUEST_COMMENT_REQUIRED")
+          XCTAssertEqual(error?.field, "comment")
+          XCTAssertEqual(error?.requestKind, "mutation")
+        }
+      }
+      mutation.auditReason = "changed after capture"
+      mutation.mutationLineage = []
+      XCTAssertEqual(request.mutation.mutationLineage, trace, kind)
+      XCTAssertEqual(request.intent.comment, comment, kind)
+      let derived = request.withMutation(mutation)
+      XCTAssertEqual(derived.intent.comment, comment, kind)
+      XCTAssertEqual(derived.mutation.auditReason, comment, kind)
     }
   }
 
