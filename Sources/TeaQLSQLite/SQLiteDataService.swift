@@ -190,9 +190,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   package func queryIntentProvenance(_ request: QueryRequest) throws -> SQLExecutionMetadata {
     let compiled = try compiler.compile(request.query)
+    // Only the invocation-local intent source includes pre-decoration operands.
+    // Physical SQL, bindings, returned metadata and safe sink records do not.
     return SQLExecutionMetadata(operation: .select, parameterizedSQL: compiled.sql,
-      parameters: compiled.parameters, debugSQL: "", elapsedMicros: 0, resultSummary: "",
-      parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL)
+      parameters: compiled.parameters + compiled.intentOperands.map(\.value),
+      debugSQL: "", elapsedMicros: 0, resultSummary: "",
+      parameterLogPolicies: compiled.parameterLogPolicies + compiled.intentOperands.map(\.policy),
+      generatedSQL: compiled.generatedSQL)
   }
 
   package func executeDiagnosed(_ request: QueryRequest) async throws -> QueryResult {
