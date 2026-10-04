@@ -925,46 +925,7 @@ public struct UserContext: Sendable {
     // Capture just the requested assembly key, in the final provider row order,
     // before a to-one load can replace it (including replacement with null).
     let attachmentKeys = attachmentKey.map { key in result.records.map { $0[key] ?? .null } } ?? []
-    var facets: [String: SmartList<TeaQLRecord>] = [:]
-    for facet in validated.facets {
-      var membership = validated
-      membership.facets = []
-      membership.relations = []
-      membership.relationAggregates = []
-      membership.orderBy = []
-      membership.offset = 0
-      membership.limit = nil
-      membership.projection = [facet.relationName]
-      let membershipRows = try await execute(request.withQuery(membership), inheritedIntent: invocationIntent).records
-      var counts: [TeaQLValue: Int64] = [:]
-      for row in membershipRows {
-        guard let value = row[facet.relationName], value != .null else { continue }
-        counts[normalizedRelationIdentity(value), default: 0] += 1
-      }
-
-      var child = facet.query.makeQuery()
-      child.tracePath = validated.tracePath + [TraceNode(
-        entity: child.entity.name, comment: "\(validated.entity.name).\(facet.relationName)",
-        purpose: "", level: validated.tracePath.count + 2,
-        kind: "relation", name: facet.relationName)]
-      child.comment = validated.comment
-      child.purpose = validated.purpose
-      let childResult = try await execute(request.withQuery(child), inheritedIntent: invocationIntent)
-      var childRows = childResult.records.map { row in
-        var copy = row
-        if let id = row["id"] {
-          copy["count"] = .int(counts[normalizedRelationIdentity(id)] ?? 0)
-        }
-        return copy
-      }
-      if !facet.includeAllFacets {
-        childRows.removeAll { row in
-          guard let id = row["id"] else { return true }
-          return counts[normalizedRelationIdentity(id)] == nil
-        }
-      }
-      facets[facet.name] = SmartList(childRows, facets: childResult.facets)
-    }
+    let facets = try await executeFacets(request, query: validated, inheritedIntent: invocationIntent)
 
     guard (!validated.relations.isEmpty || !validated.relationAggregates.isEmpty),
       !result.records.isEmpty else {
@@ -974,6 +935,7 @@ public struct UserContext: Sendable {
     }
 
     var records = result.records
+    var loadedRelations: [Int: [String: QueryResult]] = [:]
     let childIntent = LogPrivacy.inheritIntent(result.metadata, inherited: invocationIntent)
     for aggregate in validated.relationAggregates {
       guard let parentID = validated.entity.idProperty else {
@@ -1044,8 +1006,7 @@ public struct UserContext: Sendable {
           ]
         }
       ) {
-        let localValues = result.records.compactMap { $0[relation.localKey] }
-        guard !localValues.isEmpty else { return }
+        let localValues = result.records.compactMap { $0[relation.localKey] }.filter { $0 != .null }
         var child = relation.query.makeQuery()
         child.tracePath = validated.tracePath + [TraceNode(
           entity: child.entity.name, comment: "\(validated.entity.name).\(relation.traceName ?? relation.name)",
@@ -1059,6 +1020,9 @@ public struct UserContext: Sendable {
         }
         child.comment = validated.comment
         child.purpose = validated.purpose
+        let facetBase = child
+        // Facet membership belongs to each owner, not the batched visible rows.
+        child.facets = []
         if child.limit != nil,
           !child.orderBy.contains(where: { $0.field == (child.entity.properties.first(where: { $0.isID })?.name ?? "id") })
         {
@@ -1070,6 +1034,7 @@ public struct UserContext: Sendable {
           || (threshold.map { $0 > 0 && localValues.count <= $0 } ?? false))
         var children: [TeaQLRecord] = []
         var childKeys: [TeaQLValue] = []
+        var childRelations: [Int: [String: QueryResult]] = [:]
         if useProbes {
           for localValue in localValues {
             var probe = child
@@ -1078,6 +1043,8 @@ public struct UserContext: Sendable {
             probe.filter = probe.filter.map { .and([$0, join]) } ?? join
             let loaded = try await execute(request.withQuery(probe), inheritedIntent: childIntent,
               attachmentKey: relation.foreignKey)
+            let start = children.count
+            for (index, relations) in loaded.loadedRelations { childRelations[start + index] = relations }
             children.append(contentsOf: loaded.records)
             childKeys.append(contentsOf: loaded.relationAttachmentKeys)
           }
@@ -1089,17 +1056,35 @@ public struct UserContext: Sendable {
             attachmentKey: relation.foreignKey)
           children = loaded.records
           childKeys = loaded.relationAttachmentKeys
+          childRelations = loaded.loadedRelations
         }
         guard childKeys.count == children.count else {
           throw TeaQLError.execution("Relation assembly key count differs from row count")
         }
-        var grouped: [TeaQLValue: [TeaQLRecord]] = [:]
-        for (key, row) in zip(childKeys, children) {
-          grouped[normalizedRelationIdentity(key), default: []].append(row)
+        var grouped: [TeaQLValue: [Int]] = [:]
+        for (index, key) in childKeys.enumerated() {
+          grouped[normalizedRelationIdentity(key), default: []].append(index)
         }
         for index in records.indices {
           let key = normalizedRelationIdentity(result.records[index][relation.localKey] ?? .null)
-          let matches = grouped[key] ?? []
+          let found = key == .null ? [] : grouped[key] ?? []
+          let indices = relation.many ? found : Array(found.prefix(1))
+          let matches = indices.map { children[$0] }
+          var nested: [Int: [String: QueryResult]] = [:]
+          for (position, childIndex) in indices.enumerated() {
+            if let relations = childRelations[childIndex] { nested[position] = relations }
+          }
+          var ownerFacets: [String: SmartList<TeaQLRecord>] = [:]
+          if !facetBase.facets.isEmpty {
+            var owner = facetBase
+            owner.partitionBy = nil
+            let membership = TeaQLExpression.inList(relation.foreignKey, key == .null ? [] : [key])
+            owner.filter = owner.filter.map { .and([$0, membership]) } ?? membership
+            let ownerQuery = try request.withQuery(requestPolicy.apply(owner)).query.validatedForExecution()
+            ownerFacets = try await executeFacets(request, query: ownerQuery, inheritedIntent: childIntent)
+          }
+          loadedRelations[index, default: [:]][relation.name] = QueryResult(
+            records: matches, backend: result.backend, facets: ownerFacets, loadedRelations: nested)
           records[index][relation.name] = relation.many
             ? .array(matches.map(TeaQLValue.object))
             : matches.first.map(TeaQLValue.object) ?? .null
@@ -1108,7 +1093,47 @@ public struct UserContext: Sendable {
     }
     return QueryResult(
       records: records, backend: result.backend, trace: result.trace,
-      metadata: result.metadata, facets: facets).attachingRelationKeys(attachmentKeys)
+      metadata: result.metadata, facets: facets, loadedRelations: loadedRelations).attachingRelationKeys(attachmentKeys)
+  }
+
+  private func executeFacets(
+    _ request: QueryRequest, query: SelectQuery, inheritedIntent: SQLExecutionMetadata?
+  ) async throws -> [String: SmartList<TeaQLRecord>] {
+    var facets: [String: SmartList<TeaQLRecord>] = [:]
+    for facet in query.facets {
+      var membership = query
+      membership.facets = []; membership.relations = []; membership.relationAggregates = []
+      membership.aggregates = []; membership.groupBy = []; membership.orderBy = []
+      membership.partitionBy = nil; membership.offset = 0; membership.limit = nil
+      membership.projection = [facet.relationName]
+      let rows = try await execute(request.withQuery(membership), inheritedIntent: inheritedIntent).records
+      var counts: [TeaQLValue: Int64] = [:]
+      for row in rows {
+        guard let value = row[facet.relationName], value != .null else { continue }
+        counts[normalizedRelationIdentity(value), default: 0] += 1
+      }
+      var child = facet.query.makeQuery()
+      child.tracePath = query.tracePath + [TraceNode(
+        entity: child.entity.name, comment: "\(query.entity.name).\(facet.relationName)",
+        purpose: "", level: query.tracePath.count + 2, kind: "relation", name: facet.relationName)]
+      child.comment = query.comment; child.purpose = query.purpose
+      // Restrict before pagination and recursion so nested counts cannot include
+      // target candidates excluded by their parent's membership.
+      if !facet.includeAllFacets {
+        let filter = TeaQLExpression.inList("id", Array(counts.keys))
+        child.filter = child.filter.map { .and([$0, filter]) } ?? filter
+      }
+      let loaded = try await execute(request.withQuery(child), inheritedIntent: inheritedIntent)
+      let decorated = loaded.records.filter { row in
+        facet.includeAllFacets || row["id"].map { counts[normalizedRelationIdentity($0)] != nil } == true
+      }.map { row in
+        var copy = row
+        if let id = row["id"] { copy["count"] = .int(counts[normalizedRelationIdentity(id)] ?? 0) }
+        return copy
+      }
+      facets[facet.name] = SmartList(decorated, facets: loaded.facets)
+    }
+    return facets
   }
 
   private func queryIntentProvenance(_ request: QueryRequest) async throws -> SQLExecutionMetadata? {

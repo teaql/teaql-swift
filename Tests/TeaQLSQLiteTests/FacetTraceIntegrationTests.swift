@@ -85,6 +85,10 @@ private func verifyFacetTrace(loadedRelation: Bool, logging: Bool) async throws 
       guard case .object(let loaded) = row["orderEntity"] else { Issue.record("loaded order is missing"); continue }
       #expect(loaded["id"] == .int(Int64(index + 1)))
       #expect(loaded["platform"] == .int(10))
+      let carrier = try #require(result.loadedRelations[index]?["orderEntity"])
+      #expect(carrier.records == [loaded])
+      #expect(carrier.facets["platforms"]?.map { $0["count"] } == [.int(1), .int(0)])
+      #expect(carrier.facets["platforms"]?.facets["organizations"]?.map { $0["count"] } == [.int(1)])
     }
   } else {
     let values = try #require(result.facets["platforms"])
@@ -96,21 +100,23 @@ private func verifyFacetTrace(loadedRelation: Bool, logging: Bool) async throws 
     #expect(nested?.map { $0["count"] } == [.int(1)])
   }
   let facts = await evidence.snapshot(), actualRows = await capture.snapshot()
-  let offset = loadedRelation ? 1 : 0
-  #expect(facts.count == 5 + offset && actualRows.count == facts.count)
+  #expect(facts.count == (loadedRelation ? 10 : 5) && actualRows.count == facts.count)
   // These are provider-returned membership and materialization rows, not
   // synthetic SQL or fixture-supplied metadata. Counts are computed from them.
-  #expect(actualRows[offset + 1].records.map { $0["platform"] } == [.int(10), .int(10)])
-  #expect(actualRows[offset + 2].records.map { $0["id"] } == [.int(10), .int(20)])
-  #expect(actualRows[offset + 3].records.map { $0["organization"] } == [.int(100), .int(200)])
-  #expect(actualRows[offset + 4].records.map { $0["id"] } == [.int(100)])
+  for start in loadedRelation ? [2, 6] : [1] {
+    #expect(actualRows[start].records.map { $0["platform"] }
+      == (loadedRelation ? [.int(10)] : [.int(10), .int(10)]))
+    #expect(actualRows[start + 1].records.map { $0["id"] } == [.int(10), .int(20)])
+    #expect(actualRows[start + 2].records.map { $0["organization"] } == [.int(100), .int(200)])
+    #expect(actualRows[start + 3].records.map { $0["id"] } == [.int(100)])
+  }
   let prefix = loadedRelation ? ["customerOrder"] : []
   let detailPrefix = loadedRelation ? ["Payment.customerOrder"] : []
-  let routes = (loadedRelation ? [[]] : []) + [prefix, prefix,
-    prefix + ["platform"], prefix + ["platform"], prefix + ["platform", "organization"]]
-  let details = (loadedRelation ? [[]] : []) + [detailPrefix, detailPrefix,
-    detailPrefix + ["CustomerOrder.platform"], detailPrefix + ["CustomerOrder.platform"],
+  let facetRoutes = [prefix, prefix + ["platform"], prefix + ["platform"], prefix + ["platform", "organization"]]
+  let facetDetails = [detailPrefix, detailPrefix + ["CustomerOrder.platform"], detailPrefix + ["CustomerOrder.platform"],
     detailPrefix + ["CustomerOrder.platform", "Platform.organization"]]
+  let routes = loadedRelation ? [[], prefix] + facetRoutes + facetRoutes : [prefix] + facetRoutes
+  let details = loadedRelation ? [[], detailPrefix] + facetDetails + facetDetails : [detailPrefix] + facetDetails
   for (index, fact) in facts.enumerated() {
     #expect(fact.tracePath.map(\.kind) == ["operation", "request"]
       + Array(repeating: "relation", count: routes[index].count) + ["provider", "sql"])
@@ -140,4 +146,52 @@ func swiftNestedFacetsRetainSQLOriginAndCounts(logging: Bool) async throws {
 @Test(arguments: [false, true])
 func swiftLoadedRelationFacetsRetainAncestorsAndMembership(logging: Bool) async throws {
   try await verifyFacetTrace(loadedRelation: true, logging: logging)
+}
+
+@Test(arguments: [false, true], [0, 32])
+func swiftLoadedFacetCarriersKeepPerOwnerCountsAndEmptyCollections(includeAll: Bool, threshold: Int) async throws {
+  let platform = facetEntity("FacetPlatform", fields: [PropertyDescriptor(name: "name", type: .string)], privateFields: ["name"])
+  let type = facetEntity("FacetType", fields: [PropertyDescriptor(name: "platform", type: .int)])
+  let school = facetEntity("FacetSchool", fields: [PropertyDescriptor(name: "schoolType", type: .int)])
+  let service = try SQLiteDataService(path: ":memory:")
+  let context = UserContext(queryExecutor: service, mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+    querySQLLogEnabled: false, mutationSQLLogEnabled: false)
+  try await context.ensureSchema(RuntimeModule(name: "facet-carrier", entities: [platform, type, school]))
+  for (entity, values) in [
+    (platform, ["id": TeaQLValue.int(1), "name": .string("future-private-platform")]),
+    (type, ["id": .int(1), "platform": .int(1)]), (type, ["id": .int(2), "platform": .int(1)]),
+    (school, ["id": .int(1), "schoolType": .int(1)]), (school, ["id": .int(2), "schoolType": .int(1)]),
+  ] {
+    _ = try await context.execute(Mutation(kind: .create, entity: entity, values: values, auditReason: "seed native carrier"))
+  }
+  var platforms = SelectQuery(entity: platform)
+  platforms.filter = .equal("name", .string("future-private-platform"))
+  var types = SelectQuery(entity: type)
+  types.orderBy = [OrderBy("id", .ascending)]
+  types.facets = [FacetRequest(name: "platforms", relationName: "platform", query: platforms, includeAllFacets: includeAll)]
+  var schools = SelectQuery(entity: school)
+  schools.limit = 1; schools.topNProbeParentThreshold(threshold)
+  schools.facets = [FacetRequest(name: "types", relationName: "schoolType", query: types, includeAllFacets: includeAll)]
+  var parents = SelectQuery(entity: type)
+  parents.orderBy = [OrderBy("id", .ascending)]
+  parents.comment = "load future-private-platform"; parents.purpose = "verify scoped carriers"
+  parents.relationQuery("schoolList", localKey: "id", foreignKey: "schoolType", many: true, query: schools)
+  let loaded = try await context.execute(parents)
+  #expect(loaded.records.count == 2)
+  for index in loaded.records.indices {
+    let carrier = try #require(loaded.loadedRelations[index]?["schoolList"])
+    #expect(carrier.records.count == (index == 0 ? 1 : 0))
+    let facet = try #require(carrier.facets["types"])
+    #expect(facet.map { $0["count"] } == (includeAll ? [.int(index == 0 ? 2 : 0), .int(0)]
+      : index == 0 ? [.int(2)] : []))
+    #expect(facet.facets["platforms"]?.map { $0["count"] } == (includeAll ? [.int(2)]
+      : index == 0 ? [.int(1)] : []))
+    // Query-only sidecars cannot contaminate snapshots, records, or JSON.
+    #expect(loaded.records[index]["facets"] == nil && loaded.records[index]["loadedRelations"] == nil)
+    let snapshot = LoadedEntitySnapshots().capture(key: EntityKey(entity: type.name, id: .int(Int64(index + 1))),
+      version: 1, record: loaded.records[index])
+    #expect(snapshot.record == loaded.records[index])
+    let encoded = String(decoding: try JSONEncoder().encode(snapshot.record), as: UTF8.self)
+    #expect(!encoded.contains("facets") && !encoded.contains("loadedRelations"))
+  }
 }
