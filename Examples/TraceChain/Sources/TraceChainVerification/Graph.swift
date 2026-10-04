@@ -50,7 +50,8 @@ func normativeGraph(
     available.updateCustomerOrder(base)
     unavailable.markForDeletion()
     _ = unavailable.auditAs("remove unavailable item")
-    var pay = try payment(context, id: base + 201, parentID: base, label: "TRACE-PAYMENT")
+    // Equal numeric IDs across entity types must not collapse into one target.
+    var pay = try payment(context, id: base, parentID: base, label: "TRACE-PAYMENT")
     _ = pay.auditAs("authorize payment")
     var attempt = try Q.paymentAttempts().comment("initialize attempt")
         .purpose("compose payment graph").newEntity(context)
@@ -70,15 +71,15 @@ func normativeGraph(
     await audit.clear(); await sql.enableAll(); await commands.clear(commitBarrier: true)
     _ = try await root.auditAs("submit order").save(context)
     let parent = NodeExpectation(type: "CustomerOrder", id: base, reason: "submit order")
-    let payNode = NodeExpectation(type: "Payment", id: base + 201, reason: "authorize payment")
+    let payNode = NodeExpectation(type: "Payment", id: base, reason: "authorize payment")
     let expected: [String: [NodeExpectation]] = [
         key("CustomerOrder", base): [parent], key("OrderItem", base + 101): [parent],
         key("OrderItem", base + 102): [parent, NodeExpectation(type: "OrderItem", id: base + 102, reason: "remove unavailable item")],
-        key("Payment", base + 201): [parent, payNode], key("PaymentAttempt", base + 301): [parent, payNode],
+        key("Payment", base): [parent, payNode], key("PaymentAttempt", base + 301): [parent, payNode],
         key("Shipment", base + 401): [parent, NodeExpectation(type: "Shipment", id: base + 401, reason: "dispatch shipment")],
     ]
     try checkObservedGraph(expected, commands: await commands.snapshot(), sql: await sql.snapshot(),
-        audit: await audit.snapshot(), rootReason: "submit order")
+        audit: await audit.snapshot(), rootReason: "submit order", emitIdentities: true)
     let deletes = await audit.snapshot().filter { $0.operation == .delete }
     try require(deletes.count == 1 && deletes.first?.entityID == .int(base + 102), "delete not audited")
     await commands.clear()
@@ -95,7 +96,7 @@ func normativeGraph(
     try require(loaded.count == 1, "graph query missed root")
     try require(try E.customerOrder(loaded[0]).orderItemList().size().eval() == 1,
         "generated E did not exclude deleted child")
-    try require(try E.customerOrder(loaded[0]).paymentList().first().id().eval() == base + 201,
+    try require(try E.customerOrder(loaded[0]).paymentList().first().id().eval() == base,
         "generated E payment identity differs")
     print("PASS normative graph: six real commands/SQL/committed audits; root=\(base), deletion=\(base + 102)")
 }
@@ -133,7 +134,7 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
             "canonical generated path at every physical boundary")
     }
     print("PASS generated three-level Q/E: PaymentAttempt.payment -> Payment.customerOrder -> CustomerOrder.platform")
-    let hidden = try await Q.payments().withIdIs(base + 201).limit(1)
+    let hidden = try await Q.payments().withIdIs(base).limit(1)
         .selectCustomerOrderWith(Q.customerOrders().withIdIs(0).limit(1))
         .comment("load filtered forward identity").purpose("distinguish NotLoaded detail from null")
         .executeForList(context)
@@ -151,7 +152,7 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
         throw TeaQLError.execution("hidden detail became loaded-null")
     }
     try assertUnfetched()
-    let visible = try await Q.payments().withIdIs(base + 201).limit(1)
+    let visible = try await Q.payments().withIdIs(base).limit(1)
         .selectCustomerOrderWith(Q.customerOrders().withIdIs(base).limit(1))
         .comment("load independent full reference").purpose("verify edge-owned load boundaries")
         .executeForList(context)

@@ -52,6 +52,7 @@ import TeaQLSQLite
         try require(rejectedCommands.isEmpty && rejectedSQL.isEmpty && rejectedAudit.isEmpty && starts == beforeStarts,
             "invalid intent reached transaction/provider/audit")
         print("PASS generated required intent before provider/transaction access")
+        try graphIdentityControls()
         try await normativeGraph(context, commands: commands, sql: sql, audit: audit, base: base)
         try await generatedThreeLevelQuery(context, sql: sql, base: base)
         try await assignedGraph(context, commands: commands, sql: sql, audit: audit)

@@ -68,7 +68,7 @@ func key(_ type: String, _ id: Int64) -> String { "\(type)#\(id)" }
 
 func checkObservedGraph(
     _ expected: [String: [NodeExpectation]], commands: [MutationRequest],
-    sql: [SQLExecutionMetadata], audit: [AuditEvent], rootReason: String
+    sql: [SQLExecutionMetadata], audit: [AuditEvent], rootReason: String, emitIdentities: Bool = false
 ) throws {
     let writes = sql.filter { $0.operation != .select }
     let reads = sql.filter { $0.operation == .select }
@@ -77,6 +77,7 @@ func checkObservedGraph(
     try require(reads.count == expected.count && sql.count == 2 * expected.count,
         "each successful mutation must expose its real SELECT readback")
     var commandKeys: Set<String> = []; var sqlKeys: Set<String> = []; var auditKeys: Set<String> = []
+    var commandIdentities: [GraphIdentity] = [], physicalIdentities: [GraphIdentity] = [], auditIdentities: [GraphIdentity] = []
     for request in commands {
         let mutation = request.mutation
         guard let id = (mutation.id ?? mutation.values["id"])?.int64Value,
@@ -86,6 +87,7 @@ func checkObservedGraph(
         try require(commandKeys.insert(identity).inserted, "duplicate graph command identity")
         try require(request.intent.comment == rootReason, "command lost request-owned root intent")
         try checkChain(lineage, wanted, boundary: "command \(identity)")
+        commandIdentities.append(GraphIdentity(entity: mutation.entity.name, id: id))
     }
     for (index, entry) in writes.enumerated() {
         let read = reads[index]
@@ -108,6 +110,9 @@ func checkObservedGraph(
               let wanted = expected[key(entity.name, id)], entity.name == mutation.entity.name
         else { throw TeaQLError.execution("physical SQL identity missing") }
         let identity = key(entity.name, id)
+        let operation = mutation.kind == .create ? "insert" : mutation.kind == .recover ? "update" : mutation.kind.rawValue
+        try require(entry.operation.rawValue == operation && entry.affectedRows == 1,
+            "physical SQL does not match its actual command operation/row count")
         try require(sqlKeys.insert(identity).inserted, "duplicate physical SQL identity")
         try require(entry.executionOutcome == "success" && entry.auditReason == rootReason,
             "SQL lost completion outcome or root intent")
@@ -116,6 +121,7 @@ func checkObservedGraph(
             && !entry.tracePath.contains(where: { ["auditReason", "comment", "purpose"].contains($0.kind) }),
             "SQL route is noncanonical or includes intent prose")
         try checkChain(entry.mutationLineage, wanted, boundary: "SQL \(identity)")
+        physicalIdentities.append(GraphIdentity(entity: entity.name, id: id))
     }
     for event in audit {
         guard let id = event.entityID?.int64Value, let lineage = event.mutationLineage,
@@ -125,7 +131,15 @@ func checkObservedGraph(
         try require(auditKeys.insert(identity).inserted, "duplicate committed audit identity")
         try require(event.reason == rootReason, "audit lost root intent")
         try checkChain(lineage, wanted, boundary: "audit \(identity)")
+        auditIdentities.append(GraphIdentity(entity: event.entity, id: id))
     }
     try require(commandKeys == Set(expected.keys) && sqlKeys == commandKeys && auditKeys == commandKeys,
         "typed identities diverged across boundaries")
+    let wantedIdentities = try expectedIdentities(expected)
+    try checkIdentities(wantedIdentities, commandIdentities, boundary: "actual commands")
+    try checkIdentities(wantedIdentities, physicalIdentities, boundary: "command-bound physical SQL")
+    try checkIdentities(wantedIdentities, auditIdentities, boundary: "committed audit")
+    if emitIdentities {
+        try printIdentities(wantedIdentities, commands: commandIdentities, physical: physicalIdentities, audit: auditIdentities)
+    }
 }

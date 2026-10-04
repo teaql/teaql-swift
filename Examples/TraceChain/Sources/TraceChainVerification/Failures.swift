@@ -20,7 +20,7 @@ func installReadbackFault(path: String, id: Int64) throws {
 func generatedFailureProofs(_ context: UserContext, sql: SQLExecutionEvidenceStore, audit: AuditCapture,
                             path: String, base: Int64) async throws {
     var root = try order(context, id: base + 5_000, label: "TRACE-FAILED-ROOT")
-    let duplicate = try payment(context, id: base + 201, parentID: root.id, label: "TRACE-DUPLICATE")
+    let duplicate = try payment(context, id: base, parentID: root.id, label: "TRACE-DUPLICATE")
     _ = duplicate.auditAs("authorize failing payment")
     root.paymentList.append(duplicate)
     await sql.enableAll(); await audit.clear()
@@ -38,7 +38,7 @@ func generatedFailureProofs(_ context: UserContext, sql: SQLExecutionEvidenceSto
     let parent = NodeExpectation(type: "CustomerOrder", id: root.id, reason: "submit failing order")
     try checkChain(failed[1].mutationLineage, [parent], boundary: "successful parent readback before failure")
     try checkChain(failed[2].mutationLineage, [parent,
-        NodeExpectation(type: "Payment", id: base + 201, reason: "authorize failing payment")], boundary: "failed child SQL")
+        NodeExpectation(type: "Payment", id: base, reason: "authorize failing payment")], boundary: "failed child SQL")
     let after = try await Q.customerOrders().withIdIs(root.id).limit(1)
         .comment("inspect failed graph rollback").purpose("verify parent did not commit").executeForList(context)
     try require(after.isEmpty, "failed graph left a committed root")

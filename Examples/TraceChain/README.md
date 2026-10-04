@@ -47,7 +47,13 @@ No public package is claimed to contain these changes.
 | Rejected write readback | A test-only SQLite trigger removes the inserted Payment; two writes and the root readback succeed, but the child's zero-row SELECT fails persisted-snapshot acceptance; all four facts survive while the graph rolls back |
 
 The first clean-database graph uses Order#100, OrderItem#201/#202,
-Payment#301, PaymentAttempt#401 and Shipment#501. The actual model names
+Payment#100, PaymentAttempt#401 and Shipment#501. Equal Order/Payment numeric
+IDs still represent two targets. Every graph check compares exact target lists
+at command, command-bound physical SQL and committed audit boundaries, retaining
+type plus ID separately from responsibility lineage. Three pure controls reject
+duplicate, missing and equal-ID type-collapsed targets. The normative graph emits
+one `GRAPH IDENTITY EVIDENCE` JSON record with decimal-string IDs so consumers
+do not lose precision through floating-point conversion. The actual model names
 the root `CustomerOrder`. Later starts select a new ID range using bounded
 generated Q; they repeat the same topology without deleting previous rows,
 soft-deleted children, row audits or fault triggers. The seeded Platform#1 is
