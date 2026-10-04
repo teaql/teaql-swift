@@ -23,6 +23,7 @@ for round in first second; do
     --force-resolved-versions TraceChainVerification "$trace_database" \
     2>&1 | tee "$trace_evidence/$round.log"
   rg -Fq 'PASS: Swift generated Checker accepted/rejected overlap 4 cases; callbacks serialized' "$trace_evidence/$round.log"
+  rg -Fq 'PASS FORWARD_NOTLOADED: generated Q/E keeps identity, hidden detail fails closed' "$trace_evidence/$round.log"
 done
 hash_library > "$trace_evidence/generated-after.sha256"
 cmp "$trace_evidence/generated-before.sha256" "$trace_evidence/generated-after.sha256"

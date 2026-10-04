@@ -126,4 +126,32 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
             "derived query lost originating request intent")
     }
     print("PASS generated three-level Q/E: PaymentAttempt.payment -> Payment.customerOrder -> CustomerOrder.platform")
+    let hidden = try await Q.payments().withIdIs(base + 201).limit(1)
+        .selectCustomerOrderWith(Q.customerOrders().withIdIs(0).limit(1))
+        .comment("load filtered forward identity").purpose("distinguish NotLoaded detail from null")
+        .executeForList(context)
+    guard let hiddenPayment = hidden.first,
+          let identity = try E.payment(hiddenPayment).customerOrder().eval()
+    else { throw TeaQLError.execution("filtered detail erased the real reference") }
+    try require(try E.customerOrder(identity).id().eval() == base, "filtered reference lost its FK")
+    func assertUnfetched() throws {
+        do {
+            _ = try E.customerOrder(identity).description().eval()
+        } catch {
+            try require(String(describing: error).contains("NotLoaded"), "wrong hidden-detail error: \(error)")
+            return
+        }
+        throw TeaQLError.execution("hidden detail became loaded-null")
+    }
+    try assertUnfetched()
+    let visible = try await Q.payments().withIdIs(base + 201).limit(1)
+        .selectCustomerOrderWith(Q.customerOrders().withIdIs(base).limit(1))
+        .comment("load independent full reference").purpose("verify edge-owned load boundaries")
+        .executeForList(context)
+    guard let visiblePayment = visible.first,
+          let full = try E.payment(visiblePayment).customerOrder().eval()
+    else { throw TeaQLError.execution("full reference was not loaded") }
+    try require(try E.customerOrder(full).description().eval() != nil, "full detail missing")
+    try assertUnfetched()
+    print("PASS FORWARD_NOTLOADED: generated Q/E keeps identity, hidden detail fails closed")
 }

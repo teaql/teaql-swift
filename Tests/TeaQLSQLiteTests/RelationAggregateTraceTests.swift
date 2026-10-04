@@ -109,7 +109,10 @@ private func verifyAggregateGraph(
     for row in loaded {
       #expect(Set(row.keys) == Set(["id", "version", "parent_ref", "filtered_count"]
         + (repeatReference ? ["parent_again"] : [])))
-      if hiddenReference { #expect(row["parent_ref"] == .null); continue }
+      if hiddenReference {
+        #expect(row["parent_ref"] == .object(["code": .string("CODE-A")]))
+        continue
+      }
       guard case .object(let ref) = row["parent_ref"] else { Issue.record("missing hydrated FK"); continue }
       #expect(ref["code"] == .string("CODE-A"))
       #expect(ref["id"] == .int(1))
@@ -171,4 +174,35 @@ func swiftAggregateSiblingUsesOriginalMembership(nested: Bool) async throws {
 @Test(arguments: [false, true])
 func swiftAggregateFilteredReferencePreservesMembership(nested: Bool) async throws {
   try await verifyAggregateGraph(nested: nested, logging: true, failure: false, hiddenReference: true)
+}
+
+@Test func swiftForwardIDReferenceKeepsIdentityButNotHiddenDetailOrNullIdentity() async throws {
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-forward-null-\(UUID()).sqlite").path
+  let service = try SQLiteDataService(path: path)
+  let parent = aggregateEntity("Parent", fields: [PropertyDescriptor(name: "name", type: .string)])
+  let child = aggregateEntity("Child", fields: [PropertyDescriptor(name: "parent_id", type: .int, nullable: true)])
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 }, querySQLLogEnabled: false)
+  try await context.ensureSchema(RuntimeModule(name: "forward-null", entities: [parent, child]))
+  for (entity, values) in [
+    (parent, ["id": TeaQLValue.int(1), "name": .string("visible")]),
+    (child, ["id": .int(1), "parent_id": .int(1)]),
+    (child, ["id": .int(2), "parent_id": .null]),
+  ] {
+    _ = try await context.execute(Mutation(kind: .create, entity: entity, values: values,
+      auditReason: "seed nullable ID reference"))
+  }
+  var query = SelectQuery(entity: child)
+  query.projection = ["id"]; query.orderBy = [OrderBy("id", .ascending)]; query.limit = 2
+  query.comment = "load filtered references"; query.purpose = "keep identity and loading boundaries distinct"
+  #expect(try await context.execute(query).records[0]["parent"] == nil)
+  var detail = SelectQuery(entity: parent)
+  detail.filter = .equal("name", .string("absent"))
+  query.relationQuery("parent", localKey: "parent_id", foreignKey: "id", many: false, query: detail)
+  let result = try await context.execute(query)
+  #expect(result.records[0]["parent"] == .object(["id": .int(1)]))
+  #expect(result.records[1]["parent"] == .null)
+  #expect(result.loadedRelations[0]?["parent"]?.records == [["id": .int(1)]])
+  #expect(result.loadedRelations[1]?["parent"]?.records.isEmpty == true)
 }

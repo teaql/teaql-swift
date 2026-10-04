@@ -1069,7 +1069,12 @@ public struct UserContext: Sendable {
           let key = normalizedRelationIdentity(result.records[index][relation.localKey] ?? .null)
           let found = key == .null ? [] : grouped[key] ?? []
           let indices = relation.many ? found : Array(found.prefix(1))
-          let matches = indices.map { children[$0] }
+          var matches = indices.map { children[$0] }
+          // A known FK survives conditional target loading. Only its known
+          // key is loaded; missing target fields must remain NotLoaded.
+          if !relation.many && matches.isEmpty && key != .null {
+            matches = [[relation.foreignKey: key]]
+          }
           var nested: [Int: [String: QueryResult]] = [:]
           for (position, childIndex) in indices.enumerated() {
             if let relations = childRelations[childIndex] { nested[position] = relations }
