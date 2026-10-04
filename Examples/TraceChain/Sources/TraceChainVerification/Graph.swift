@@ -124,6 +124,13 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
         try require(entry.tracePath.first?.name == "PaymentAttempt" && entry.comment == comment
             && entry.purpose == purpose && entry.tracePath.last?.name == "select",
             "derived query lost originating request intent")
+        try require(entry.tracePath.map(\.kind) == ["operation", "request"]
+            + Array(repeating: "relation", count: depth) + ["provider", "sql"]
+            && entry.tracePath.map(\.name) == ["PaymentAttempt", "PaymentAttempt"]
+            + Array(names.prefix(depth)) + ["sqlite", "select"]
+            && entry.tracePath.map(\.comment) == ["query", ""]
+            + Array(details.prefix(depth)) + ["", ""],
+            "canonical generated path at every physical boundary")
     }
     print("PASS generated three-level Q/E: PaymentAttempt.payment -> Payment.customerOrder -> CustomerOrder.platform")
     let hidden = try await Q.payments().withIdIs(base + 201).limit(1)
