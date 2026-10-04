@@ -22,6 +22,19 @@ private actor PausedRootQueries: QueryExecutor {
   }
 }
 
+/// Swift Context has fixed value-type storage, not a dynamic resource map.
+/// Observe stored values/reference identities without walking mutable sinks or
+/// actors unsafely. Their public query observations are checked separately.
+private func queryContextStorage(_ context: UserContext) -> [String: String] {
+  Dictionary(uniqueKeysWithValues: Mirror(reflecting: context).children.map { child in
+    let mirror = Mirror(reflecting: child.value)
+    let value = mirror.displayStyle == .class
+      ? String(describing: ObjectIdentifier(child.value as AnyObject))
+      : String(reflecting: child.value)
+    return (child.label!, value)
+  })
+}
+
 @Test(arguments: [false, true])
 func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) async throws {
   let parent = EntityDescriptor(name: "QueryParent", table: "query_parent", properties: [
@@ -62,6 +75,17 @@ func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) a
     return request
   }
   let firstQuery = query(1), secondQuery = query(2)
+  let storageBefore = queryContextStorage(context)
+  let pageBefore = await context.continuousPageObservation()
+  let idSetBefore = await context.idSetPaginationObservation()
+  func expectContextUnchanged() async {
+    let observedStorage = queryContextStorage(context)
+    #expect(observedStorage == storageBefore, "shared Context stored fields changed during independent queries")
+    #expect(await context.continuousPageObservation() == pageBefore)
+    #expect(await context.idSetPaginationObservation() == idSetBefore)
+    #expect(context.lastMutationGovernance == nil)
+    #expect(context.lastFixEvidence.isEmpty)
+  }
   let first = Task { try await context.execute(firstQuery) }
   let second = Task { try await context.execute(secondQuery) }
   // Bounded, cancellation-aware waiting: an early SQL failure cannot hang CI.
@@ -78,6 +102,7 @@ func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) a
     #expect(request.query.tracePath.filter { $0.kind == "relation" }.isEmpty)
   }
   #expect(firstQuery.tracePath.isEmpty && secondQuery.tracePath.isEmpty)
+  await expectContextUnchanged()
   await executor.release()
   let results = try await [first.value, second.value]
   for (offset, result) in results.enumerated() {
@@ -89,6 +114,7 @@ func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) a
     }
     #expect(items.count == 1 && item["id"] == .int(id + 10))
   }
+  await expectContextUnchanged()
   let facts = await evidence.snapshot()
   #expect(facts.count == 4)
   for label in ["alpha", "beta"] {
