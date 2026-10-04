@@ -36,6 +36,7 @@ No public package is claimed to contain these changes.
 | Ledger replacement | A typed per-Payment complete chain replaces graph fallback, rather than concatenating the two |
 | Same numeric ID | CustomerOrder and Payment keep distinct versions 2/1, update successfully, and retain their own typed lineages |
 | Concurrent graphs | Overlapping Tasks reuse one Context while its provider serializes transactions; graph reasons do not cross branches |
+| Accepted/rejected Checker overlap | Real generated Required rejects an unnamed child while the other graph alone updates its root/child; both logging modes and invocation orders preserve independent ledgers, a shared readonly snapshot, and following-save isolation |
 | Shared read-only references | One bounded two-root Q query shares an actual immutable Platform snapshot reference while root and forward-reference wrappers retain independent mutation ledgers; two overlapping saves issue only two root UPDATEs using versions 2/1 |
 | Scoped child adoption | Only the reached changed child is imported and written; foreign-root and sibling pending values remain in their original ledger, and Q/E verifies the changed FK |
 | Clean ancestors | Saving a clean parent writes only its changed descendant; its root reason is retained in the child lineage, while the parent version remains unchanged |
@@ -75,6 +76,28 @@ versions remain separate; the pool is never stored on `UserContext` and contains
 no pending mutations. Swift value-copy access cannot modify its immutable stored
 record. Generated scalar and Q/E APIs remain unchanged. Independent transactions
 serialize at the existing Context gate; this is not parallel SQLite writers.
+
+For only the four real generated Checker overlap cases, run
+`bash Examples/TraceChain/verify-checker-overlap.sh [retained-sqlite-path]`.
+Set `TEAQL_SWIFT_CHECKER_EVIDENCE` for the logs/fingerprints directory and
+`TEAQL_SWIFT_SCRATCH_PATH` for the build cache. The script runs twice without
+cleanup and removes inherited plaintext-log opt-in. The full verifier includes
+these cases and ignores the focused selector.
+Both verifier scripts require GNU `timeout`: each invocation has a 180-second
+deadline with a 10-second termination grace period; timeout preserves the log
+and fails the script rather than hanging on an actor rendezvous.
+
+`CheckerOverlapProofs.swift` pauses the first real BEGIN while two public saves
+remain outstanding; the existing Context gate serializes transactions and
+Checker callbacks. Generated checkers are installed unchanged, with no fake
+results. The rejected graph reaches no mutation-provider command or business
+SQL metadata, but its transaction begins and rolls back. Raw successful SQL
+bindings retain the private child value; safe telemetry/diagnostics mask it.
+Committed audits are checked against an already successful COMMIT. Q/E confirms
+the rejected database graph and shared Platform remain unchanged. A subsequent
+independent save preserves its own lineage, including a formerly private word
+now unrelated to its fields. This is not simultaneous Checker execution or a
+claim of zero transaction-control SQL.
 
 `PaginationProofs.swift` uses current list-page Assist and generated Q/E/save.
 Its four `PAGE_OBSERVED` records retain real physical SQL (including COUNT),

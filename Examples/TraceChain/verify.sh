@@ -18,9 +18,11 @@ hash_library() {
 }
 hash_library > "$trace_evidence/generated-before.sha256"
 for round in first second; do
-  swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
+  timeout --kill-after=10s 180s env -u TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS -u TEAQL_SWIFT_TRACE_SCENARIO \
+    swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
     --force-resolved-versions TraceChainVerification "$trace_database" \
     2>&1 | tee "$trace_evidence/$round.log"
+  rg -Fq 'PASS: Swift generated Checker accepted/rejected overlap 4 cases; callbacks serialized' "$trace_evidence/$round.log"
 done
 hash_library > "$trace_evidence/generated-after.sha256"
 cmp "$trace_evidence/generated-before.sha256" "$trace_evidence/generated-after.sha256"
