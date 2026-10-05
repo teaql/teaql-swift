@@ -3,6 +3,22 @@ import GeneratedTeaQL
 import TeaQLCore
 import TeaQLSQLite
 
+private actor SharedSaveInvocations {
+    private var active = 0, maximum = 0
+    private var bothWaiter: CheckedContinuation<Void, Never>?
+    func save(_ entity: CustomerOrder, reason: String, context: UserContext) async throws -> CustomerOrder {
+        active += 1; maximum = max(maximum, active)
+        if active == 2 { bothWaiter?.resume(); bothWaiter = nil }
+        defer { active -= 1 }
+        // No observer barrier before the real generated public save.
+        return try await entity.auditAs(reason).save(context)
+    }
+    func waitForBoth() async {
+        if maximum < 2 { await withCheckedContinuation { bothWaiter = $0 } }
+    }
+    func snapshot() -> (active: Int, maximum: Int) { (active, maximum) }
+}
+
 /// Observe the actual reviewed plans, including phantom creates that emit no SQL.
 final class OwnershipPolicyCapture: MutationPolicy, @unchecked Sendable {
     let identity = MutationPolicyIdentity(policyID: "trace-ownership", version: "1", fingerprint: "local-fixture")
@@ -122,9 +138,21 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
     roots[1].updateDescription("independent second mutation")
     let first = roots[0], second = roots[1]
     await commands.clear(); await sql.enableAll(); await audit.clear(); policy.clear()
-    async let savedFirst = first.auditAs("save ownership A").save(context)
-    async let savedSecond = second.auditAs("save ownership B").save(context)
-    _ = try await (savedFirst, savedSecond)
+    let pause = GraphBeginPause(), invocations = SharedSaveInvocations()
+    let startsBefore = await commands.starts()
+    await commands.pauseNextBegin(pause)
+    let savedFirst = Task { try await invocations.save(first, reason: "save ownership A", context: context) }
+    await pause.waitUntilEntered()
+    let savedSecond = Task { try await invocations.save(second, reason: "save ownership B", context: context) }
+    await invocations.waitForBoth()
+    let overlap = await invocations.snapshot(), startsWhilePaused = await commands.starts()
+    let pausedRequests = await commands.snapshot(), pausedAudit = await audit.snapshot()
+    // Release before a throwing assertion so a red test cannot strand BEGIN.
+    await pause.release()
+    _ = try await (savedFirst.value, savedSecond.value)
+    try require(overlap.active == 2 && overlap.maximum == 2 && startsWhilePaused == startsBefore + 1
+        && pausedRequests.isEmpty && pausedAudit.isEmpty,
+        "shared-reference saves must overlap at the public boundary, with only one real BEGIN before release")
     let requests = await commands.snapshot(), entries = await sql.snapshot(), events = await audit.snapshot()
     for (id, reason) in [(firstID, "save ownership A"), (secondID, "save ownership B")] {
         try checkObservedGraph([key("CustomerOrder", id): [NodeExpectation(type: "CustomerOrder", id: id, reason: reason)]],
@@ -135,6 +163,8 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
     let expectedVersions = requests.map { $0.mutation.expectedVersion }.compactMap { $0 }.sorted()
     try await observeOwnership("shared-readonly", checks: [
         "actual_shared_snapshot": sharedReference, "independent_root_ledgers": independentRoots,
+        "public_saves_overlap": overlap.active == 2 && overlap.maximum == 2,
+        "only_first_begin_while_paused": startsWhilePaused == startsBefore + 1,
         "independent_reference_ledgers": independentReferences, "snapshot_unchanged": shared.record == originalSnapshot,
         "only_two_root_commands": requests.count == 2 && requests.allSatisfy { $0.mutation.entity.name == "CustomerOrder" },
         "original_versions_1_2": expectedVersions == [1, 2],
@@ -147,6 +177,7 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
         "reference_version_unchanged": try E.platform(firstReference).version().eval() == 1
             && E.platform(try E.customerOrder(persisted[0]).platform().eval()!).version().eval() == 1,
     ], commands: commands, sql: sql, audit: audit, policy: policy)
+    print("PASS TC-MUT-12 Swift shared readonly: forced public overlap, one BEGIN while paused, command/SQL/audit isolated")
 
     var target = persisted[0], foreign = persisted[1]
     foreign.updateDescription("unsaved foreign root")

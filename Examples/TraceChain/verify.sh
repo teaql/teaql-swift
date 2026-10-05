@@ -23,6 +23,7 @@ for round in first second; do
     --force-resolved-versions TraceChainVerification "$trace_database" \
     2>&1 | tee "$trace_evidence/$round.log"
   rg -Fq 'PASS: Swift generated Checker accepted/rejected overlap 4 cases; callbacks serialized' "$trace_evidence/$round.log"
+  rg -Fxq 'PASS TC-MUT-12 Swift shared readonly: forced public overlap, one BEGIN while paused, command/SQL/audit isolated' "$trace_evidence/$round.log"
   rg -Fxq 'PASS Swift generated bootstrap intent: logging off/on, committed audit, repeat no writes' "$trace_evidence/$round.log"
   [[ "$(rg -c '^BOOTSTRAP INTENT ' "$trace_evidence/$round.log")" == 2 ]]
   rg -Fq 'PASS Swift generated ledger override: Payment replaces fallback; independent OrderItem inherits only root at command/SQL/audit' "$trace_evidence/$round.log"

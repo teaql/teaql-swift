@@ -13,6 +13,22 @@ actor AuditCapture: AuditSink {
     func clear() { events.removeAll() }
 }
 
+/// Test-only rendezvous at a real provider BEGIN. It never supplies a graph,
+/// request, mutation, trace frame or successful result to the runtime.
+actor GraphBeginPause {
+    private var entered = false, released = false
+    private var entryWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiter: CheckedContinuation<Void, Never>?
+    func hold() async {
+        entered = true; entryWaiters.forEach { $0.resume() }; entryWaiters.removeAll()
+        if !released { await withCheckedContinuation { releaseWaiter = $0 } }
+    }
+    func waitUntilEntered() async {
+        if !entered { await withCheckedContinuation { entryWaiters.append($0) } }
+    }
+    func release() { released = true; releaseWaiter?.resume(); releaseWaiter = nil }
+}
+
 /// Records the real generated command before delegating to SQLite; it neither
 /// creates nor modifies intent, IDs or lineage. Failure tests use the native
 /// provider directly so its package-only diagnostic SPI is not erased.
@@ -22,13 +38,16 @@ actor CommandCapture: GraphTransactionExecutor {
     private var requests: [MutationRequest] = []
     private var graphStarts = 0
     private var requireCommitBarrier = false
+    private var pause: GraphBeginPause?
 
     init(service: SQLiteDataService, audit: AuditCapture) {
         self.service = service; self.audit = audit
     }
+    func pauseNextBegin(_ value: GraphBeginPause) { pause = value }
     func beginGraphTransaction() async throws {
         graphStarts += 1
         try await service.beginGraphTransaction()
+        if let waiting = pause { pause = nil; await waiting.hold() }
     }
     func commitGraphTransaction() async throws { try await service.commitGraphTransaction() }
     func rollbackGraphTransaction() async throws { try await service.rollbackGraphTransaction() }
