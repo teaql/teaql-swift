@@ -26,6 +26,10 @@ for round in first second; do
   rg -Fxq 'PASS Swift generated bootstrap intent: logging off/on, committed audit, repeat no writes' "$trace_evidence/$round.log"
   [[ "$(rg -c '^BOOTSTRAP INTENT ' "$trace_evidence/$round.log")" == 2 ]]
   rg -Fq 'PASS Swift generated ledger override: Payment replaces fallback; independent OrderItem inherits only root at command/SQL/audit' "$trace_evidence/$round.log"
+  [[ "$(rg -c '^ASSIGNED_IDENTITY_OBSERVED ' "$trace_evidence/$round.log")" == 2 ]]
+  for logging in false true; do
+    rg -Fxq "PASS assigned identity logging=$logging: actual command/SQL/audit, unannotated sibling and independent Q/E reload" "$trace_evidence/$round.log"
+  done
   rg -Fq 'PASS FORWARD_NOTLOADED: generated Q/E keeps identity, hidden detail fails closed' "$trace_evidence/$round.log"
   rg -Fq 'PASS Swift graph identity controls: duplicate, missing and equal-ID type collapse rejected' "$trace_evidence/$round.log"
   [[ "$(rg -c '^GRAPH IDENTITY EVIDENCE ' "$trace_evidence/$round.log")" == 1 ]]
