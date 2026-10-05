@@ -15,6 +15,8 @@ import TeaQLSQLite
         let path = CommandLine.arguments.dropFirst().first ?? FileManager.default.temporaryDirectory
             .appendingPathComponent("teaql-swift-generated-trace-\(UUID()).sqlite").path
         print("database retained: \(path)")
+        try await generatedBootstrapProofs(path: path)
+        if ProcessInfo.processInfo.environment["TEAQL_SWIFT_TRACE_SCENARIO"] == "bootstrap-intent" { return }
         let service = try SQLiteDataService(path: path)
         let audit = AuditCapture(), sql = SQLExecutionEvidenceStore()
         let commands = CommandCapture(service: service, audit: audit)
