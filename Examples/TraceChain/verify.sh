@@ -23,6 +23,7 @@ for round in first second; do
     --force-resolved-versions TraceChainVerification "$trace_database" \
     2>&1 | tee "$trace_evidence/$round.log"
   rg -Fq 'PASS: Swift generated Checker accepted/rejected overlap 4 cases; callbacks serialized' "$trace_evidence/$round.log"
+  rg -Fq 'PASS Swift generated ledger override: Payment replaces fallback; independent OrderItem inherits only root at command/SQL/audit' "$trace_evidence/$round.log"
   rg -Fq 'PASS FORWARD_NOTLOADED: generated Q/E keeps identity, hidden detail fails closed' "$trace_evidence/$round.log"
   rg -Fq 'PASS Swift graph identity controls: duplicate, missing and equal-ID type collapse rejected' "$trace_evidence/$round.log"
   [[ "$(rg -c '^GRAPH IDENTITY EVIDENCE ' "$trace_evidence/$round.log")" == 1 ]]

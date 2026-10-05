@@ -44,14 +44,24 @@ func ledgerReplacement(_ context: UserContext, commands: CommandCapture, sql: SQ
             kind: "auditReason", entityID: .int(paymentID)),
     ])
     root.paymentList.append(pay)
+    // A complete chain belongs to one typed key, not to the entire graph.
+    let siblingID = rootID + 2
+    var sibling = try Q.orderItems().comment("initialize unannotated ledger sibling")
+        .purpose("verify independent graph fallback").newEntity(context)
+    sibling.updateId(siblingID)
+    sibling.updateCustomerOrder(rootID)
+    sibling.updateName("Ledger fallback sibling")
+    root.orderItemList.append(sibling)
     await commands.clear(); await sql.enableAll(); await audit.clear()
     _ = try await root.auditAs("submit ledger order").save(context)
     let parent = NodeExpectation(type: "CustomerOrder", id: rootID, reason: "submit ledger order")
     let expected = [key("CustomerOrder", rootID): [parent],
+        key("OrderItem", siblingID): [parent],
         key("Payment", paymentID): [parent, NodeExpectation(type: "Payment", id: paymentID, reason: "ledger-specific approval")]]
     try checkObservedGraph(expected, commands: await commands.snapshot(), sql: await sql.snapshot(),
         audit: await audit.snapshot(), rootReason: "submit ledger order")
     print("PASS generated graph consumes typed ledger-specific replacement, not fallback concatenation")
+    print("PASS Swift generated ledger override: Payment replaces fallback; independent OrderItem inherits only root at command/SQL/audit")
 }
 
 func sameIDVersions(_ context: UserContext, commands: CommandCapture, sql: SQLExecutionEvidenceStore,
