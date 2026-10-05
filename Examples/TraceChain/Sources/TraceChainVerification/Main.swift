@@ -69,7 +69,12 @@ import TeaQLSQLite
             telemetrySink: sql, diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }))
         try await generatedFailureProofs(native, sql: sql, audit: audit, path: path, base: base)
         native.querySQLLogEnabled = false; native.mutationSQLLogEnabled = false
-        try await generatedLoadedPrivacy(native, sql: sql, audit: audit, base: base)
+        for (index, logging) in [false, true].enumerated() {
+            var privacyContext = context
+            privacyContext.querySQLLogEnabled = logging; privacyContext.mutationSQLLogEnabled = logging
+            try await generatedLoadedPrivacy(privacyContext, commands: commands, sql: sql, audit: audit,
+                base: base + Int64(index) * 20_000)
+        }
         print("PASS: Swift generated Trace Chain example")
     }
 }
