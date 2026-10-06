@@ -32,7 +32,8 @@ func sqliteUnknownFieldPolicyKeepsTypedRowCounts() async throws {
     values: ["id": .int(1), "version": .int(1), "name": .string("Riverside")],
     auditReason: "create customer 1"))
   let written = await evidence.snapshot()
-  #expect(written.count == 1)
+  #expect(written.map(\.operation) == [.insert, .select])
+  #expect(written.last?.resultCount == 1)
   #expect(written.first?.auditReason == "create customer [REDACTED]")
   #expect(written.first?.affectedRows == 1)
   #expect(written.first?.resultSummary == "1 rows affected")

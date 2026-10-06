@@ -43,8 +43,6 @@ Requirements: Swift 6 and SQLite development headers (`libsqlite3-dev` on Ubuntu
 
 ```swift
 let database = try SQLiteDataService(path: "app.sqlite")
-try await context.ensureSchema(RuntimeModule(
-  name: "OrderManagement", entities: [CustomerOrder.descriptor]))
 
 let context = UserContext(
     actor: "current-user",
@@ -57,6 +55,8 @@ let context = UserContext(
     mutationPolicyRegistry: mutationPolicyRegistry,
     mutationPolicyApprovalProvider: approvalProvider
 )
+try await context.ensureSchema(RuntimeModule(
+  name: "OrderManagement", entities: [CustomerOrder.descriptor]))
 
 let orders = try await Q.customerOrders()
     .withOrderNumberContaining("SWIFT")
@@ -88,6 +88,81 @@ policy, actor, application audit sink, and Mutation Policy are installed when
 that trusted context is created. Dynamic or federated payloads cannot override
 them. A non-empty comment and purpose are required for queries; every save
 requires an audit reason.
+
+`QueryRequest` owns an immutable, validated `QueryIntent` (`comment` and
+`purpose`). `MutationRequest` owns `MutationIntent`: its required `comment` is
+the existing audit reason, not an additional input. These envelopes are required
+by the provider SPI. Legacy builder/command convenience calls construct a
+validated envelope before invoking the provider.
+
+Missing, null, empty and Unicode-whitespace-only values fail with
+`REQUEST_COMMENT_REQUIRED` at `comment`, or `QUERY_PURPOSE_REQUIRED` at
+`purpose`, before Policy, Checker, transaction start or provider access. Neither
+Context nor optional trace frames supply a default. Disabling SQL logs does not
+disable this gate; Policy and Checker may change payloads but cannot replace
+the captured intent.
+
+Custom graph callbacks must also declare their root reason:
+
+```swift
+try await context.executeGraphSave(comment: "apply the reviewed order changes") { graphContext, session in
+    // Preflight and execute this graph using graphContext.
+    // Generated child traversal passes session and an immutable parent scope.
+}
+```
+
+A child's reason cannot fill a missing root reason. Generated
+`.comment(...).purpose(...)` and `.auditAs(...).save(context)` calls keep their
+existing spelling. Regenerate libraries after adopting the changed provider
+SPI; providers must implement `QueryRequest` / `MutationRequest` methods.
+
+Each graph invocation owns a `GraphMutationSession`, Checker/Fix clock, policy
+state, callbacks and pending audit events. Context provides an invocation view;
+it does not own a mutable trace stack. Independent nested roots are rejected
+instead of silently joining an existing transaction. Generated traversal shares
+immutable `TraceScopeToken` ancestors, inherits unannotated children, preserves
+local child/deletion reasons and resolves ledger-specific complete chains by
+typed `EntityKey`. SQL paths and structured mutation lineage are separate.
+
+Application audit events are delivered only after graph commit and discarded
+on rollback. `GraphCommittedError.committed` reports a cleanup callback or audit
+delivery failure after successful commit; remaining callbacks and events are
+still attempted, and the transaction gate is released. Do not
+retry that mutation as if it had rolled back. This is not a durable audit outbox.
+
+The [generated Trace Chain example](Examples/TraceChain/README.md) runs the
+six-item graph, typed identities, assigned IDs, concurrent graph saves and real
+SQLite failures. It also proves pointer-shared immutable Platform snapshots with
+independent ledgers, reached-key imports, clean-parent/changed-child saves and
+mixed-version rejection before business SQL. Actual commands, SQL, audits and
+reviewed Mutation Policy operations are observed. All examples must pass through
+`scripts/verify-examples.sh`; Registry replay remains a separate release gate.
+
+Generated pages retain an independent mutation ledger per root, including
+eagerly loaded children and shared immutable references. The Trace Chain example
+checks a nonzero offset, exact filtered total, deferred saves of separate roots,
+and a changed child under a clean parent. Exact-count SELECTs keep the originating
+comment/purpose, canonical SQL path and safe expanded SQL on success or failure.
+Disabling query text logs does not disable intent validation or captured telemetry.
+Provider diagnostic handoff remains package-only; custom executors are not given
+fabricated SQL metadata.
+
+SQLite mutations retain their logical affected-row result plus ordered physical
+`metadata.statements`: the write followed by its actual persisted-row SELECT.
+Readback uses the originating root's query/request path and keeps the per-item
+mutation lineage. No extra query is issued for tracing. Query and mutation log
+switches control their respective physical statements; returned metadata is
+preserved even when both logs are off. Safe sinks redact inherited intent as well
+as bindings; raw result metadata remains a trusted internal surface. A zero-row
+unversioned update has no fabricated readback or committed audit event.
+
+One generated query may share a `LoadedEntitySnapshot`, never a mutable ledger.
+The query-scoped pool reuses only equal records with equal typed identities and
+versions. Partial entity projections retain ID/version and relation assembly
+keys; aggregates are not expanded. Loaded-version registration, merge and rekey
+throw on conflicting versions instead of overwriting pending state. Custom code
+using these lower-level methods must handle that error with `try`. A committed
+version can advance only after its pending state has been cleared.
 
 Generated graph saves run Checker/Fix for every reachable mutation, freeze one
 complete `MutationPlan`, and review it before the first provider mutation. An
@@ -156,7 +231,50 @@ bindings are not provided by this local adapter.
 
 ```bash
 swift test
+./scripts/verify-examples.sh
 ```
+
+The School example includes required-comment and purpose failures with SQL
+logging disabled, and proves that an invalid audited save writes no School row.
+The example script uses local runtime source and locked dependency versions;
+all four retained examples must pass. Shared request-intent construction
+vectors are retained in `test-vectors/request-intent-v1.json`.
+
+The [generated Trace Chain example](Examples/TraceChain/README.md) observes
+six graph mutations at command/SQL/committed-audit boundaries, three relation
+levels through Q/E, allocated and same-ID typed identities, ledger replacement,
+concurrent saves, actual UNIQUE rollback and rejected write readback. Its script
+runs twice on one retained database and checks that the generated library is
+unchanged. Internal Registry replay and the broader privacy/entry-point gates
+remain separate; these local tests do not claim a public release.
+
+Native SQLite regressions in `RelationAggregateTraceTests` compose related counts
+with nested eager loading, including references keyed by text `code` rather than
+`id`. Assembly retains the original scalar key even when a forward reference is
+hydrated or filtered to null. The temporary keys are runtime-only, not returned
+record fields or mutation inputs. Tests check canonical ancestry, safe intent,
+logging-off execution, independent failure recovery and sibling relation loads.
+This is not yet generated related-count API acceptance.
+
+### Validated native mutation batches
+
+The native SPI executes batches through Context, not a bare provider array:
+
+```swift
+let request = try MutationBatchRequest(mutations: children, comment: "process the selected records")
+let results = try await context.execute(request)
+```
+
+The required root comment is independent of each child's optional local reason.
+Missing or blank root intent is rejected before Checker, Policy or provider
+access, even with logging disabled. One graph session preflights all items,
+preserves their own lineages and sibling redaction provenance, rolls back on
+failure, and delivers application audits after commit. The old public
+`SQLiteDataService.transaction([Mutation])` bypass is removed. The example gate
+typechecks the Context form and verifies that the old form cannot compile.
+This is ordered atomic execution, not a prepared-statement batching claim.
+Codable validates the request's intent; it does not authorize untrusted input
+or enable a public protocol endpoint.
 
 The live Swift-to-Rust federation test is enabled when `TEAQL_TFP_BASE_URL` points to the deterministic test endpoint:
 

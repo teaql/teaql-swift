@@ -76,10 +76,10 @@ private final class RequiredNameChecker: EntityChecker, @unchecked Sendable {
 
 private actor CountingExecutor: QueryExecutor, MutationExecutor {
   private(set) var mutationCalls = 0
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult {
     QueryResult(records: [], backend: "test")
   }
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
     mutationCalls += 1
     return MutationResult(affectedRows: 1)
   }

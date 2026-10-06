@@ -193,7 +193,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("platform") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
             copy.query.projection.append("platform")
         }
         copy.query.relationQuery(
@@ -201,7 +201,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
             localKey: "platform",
             foreignKey: "id",
             many: false,
-            query: child.toQuery())
+            query: child.toQuery(),
+            traceName: "platform")
         return copy
     }
 
@@ -215,7 +216,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         _ child: SchoolTypeRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("schoolType") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("schoolType") {
             copy.query.projection.append("schoolType")
         }
         copy.query.relationQuery(
@@ -223,7 +224,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
             localKey: "schoolType",
             foreignKey: "id",
             many: false,
-            query: child.toQuery())
+            query: child.toQuery(),
+            traceName: "schoolType")
         return copy
     }
 
@@ -746,47 +748,47 @@ public struct SchoolRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withCreateTimeIs(_ value: Date) -> Self {
-        adding(.equal("createTime", .date(value)))
+        adding(.equal("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeIn(_ values: [Date]) -> Self {
-        adding(.inList("createTime", values.map { .date($0) }))
+        adding(.inList("createTime", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withCreateTimeIsNot(_ value: Date) -> Self {
-        adding(.notEqual("createTime", .date(value)))
+        adding(.notEqual("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("createTime", values.map { .date($0) }))
+        adding(.notInList("createTime", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withCreateTimeGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("createTime", .date(value)))
+        adding(.greaterThan("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("createTime", .date(value)))
+        adding(.greaterThanOrEqual("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeLessThan(_ value: Date) -> Self {
-        adding(.lessThan("createTime", .date(value)))
+        adding(.lessThan("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("createTime", .date(value)))
+        adding(.lessThanOrEqual("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("createTime", .date(lower), .date(upper)))
+        adding(.between("createTime", .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
@@ -802,47 +804,47 @@ public struct SchoolRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withUpdateTimeIs(_ value: Date) -> Self {
-        adding(.equal("updateTime", .date(value)))
+        adding(.equal("updateTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withUpdateTimeIn(_ values: [Date]) -> Self {
-        adding(.inList("updateTime", values.map { .date($0) }))
+        adding(.inList("updateTime", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withUpdateTimeIsNot(_ value: Date) -> Self {
-        adding(.notEqual("updateTime", .date(value)))
+        adding(.notEqual("updateTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withUpdateTimeNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("updateTime", values.map { .date($0) }))
+        adding(.notInList("updateTime", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withUpdateTimeGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("updateTime", .date(value)))
+        adding(.greaterThan("updateTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withUpdateTimeGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("updateTime", .date(value)))
+        adding(.greaterThanOrEqual("updateTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withUpdateTimeLessThan(_ value: Date) -> Self {
-        adding(.lessThan("updateTime", .date(value)))
+        adding(.lessThan("updateTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withUpdateTimeLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("updateTime", .date(value)))
+        adding(.lessThanOrEqual("updateTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withUpdateTimeBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("updateTime", .date(lower), .date(upper)))
+        adding(.between("updateTime", .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
@@ -1142,14 +1144,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
 
 public extension SchoolRequest where State == RequestExecutable {
     private func ensureIntent() throws {
-        guard let comment = query.comment,
-              !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Comment is required before execution")
-        }
-        guard let purpose = query.purpose,
-              !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Purpose is required before execution")
-        }
+        _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
     func newEntity(_ context: UserContext) throws -> School {
@@ -1159,16 +1154,16 @@ public extension SchoolRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<School> {
         try ensureIntent()
-        let result = try await context.execute(query)
-        let queryRoot = EntityRoot()
+        let result = try await context.execute(QueryRequest(query: query))
+        let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try School.from(record: $0, root: queryRoot) },
+            try result.records.map { try School.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             facets: result.facets)
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
 
@@ -1179,17 +1174,17 @@ public extension SchoolRequest where State == RequestExecutable {
         var pageQuery = query
         pageQuery.offset = offset
         pageQuery.limit = limit
-        let result = try await context.execute(pageQuery)
+        let result = try await context.execute(QueryRequest(query: pageQuery))
         let observation = await context.idSetPaginationObservation()
         let total: Int
         if pageQuery.idSetPagination != nil && observation.countAccuracy == "EXACT" {
             total = observation.count
         } else {
-            total = try await context.count(pageQuery)
+            total = try await context.count(QueryRequest(query: pageQuery))
         }
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try School.from(record: $0, root: queryRoot) },
+            try result.records.map { try School.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

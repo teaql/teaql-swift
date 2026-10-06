@@ -54,16 +54,20 @@ public struct QueryAggregate: Sendable, Hashable, Codable {
 }
 
 public struct RelationLoad: Sendable, Hashable, Codable {
+  /// Hydration result key, which may differ from the logical model relation.
   public let name: String
+  public let traceName: String?
   public let localKey: String
   public let foreignKey: String
   public let many: Bool
   public let query: RelationQueryPlan
 
   public init(
-    name: String, localKey: String, foreignKey: String, many: Bool, query: SelectQuery
+    name: String, localKey: String, foreignKey: String, many: Bool, query: SelectQuery,
+    traceName: String? = nil
   ) {
     self.name = name
+    self.traceName = traceName
     self.localKey = localKey
     self.foreignKey = foreignKey
     self.many = many
@@ -90,8 +94,8 @@ public struct RelationAggregateLoad: Sendable, Hashable, Codable {
   }
 }
 
-/// A non-recursive child-query snapshot. Runtime hydration deliberately loads
-/// one relation level per plan so SelectQuery remains a value type.
+/// An owned child-query snapshot. Arrays break the recursive value layout while
+/// preserving nested loading plans; no ambient Context graph is retained.
 public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let entity: EntityDescriptor
   public let filter: TeaQLExpression?
@@ -104,6 +108,9 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let aggregates: [QueryAggregate]
   public let partitionBy: String?
   public let topNProbeParentThreshold: Int?
+  private let relations: [RelationLoad]?
+  private let relationAggregates: [RelationAggregateLoad]?
+  private let facets: [FacetRequest]?
 
   public init(_ query: SelectQuery) {
     entity = query.entity
@@ -117,6 +124,9 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     aggregates = query.aggregates
     partitionBy = query.partitionBy
     topNProbeParentThreshold = query.topNProbeParentThreshold
+    relations = query.relations
+    relationAggregates = query.relationAggregates
+    facets = query.facets
   }
 
   public func makeQuery() -> SelectQuery {
@@ -131,6 +141,9 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.aggregates = aggregates
     query.partitionBy = partitionBy
     query.topNProbeParentThreshold = topNProbeParentThreshold
+    query.relations = relations ?? []
+    query.relationAggregates = relationAggregates ?? []
+    query.facets = facets ?? []
     return query
   }
 }
@@ -188,11 +201,12 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   @discardableResult
   public mutating func relationQuery(
     _ name: String, localKey: String, foreignKey: String, many: Bool = true,
-    query: SelectQuery
+    query: SelectQuery, traceName: String? = nil
   ) -> Self {
     relations.append(
       RelationLoad(
-        name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query))
+        name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query,
+        traceName: traceName))
     return self
   }
 
@@ -209,12 +223,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   }
 
   public func validatedForExecution() throws -> Self {
-    guard let comment, !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      throw TeaQLError.missingComment
-    }
-    guard let purpose, !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      throw TeaQLError.missingPurpose
-    }
+    _ = try QueryIntent(comment: comment, purpose: purpose)
     guard hardLimit > 0, hardLimit <= Self.defaultHardLimit else {
       throw TeaQLError.invalidHardLimit(hardLimit)
     }
@@ -225,7 +234,17 @@ public struct SelectQuery: Sendable, Hashable, Codable {
       }
     }
     guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }
-    return self
+    var validated = self
+    // Entity projections preserve persistence identity and relation assembly
+    // keys. Aggregate/group results are not entity rows and must stay unchanged.
+    if !validated.projection.isEmpty && aggregates.isEmpty && groupBy.isEmpty {
+      let structural = entity.properties.filter { $0.isID || $0.isVersion }.map(\.name)
+        + relations.map(\.localKey)
+      for field in structural where !validated.projection.contains(field) {
+        validated.projection.append(field)
+      }
+    }
+    return validated
   }
 }
 
@@ -273,24 +292,39 @@ public enum TeaQLError: Error, Sendable, Equatable {
 }
 
 public struct QueryResult: Sendable {
+  // Context-owned handoff for recursive relation assembly only. Not a record
+  // field, projection alias, wire property, or mutation-ledger input.
+  var relationAttachmentKeys: [TeaQLValue] = []
+
+  func attachingRelationKeys(_ keys: [TeaQLValue]) -> Self {
+    var copy = self
+    copy.relationAttachmentKeys = keys
+    return copy
+  }
+
   public let records: [TeaQLRecord]
   public let backend: String
   public let trace: [TraceNode]
   public let metadata: SQLExecutionMetadata?
   public let facets: [String: SmartList<TeaQLRecord>]
+  /// Query-only per-row relation results. These never become record fields,
+  /// wire values, or mutation-ledger snapshots.
+  public let loadedRelations: [Int: [String: QueryResult]]
 
   public init(
     records: [TeaQLRecord],
     backend: String,
     trace: [TraceNode] = [],
     metadata: SQLExecutionMetadata? = nil,
-    facets: [String: SmartList<TeaQLRecord>] = [:]
+    facets: [String: SmartList<TeaQLRecord>] = [:],
+    loadedRelations: [Int: [String: QueryResult]] = [:]
   ) {
     self.records = records
     self.backend = backend
     self.trace = trace
     self.metadata = metadata
     self.facets = facets
+    self.loadedRelations = loadedRelations
   }
 }
 
@@ -315,10 +349,12 @@ public struct TraceNode: Sendable, Hashable, Codable {
   public let entity: String
   public let comment: String
   public let purpose: String
+  public let entityID: TeaQLValue?
 
   public init(
     entity: String, comment: String, purpose: String,
-    level: Int = 0, kind: String = "request", name: String? = nil
+    level: Int = 0, kind: String = "request", name: String? = nil,
+    entityID: TeaQLValue? = nil
   ) {
     self.level = level
     self.kind = kind
@@ -326,5 +362,6 @@ public struct TraceNode: Sendable, Hashable, Codable {
     self.entity = entity
     self.comment = comment
     self.purpose = purpose
+    self.entityID = entityID
   }
 }

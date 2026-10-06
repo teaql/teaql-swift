@@ -10,8 +10,8 @@ private struct StubHTTPTransport: HTTPTransport {
 }
 
 private struct UnusedExecutor: QueryExecutor, MutationExecutor {
-  func execute(_ query: SelectQuery) async throws -> QueryResult { throw TeaQLError.execution("unused") }
-  func execute(_ mutation: Mutation) async throws -> MutationResult { throw TeaQLError.execution("unused") }
+  func execute(_ request: QueryRequest) async throws -> QueryResult { throw TeaQLError.execution("unused") }
+  func execute(_ request: MutationRequest) async throws -> MutationResult { throw TeaQLError.execution("unused") }
 }
 
 private func toolContext() -> UserContext {

@@ -51,11 +51,11 @@ final class RuntimeTelemetryTests: XCTestCase {
 }
 
 private struct StubExecutor: QueryExecutor, MutationExecutor {
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult {
     QueryResult(records: [["id": .int(1)], ["id": .int(2)]], backend: "stub")
   }
 
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
     MutationResult(affectedRows: 1)
   }
 }

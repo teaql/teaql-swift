@@ -7,16 +7,22 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
   if !condition() { throw TeaQLError.execution(message) }
 }
 
+private actor BootstrapAuditSink: AuditSink {
+  private var values: [AuditEvent] = []
+  func record(_ event: AuditEvent) async throws { values.append(event) }
+  func snapshot() -> [AuditEvent] { values }
+}
+
 @main enum SchoolBootstrapVerification {
   static func main() async throws {
     let orderKey = EntityKey(entity: "Order", id: .int(1))
     let executionKey = EntityKey(entity: "InferenceExecution", id: .int(1))
     let targetLedger = EntityRoot()
     let sourceLedger = EntityRoot()
-    targetLedger.setOriginalVersion(orderKey, version: 3)
-    sourceLedger.setOriginalVersion(executionKey, version: 9)
+    try targetLedger.setOriginalVersion(orderKey, version: 3)
+    try sourceLedger.setOriginalVersion(executionKey, version: 9)
     sourceLedger.set(executionKey, field: "execution_status", value: .string("COMPLETED"))
-    targetLedger.merge(from: sourceLedger)
+    try targetLedger.merge(from: sourceLedger)
     try require(targetLedger.originalVersion(orderKey) == 3, "Order#1 version was overwritten")
     try require(targetLedger.originalVersion(executionKey) == 9,
                 "InferenceExecution#1 version was resolved through Order#1")
@@ -29,11 +35,67 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     let module = GeneratedRuntimeModule.module
     var runtime = TeaQLRuntime()
     try runtime.install(module)
+    let bootstrapAudit = BootstrapAuditSink()
+    let bootstrapSQL = SQLExecutionEvidenceStore()
     let context = UserContext(
       runtime: runtime, actor: "conformance", queryExecutor: service,
-      mutationExecutor: service, requestPolicy: RequestPolicy { $0 })
+      mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+      auditSink: bootstrapAudit, telemetrySink: bootstrapSQL)
+    let quietContext = UserContext(
+      runtime: runtime, actor: "conformance", queryExecutor: service,
+      mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+      querySQLLogEnabled: false, mutationSQLLogEnabled: false)
     try await context.ensureSchema(module)
+    let firstBootstrapSQL = await bootstrapSQL.snapshot()
+    let firstBootstrapAudit = await bootstrapAudit.snapshot()
+    try require(firstBootstrapAudit.count == 3, "Bootstrap must audit one root and two constants")
+    try require(firstBootstrapAudit.allSatisfy {
+      $0.actor == "teaql-generated-bootstrap" && $0.category == "runtime-bootstrap"
+        && !$0.reason.isEmpty && $0.mutationLineage?.last?.comment == $0.reason
+    }, "Generated bootstrap lost its runtime identity or committed lineage")
+    let writes = firstBootstrapSQL.filter { $0.operation == .insert }
+    try require(writes.count == 3, "Bootstrap must execute three real typed INSERTs")
+    for write in writes {
+      try require(write.auditReason?.isEmpty == false
+        && write.tracePath.map(\.kind) == ["operation", "entity", "provider", "sql"],
+        "Generated bootstrap INSERT lost its request intent or canonical SQL path")
+      try require(firstBootstrapAudit.contains {
+        $0.entity == write.tracePath.first(where: { $0.kind == "entity" })?.name
+          && $0.mutationLineage == write.mutationLineage && $0.reason == write.auditReason
+      }, "Bootstrap SQL and committed audit disagree")
+    }
+    for read in firstBootstrapSQL.filter({ $0.operation == .select }) {
+      try require(read.purpose?.isEmpty == false
+        && (read.comment?.isEmpty == false || read.auditReason?.isEmpty == false)
+        && read.tracePath.map(\.kind) == ["operation", "request", "provider", "sql"],
+        "Generated bootstrap lookup/readback lost its intent or SQL path")
+    }
     try await context.ensureSchema(module)
+    let repeatedAudit = await bootstrapAudit.snapshot()
+    let repeatedSQL = Array(await bootstrapSQL.snapshot().dropFirst(firstBootstrapSQL.count))
+    try require(repeatedAudit.count == firstBootstrapAudit.count,
+                "Repeated bootstrap must not add committed mutation audits")
+    try require(repeatedSQL.count == 3 && repeatedSQL.allSatisfy {
+      $0.operation == .select && $0.comment?.isEmpty == false && $0.purpose?.isEmpty == false
+    }, "Repeated bootstrap must perform only its three intent-bearing lookups")
+    try require(context.actor == "conformance", "Bootstrap changed the caller identity")
+    print("PASS generated bootstrap SQL intent, committed lineage and no-op reseeding")
+    do {
+      _ = try await Q.schools().purpose("verify required intent with logging disabled")
+        .executeForList(quietContext)
+      throw TeaQLError.execution("Generated Q accepted a missing comment")
+    } catch let error as RequestIntentError {
+      try require(error.code == "REQUEST_COMMENT_REQUIRED" && error.field == "comment",
+                  "Generated Q did not name the required comment")
+    }
+    do {
+      _ = try await Q.schools().comment("verify required purpose").purpose("\u{0085}")
+        .executeForRows(quietContext)
+      throw TeaQLError.execution("Generated Q accepted a Unicode-blank purpose")
+    } catch let error as RequestIntentError {
+      try require(error.code == "QUERY_PURPOSE_REQUIRED" && error.field == "purpose",
+                  "Generated Q did not name the required purpose")
+    }
     let platforms = try await Q.platforms().comment("verify seeded root")
       .purpose("local runtime verification").executeForList(context)
     let constants = try await Q.schoolTypes().orderByIdAscending()
@@ -58,6 +120,17 @@ func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     school.updateActive(true)
     school.updateCreateTime(now)
     school.updateUpdateTime(now)
+    do {
+      _ = try await school.auditAs("\u{0085}").save(quietContext)
+      throw TeaQLError.execution("Generated save accepted a Unicode-blank root comment")
+    } catch let error as RequestIntentError {
+      try require(error.code == "REQUEST_COMMENT_REQUIRED" && error.field == "comment",
+                  "Generated save did not name the required root comment")
+    }
+    let afterRejectedSave = try await Q.schools().comment("check rejected save caused no writes")
+      .purpose("verify missing intent cannot reach SQLite").executeForList(quietContext)
+    try require(afterRejectedSave.isEmpty, "Invalid generated save wrote a School row")
+    print("PASS required Query and Mutation comments, including logging disabled")
     let saved = try await school.auditAs("seed school linked to PRIMARY").save(context)
     try require(saved.schoolType == 1001,
                 "Constant helper did not retain School.schoolType=1001 after save")

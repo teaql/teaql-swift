@@ -69,12 +69,9 @@ final class MaskingContractTests: XCTestCase {
     process.environment = environment
     process.standardOutput = handle
     process.standardError = handle
-    try process.run()
-    let deadline = Date().addingTimeInterval(30)
-    while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
-    if process.isRunning { process.terminate(); XCTFail("Log child timed out"); return }
+    let status = try runBoundedTestChild(process, output: handle)
     let text = try String(contentsOf: path, encoding: .utf8)
-    XCTAssertEqual(process.terminationStatus, 0, text)
+    XCTAssertEqual(status, 0, text)
     let records = text.components(separatedBy: "RECORD_BOUNDARY")
     XCTAssertEqual(records.count, 3, text)
     for record in records.dropFirst() {

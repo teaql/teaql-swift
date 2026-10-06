@@ -217,13 +217,18 @@ private enum MutationMatchKey: Hashable {
   case structural(String)
 }
 
+private final class MutationWarningHistory: @unchecked Sendable {
+  private let lock = NSLock()
+  private var keys: Set<String> = []
+  func first(_ key: String) -> Bool { lock.withLock { keys.insert(key).inserted } }
+}
+
 package final class MutationPolicyCoordinator: @unchecked Sendable {
   private let registry: (any MutationPolicyRegistry)?
   private let approvalProvider: (any MutationPolicyApprovalProvider)?
   private let warningSink: any MutationGovernanceSink
   private let stateLock = NSRecursiveLock()
-  private let warningLock = NSLock()
-  private var emittedWarnings: Set<String> = []
+  private var warningHistory = MutationWarningHistory()
   private var graphActive = false
   private var graphReviewed = false
   private var preflight: [(MutationPolicyOperation, MutationMatchKey)] = []
@@ -243,16 +248,25 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
     self.warningSink = warningSink ?? ConsoleMutationGovernanceSink()
   }
 
-  package func beginGraph() throws {
+  package func beginGraph(auditReason: String) throws {
     stateLock.lock(); defer { stateLock.unlock() }
     guard !graphActive else { throw MutationPolicyError.graphAlreadyActive }
     graphActive = true
     graphReviewed = false
     preflight = []
     rootEntity = nil
-    auditReason = nil
+    self.auditReason = auditReason
     remaining = [:]
     graphSnapshot = nil
+  }
+
+  package func fork() -> MutationPolicyCoordinator {
+    let fork = MutationPolicyCoordinator(registry: registry, approvalProvider: approvalProvider, warningSink: warningSink)
+    fork.warningHistory = warningHistory
+    return fork
+  }
+  package func retain(_ snapshot: MutationGovernanceSnapshot?) {
+    stateLock.withLock { retainedSnapshot = snapshot }
   }
 
   package func endGraph() {
@@ -415,9 +429,7 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
       "\($0.policyID):\($0.version):\($0.fingerprint)"
     } ?? "none"
     let key = "\(snapshot.requestKey)|\(policy)|\(code)"
-    warningLock.lock()
-    let first = emittedWarnings.insert(key).inserted
-    warningLock.unlock()
+    let first = warningHistory.first(key)
     try? warningSink.onWarning(
       context: context,
       warning: MutationGovernanceWarning(

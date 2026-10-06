@@ -33,18 +33,10 @@ final class LogPrivacyTests: XCTestCase {
       process.environment = environment
       process.standardOutput = handle
       process.standardError = handle
-      try process.run()
-      let deadline = Date().addingTimeInterval(30)
-      while process.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
-      if process.isRunning {
-        process.terminate()
-        try handle.close()
-        XCTFail("Privacy child did not terminate within 30 seconds")
-        return
-      }
+      let status = try runBoundedTestChild(process, output: handle)
       try handle.close()
       let text = try String(contentsOf: file, encoding: .utf8)
-      XCTAssertEqual(process.terminationStatus, 0, text)
+      XCTAssertEqual(status, 0, text)
       XCTAssertTrue(text.contains("TEAQL_LOG_PRIVACY_CHILD_DONE"), text)
       XCTAssertEqual(text.contains("PRIVATE-CUSTOMER-CANARY"), setting == LogPrivacy.acknowledgement, text)
       XCTAssertEqual(text.contains("may be written to disk"), setting == LogPrivacy.acknowledgement, text)

@@ -1,0 +1,37 @@
+{
+  "contract": "teaql.graph-mutation-lineage.v1",
+  "owningIssue": "https://github.com/teaql/teaql-conformance/issues/99",
+  "evidenceLevel": "normative-fixture-not-runtime-proof",
+  "notes": [
+    "nodeId is a fixture-local handle only. Runtime identity remains (entityType, assignedEntityId).",
+    "The root comment is the Mutation Request comment and must appear once, not once for the request plus once for the root entity.",
+    "For unit token recovery, parentage and final assigned IDs are supplied by the fixture. Only real planner/provider/audit integration proves capture, allocation, deletion and commit ordering.",
+    "Compare keyed per-entity observations and ordered nodes within each lineage. Do not impose this fixture's sibling order on a runtime's SQL batch scheduler.",
+    "localComment=null or blank describes defensive graph state, not a permitted blank public audited-save request."
+  ],
+  "cases": [
+    {"id":"normative-order","coverage":["TC-MUT-01","TC-MUT-02","TC-MUT-03","TC-MUT-04","TC-MUT-05","TC-MUT-06","TC-MUT-09"],"requestComment":"submit order","nodes":[{"nodeId":"order","entityType":"Order","entityId":100,"parent":null,"localComment":"submit order","operation":"save"},{"nodeId":"item","entityType":"OrderItem","entityId":201,"parent":"order","localComment":null,"operation":"save"},{"nodeId":"payment","entityType":"Payment","entityId":301,"parent":"order","localComment":"authorize payment","operation":"save"},{"nodeId":"attempt","entityType":"PaymentAttempt","entityId":401,"parent":"payment","localComment":null,"operation":"save"},{"nodeId":"shipment","entityType":"Shipment","entityId":501,"parent":"order","localComment":"dispatch shipment","operation":"save"},{"nodeId":"deleted-item","entityType":"OrderItem","entityId":202,"parent":"order","localComment":"remove unavailable item","operation":"delete"}],"expected":[{"nodeId":"order","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]},{"nodeId":"item","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]},{"nodeId":"payment","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"Payment","entityId":301,"detail":"authorize payment"}]},{"nodeId":"attempt","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"Payment","entityId":301,"detail":"authorize payment"}]},{"nodeId":"shipment","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"Shipment","entityId":501,"detail":"dispatch shipment"}]},{"nodeId":"deleted-item","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"OrderItem","entityId":202,"detail":"remove unavailable item"}]}]},
+    {"id":"same-id-different-types","coverage":["TC-MUT-08"],"requestComment":"submit order","nodes":[{"nodeId":"order","entityType":"Order","entityId":1,"parent":null,"localComment":"submit order","operation":"save"},{"nodeId":"payment","entityType":"Payment","entityId":1,"parent":"order","localComment":"authorize payment","operation":"save"}],"expected":[{"nodeId":"order","lineage":[{"kind":"AuditReason","name":"Order","entityId":1,"detail":"submit order"}]},{"nodeId":"payment","lineage":[{"kind":"AuditReason","name":"Order","entityId":1,"detail":"submit order"},{"kind":"AuditReason","name":"Payment","entityId":1,"detail":"authorize payment"}]}]},
+    {"id":"complete-ledger-chain-replaces-fallback","coverage":["TC-MUT-10"],"requestComment":"submit order","nodes":[{"nodeId":"order","entityType":"Order","entityId":100,"parent":null,"localComment":"submit order","operation":"save"},{"nodeId":"payment","entityType":"Payment","entityId":301,"parent":"order","localComment":"authorize payment","operation":"save","ledgerLineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"Payment","entityId":301,"detail":"special approval"}]},{"nodeId":"item","entityType":"OrderItem","entityId":201,"parent":"order","localComment":null,"operation":"save","ledgerLineage":[]}],"expected":[{"nodeId":"order","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]},{"nodeId":"payment","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"Payment","entityId":301,"detail":"special approval"}]},{"nodeId":"item","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]}]},
+    {"id":"blank-local-defensive-inheritance","coverage":["TC-MUT-11"],"requestComment":"submit order","nodes":[{"nodeId":"order","entityType":"Order","entityId":100,"parent":null,"localComment":"submit order","operation":"save"},{"nodeId":"item","entityType":"OrderItem","entityId":201,"parent":"order","localComment":" \t ","operation":"save"}],"expected":[{"nodeId":"order","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]},{"nodeId":"item","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]}]},
+    {"id":"late-assigned-id","coverage":["TC-MUT-07"],"requestComment":"submit order","nodes":[{"nodeId":"order","entityType":"Order","entityId":100,"parent":null,"localComment":"submit order","operation":"save"},{"nodeId":"payment","entityType":"Payment","entityId":null,"parent":"order","localComment":"authorize payment","operation":"save","assignedEntityId":601}],"expected":[{"nodeId":"order","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"}]},{"nodeId":"payment","lineage":[{"kind":"AuditReason","name":"Order","entityId":100,"detail":"submit order"},{"kind":"AuditReason","name":"Payment","entityId":601,"detail":"authorize payment"}]}]}
+  ],
+  "requiredIntegrationCases": [
+    {
+      "id": "TC-MUT-12",
+      "requirement": "Execute two independent graphs concurrently in one real Context; observe isolated emitted lineages."
+    },
+    {
+      "id": "TC-MUT-13",
+      "requirement": "Fail the provider after planning; retain failed SQL lineage and emit no committed audit event."
+    },
+    {
+      "id": "TC-MUT-14",
+      "requirement": "Commit the write and fail readback; retain successful write and independently traced readback failure."
+    },
+    {
+      "id": "TC-MUT-15",
+      "requirement": "Drive normative-order with unchanged generated Mutation/Q/E APIs; assert emitted commands, SQL metadata and safe committed audit sinks; run twice without cleanup."
+    }
+  ]
+}

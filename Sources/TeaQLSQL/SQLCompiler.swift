@@ -1,11 +1,18 @@
 import Foundation
 import TeaQLCore
 
+/// Compiler-owned input before LIKE decoration, not an executable SQL binding.
+package struct SQLIntentOperand: Sendable, Equatable {
+  package let value: TeaQLValue
+  package let policy: SQLParameterLogPolicy
+}
+
 public struct CompiledSQL: Sendable, Equatable {
   public let sql: String
   public let parameters: [TeaQLValue]
   public let parameterLogPolicies: [SQLParameterLogPolicy]
   public let generatedSQL: Bool
+  package private(set) var intentOperands: [SQLIntentOperand] = []
 
   public init(sql: String, parameters: [TeaQLValue],
               parameterLogPolicies: [SQLParameterLogPolicy] = [], generatedSQL: Bool = false) {
@@ -13,6 +20,12 @@ public struct CompiledSQL: Sendable, Equatable {
     self.parameters = parameters
     self.parameterLogPolicies = parameterLogPolicies
     self.generatedSQL = generatedSQL
+  }
+
+  fileprivate func retainingIntentOperands(_ operands: [SQLIntentOperand]) -> Self {
+    var result = self
+    result.intentOperands = operands
+    return result
   }
 
   /// Explicit diagnostic utility; normal runtime logging first projects safe values.
@@ -25,8 +38,13 @@ private struct SQLBindings {
   var values: [TeaQLValue] = []
   var policies: [SQLParameterLogPolicy] = []
   var policy: SQLParameterLogPolicy = .plain
+  var intentOperands: [SQLIntentOperand] = []
   mutating func append(_ value: TeaQLValue) { values.append(value); policies.append(policy) }
   mutating func append(contentsOf values: [TeaQLValue]) { for value in values { append(value) } }
+  mutating func appendLike(_ operand: String, prefix: String, suffix: String) {
+    intentOperands.append(SQLIntentOperand(value: .string(operand), policy: policy))
+    append(.string(prefix + operand + suffix))
+  }
 }
 
 public struct SQLiteCompiler: Sendable {
@@ -68,6 +86,7 @@ public struct SQLiteCompiler: Sendable {
       parameters.append(.int(Int64(query.offset)))
       parameters.append(.int(Int64(query.offset + limit)))
       return CompiledSQL(sql: sql, parameters: parameters.values, parameterLogPolicies: parameters.policies, generatedSQL: true)
+        .retainingIntentOperands(parameters.intentOperands)
     }
     if !query.orderBy.isEmpty {
       let orders = try query.orderBy.map { item in
@@ -84,6 +103,7 @@ public struct SQLiteCompiler: Sendable {
       parameters.append(.int(Int64(query.offset)))
     }
     return CompiledSQL(sql: sql, parameters: parameters.values, parameterLogPolicies: parameters.policies, generatedSQL: true)
+      .retainingIntentOperands(parameters.intentOperands)
   }
 
   public func compileCount(_ rawQuery: SelectQuery) throws -> CompiledSQL {
@@ -94,6 +114,7 @@ public struct SQLiteCompiler: Sendable {
       sql += " WHERE " + (try expression(filter, entity: query.entity, parameters: &parameters))
     }
     return CompiledSQL(sql: sql, parameters: parameters.values, parameterLogPolicies: parameters.policies, generatedSQL: true)
+      .retainingIntentOperands(parameters.intentOperands)
   }
 
   public func createTable(_ entity: EntityDescriptor) throws -> String {
@@ -184,22 +205,22 @@ public struct SQLiteCompiler: Sendable {
       parameters.append(upper)
       return "\(quote(try requireProperty(field, in: entity).column)) BETWEEN ? AND ?"
     case .contains(let field, let value):
-      parameters.append(.string("%\(value)%"))
+      parameters.appendLike(value, prefix: "%", suffix: "%")
       return "\(quote(try requireProperty(field, in: entity).column)) LIKE ?"
     case .notContains(let field, let value):
-      parameters.append(.string("%\(value)%"))
+      parameters.appendLike(value, prefix: "%", suffix: "%")
       return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
     case .startsWith(let field, let value):
-      parameters.append(.string("\(value)%"))
+      parameters.appendLike(value, prefix: "", suffix: "%")
       return "\(quote(try requireProperty(field, in: entity).column)) LIKE ?"
     case .notStartsWith(let field, let value):
-      parameters.append(.string("\(value)%"))
+      parameters.appendLike(value, prefix: "", suffix: "%")
       return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
     case .endsWith(let field, let value):
-      parameters.append(.string("%\(value)"))
+      parameters.appendLike(value, prefix: "%", suffix: "")
       return "\(quote(try requireProperty(field, in: entity).column)) LIKE ?"
     case .notEndsWith(let field, let value):
-      parameters.append(.string("%\(value)"))
+      parameters.appendLike(value, prefix: "%", suffix: "")
       return "\(quote(try requireProperty(field, in: entity).column)) NOT LIKE ?"
     case .soundingLike(let field, let value):
       parameters.append(.string(value))

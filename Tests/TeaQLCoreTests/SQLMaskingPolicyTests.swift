@@ -147,4 +147,28 @@ final class SQLMaskingPolicyTests: XCTestCase {
       XCTAssertEqual(again.debugSQL, safe.debugSQL)
     }
   }
+
+  func testPhysicalReadbackChildrenAreSafeAndDebugCanBeRevoked() {
+    let write = entry("INSERT INTO customer VALUES (?, ?)",
+      values: [.string("Riverside"), .string("PASSWORD-CANARY")], policies: [.masked, .credential])
+    let read = SQLExecutionMetadata(operation: .select, comment: "persist Riverside PASSWORD-CANARY",
+      purpose: "verify persisted mutation", parameterizedSQL: "SELECT name FROM customer WHERE id=?",
+      parameters: [.int(17)], debugSQL: "", elapsedMicros: 1, resultCount: 1,
+      resultSummary: "1 row", parameterLogPolicies: [.plain], generatedSQL: true)
+    let source = write.includingStatements([write, read])
+    let safe = LogPrivacy.project(source)
+    XCTAssertEqual(safe.statements.count, 2)
+    XCTAssertEqual(safe.statements[1].parameters, [.int(17)])
+    XCTAssertEqual(safe.statements[1].comment, "persist [REDACTED] [REDACTED]")
+    XCTAssertFalse(String(describing: safe).contains("Riverside"))
+    XCTAssertFalse(String(describing: safe).contains("PASSWORD-CANARY"))
+    let debug = LogPrivacy.project(source, allowPlaintext: true)
+    XCTAssertEqual(debug.statements[1].comment, "persist Riverside [REDACTED]")
+    XCTAssertFalse(String(describing: debug).contains("PASSWORD-CANARY"))
+    let revoked = LogPrivacy.project(debug)
+    XCTAssertEqual(revoked.statements[1].comment, safe.statements[1].comment)
+    XCTAssertFalse(String(describing: revoked).contains("Riverside"))
+    XCTAssertEqual(source.statements[1].comment, "persist Riverside PASSWORD-CANARY")
+    XCTAssertEqual(source.statements[0].parameters, write.parameters)
+  }
 }

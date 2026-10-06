@@ -25,10 +25,10 @@ final class ContextEntityCreationTests: XCTestCase {
 }
 
 private struct RejectingCreationExecutor: QueryExecutor, MutationExecutor {
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult {
     throw TeaQLError.execution("not used")
   }
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
     throw TeaQLError.execution("not used")
   }
 }

@@ -479,14 +479,7 @@ public struct PlatformRequest<State: Sendable>: Sendable {
 
 public extension PlatformRequest where State == RequestExecutable {
     private func ensureIntent() throws {
-        guard let comment = query.comment,
-              !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Comment is required before execution")
-        }
-        guard let purpose = query.purpose,
-              !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Purpose is required before execution")
-        }
+        _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
     func newEntity(_ context: UserContext) throws -> Platform {
@@ -496,16 +489,16 @@ public extension PlatformRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Platform> {
         try ensureIntent()
-        let result = try await context.execute(query)
-        let queryRoot = EntityRoot()
+        let result = try await context.execute(QueryRequest(query: query))
+        let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try Platform.from(record: $0, root: queryRoot) },
+            try result.records.map { try Platform.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             facets: result.facets)
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
 
@@ -516,17 +509,17 @@ public extension PlatformRequest where State == RequestExecutable {
         var pageQuery = query
         pageQuery.offset = offset
         pageQuery.limit = limit
-        let result = try await context.execute(pageQuery)
+        let result = try await context.execute(QueryRequest(query: pageQuery))
         let observation = await context.idSetPaginationObservation()
         let total: Int
         if pageQuery.idSetPagination != nil && observation.countAccuracy == "EXACT" {
             total = observation.count
         } else {
-            total = try await context.count(pageQuery)
+            total = try await context.count(QueryRequest(query: pageQuery))
         }
-        let queryRoot = EntityRoot()
+        let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try Platform.from(record: $0, root: queryRoot) },
+            try result.records.map { try Platform.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
             totalCount: total)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }

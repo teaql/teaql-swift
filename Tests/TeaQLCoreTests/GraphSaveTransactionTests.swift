@@ -2,14 +2,22 @@ import XCTest
 @testable import TeaQLCore
 
 final class GraphSaveTransactionTests: XCTestCase {
-  func testNestedGraphSaveUsesOneTransactionAndCommitCallback() async throws {
+  func testIndependentNestedGraphSaveIsRejectedWithoutImplicitJoin() async throws {
     let provider = TransactionRecorder()
     let context = makeContext(provider)
     let callbacks = LockedStrings()
 
-    let result = try await context.executeGraphSave {
-      try context.afterGraphCommit { callbacks.append("committed") }
-      return try await context.executeGraphSave { 42 }
+    let result = try await context.executeGraphSave(comment: "verify graph save request") { graphContext, session in
+      try session.afterCommit { callbacks.append("committed") }
+      do {
+        _ = try await graphContext.executeGraphSave(comment: "different independent root") { _, _ in 0 }
+        XCTFail("an independent root must not join the session")
+      } catch { }
+      do {
+        _ = try await context.executeGraphSave(comment: "different original-context root") { _, _ in 0 }
+        XCTFail("same-task reentry must not deadlock or join the session")
+      } catch { }
+      return 42
     }
 
     XCTAssertEqual(result, 42)
@@ -23,9 +31,9 @@ final class GraphSaveTransactionTests: XCTestCase {
     let context = makeContext(provider)
     let callbacks = LockedStrings()
     do {
-      _ = try await context.executeGraphSave { () async throws -> Int in
-        try context.afterGraphRollback { callbacks.append("parent") }
-        try context.afterGraphRollback { callbacks.append("child") }
+      _ = try await context.executeGraphSave(comment: "verify graph save request") { _, session in
+        try session.afterRollback { callbacks.append("parent") }
+        try session.afterRollback { callbacks.append("child") }
         throw TeaQLError.execution("injected")
       }
       XCTFail("missing failure")
@@ -38,10 +46,10 @@ final class GraphSaveTransactionTests: XCTestCase {
   func testIndependentConcurrentGraphSavesAreSerialized() async throws {
     let provider = TransactionRecorder()
     let context = makeContext(provider)
-    async let first: Int = context.executeGraphSave {
+    async let first: Int = context.executeGraphSave(comment: "verify graph save request") { _, _ in
       try await Task.sleep(for: .milliseconds(75)); return 1
     }
-    async let second: Int = context.executeGraphSave { 2 }
+    async let second: Int = context.executeGraphSave(comment: "verify graph save request") { _, _ in 2 }
     let values = try await [first, second]
     XCTAssertEqual(Set(values), [1, 2])
     let beginCount = await provider.beginCount
@@ -61,7 +69,7 @@ final class GraphSaveTransactionTests: XCTestCase {
     let context = UserContext(
       runtime: runtime, queryExecutor: EmptyQueryExecutor(), mutationExecutor: provider,
       requestPolicy: RequestPolicy { $0 })
-    try await context.executeGraphSave {
+    try await context.executeGraphSave(comment: "verify graph save request") { context, _ in
       _ = try await context.execute(Mutation(kind: .create, entity: descriptor, auditReason: "first"))
       try await Task.sleep(for: .milliseconds(5))
       _ = try await context.execute(Mutation(kind: .create, entity: descriptor, auditReason: "second"))
@@ -79,8 +87,8 @@ final class GraphSaveTransactionTests: XCTestCase {
 }
 
 private struct EmptyQueryExecutor: QueryExecutor {
-  func execute(_ query: SelectQuery) async throws -> QueryResult { QueryResult(records: [], backend: "test") }
-  func count(_ query: SelectQuery) async throws -> Int { 0 }
+  func execute(_ request: QueryRequest) async throws -> QueryResult { QueryResult(records: [], backend: "test") }
+  func count(_ request: QueryRequest) async throws -> Int { 0 }
 }
 
 private actor TransactionRecorder: GraphTransactionExecutor {
@@ -94,8 +102,8 @@ private actor TransactionRecorder: GraphTransactionExecutor {
   }
   func commitGraphTransaction() async throws { activeTransactions -= 1 }
   func rollbackGraphTransaction() async throws { rollbackCount += 1; activeTransactions -= 1 }
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
-    MutationResult(affectedRows: 1, persistedRecord: mutation.values)
+  func execute(_ request: MutationRequest) async throws -> MutationResult { let mutation = request.mutation;
+    return MutationResult(affectedRows: 1, persistedRecord: mutation.values)
   }
 }
 

@@ -180,7 +180,7 @@ private actor TestIdSetExecutor: QueryExecutor {
 
   func delete(_ id: Int64) { storedIds.removeAll { $0 == id } }
 
-  func execute(_ query: SelectQuery) async throws -> QueryResult {
+  func execute(_ request: QueryRequest) async throws -> QueryResult { let query = request.query;
     calls += 1
     let build = query.projection == ["id"] && query.idSetPagination == nil
     if build {
@@ -196,7 +196,7 @@ private actor TestIdSetExecutor: QueryExecutor {
       backend: "fixture")
   }
 
-  func count(_ query: SelectQuery) async throws -> Int { countCalls += 1; return storedIds.count }
+  func count(_ request: QueryRequest) async throws -> Int { countCalls += 1; return storedIds.count }
 
   private func requestedIds(_ expression: TeaQLExpression?) -> [Int64]? {
     switch expression {
@@ -208,7 +208,7 @@ private actor TestIdSetExecutor: QueryExecutor {
 }
 
 private struct RejectingMutationExecutor: MutationExecutor {
-  func execute(_ mutation: Mutation) async throws -> MutationResult {
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
     throw TeaQLError.execution("mutation is not part of ID-set tests")
   }
 }

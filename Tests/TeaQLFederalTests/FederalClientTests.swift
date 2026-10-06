@@ -130,7 +130,7 @@ private struct DenyFederalMutationPolicy: MutationPolicy {
     json: #"{"affectedRows":1,"data":[{"id":9}],"resultCode":0,"status":"YES"}"#)
   let client = TeaQLFederalClient(
     baseURL: URL(string: "https://example.test/")!, transport: transport)
-  await #expect(throws: FederalError.missingAuditReason) {
+  await #expect(throws: RequestIntentError(code: "REQUEST_COMMENT_REQUIRED", field: "comment", requestKind: "mutation")) {
     try await client.execute(
       FederalMutation(entity: "Task", action: .create, payload: [:], auditReason: " "))
   }

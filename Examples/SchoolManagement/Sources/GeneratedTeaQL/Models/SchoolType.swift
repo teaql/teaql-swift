@@ -13,6 +13,7 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     public var schoolList: [School] = []
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
+    public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -44,11 +45,19 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "code", modelName: "code", column: "code", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "displayOrder", modelName: "display_order", column: "display_order", type: .decimal, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
-        ]
+        ],
+        auditMaskFields: []
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
+        try from(record: record, root: EntityRoot())
+    }
+
+    public static func from(record: TeaQLRecord, root: EntityRoot,
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
         var entity = Self()
+        // Discard the constructor's new-entity ledger during hydration.
+        entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.platform = record["platform"]?.int64Value
         if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
@@ -62,10 +71,15 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         if record.keys.contains("displayOrder") { entity._loadedFields.insert("displayOrder") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.teaqlLedgerID = entity.id
+        try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
+        entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
+            version: entity.version, record: record)
         if let relationValue = record["platformEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.platformEntity = try Platform.from(record: relatedRecord)
+                entity.platformEntity = try Platform.from(record: relatedRecord,
+                    root: EntityRoot(), snapshots: snapshots)
             case .null:
                 entity.platformEntity = nil
             default:
@@ -78,10 +92,10 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
             case .array(let values):
                 entity.schoolList = try values.compactMap {
                     guard case .object(let childRecord) = $0 else { return nil }
-                    return try School.from(record: childRecord)
+                    return try School.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
                 }
             case .object(let childRecord):
-                entity.schoolList = [try School.from(record: childRecord)]
+                entity.schoolList = [try School.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
             case .null:
                 entity.schoolList = []
             default:
@@ -89,23 +103,15 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
             }
             entity._loadedFields.insert("schoolList")
         }
-        let temporaryKey = entity.teaqlEntityKey
-        entity.teaqlLedgerID = entity.id
-        entity.teaqlEntityRoot.rekey(temporaryKey, to: entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.markAsPersisted(entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         return entity
     }
 
-    public static func from(record: TeaQLRecord, root: EntityRoot) throws -> Self {
-        var entity = try from(record: record)
-        entity.teaqlAttachRoot(root)
-        return entity
-    }
-
-    public mutating func teaqlAttachRoot(_ root: EntityRoot) {
-        if teaqlEntityRoot !== root { root.merge(from: teaqlEntityRoot); teaqlEntityRoot = root }
-        for index in schoolList.indices { schoolList[index].teaqlAttachRoot(root) }
+    public mutating func teaqlAttachRoot(_ root: EntityRoot) throws {
+        if teaqlEntityRoot !== root && teaqlEntityRoot.hasPending(teaqlEntityKey) {
+            try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
+            teaqlEntityRoot = root
+        }
+        for index in schoolList.indices { try schoolList[index].teaqlAttachRoot(root) }
     }
 
     public func toRecord() -> TeaQLRecord {
@@ -143,6 +149,16 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
+
+    /// Generator-only fixed identity initialization for schema bootstrap.
+    /// Application code must use the ordinary ID generator.
+    mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
+        let oldKey = teaqlEntityKey
+        id = value
+        _loadedFields.insert("id")
+        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+        teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+    }
 
     @discardableResult
     public mutating func markLoadedOnly(_ fields: String...) -> Self {
@@ -205,7 +221,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
 
 
     public func auditAs(_ reason: String) -> SchoolTypeAudited {
-        SchoolTypeAudited(entity: self, reason: reason)
+        teaqlEntityRoot.setLocalAuditReason(teaqlEntityKey, reason: reason)
+        return SchoolTypeAudited(entity: self, reason: reason)
     }
 
     @discardableResult
@@ -220,13 +237,35 @@ public struct SchoolTypeAudited: Sendable {
     public let reason: String
 
     public func save(_ context: UserContext) async throws -> SchoolType {
-        try await context.executeGraphSave {
-        try teaqlPreflightGraph(context)
-        let saved = try await AuditedEntity(entity: entity, reason: reason).save(context)
+        _ = try MutationIntent(comment: reason)
+        return try await context.executeGraphSave(comment: reason) { context, session in
+            try teaqlPreflightGraph(context)
+            return try await teaqlSavePreflighted(context, session: session,
+                scope: session.scope(key: entity.teaqlEntityKey))
+        }
+    }
+
+    /// Executes a node whose complete aggregate graph was already preflighted
+    /// by the public save entry point. Generated cascade code must use this
+    /// path so policy review remains a strict preflight-then-mutate sequence.
+    func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
+                            scope: TraceScopeToken) async throws -> SchoolType {
+        let saved = try await AuditedEntity(entity: entity, reason: reason)
+            .saveInGraph(context, session: session, scope: scope)
+        let activeScope = try scope.assigning(entity.teaqlEntityKey,
+            to: EntityKey(entity: "SchoolType", id: .int(saved.id)))
         for (index, var child) in entity.schoolList.enumerated() {
-            child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            child.updateSchoolType(saved.id)
-            do { _ = try await child.auditAs(reason).save(context) }
+            try child.teaqlAttachRoot(entity.teaqlEntityRoot)
+            if child.schoolType != saved.id {
+                child.updateSchoolType(saved.id)
+            }
+            let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
+            let childScope = try session.scope(key: child.teaqlEntityKey,
+                localReason: localReason, parent: activeScope)
+            do {
+                _ = try await SchoolAudited(entity: child, reason: localReason ?? reason)
+                    .teaqlSavePreflighted(context, session: session, scope: childScope)
+            }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_list").index(index)
                 throw CheckException(error.violations.map { violation in
@@ -240,11 +279,10 @@ public struct SchoolTypeAudited: Sendable {
             }
         }
         return saved
-        }
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.id != 0 {
+        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("platform") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity")])
             }
@@ -266,9 +304,12 @@ public struct SchoolTypeAudited: Sendable {
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)
         for (index, var child) in entity.schoolList.enumerated() {
-            child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            child.updateSchoolType(entity.teaqlPreflightID)
-            do { try child.auditAs(reason).teaqlPreflightGraph(context) }
+            try child.teaqlAttachRoot(entity.teaqlEntityRoot)
+            if child.schoolType != entity.teaqlPreflightID {
+                child.updateSchoolType(entity.teaqlPreflightID)
+            }
+            let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            do { try SchoolAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_list").index(index)
                 throw CheckException(error.violations.map { violation in

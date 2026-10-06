@@ -2,11 +2,11 @@ import XCTest
 @testable import TeaQLCore
 
 final class EntityRootTests: XCTestCase {
-  func testTracksFinalValuesVersionsAndLifecycle() {
+  func testTracksFinalValuesVersionsAndLifecycle() throws {
     let root = EntityRoot()
     let order = EntityKey(entity: "Order", id: .int(10))
     let line = EntityKey(entity: "OrderLine", id: .int(20))
-    root.setOriginalVersion(order, version: 3)
+    try root.setOriginalVersion(order, version: 3)
     root.set(order, field: "status", value: .string("pending"))
     root.set(order, field: "status", value: .string("confirmed"))
     root.set(line, field: "quantity", value: .int(2))
@@ -23,10 +23,10 @@ final class EntityRootTests: XCTestCase {
     XCTAssertFalse(root.isDeleted(line))
   }
 
-  func testMergesRekeysAndClearsOneEntity() {
+  func testMergesRekeysAndClearsOneEntity() throws {
     let child = EntityRoot(); let temporary = EntityKey(entity: "Line", id: .int(-1)); let persisted = EntityKey(entity: "Line", id: .int(42))
     child.markAsNew(temporary); child.set(temporary, field: "quantity", value: .int(2))
-    let root = EntityRoot(); root.merge(from: child); root.rekey(temporary, to: persisted)
+    let root = EntityRoot(); try root.merge(from: child); try root.rekey(temporary, to: persisted)
     XCTAssertTrue(root.isNew(persisted)); XCTAssertEqual(root.change(persisted)["quantity"], .int(2))
     root.clearEntity(persisted); XCTAssertFalse(root.isNew(persisted)); XCTAssertTrue(root.change(persisted).isEmpty)
   }

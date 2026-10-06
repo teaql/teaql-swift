@@ -454,12 +454,15 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
   #expect(saved.version == 1)
 }
 
-@Test func generatedBootstrapRunsAfterDDLThroughTypedMutation() async throws {
+@Test(arguments: [false, true])
+func generatedBootstrapRunsAfterDDLThroughTypedMutation(logging: Bool) async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-school-bootstrap-\(UUID().uuidString).db").path
   defer { try? FileManager.default.removeItem(atPath: path) }
   let service = try SQLiteDataService(path: path)
   let audit = RecordingAuditSink()
+  let evidence = SQLExecutionEvidenceStore()
+  let diagnostic = TextDiagnosticSQLLogSink(writer: { _ in })
   let module = RuntimeModule(
     name: "generated-bootstrap", entities: [SavedWidget.descriptor],
     generatedBootstrap: { context in
@@ -468,20 +471,46 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
       #expect(try bootstrap.requireActiveRoot("SavedWidget").id == .int(1001))
       var query = SelectQuery(entity: SavedWidget.descriptor)
       query.filter = TeaQLExpression.equal("id", .int(1001))
+      query.limit = 1
       query.comment = "find generated bootstrap fixture"
       query.purpose = "ensure idempotent typed bootstrap"
       if try await bootstrap.execute(query).records.isEmpty {
         _ = try await SavedWidget(id: 1001, name: "Primary", version: 0)
-          .auditAs("create model constant SavedWidget.Primary").save(bootstrap)
+          .auditAs("initialize runtime constant").save(bootstrap)
       }
     })
   var runtime = TeaQLRuntime()
   try runtime.install(module)
   let caller = UserContext(
     runtime: runtime, actor: "application", queryExecutor: service,
-    mutationExecutor: service, requestPolicy: RequestPolicy { $0 }, auditSink: audit)
+    mutationExecutor: service, requestPolicy: RequestPolicy { $0 }, auditSink: audit,
+    telemetrySink: evidence, diagnosticSQLLogSink: diagnostic,
+    querySQLLogEnabled: logging, mutationSQLLogEnabled: logging)
   try await caller.ensureSchema(module)
   try await caller.ensureSchema(module)
+
+  // Observe real bootstrap SQL before the verification query adds its own fact.
+  // No trace nodes are supplied by this test; runtime derives every path.
+  let facts = await evidence.snapshot()
+  try #require(facts.count == 4)
+  #expect(facts.map(\.operation) == [.select, .insert, .select, .select])
+  #expect(facts.allSatisfy { $0.executionOutcome == "success" })
+  for index in [0, 3] {
+    let fact = facts[index]
+    #expect(fact.comment == "find generated bootstrap fixture")
+    #expect(fact.purpose == "ensure idempotent typed bootstrap")
+    #expect(fact.tracePath.map(\.kind) == ["operation", "request", "provider", "sql"])
+    #expect(fact.tracePath.prefix(2).map(\.name) == ["SavedWidget", "SavedWidget"])
+  }
+  for index in [1, 2] {
+    let fact = facts[index]
+    #expect(fact.auditReason == "initialize runtime constant")
+    #expect(fact.tracePath.map(\.kind) == ["operation", index == 1 ? "entity" : "request", "provider", "sql"])
+    #expect(fact.mutationLineage.map(\.comment) == ["initialize runtime constant"])
+  }
+  #expect(facts[2].purpose == "verify the persisted mutation result")
+  #expect((await diagnostic.snapshot()).count == (logging ? facts.count : 0))
+  #expect(caller.actor == "application")
 
   var query = SelectQuery(entity: SavedWidget.descriptor)
   query.comment = "verify generated bootstrap rows"
@@ -495,6 +524,8 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
   #expect(events[0].entityID == .int(1001))
   #expect(events[0].actor == "teaql-generated-bootstrap")
   #expect(events[0].category == "runtime-bootstrap")
+  #expect(events[0].reason == "initialize runtime constant")
+  #expect(events[0].mutationLineage?.map(\.comment) == ["initialize runtime constant"])
   let rowAudit = try await service.auditEvents()
   #expect(rowAudit.first?["entityID"] == .string("1001"))
   #expect(rowAudit.first?["category"] == .string("runtime-bootstrap"))
@@ -639,7 +670,9 @@ private func context(
   #expect(entries.allSatisfy { $0.sqlOmissionReason == nil })
   #expect(entries.contains { $0.resultCount != nil })
   #expect(entries.contains { $0.affectedRows != nil })
-  let selectEntry = try #require(entries.first { $0.operation == .select })
+  #expect(entries.map(\.operation) == [.insert, .select, .select])
+  #expect(entries[1].purpose == "verify the persisted mutation result")
+  let selectEntry = try #require(entries.last { $0.operation == .select })
   #expect(selectEntry.comment == "Read SQL evidence fixture")
   #expect(selectEntry.purpose == "Prove parameterized execution")
   #expect(selectEntry.tracePath.map(\.kind) == [
@@ -867,7 +900,7 @@ private func context(
   #expect(audit.last?["reason"] == .string("Soft delete order 100"))
   #expect(await appAudit.events().count == 4)
 
-  _ = try await service.transaction([
+  _ = try await context.execute(MutationBatchRequest(mutations: [
     Mutation(
       kind: .create,
       entity: order,
@@ -886,7 +919,7 @@ private func context(
       ],
       auditReason: "Create second transaction order"
     ),
-  ])
+  ], comment: "Create both transaction orders"))
   var transactionQuery = SelectQuery(entity: order)
   transactionQuery.filter = .inList("id", [.int(300), .int(301)])
   transactionQuery.comment = "Read transaction records"
@@ -894,7 +927,7 @@ private func context(
   #expect(try await context.execute(transactionQuery).records.count == 2)
 
   await #expect(throws: (any Error).self) {
-    try await service.transaction([
+    try await context.execute(MutationBatchRequest(mutations: [
       Mutation(
         kind: .create,
         entity: order,
@@ -913,7 +946,7 @@ private func context(
         ],
         auditReason: "Trigger rollback test"
       ),
-    ])
+    ], comment: "Verify transaction rollback"))
   }
   var rollbackQuery = SelectQuery(entity: order)
   rollbackQuery.filter = .equal("id", .int(400))

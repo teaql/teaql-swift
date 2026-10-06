@@ -6,6 +6,26 @@ final class SQLMaskedAlternative: Sendable {
 }
 
 enum LogPrivacy {
+  static func loadedMutationSource(_ mutation: Mutation) -> SQLExecutionMetadata {
+    var values: [TeaQLValue] = [], policies: [SQLParameterLogPolicy] = []
+    for property in mutation.entity.properties {
+      guard let value = mutation.loadedValues[property.name] else { continue }
+      let names = [property.name, property.modelName ?? property.name, property.column]
+      let policy: SQLParameterLogPolicy = names.contains(where: credential) ? .credential
+        : mutation.entity.auditMaskFields.map { fields in
+          names.contains(where: fields.contains) ? .masked : .plain
+        } ?? .unknown
+      values.append(value); policies.append(policy)
+    }
+    return SQLExecutionMetadata(operation: .select, parameterizedSQL: "", parameters: values,
+      debugSQL: "", elapsedMicros: 0, resultSummary: "", parameterLogPolicies: policies, generatedSQL: true)
+  }
+
+  static func privateValues(_ source: SQLExecutionMetadata) -> [TeaQLValue] {
+    zip(source.parameters, policies(source)).compactMap { value, policy in
+      policy == .plain && !hasCredentials(value) ? nil : value
+    }
+  }
   // Count Unicode scalars (not grapheme clusters); only ASCII digits are numeric IDs.
   static func maskAuditValue(_ value: String) -> String {
     let scalars = Array(value.unicodeScalars)
@@ -195,12 +215,20 @@ enum LogPrivacy {
       operation: source.operation, comment: source.comment.map(safeIntent), purpose: source.purpose.map(safeIntent),
       auditReason: source.auditReason.map(safeIntent),
       tracePath: source.tracePath.map { TraceNode(entity: safeIntent($0.entity), comment: safeIntent($0.comment),
-        purpose: safeIntent($0.purpose), level: $0.level, kind: safeIntent($0.kind), name: safeIntent($0.name)) },
+        purpose: safeIntent($0.purpose), level: $0.level, kind: safeIntent($0.kind), name: safeIntent($0.name),
+        entityID: $0.entityID) },
+      mutationLineage: TraceChain.maskLineage(source.mutationLineage, values: intentHidden),
       parameterizedSQL: omission == nil ? source.parameterizedSQL : redactedSQL,
       parameters: values, debugSQL: debug, elapsedMicros: source.elapsedMicros,
       resultCount: source.resultCount, affectedRows: source.affectedRows, resultSummary: safeSummary(source.resultSummary),
       parameterLogPolicies: policies, maskedParameters: flags, generatedSQL: source.generatedSQL,
       sqlOmissionReason: omission, executionOutcome: source.executionOutcome)
+    if !source.statements.isEmpty {
+      let provenance = inheritIntent(source, inherited: intentSource)
+      result = result.includingStatements(source.statements.map {
+        project($0, allowPlaintext: allowPlaintext, intentSource: provenance, intentValues: intentValues)
+      })
+    }
     result.isSafeProjection = !allowPlaintext
     if allowPlaintext {
       result.maskedAlternative = source.maskedAlternative ?? SQLMaskedAlternative(

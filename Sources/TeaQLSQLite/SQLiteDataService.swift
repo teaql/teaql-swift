@@ -48,7 +48,7 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
@@ -183,31 +183,24 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
   }
 
-  public func transaction(_ mutations: [Mutation]) async throws -> [MutationResult] {
-    try executeSQL("BEGIN IMMEDIATE")
-    do {
-      var results: [MutationResult] = []
-      for mutation in mutations {
-        let validated = try mutation.validatedForExecution()
-        let result = try performMutation(validated)
-        try insertAudit(validated, generatedValues: result.generatedValues)
-        results.append(result)
-      }
-      try executeSQL("COMMIT")
-      return results
-    } catch {
-      try? executeSQL("ROLLBACK")
-      if let failure = error as? SQLExecutionFailure { throw failure.cause }
-      throw error
-    }
-  }
-
-  public func execute(_ query: SelectQuery) async throws -> QueryResult {
-    do { return try await executeDiagnosed(query) }
+  public func execute(_ request: QueryRequest) async throws -> QueryResult {
+    do { return try await executeDiagnosed(request) }
     catch let failure as SQLExecutionFailure { throw failure.cause }
   }
 
-  package func executeDiagnosed(_ query: SelectQuery) async throws -> QueryResult {
+  package func queryIntentProvenance(_ request: QueryRequest) throws -> SQLExecutionMetadata {
+    let compiled = try compiler.compile(request.query)
+    // Only the invocation-local intent source includes pre-decoration operands.
+    // Physical SQL, bindings, returned metadata and safe sink records do not.
+    return SQLExecutionMetadata(operation: .select, parameterizedSQL: compiled.sql,
+      parameters: compiled.parameters + compiled.intentOperands.map(\.value),
+      debugSQL: "", elapsedMicros: 0, resultSummary: "",
+      parameterLogPolicies: compiled.parameterLogPolicies + compiled.intentOperands.map(\.policy),
+      generatedSQL: compiled.generatedSQL)
+  }
+
+  package func executeDiagnosed(_ request: QueryRequest) async throws -> QueryResult {
+    let query = request.query
     let compiled = try compiler.compile(query)
     let startedAt = DispatchTime.now().uptimeNanoseconds
     let records: [TeaQLRecord]
@@ -215,13 +208,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     catch {
       throw SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
         operation: .select, comment: query.comment, purpose: query.purpose,
-        tracePath: [
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 0, kind: "operation", name: "query"),
-          TraceNode(entity: query.entity.name, comment: "", purpose: "", level: 1, kind: "request", name: query.entity.name),
-        ] + query.tracePath + [
-          TraceNode(entity: query.entity.name, comment: "", purpose: "", level: query.tracePath.count + 2, kind: "provider", name: "sqlite"),
-          TraceNode(entity: query.entity.name, comment: "", purpose: "", level: query.tracePath.count + 3, kind: "sql", name: "select"),
-        ], parameterizedSQL: compiled.sql, parameters: compiled.parameters, debugSQL: "",
+        tracePath: querySQLTrace(request),
+        parameterizedSQL: compiled.sql, parameters: compiled.parameters, debugSQL: "",
         elapsedMicros: elapsedMicros(since: startedAt), resultSummary: "statement failed; row count unknown",
         parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL,
         executionOutcome: "failure"))
@@ -230,19 +218,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       records: records,
       backend: "sqlite",
       trace: [
-        TraceNode(entity: query.entity.name, comment: query.comment!, purpose: query.purpose!)
+        TraceNode(entity: request.originEntity, comment: request.intent.comment, purpose: request.intent.purpose)
       ],
       metadata: SQLExecutionMetadata(
         operation: .select,
         comment: query.comment,
         purpose: query.purpose,
-        tracePath: [
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 0, kind: "operation", name: "query"),
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: 1, kind: "request", name: query.entity.name),
-        ] + query.tracePath + [
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: query.tracePath.count + 2, kind: "provider", name: "sqlite"),
-          TraceNode(entity: query.entity.name, comment: query.comment ?? "", purpose: query.purpose ?? "", level: query.tracePath.count + 3, kind: "sql", name: "select"),
-        ],
+        tracePath: querySQLTrace(request),
         parameterizedSQL: compiled.sql,
         parameters: compiled.parameters,
         debugSQL: "",
@@ -254,38 +236,55 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     )
   }
 
-  public func count(_ query: SelectQuery) async throws -> Int {
-    let compiled = try compiler.compileCount(query)
-    var prepared: OpaquePointer?
-    guard sqlite3_prepare_v2(database, compiled.sql, -1, &prepared, nil) == SQLITE_OK,
-      let statement = prepared
-    else {
-      throw currentError(sql: compiled.sql)
-    }
-    defer { sqlite3_finalize(statement) }
-    try bind(compiled.parameters, to: statement)
-    guard sqlite3_step(statement) == SQLITE_ROW else {
-      throw currentError(sql: compiled.sql)
-    }
-    return Int(sqlite3_column_int64(statement, 0))
-  }
-
-  public func execute(_ mutation: Mutation) async throws -> MutationResult {
-    do { return try await executeDiagnosed(mutation) }
+  public func count(_ request: QueryRequest) async throws -> Int {
+    do { return try await countDiagnosed(request).count }
     catch let failure as SQLExecutionFailure { throw failure.cause }
   }
 
-  package func executeDiagnosed(_ mutation: Mutation) async throws -> MutationResult {
-    let mutation = try mutation.validatedForExecution()
+  package func countDiagnosed(_ request: QueryRequest) async throws -> SQLCountResult {
+    let query = request.query
+    let compiled = try compiler.compileCount(query)
+    let startedAt = DispatchTime.now().uptimeNanoseconds
+    func metadata(count: Int? = nil) -> SQLExecutionMetadata {
+      SQLExecutionMetadata(operation: .select, comment: query.comment, purpose: query.purpose,
+        tracePath: querySQLTrace(request), parameterizedSQL: compiled.sql,
+        parameters: compiled.parameters, debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt),
+        resultCount: count == nil ? nil : 1,
+        resultSummary: count.map { "\($0) records counted" } ?? "statement failed; count unknown",
+        parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL,
+        executionOutcome: count == nil ? "failure" : "success")
+    }
+    do {
+      var prepared: OpaquePointer?
+      guard sqlite3_prepare_v2(database, compiled.sql, -1, &prepared, nil) == SQLITE_OK,
+        let statement = prepared
+      else { throw currentError(sql: compiled.sql) }
+      defer { sqlite3_finalize(statement) }
+      try bind(compiled.parameters, to: statement)
+      guard sqlite3_step(statement) == SQLITE_ROW else { throw currentError(sql: compiled.sql) }
+      let count = Int(sqlite3_column_int64(statement, 0))
+      return SQLCountResult(count: count, metadata: metadata(count: count))
+    } catch {
+      throw SQLExecutionFailure(cause: error, metadata: metadata())
+    }
+  }
+
+  public func execute(_ request: MutationRequest) async throws -> MutationResult {
+    do { return try await executeDiagnosed(request) }
+    catch let failure as SQLExecutionFailure { throw failure.cause }
+  }
+
+  package func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult {
+    let mutation = request.mutation
     if graphTransactionActive {
       let result = try performMutation(mutation)
-      try insertAudit(mutation, generatedValues: result.generatedValues)
+      if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
       return result
     }
     try executeSQL("BEGIN IMMEDIATE")
     do {
       let result = try performMutation(mutation)
-      try insertAudit(mutation, generatedValues: result.generatedValues)
+      if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
       try executeSQL("COMMIT")
       return result
     } catch {
@@ -350,6 +349,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
       operation: operation, auditReason: mutation.auditReason,
       tracePath: mutationSQLTrace(mutation, operation: operation.rawValue),
+      mutationLineage: mutation.mutationLineage ?? [],
       parameterizedSQL: sql, parameters: values, debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt),
       affectedRows: affectedRows,
       resultSummary: affectedRows.map { "\($0) rows affected" } ?? "statement failed; row count unknown",
@@ -357,6 +357,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   private func insert(_ mutation: Mutation) throws -> MutationResult {
+    var mutation = mutation
     var insertValues = try normalizedValues(mutation.values, for: mutation.entity)
     if let id = mutation.entity.idProperty {
       if insertValues[id.name] == nil {
@@ -367,6 +368,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
     if let version = mutation.entity.versionProperty {
       insertValues[version.name] = .int(1)
+    }
+    if let id = mutation.entity.idProperty.flatMap({ insertValues[$0.name] }) {
+      mutation.id = id
+      mutation.mutationLineage = TraceChain.assignedLineage(mutation.mutationLineage ?? [],
+        key: EntityKey(entity: mutation.entity.name, id: id))
     }
     let properties = try insertValues.keys.sorted().map {
       try requireProperty($0, mutation.entity)
@@ -390,6 +396,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .insert,
         auditReason: mutation.auditReason,
         tracePath: mutationSQLTrace(mutation, operation: "insert"),
+        mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: "",
@@ -397,11 +404,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         affectedRows: affected,
         resultSummary: "\(affected) rows affected",
         parameterLogPolicies: properties.map { .field($0.name, in: mutation.entity) }, generatedSQL: true, executionOutcome: "success")
-    return MutationResult(affectedRows: affected, generatedValues: generated,
-      persistedRecord: try fetchPersistedRecord(entity: mutation.entity,
+    let (record, read) = try fetchPersistedRecord(entity: mutation.entity,
         id: generated[mutation.entity.idProperty?.name ?? "id"]
-          ?? mutation.values[mutation.entity.idProperty?.name ?? "id"], write: metadata),
-      metadata: metadata)
+          ?? mutation.values[mutation.entity.idProperty?.name ?? "id"], write: metadata)
+    return MutationResult(affectedRows: affected, generatedValues: generated,
+      persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
   }
 
   private func allocateID(typeName: String) throws -> Int64 {
@@ -488,15 +495,17 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .update,
         auditReason: mutation.auditReason,
         tracePath: mutationSQLTrace(mutation, operation: "update"),
+        mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: "",
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
         resultSummary: "\(changed) rows affected", parameterLogPolicies: policies, generatedSQL: true, executionOutcome: "success")
-    return MutationResult(affectedRows: changed,
-      persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata),
-      metadata: metadata)
+    guard changed > 0 else { return MutationResult(affectedRows: changed, metadata: metadata) }
+    let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
+    return MutationResult(affectedRows: changed, persistedRecord: record,
+      metadata: metadata.includingStatements([metadata, read]))
   }
 
   private func delete(_ mutation: Mutation) throws -> MutationResult {
@@ -530,6 +539,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .delete,
         auditReason: mutation.auditReason,
         tracePath: mutationSQLTrace(mutation, operation: "delete"),
+        mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
         debugSQL: "",
@@ -539,9 +549,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         parameterLogPolicies: [.field(versionProperty.name, in: mutation.entity),
           .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)],
         generatedSQL: true, executionOutcome: "success")
+    let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
     return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: .int(deletedVersion)],
-      persistedRecord: try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata),
-      metadata: metadata)
+      persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
   }
 
   private func insertAudit(_ mutation: Mutation, generatedValues: TeaQLRecord) throws {
@@ -591,7 +601,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func fetchPersistedRecord(
     entity: EntityDescriptor, id: TeaQLValue?, write: SQLExecutionMetadata
-  ) throws -> TeaQLRecord {
+  ) throws -> (TeaQLRecord, SQLExecutionMetadata) {
     guard let id, let idProperty = entity.idProperty else {
       throw TeaQLError.execution(
         "Persisted state refresh requires entity ID metadata and an ID value")
@@ -603,23 +613,27 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     )
     let startedAt = DispatchTime.now().uptimeNanoseconds
     var resultCount: Int?
+    let intent = try MutationIntent(comment: write.auditReason).readbackIntent()
+    func readMetadata(rejected: Bool = false) -> SQLExecutionMetadata {
+      SQLExecutionMetadata(operation: .select, comment: intent.comment,
+        purpose: intent.purpose, auditReason: write.auditReason,
+        tracePath: TraceChain.readback(write.tracePath), mutationLineage: write.mutationLineage,
+        parameterizedSQL: compiled.sql, parameters: compiled.parameters,
+        debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
+        resultSummary: resultCount.map { "\($0) rows returned" + (rejected ? "; persisted snapshot rejected" : "") }
+          ?? "readback failed; row count unknown",
+        parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: true,
+        executionOutcome: resultCount == nil ? "failure" : "success")
+    }
     do {
       let records = try fetch(compiled, entity: entity)
       resultCount = records.count
       guard records.count == 1 else {
         throw TeaQLError.execution("Persisted state refresh expected one \(entity.name) row; found \(records.count)")
       }
-      return records[0]
+      return (records[0], readMetadata())
     } catch {
-      let read = SQLExecutionMetadata(operation: .select, auditReason: write.auditReason,
-        tracePath: write.tracePath + [TraceNode(entity: entity.name, comment: write.auditReason ?? "",
-          purpose: "", level: write.tracePath.count, kind: "sql", name: "readback")],
-        parameterizedSQL: compiled.sql, parameters: compiled.parameters,
-        debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
-        resultSummary: resultCount.map { "\($0) rows returned; persisted snapshot rejected" }
-          ?? "readback failed; row count unknown",
-        parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: true,
-        executionOutcome: resultCount == nil ? "failure" : "success")
+      let read = readMetadata(rejected: true)
       throw SQLExecutionFailure(cause: error, diagnostics: [SQLFailureDiagnostic(metadata: write),
         SQLFailureDiagnostic(metadata: read, intentSource: write)])
     }
@@ -629,12 +643,21 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func mutationSQLTrace(_ mutation: Mutation, operation: String) -> [TraceNode] {
     let reason = mutation.auditReason ?? ""
-    return [
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 0, kind: "operation", name: "mutation"),
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 1, kind: "entity", name: mutation.entity.name),
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 2, kind: "provider", name: "sqlite"),
-      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", level: 3, kind: "sql", name: operation),
-    ]
+    return TraceChain.canonical((mutation.mutationLineage ?? [
+      TraceNode(entity: mutation.entity.name, comment: reason, purpose: "", kind: "auditReason")
+    ]) + [
+      TraceNode(entity: mutation.entity.name, comment: "", purpose: "", kind: "entity",
+        entityID: mutation.id ?? mutation.entity.idProperty.flatMap { mutation.values[$0.name] }),
+    ], backend: "sqlite", operation: operation)
+  }
+
+  private func querySQLTrace(_ request: QueryRequest) -> [TraceNode] {
+    // Origin and intent belong to the request, not supplied diagnostic frames.
+    return TraceChain.canonical([
+      TraceNode(entity: request.originEntity, comment: request.intent.comment, purpose: "", kind: "comment"),
+      TraceNode(entity: request.originEntity, comment: request.intent.purpose, purpose: "", kind: "purpose"),
+    ] + request.query.tracePath.filter { $0.kind.lowercased() == "relation" },
+      backend: "sqlite", operation: "select")
   }
 
   private func elapsedMicros(since startedAt: UInt64) -> UInt64 {
