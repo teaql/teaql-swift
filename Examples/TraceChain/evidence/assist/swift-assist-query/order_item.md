@@ -28,6 +28,21 @@ will be mutated. Minimal projection is for reading, not whole-object save.
 
 Compile and execute this source unchanged. Use only generated projection, predicate, ordering, and relation-selection APIs. Reuse the same active filters for rows, count, facets, and aggregates. Missing/blank intent, unknown fields, unbounded reads, and trusted-context inputs must fail. Use generated relation loading rather than handwritten child-query loops; never guess a plural.
 
+## Facet results and loaded relations
+
+Use the field-specific `facetBy...As` method with the named
+`includeAllFacets: Bool` argument. Read `list.facets[name]` as a
+`SmartList<TeaQLRecord>`; membership counts are in each row's `"count"` value.
+Nested Facets are in that result's own `facets`. Counts use the full active
+filter before pagination. `includeAllFacets` includes candidates with zero count.
+
+After selecting `customerOrder`, `entity.customerOrderResult` is the typed
+SmartList carrier; `entity.customerOrderEntity` remains its optional entity convenience.
+
+An unselected carrier has `isLoaded == false`; selected empty/null has
+`isLoaded == true`. Relation result metadata is query-only and never a mutation
+record or encoded model field. Use E for loaded field and relation traversal.
+
 ## Field-specific Query Assist
 
 Use the canonical KSML field name from this list. Do not substitute a language member name, JSON name, or database column.

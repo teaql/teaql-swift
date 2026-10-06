@@ -1,23 +1,21 @@
 <!-- ephemeral -->
 
-# Query Reverse-Relation Assist — `payment.payment_attempt_list`
+# Swift Query Field Assist — `order_item.name`
 
-KSML entity: `payment`  
-Derived reverse relation: `payment_attempt_list`  
-Child entity: `payment_attempt`
+KSML entity: `Order Item`  
+KSML field: `name`  
+Type: `string`
 
 | Capability | Generated API |
 | --- | --- |
-| Select | `.selectPaymentAttemptList()`, `.selectPaymentAttemptListWith(Q.paymentAttemptsWithMinimalFields())` |
-| Related count | `.countPaymentAttemptsAs(alias)` |
-| Filtered related count | `.countPaymentAttemptsWith(alias, childRequest)` |
-| Read related count | `try entity.queryProjection(alias).int64Value`; require a present numeric value |
-| Check projection presence | `entity.hasQueryProjection(alias)` |
-
-Missing aliases throw QueryProjectionNotLoaded; null and zero remain present. Related counts are query-only snapshots, never modeled fields or mutation setters. Use a dedicated child request for the aggregate; do not reuse a row-selection request. Use E for modeled fields and loaded relations; aliases have no generated E accessor. List and nested loaded entities retain aliases. Projection reads never perform database I/O, and returned values are isolated Swift value copies. Do not collide with model fields, relations or entity methods. Snapshots do not recalculate after save.
-
-Reverse relations are model-derived and never perform an implicit database query. Select the relation explicitly before expression access. Apply query methods before the executable purpose stage, then execute with exactly one trusted context.
-
+| Select | ``selectName()` |
+| Equality/set | `withNameIs(value)`, `withNameIsNot(value)`, `withNameIn(values)`, `withNameNotIn(values)` |
+| Comparison | `withNameGreaterThan(value)`, `withNameGreaterThanOrEqualTo(value)`, `withNameLessThan(value)`, `withNameLessThanOrEqualTo(value)`, `withNameBetween(lower, upper)` |
+| Null state | `withNameIsKnown()`, `withNameIsUnknown()` |
+| String | `withNameContaining(value)`, `withNameNotContaining(value)`, `withNameStartingWith(value)`, `withNameEndingWith(value)`, `withNameSoundingLike(value)` |
+| Order | `orderByNameAscending()`, `orderByNameDescending()` |
+| Group | `groupByName()` |
+Execution requires `comment(...)`, `purpose(...)`, and exactly one `context`.
 
 ---
 

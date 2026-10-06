@@ -8,13 +8,53 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     public var orderNumber: String? = nil
     public var description: String? = nil
     public var version: Int64 = 0
-    public var platformEntity: Platform?
-    public var orderItemList: [OrderItem] = []
-    public var paymentList: [Payment] = []
-    public var shipmentList: [Shipment] = []
+    private var _platformResult: SmartList<Platform> = .empty
+    public var platformResult: SmartList<Platform> { _platformResult }
+    public var platformEntity: Platform? {
+        get { _platformResult.first }
+        set {
+            _platformResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _platformResult.facets)
+            _loadedFields.insert("platformEntity")
+        }
+    }
+    private var _orderItemListResult: SmartList<OrderItem> = .empty
+    public var orderItemListResult: SmartList<OrderItem> { _orderItemListResult }
+    public var orderItemList: [OrderItem] {
+        get { _orderItemListResult.data }
+        set {
+            _orderItemListResult = SmartList(newValue, totalCount: _orderItemListResult.totalCount,
+                aggregations: _orderItemListResult.aggregations, summary: _orderItemListResult.summary,
+                facets: _orderItemListResult.facets)
+            _loadedFields.insert("orderItemList")
+        }
+    }
+    private var _paymentListResult: SmartList<Payment> = .empty
+    public var paymentListResult: SmartList<Payment> { _paymentListResult }
+    public var paymentList: [Payment] {
+        get { _paymentListResult.data }
+        set {
+            _paymentListResult = SmartList(newValue, totalCount: _paymentListResult.totalCount,
+                aggregations: _paymentListResult.aggregations, summary: _paymentListResult.summary,
+                facets: _paymentListResult.facets)
+            _loadedFields.insert("paymentList")
+        }
+    }
+    private var _shipmentListResult: SmartList<Shipment> = .empty
+    public var shipmentListResult: SmartList<Shipment> { _shipmentListResult }
+    public var shipmentList: [Shipment] {
+        get { _shipmentListResult.data }
+        set {
+            _shipmentListResult = SmartList(newValue, totalCount: _shipmentListResult.totalCount,
+                aggregations: _shipmentListResult.aggregations, summary: _shipmentListResult.summary,
+                facets: _shipmentListResult.facets)
+            _loadedFields.insert("shipmentList")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+    private var teaqlQueryProjections = QueryProjectionSnapshot()
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -53,7 +93,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
@@ -72,65 +113,80 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.teaqlQueryProjections = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["platformEntity"]
+            + ["orderItemList", "paymentList", "shipmentList"]))
         if let relationValue = record["platformEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
                 entity.platformEntity = try Platform.from(record: relatedRecord,
-                    root: EntityRoot(), snapshots: snapshots)
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["platformEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.platformEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: platform")
             }
             entity._loadedFields.insert("platformEntity")
+            entity._platformResult.facets = relations["platformEntity"]?.facets ?? [:]
         }
         if let relationValue = record["orderItemList"] {
             switch relationValue {
             case .array(let values):
-                entity.orderItemList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try OrderItem.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.orderItemList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try OrderItem.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["orderItemList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.orderItemList = [try OrderItem.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.orderItemList = [try OrderItem.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["orderItemList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.orderItemList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: orderItemList")
             }
             entity._loadedFields.insert("orderItemList")
+            entity._orderItemListResult.facets = relations["orderItemList"]?.facets ?? [:]
         }
         if let relationValue = record["paymentList"] {
             switch relationValue {
             case .array(let values):
-                entity.paymentList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try Payment.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.paymentList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try Payment.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["paymentList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.paymentList = [try Payment.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.paymentList = [try Payment.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["paymentList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.paymentList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: paymentList")
             }
             entity._loadedFields.insert("paymentList")
+            entity._paymentListResult.facets = relations["paymentList"]?.facets ?? [:]
         }
         if let relationValue = record["shipmentList"] {
             switch relationValue {
             case .array(let values):
-                entity.shipmentList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try Shipment.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.shipmentList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try Shipment.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["shipmentList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.shipmentList = [try Shipment.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.shipmentList = [try Shipment.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["shipmentList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.shipmentList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: shipmentList")
             }
             entity._loadedFields.insert("shipmentList")
+            entity._shipmentListResult.facets = relations["shipmentList"]?.facets ?? [:]
         }
         return entity
     }
@@ -176,6 +232,15 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
+
+    /// Read a query-only alias; missing is NotLoaded, never an implicit query or zero.
+    public func queryProjection(_ alias: String) throws -> TeaQLValue {
+        try teaqlQueryProjections.get(alias)
+    }
+
+    public func hasQueryProjection(_ alias: String) -> Bool {
+        teaqlQueryProjections.contains(alias)
+    }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.

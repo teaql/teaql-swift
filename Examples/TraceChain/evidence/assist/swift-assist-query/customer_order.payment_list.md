@@ -9,6 +9,12 @@ Child entity: `payment`
 | Capability | Generated API |
 | --- | --- |
 | Select | `.selectPaymentList()`, `.selectPaymentListWith(Q.paymentsWithMinimalFields())` |
+| Related count | `.countPaymentsAs(alias)` |
+| Filtered related count | `.countPaymentsWith(alias, childRequest)` |
+| Read related count | `try entity.queryProjection(alias).int64Value`; require a present numeric value |
+| Check projection presence | `entity.hasQueryProjection(alias)` |
+
+Missing aliases throw QueryProjectionNotLoaded; null and zero remain present. Related counts are query-only snapshots, never modeled fields or mutation setters. Use a dedicated child request for the aggregate; do not reuse a row-selection request. Use E for modeled fields and loaded relations; aliases have no generated E accessor. List and nested loaded entities retain aliases. Projection reads never perform database I/O, and returned values are isolated Swift value copies. Do not collide with model fields, relations or entity methods. Snapshots do not recalculate after save.
 
 Reverse relations are model-derived and never perform an implicit database query. Select the relation explicitly before expression access. Apply query methods before the executable purpose stage, then execute with exactly one trusted context.
 

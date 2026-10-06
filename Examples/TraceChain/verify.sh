@@ -35,6 +35,8 @@ for round in first second; do
   rg -Fq 'PASS Swift graph identity controls: duplicate, missing and equal-ID type collapse rejected' "$trace_evidence/$round.log"
   [[ "$(rg -c '^GRAPH IDENTITY EVIDENCE ' "$trace_evidence/$round.log")" == 1 ]]
   rg -Fq 'PASS: Swift generated Trace Chain example' "$trace_evidence/$round.log"
+  [[ "$(rg -c '^PASS Swift generated aggregate membership:' "$trace_evidence/$round.log")" == 8 ]]
+  [[ "$(rg -c '^AGGREGATE_OBSERVED ' "$trace_evidence/$round.log")" == 8 ]]
   [[ "$(rg -c '^PASS Swift complete private lineage:' "$trace_evidence/$round.log")" == 4 ]]
 done
 hash_library > "$trace_evidence/generated-after.sha256"

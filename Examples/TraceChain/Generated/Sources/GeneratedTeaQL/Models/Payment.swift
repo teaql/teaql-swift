@@ -7,11 +7,31 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     public var customerOrder: Int64? = nil
     public var referenceCode: String? = nil
     public var version: Int64 = 0
-    public var customerOrderEntity: CustomerOrder?
-    public var paymentAttemptList: [PaymentAttempt] = []
+    private var _customerOrderResult: SmartList<CustomerOrder> = .empty
+    public var customerOrderResult: SmartList<CustomerOrder> { _customerOrderResult }
+    public var customerOrderEntity: CustomerOrder? {
+        get { _customerOrderResult.first }
+        set {
+            _customerOrderResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _customerOrderResult.facets)
+            _loadedFields.insert("customerOrderEntity")
+        }
+    }
+    private var _paymentAttemptListResult: SmartList<PaymentAttempt> = .empty
+    public var paymentAttemptListResult: SmartList<PaymentAttempt> { _paymentAttemptListResult }
+    public var paymentAttemptList: [PaymentAttempt] {
+        get { _paymentAttemptListResult.data }
+        set {
+            _paymentAttemptListResult = SmartList(newValue, totalCount: _paymentAttemptListResult.totalCount,
+                aggregations: _paymentAttemptListResult.aggregations, summary: _paymentAttemptListResult.summary,
+                facets: _paymentAttemptListResult.facets)
+            _loadedFields.insert("paymentAttemptList")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+    private var teaqlQueryProjections = QueryProjectionSnapshot()
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -48,7 +68,8 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
@@ -65,33 +86,42 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.teaqlQueryProjections = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["customerOrderEntity"]
+            + ["paymentAttemptList"]))
         if let relationValue = record["customerOrderEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
                 entity.customerOrderEntity = try CustomerOrder.from(record: relatedRecord,
-                    root: EntityRoot(), snapshots: snapshots)
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["customerOrderEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.customerOrderEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: customerOrder")
             }
             entity._loadedFields.insert("customerOrderEntity")
+            entity._customerOrderResult.facets = relations["customerOrderEntity"]?.facets ?? [:]
         }
         if let relationValue = record["paymentAttemptList"] {
             switch relationValue {
             case .array(let values):
-                entity.paymentAttemptList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try PaymentAttempt.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.paymentAttemptList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try PaymentAttempt.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["paymentAttemptList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.paymentAttemptList = [try PaymentAttempt.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.paymentAttemptList = [try PaymentAttempt.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["paymentAttemptList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.paymentAttemptList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: paymentAttemptList")
             }
             entity._loadedFields.insert("paymentAttemptList")
+            entity._paymentAttemptListResult.facets = relations["paymentAttemptList"]?.facets ?? [:]
         }
         return entity
     }
@@ -131,6 +161,15 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
+
+    /// Read a query-only alias; missing is NotLoaded, never an implicit query or zero.
+    public func queryProjection(_ alias: String) throws -> TeaQLValue {
+        try teaqlQueryProjections.get(alias)
+    }
+
+    public func hasQueryProjection(_ alias: String) -> Bool {
+        teaqlQueryProjections.contains(alias)
+    }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.

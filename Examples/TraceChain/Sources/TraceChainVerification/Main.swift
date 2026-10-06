@@ -31,6 +31,10 @@ import TeaQLSQLite
             .comment("choose unused verification IDs").purpose("repeat without deleting prior evidence")
             .executeForList(context).first
         let base = (latest?.id).map { $0 + 10_000 } ?? 100
+        if ProcessInfo.processInfo.environment["TEAQL_SWIFT_TRACE_SCENARIO"] == "aggregate-membership" {
+            try await generatedAggregateProofs(runtime: runtime, service: service, base: base)
+            return
+        }
         if ProcessInfo.processInfo.environment["TEAQL_SWIFT_TRACE_SCENARIO"] == "checker-overlap" {
             try await generatedCheckerOverlap(runtime: runtime, service: service, base: base)
             return
@@ -64,6 +68,7 @@ import TeaQLSQLite
         try await sharedOwnershipProofs(runtime: runtime, service: service, base: base)
         try await generatedCheckerOverlap(runtime: runtime, service: service, base: base)
         try await generatedPaginationProofs(runtime: runtime, service: service, base: base)
+        try await generatedAggregateProofs(runtime: runtime, service: service, base: base)
         var native = UserContext(runtime: runtime, actor: "trace-conformance", queryExecutor: service,
             mutationExecutor: service, requestPolicy: RequestPolicy { $0 }, auditSink: audit,
             telemetrySink: sql, diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }))

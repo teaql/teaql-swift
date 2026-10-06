@@ -841,7 +841,9 @@ public extension CustomerOrderRequest where State == RequestExecutable {
         let result = try await context.execute(QueryRequest(query: query))
         let snapshots = LoadedEntitySnapshots()
         return SmartList(
-            try result.records.map { try CustomerOrder.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
+            try result.records.enumerated().map { index, record in
+                try CustomerOrder.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                    relations: result.loadedRelations[index] ?? [:]) },
             facets: result.facets)
     }
 
@@ -868,8 +870,10 @@ public extension CustomerOrderRequest where State == RequestExecutable {
         }
         let snapshots = LoadedEntitySnapshots()
         let items = SmartList(
-            try result.records.map { try CustomerOrder.from(record: $0, root: EntityRoot(), snapshots: snapshots) },
-            totalCount: total)
+            try result.records.enumerated().map { index, record in
+                try CustomerOrder.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                    relations: result.loadedRelations[index] ?? [:]) },
+            totalCount: total, facets: result.facets)
         return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
     }
 }

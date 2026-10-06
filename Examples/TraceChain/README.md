@@ -45,6 +45,17 @@ No public package is claimed to contain these changes.
 | Pagination and descendant lineage | Row, forward/reverse relation and exact-count SQL inherit one page comment/purpose; a clean paginated parent saves only its changed child with root/local responsibility |
 | Actual child SQL failure | Duplicate Payment ID raises SQLite UNIQUE; preceding parent statement remains successful, failed child retains lineage, graph rolls back and emits no committed audit |
 | Rejected write readback | A test-only SQLite trigger removes the inserted Payment; two writes and the root readback succeed, but the child's zero-row SELECT fails persisted-snapshot acceptance; all four facts survive while the graph rolls back |
+| Related counts and loaded membership | Eight log-on/off × root/nested × filtered-forward combinations retain eligible count 1, empty count 0 and both OrderItems. Every actual count/list/forward statement keeps the original root and ancestors; safe intent masks the original private operand without changing driver values |
+
+Related counts are query-only snapshots: use `queryProjection(alias)` and
+`hasQueryProjection(alias)` as described by the field-specific reverse-relation
+Assist. A missing alias throws `QueryProjectionNotLoaded`, while null and zero
+remain present. The snapshot is independent of modeled JSON and the mutation
+ledger, never performs implicit I/O, and is not recalculated after save. A
+filtered forward target retains its real FK identity; unfetched target detail
+is `NotLoaded`, not a fabricated null. SQLite's existing probe policy observes
+both child forward edges, so this example checks six physical SELECTs at the
+root and eight for the nested route; it does not claim a probe optimization.
 
 The first clean-database graph uses Order#100, OrderItem#201/#202,
 Payment#100, PaymentAttempt#401 and Shipment#501. Equal Order/Payment numeric

@@ -7,10 +7,20 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
     public var payment: Int64? = nil
     public var referenceCode: String? = nil
     public var version: Int64 = 0
-    public var paymentEntity: Payment?
+    private var _paymentResult: SmartList<Payment> = .empty
+    public var paymentResult: SmartList<Payment> { _paymentResult }
+    public var paymentEntity: Payment? {
+        get { _paymentResult.first }
+        set {
+            _paymentResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _paymentResult.facets)
+            _loadedFields.insert("paymentEntity")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+    private var teaqlQueryProjections = QueryProjectionSnapshot()
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -47,7 +57,8 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
@@ -64,17 +75,23 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.teaqlQueryProjections = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["paymentEntity"]
+            + []))
         if let relationValue = record["paymentEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
                 entity.paymentEntity = try Payment.from(record: relatedRecord,
-                    root: EntityRoot(), snapshots: snapshots)
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["paymentEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.paymentEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: payment")
             }
             entity._loadedFields.insert("paymentEntity")
+            entity._paymentResult.facets = relations["paymentEntity"]?.facets ?? [:]
         }
         return entity
     }
@@ -113,6 +130,15 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
+
+    /// Read a query-only alias; missing is NotLoaded, never an implicit query or zero.
+    public func queryProjection(_ alias: String) throws -> TeaQLValue {
+        try teaqlQueryProjections.get(alias)
+    }
+
+    public func hasQueryProjection(_ alias: String) -> Bool {
+        teaqlQueryProjections.contains(alias)
+    }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.
