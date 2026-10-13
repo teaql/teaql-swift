@@ -16,8 +16,8 @@ final class QueueAdmissionTests: XCTestCase {
     // The real SDK worker moves a large staging list out of its queue before
     // calling the first 128-record export. Hold that export, not the producer.
     for _ in 0..<1200 { await telemetry.withOperation(RuntimeOperation(family: "query", name: "School.list")) {} }
-    let spansStarted = held.spansEntered.wait(timeout: .now() + 2) == .success
-    let logsStarted = held.logsEntered.wait(timeout: .now() + 2) == .success
+    let spansStarted = await waitForExport(held.spansEntered)
+    let logsStarted = await waitForExport(held.logsEntered)
     for _ in 1200..<5000 { await telemetry.withOperation(RuntimeOperation(family: "query", name: "School.list")) {} }
     let overflow = telemetry.exportLosses
     // Always release before assertions so a red test cannot strand SDK workers.
@@ -133,8 +133,8 @@ final class QueueAdmissionTests: XCTestCase {
       TelemetryStartupConfiguration.endpointVariable: "http://localhost:4318",
     ]), traceExporter: traceHeld, metricExporter: metrics, logExporter: logHeld)
     for _ in 0..<3000 { await telemetry.withOperation(RuntimeOperation(family: "query", name: "backlog")) {} }
-    let spansStarted = traceHeld.spansEntered.wait(timeout: .now() + 2) == .success
-    let logsStarted = logHeld.logsEntered.wait(timeout: .now() + 2) == .success
+    let spansStarted = await waitForExport(traceHeld.spansEntered)
+    let logsStarted = await waitForExport(logHeld.logsEntered)
     let before = ContinuousClock.now
     await telemetry.shutdown()
     let elapsed = before.duration(to: .now)
@@ -152,6 +152,16 @@ final class QueueAdmissionTests: XCTestCase {
     XCTAssertEqual(traceHeld.shutdownCount, 1); XCTAssertEqual(logHeld.shutdownCount, 1)
     await telemetry.shutdown()
     XCTAssertEqual(traceHeld.shutdownCount, 1); XCTAssertEqual(logHeld.shutdownCount, 1)
+  }
+}
+
+// The SDK exporters block on their own workers. Await their entry from a GCD
+// worker instead of blocking Swift's cooperative executor (unavailable on macOS).
+private func waitForExport(_ semaphore: DispatchSemaphore) async -> Bool {
+  await withCheckedContinuation { continuation in
+    DispatchQueue.global().async {
+      continuation.resume(returning: semaphore.wait(timeout: .now() + 2) == .success)
+    }
   }
 }
 

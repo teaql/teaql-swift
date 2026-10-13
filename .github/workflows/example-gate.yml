@@ -13,5 +13,5 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - uses: swift-actions/setup-swift@v2
         with:
-          swift-version: '6.0'
+          swift-version: '6.3.3'
       - run: ./scripts/verify-examples.sh
