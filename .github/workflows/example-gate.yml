@@ -11,6 +11,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install example verification tools
         run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - name: Import official Swift release signing keys
+        run: |
+          curl --fail --show-error --silent --retry 3 \
+            https://www.swift.org/keys/all-keys.asc \
+            --output "$RUNNER_TEMP/swift-release-keys.asc"
+          gpg --show-keys --with-colons "$RUNNER_TEMP/swift-release-keys.asc" \
+            | grep -F 'fpr:::::::::E813C892820A6FA13755B268F167DF1ACF9CE069:'
+          gpg --batch --import "$RUNNER_TEMP/swift-release-keys.asc"
       # Swiftly-backed v3 resolves current official Swift releases; v2's
       # legacy version catalogue does not contain the qualified 6.3.3 toolchain.
       - uses: swift-actions/setup-swift@d8e84bc3a450686a95474d7d6fa4a3301498debc # v3
