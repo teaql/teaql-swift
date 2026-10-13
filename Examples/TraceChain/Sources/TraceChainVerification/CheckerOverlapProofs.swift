@@ -130,6 +130,7 @@ private struct CheckerObservation: Encodable {
 private func loadCheckerGraphs(_ context: UserContext, ids: [Int64]) async throws -> [CustomerOrder] {
     let rows = try await Q.customerOrders().withIdIn(ids).orderByIdAscending().limit(2)
         .selectPlatformWith(Q.platforms().limit(1))
+        .selectSelfFields()
         .selectOrderItemListWith(Q.orderItems().orderByIdAscending().limit(10))
         .comment("load complete graphs for generated Checker overlap")
         .purpose("preserve original versions and shared readonly snapshots").executeForList(context)

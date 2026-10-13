@@ -3,24 +3,15 @@ import Foundation
 import TeaQLCore
 
 public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var payment: Int64? = nil
     public var referenceCode: String? = nil
     public var version: Int64 = 0
-    private var _paymentResult: SmartList<Payment> = .empty
-    public var paymentResult: SmartList<Payment> { _paymentResult }
-    public var paymentEntity: Payment? {
-        get { _paymentResult.first }
-        set {
-            _paymentResult = SmartList(newValue.map { [$0] } ?? [],
-                facets: _paymentResult.facets)
-            _loadedFields.insert("paymentEntity")
-        }
-    }
+    public var paymentEntity: Payment?
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
-    private var teaqlQueryProjections = QueryProjectionSnapshot()
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -57,10 +48,9 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
-                            relations: [String: QueryResult] = [:]) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
         var entity = Self()
-        // Discard the constructor's new-entity ledger during hydration.
+        // Hydration must not import the constructor's temporary new-entity ledger.
         entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
@@ -75,24 +65,22 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
-        entity.teaqlQueryProjections = QueryProjectionSnapshot(record: record, excluding: Set(
-            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
-            + ["paymentEntity"]
-            + []))
         if let relationValue = record["paymentEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.paymentEntity = try Payment.from(record: relatedRecord,
-                    root: EntityRoot(), snapshots: snapshots,
-                    relations: relations["paymentEntity"]?.loadedRelations[0] ?? [:])
+                entity.paymentEntity = try Payment.from(
+                    record: relatedRecord, root: EntityRoot(), snapshots: snapshots)
             case .null:
                 entity.paymentEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: payment")
             }
             entity._loadedFields.insert("paymentEntity")
-            entity._paymentResult.facets = relations["paymentEntity"]?.facets ?? [:]
         }
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set([
+            "id", "payment", "referenceCode", "version"
+        ]).union(["paymentEntity"])
+            .union([]))
         return entity
     }
 
@@ -131,22 +119,14 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
 
-    /// Read a query-only alias; missing is NotLoaded, never an implicit query or zero.
-    public func queryProjection(_ alias: String) throws -> TeaQLValue {
-        try teaqlQueryProjections.get(alias)
-    }
-
-    public func hasQueryProjection(_ alias: String) -> Bool {
-        teaqlQueryProjections.contains(alias)
-    }
-
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "PaymentAttempt", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -224,11 +204,14 @@ public struct PaymentAttemptAudited: Sendable {
                             scope: TraceScopeToken) async throws -> PaymentAttempt {
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
+        let activeScope = try scope.assigning(entity.teaqlEntityKey,
+            to: EntityKey(entity: "PaymentAttempt", id: .int(saved.id)))
         return saved
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

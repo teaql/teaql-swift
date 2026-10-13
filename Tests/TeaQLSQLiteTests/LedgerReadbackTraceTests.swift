@@ -101,6 +101,8 @@ func swiftLedgerOverrideAndUnannotatedSiblingReachRealSinks(logs: Bool) async th
     #expect(raw.statements.map(\.operation) == [.insert, .select])
     #expect(raw.statements.first?.parameters == [.int(1), commands[index].values["name"]!, .int(1)])
     #expect(raw.statements.last?.parameters == [.int(1)])
+    #expect(raw.statements.last?.traceChain.map(\.kind) == ["purpose", "comment"])
+    #expect(raw.statements.last?.traceChain.last?.comment == reason)
     #expect(raw.statements.allSatisfy { $0.mutationLineage == commands[index].mutationLineage })
     let write = facts[index * 2], read = facts[index * 2 + 1]
     #expect(write.operation == .insert && write.affectedRows == 1 && write.executionOutcome == "success")

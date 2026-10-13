@@ -53,11 +53,11 @@ private struct PageObservation: Encodable {
     let plans: [MutationPlan]
 }
 
-private func observePage(_ phase: String, checks: [String: Bool], page: TeaQLPage<CustomerOrder>,
+private func observePage(_ phase: String, checks: [String: Bool], page: SmartList<CustomerOrder>,
     commands: CommandCapture, sql: SQLExecutionEvidenceStore, audit: AuditCapture,
     policy: OwnershipPolicyCapture) async throws {
-    let observation = PageObservation(phase: phase, checks: checks, rootIDs: page.items.map(\.id),
-        rootVersions: page.items.map(\.version), total: page.total, offset: page.offset, limit: page.limit,
+    let observation = PageObservation(phase: phase, checks: checks, rootIDs: page.data.map(\.id),
+        rootVersions: page.data.map(\.version), total: page.totalCount ?? 0, offset: 1, limit: 2,
         commands: await commands.snapshot().map(PageCommand.init), sql: await sql.snapshot().map(PageSQL.init),
         audit: await audit.snapshot(), plans: policy.snapshot())
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
@@ -66,12 +66,14 @@ private func observePage(_ phase: String, checks: [String: Bool], page: TeaQLPag
     print("PASS Swift generated page: \(phase)")
 }
 
-private func loadPage(_ context: UserContext, ids: [Int64], comment: String) async throws -> TeaQLPage<CustomerOrder> {
+private func loadPage(_ context: UserContext, ids: [Int64], comment: String) async throws -> SmartList<CustomerOrder> {
     try await Q.customerOrders().withIdIn(ids).orderByIdAscending()
+        .selectSelfFields()
         .selectPlatformWith(Q.platforms().limit(1))
         .selectOrderItemListWith(Q.orderItems().orderByIdAscending().limit(10))
+        .countAs("totalOrders").offset(1).limit(2)
         .comment(comment).purpose("verify independently saveable paginated graphs")
-        .executeForPage(context, offset: 1, limit: 2)
+        .executeForList(context)
 }
 
 func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService, base: Int64) async throws {
@@ -96,8 +98,8 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
     await commands.clear(); await sql.enableAll(); await audit.clear(); policy.clear()
     let comment = "load one bounded page with shared Platform"
     let page = try await loadPage(context, ids: ids, comment: comment)
-    try require(page.items.count == 2, "page must return two roots")
-    var first = page.items[0], second = page.items[1]
+    try require(page.count == 2, "page must return two roots")
+    var first = page[0], second = page[1]
     guard let firstReference = try E.customerOrder(first).platform().eval(),
           let secondReference = try E.customerOrder(second).platform().eval(),
           let snapshot = firstReference.teaqlLoadedSnapshot,
@@ -106,8 +108,8 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
     let pageSQL = await sql.snapshot()
     let countSQL = pageSQL.filter { $0.parameterizedSQL.contains("COUNT(*)") }
     let rowSQL = pageSQL.filter { !$0.parameterizedSQL.contains("COUNT(*)") }
-    let allIntent = pageSQL.allSatisfy { $0.comment == comment
-        && $0.purpose == "verify independently saveable paginated graphs"
+    let allIntent = pageSQL.allSatisfy { hasQueryBusinessIntent($0, rootComment: comment,
+        purpose: "verify independently saveable paginated graphs")
         && $0.tracePath.first?.name == "CustomerOrder" && $0.executionOutcome == "success" }
     let allCanonical = pageSQL.allSatisfy { entry in
         entry.tracePath.first?.kind == "operation" && entry.tracePath.last?.kind == "sql"
@@ -116,8 +118,8 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
     }
     let pendingBefore = first.teaqlEntityRoot.snapshot()
     try await observePage("page-rows", checks: [
-        "bounded_page_and_exact_total": page.total == 3 && page.offset == 1 && page.limit == 2,
-        "stable_ids_and_versions": page.items.map(\.id) == Array(ids.suffix(2)) && page.items.map(\.version) == [2, 1],
+        "bounded_page_and_exact_total": page.totalCount == 3 && page.aggregations["totalOrders"] == .int(3),
+        "stable_ids_and_versions": page.map(\.id) == Array(ids.suffix(2)) && page.map(\.version) == [2, 1],
         "independent_root_ledgers": first.teaqlEntityRoot !== second.teaqlEntityRoot,
         "independent_reference_ledgers": firstReference.teaqlEntityRoot !== secondReference.teaqlEntityRoot,
         "actual_shared_readonly_snapshot": snapshot === other,
@@ -151,7 +153,7 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
     ], page: page, commands: commands, sql: sql, audit: audit, policy: policy)
 
     var cleanPage = try await loadPage(context, ids: ids, comment: "reload independently persisted page")
-    var clean = cleanPage.items[0]
+    var clean = cleanPage[0]
     clean.orderItemList[0].updateName("saved paginated descendant")
     _ = clean.orderItemList[0].auditAs("edit page descendant")
     let childID = clean.orderItemList[0].id
@@ -177,12 +179,12 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
     try await observePage("save-second-root", checks: [
         "only_second_root_reviewed": policy.snapshot().flatMap(\.operations).count == 1,
         "original_second_version_one": secondCommands.first?.mutation.expectedVersion == 1,
-        "persisted_root_versions_three_two": cleanPage.items.map(\.version) == [3, 2],
-        "first_root_value": try E.customerOrder(cleanPage.items[0]).description().eval() == "saved first paginated root",
-        "second_root_value": try E.customerOrder(cleanPage.items[1]).description().eval() == "pending second paginated root",
-        "descendant_value": try E.orderItem(cleanPage.items[0].orderItemList[0]).name().eval() == "saved paginated descendant",
-        "descendant_version_two": cleanPage.items[0].orderItemList[0].version == 2,
-        "other_child_version_one": cleanPage.items[1].orderItemList[0].version == 1,
+        "persisted_root_versions_three_two": cleanPage.map(\.version) == [3, 2],
+        "first_root_value": try E.customerOrder(cleanPage[0]).description().eval() == "saved first paginated root",
+        "second_root_value": try E.customerOrder(cleanPage[1]).description().eval() == "pending second paginated root",
+        "descendant_value": try E.orderItem(cleanPage[0].orderItemList[0]).name().eval() == "saved paginated descendant",
+        "descendant_version_two": cleanPage[0].orderItemList[0].version == 2,
+        "other_child_version_one": cleanPage[1].orderItemList[0].version == 1,
         "readonly_snapshot_unchanged": snapshot.record == originalSnapshot,
     ], page: cleanPage, commands: commands, sql: sql, audit: audit, policy: policy)
 }

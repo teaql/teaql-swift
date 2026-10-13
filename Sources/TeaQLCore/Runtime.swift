@@ -80,12 +80,19 @@ public struct SQLExecutionMetadata: Sendable {
   }
   // Immutable value copies retain the already-safe fallback, never raw provenance.
   var maskedAlternative: SQLMaskedAlternative?
-  var isSafeProjection = false
+  package var isSafeProjection = false
+  package private(set) var telemetryCorrelation: SQLTelemetryCorrelation?
+  package func withTelemetryCorrelation(_ correlation: SQLTelemetryCorrelation?) -> Self {
+    var result = self
+    result.telemetryCorrelation = correlation
+    return result
+  }
   public let operation: SQLExecutionOperation
   public let comment: String?
   public let purpose: String?
   public let auditReason: String?
   public let tracePath: [TraceNode]
+  public let traceChain: [TraceNode]
   public let mutationLineage: [TraceNode]
   public let parameterizedSQL: String
   public let parameters: [TeaQLValue]
@@ -107,6 +114,7 @@ public struct SQLExecutionMetadata: Sendable {
     purpose: String? = nil,
     auditReason: String? = nil,
     tracePath: [TraceNode] = [],
+    traceChain: [TraceNode] = [],
     mutationLineage: [TraceNode] = [],
     parameterizedSQL: String,
     parameters: [TeaQLValue],
@@ -126,6 +134,7 @@ public struct SQLExecutionMetadata: Sendable {
     self.purpose = purpose
     self.auditReason = auditReason
     self.tracePath = tracePath
+    self.traceChain = traceChain
     self.mutationLineage = mutationLineage
     self.parameterizedSQL = parameterizedSQL
     self.parameters = parameters
@@ -165,7 +174,7 @@ public actor TextDiagnosticSQLLogSink: DiagnosticSQLLogSink {
     let text = "[TeaQL SQL][\(metadata.operation.rawValue)][\(metadata.elapsedMicros)us] "
       + "\(metadata.resultSummary) outcome=\(metadata.executionOutcome ?? "unknown") comment=\(metadata.comment ?? "") "
       + "purpose=\(metadata.purpose ?? "") auditReason=\(metadata.auditReason ?? "") "
-      + "tracePath=\(metadata.tracePath) parameterCount=\(metadata.parameters.count)\n"
+      + "traceChain=\(metadata.traceChain) tracePath=\(metadata.tracePath) parameterCount=\(metadata.parameters.count)\n"
       + "SQL: \(metadata.debugSQL)"
     lines.append(text)
     writer(text)
@@ -375,7 +384,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         expectedVersion: originalVersion,
         auditReason: reason
       )
-    } else if entity.version == 0 {
+    } else if entity.version == 0 || rooted.map({ $0.teaqlEntityRoot.isNew($0.teaqlEntityKey) }) == true {
       let idName = Entity.descriptor.idProperty?.name ?? "id"
       if entity.id == 0 { values.removeValue(forKey: idName) }
       else { values[idName] = .int(entity.id) }
@@ -589,7 +598,20 @@ private struct IdSetExecution: Sendable {
 
 private enum IdSetBuildError: Error { case limitExceeded(Int) }
 
+private struct ListExecutionOwner: Sendable {
+  let context: UUID
+  let root: QueryRequestScope
+  let authorized: QueryRequestScope
+}
+
+private enum ListExecutionState {
+  @TaskLocal static var owner: ListExecutionOwner?
+}
+
 public struct UserContext: Sendable {
+  // The existing per-Context gate already supplies a stable private identity.
+  // Reuse identity only, not its mutation state/lock; avoid changing value layout.
+  private var queryExecutionContext: UUID { graphTransactionGate.id }
   public let runtime: TeaQLRuntime
   public let actor: String?
   public let auditCategory: String?
@@ -631,7 +653,7 @@ public struct UserContext: Sendable {
     diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = TextDiagnosticSQLLogSink(),
     querySQLLogEnabled: Bool = true,
     mutationSQLLogEnabled: Bool = true,
-    runtimeTelemetry: any RuntimeTelemetry = NoopRuntimeTelemetry(),
+    runtimeTelemetry: any RuntimeTelemetry = RuntimeTelemetryStartup.defaultTelemetry(),
     idSetStore: any IdSetStore = InMemoryIdSetStore.shared,
     locale: TeaQLLocale = .en,
     i18nCatalog: I18nCatalog = .builtin,
@@ -688,6 +710,18 @@ public struct UserContext: Sendable {
       throw TeaQLError.execution("The configured mutation provider does not support atomic graph saves")
     }
     await graphTransactionGate.acquire()
+    // The runtime owns the graph boundary, including transaction completion
+    // and post-commit audit delivery. Individual entity operations remain its
+    // children; applications and generated libraries need no SDK calls.
+    return try await runtimeTelemetry.withOperation(RuntimeOperation(family: "mutation", name: "graph.save")) {
+      try await executeGraphTransaction(request, transaction: transaction, operation)
+    }
+  }
+
+  private func executeGraphTransaction<T: Sendable>(
+    _ request: GraphMutationRequest, transaction: any GraphTransactionExecutor,
+    _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
+  ) async throws -> T {
     let policy = mutationPolicyCoordinator.fork()
     let session = GraphMutationSession(intent: request.intent, policy: policy)
     var invocation = self
@@ -841,15 +875,60 @@ public struct UserContext: Sendable {
   private func execute(
     _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?, attachmentKey: String? = nil
   ) async throws -> QueryResult {
-    let query = request.query
-    return try await runtimeTelemetry.withOperation(
-      RuntimeOperation(
-        family: "query", name: "\(query.entity.name).list",
-        attributes: ["teaql.entity.type": .string(query.entity.name)]
-      ), completion: { result in
+    return try await withListOperation(request, completion: { result in
       ["teaql.result.cardinality": .integer(Int64(result.records.count))]
-    }) {
-      try await executeQuery(request, inheritedIntent: inheritedIntent, attachmentKey: attachmentKey)
+    }) { authorized in
+      try await executeQuery(authorized, inheritedIntent: inheritedIntent, attachmentKey: attachmentKey)
+    }
+  }
+
+  private func scopeAlreadyAuthorized(_ scope: QueryRequestScope) -> Bool {
+    guard let owner = ListExecutionState.owner else { return false }
+    return owner.context == queryExecutionContext && owner.authorized === scope
+  }
+
+  private func withListOperation<Result: Sendable>(
+    _ request: QueryRequest,
+    completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
+    _ body: (QueryRequest) async throws -> Result
+  ) async throws -> Result {
+    let bound = try request.bindingTree()
+    if let owner = ListExecutionState.owner,
+      owner.context == queryExecutionContext && owner.root === bound.scope.root {
+      return try await body(bound)
+    }
+    let authorized = try bound.withQuery(requestPolicy.apply(bound.query)).bindingTree()
+    let owner = ListExecutionOwner(context: queryExecutionContext, root: authorized.scope.root,
+      authorized: authorized.scope)
+    return try await ListExecutionState.$owner.withValue(owner) {
+      try await runtimeTelemetry.withOperation(
+      RuntimeOperation(
+        family: "query", name: "\(authorized.query.entity.name).list",
+        attributes: ["teaql.entity.type": .string(authorized.query.entity.name)]
+      ), completion: completion) {
+        try await body(authorized)
+      }
+    }
+  }
+
+  /// Generated-library bridge: one operation owns optional count, relation and
+  /// facet loading and typed hydration. No shared Context mutation ledger or
+  /// ambient SDK span is used to infer invocation ownership.
+  public func executeTypedList<Entity: Sendable>(
+    _ query: SelectQuery, countRequested: Bool,
+    hydrate: @Sendable (TeaQLRecord) throws -> Entity
+  ) async throws -> SmartList<Entity> {
+    let request = try QueryRequest(query: query)
+    return try await withListOperation(request, completion: { rows in
+      ["teaql.result.cardinality": .integer(Int64(rows.count))]
+    }) { authorized in
+      if countRequested {
+        let page = try await executePage(authorized, offset: query.offset, limit: query.limit ?? 10_000)
+        return SmartList(try page.items.map(hydrate), totalCount: page.total,
+          aggregations: page.items.aggregations, summary: page.items.summary, facets: page.items.facets)
+      }
+      let result = try await execute(authorized)
+      return SmartList(try result.records.map(hydrate), facets: result.facets)
     }
   }
 
@@ -864,44 +943,22 @@ public struct UserContext: Sendable {
   private func executeQuery(
     _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?, attachmentKey: String?
   ) async throws -> QueryResult {
-    let validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
+    let bound = try request.bindingTree()
+    let request = try (scopeAlreadyAuthorized(bound.scope)
+      ? bound : bound.withQuery(requestPolicy.apply(bound.query)).bindingTree())
+    let validated = try request.query.validatedForExecution()
     // Root prose can mention a masked value bound only by a descendant. Capture
     // declared bindings before emitting parent logs, without fetching children.
     let invocationIntent: SQLExecutionMetadata?
     if let inheritedIntent { invocationIntent = inheritedIntent }
     else { invocationIntent = try await queryIntentProvenance(request.withQuery(validated)) }
-    let idSetPrepared = try await prepareIdSetPagination(validated)
+    let idSetPrepared = try await prepareIdSetPagination(request.withQuery(validated), inheritedIntent: invocationIntent)
     let prepared = await prepareContinuousPage(idSetPrepared.query)
     var base = prepared.query
     base.relations = []
     base.relationAggregates = []
     base.facets = []
-    let rawResult = try await runtimeTelemetry.withOperation(
-      RuntimeOperation(
-        family: "provider", name: "\(queryExecutor.providerKind).query",
-        attributes: [
-          "teaql.provider.kind": .string(queryExecutor.providerKind),
-          "teaql.provider.operation": .string("query"),
-        ]
-      )
-    ) {
-      do {
-        if let diagnosed = queryExecutor as? any SQLDiagnosticExecutor {
-          return try await diagnosed.executeDiagnosed(request.withQuery(base))
-        }
-        return try await queryExecutor.execute(request.withQuery(base))
-      } catch let failure as SQLExecutionFailure {
-        for diagnostic in failure.diagnostics {
-          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: invocationIntent)
-          await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: source))
-          if querySQLLogEnabled {
-            await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
-              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source))
-          }
-        }
-        throw failure.cause
-      }
-    }
+    let rawResult = try await executeProviderQuery(request.withQuery(base), inheritedIntent: invocationIntent)
     let result: QueryResult
     if let execution = idSetPrepared.execution {
       let order = Dictionary(uniqueKeysWithValues: execution.pageIds.enumerated().map { ($0.element, $0.offset) })
@@ -915,11 +972,6 @@ public struct UserContext: Sendable {
         metadata: rawResult.metadata, facets: rawResult.facets)
     } else {
       result = rawResult
-    }
-    if let metadata = result.metadata {
-      await telemetrySink?.record(LogPrivacy.project(metadata, intentSource: invocationIntent))
-      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata,
-        allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: invocationIntent)) }
     }
     await registerContinuousPage(prepared.execution, rows: result.records)
     // Capture just the requested assembly key, in the final provider row order,
@@ -963,11 +1015,9 @@ public struct UserContext: Sendable {
       child.limit = nil
       child.relations = []
       child.relationAggregates = []
-      child.comment = validated.comment
-      child.purpose = validated.purpose
       let membership = TeaQLExpression.inList(foreignKey.name, parentIDs)
       child.filter = child.filter.map { .and([$0, membership]) } ?? membership
-      let rows = try await execute(request.withQuery(child), inheritedIntent: childIntent).records
+      let rows = try await execute(request.derive(child), inheritedIntent: childIntent).records
       let pairs: [(TeaQLValue, TeaQLValue)] = rows.compactMap { row in
         guard let key = row[foreignKey.name], let value = row[valueAlias] else { return nil }
         return (normalizedRelationIdentity(key), value)
@@ -1018,8 +1068,6 @@ public struct UserContext: Sendable {
         if !child.projection.isEmpty && !child.projection.contains(relation.foreignKey) {
           child.projection.append(relation.foreignKey)
         }
-        child.comment = validated.comment
-        child.purpose = validated.purpose
         let facetBase = child
         // Facet membership belongs to each owner, not the batched visible rows.
         child.facets = []
@@ -1041,7 +1089,7 @@ public struct UserContext: Sendable {
             probe.partitionBy = nil
             let join = TeaQLExpression.equal(relation.foreignKey, localValue)
             probe.filter = probe.filter.map { .and([$0, join]) } ?? join
-            let loaded = try await execute(request.withQuery(probe), inheritedIntent: childIntent,
+            let loaded = try await execute(request.derive(probe), inheritedIntent: childIntent,
               attachmentKey: relation.foreignKey)
             let start = children.count
             for (index, relations) in loaded.loadedRelations { childRelations[start + index] = relations }
@@ -1052,7 +1100,7 @@ public struct UserContext: Sendable {
           if child.limit != nil { child.partitionBy = relation.foreignKey }
           let join = TeaQLExpression.inList(relation.foreignKey, localValues)
           child.filter = child.filter.map { .and([$0, join]) } ?? join
-          let loaded = try await execute(request.withQuery(child), inheritedIntent: childIntent,
+          let loaded = try await execute(request.derive(child), inheritedIntent: childIntent,
             attachmentKey: relation.foreignKey)
           children = loaded.records
           childKeys = loaded.relationAttachmentKeys
@@ -1085,8 +1133,10 @@ public struct UserContext: Sendable {
             owner.partitionBy = nil
             let membership = TeaQLExpression.inList(relation.foreignKey, key == .null ? [] : [key])
             owner.filter = owner.filter.map { .and([$0, membership]) } ?? membership
-            let ownerQuery = try request.withQuery(requestPolicy.apply(owner)).query.validatedForExecution()
-            ownerFacets = try await executeFacets(request, query: ownerQuery, inheritedIntent: childIntent)
+            let ownerRequest = try request.derive(owner).bindingTree()
+            let authorizedOwner = try ownerRequest.withQuery(requestPolicy.apply(ownerRequest.query)).bindingTree()
+            let ownerQuery = try authorizedOwner.query.validatedForExecution()
+            ownerFacets = try await executeFacets(authorizedOwner, query: ownerQuery, inheritedIntent: childIntent)
           }
           loadedRelations[index, default: [:]][relation.name] = QueryResult(
             records: matches, backend: result.backend, facets: ownerFacets, loadedRelations: nested)
@@ -1106,34 +1156,59 @@ public struct UserContext: Sendable {
   ) async throws -> [String: SmartList<TeaQLRecord>] {
     var facets: [String: SmartList<TeaQLRecord>] = [:]
     for facet in query.facets {
+      var child = facet.query.makeQuery()
+      guard let facetScope = child.requestScope?.parent, facetScope.isFacet else {
+        throw TeaQLError.execution("QUERY_FACET_SCOPE_REQUIRED")
+      }
+      let countAliases = child.aggregates.filter { $0.function == .count }.map(\.alias)
+      let aliases = countAliases.isEmpty ? ["count"] : countAliases
+      let helper = facetScope.helper(entity: query.entity.name, comment: "aggregate \(facetScope.relation)")
       var membership = query
       membership.facets = []; membership.relations = []; membership.relationAggregates = []
-      membership.aggregates = []; membership.groupBy = []; membership.orderBy = []
+      membership.aggregates = aliases.map { QueryAggregate(.count, field: "*", alias: $0) }
+      membership.groupBy = [facet.relationName]; membership.orderBy = []
       membership.partitionBy = nil; membership.offset = 0; membership.limit = nil
-      membership.projection = [facet.relationName]
-      let rows = try await execute(request.withQuery(membership), inheritedIntent: inheritedIntent).records
-      var counts: [TeaQLValue: Int64] = [:]
+      membership.projection = []
+      let rows = try await execute(request.derive(membership, scope: helper), inheritedIntent: inheritedIntent).records
+      var counts: [TeaQLValue: TeaQLRecord] = [:]
       for row in rows {
         guard let value = row[facet.relationName], value != .null else { continue }
-        counts[normalizedRelationIdentity(value), default: 0] += 1
+        counts[normalizedRelationIdentity(value)] = row
       }
-      var child = facet.query.makeQuery()
+      child.aggregates.removeAll { $0.function == .count }
+      // Reverse aggregates must use the entire filtered source set, not the
+      // visible page and not all rows referencing the facet value.
+      var source = query
+      source.relations = []; source.relationAggregates = []; source.facets = []
+      source.aggregates = []; source.groupBy = []; source.orderBy = []
+      source.offset = 0; source.limit = nil; source.partitionBy = nil
+      source.continuousPage = nil; source.idSetPagination = nil; source.projection = ["id"]
+      child.relationAggregates = child.relationAggregates.map { aggregate in
+        var nested = aggregate.query.makeQuery()
+        if nested.entity.name == source.entity.name {
+          let restriction = TeaQLExpression.inSubquery("id", RelationQueryPlan(source), "id")
+          nested.filter = nested.filter.map { .and([$0, restriction]) } ?? restriction
+        }
+        return RelationAggregateLoad(relationName: aggregate.relationName, foreignKey: aggregate.foreignKey,
+          alias: aggregate.alias, query: nested, singleResult: aggregate.singleResult, operation: aggregate.operation)
+      }
       child.tracePath = query.tracePath + [TraceNode(
         entity: child.entity.name, comment: "\(query.entity.name).\(facet.relationName)",
         purpose: "", level: query.tracePath.count + 2, kind: "relation", name: facet.relationName)]
-      child.comment = query.comment; child.purpose = query.purpose
       // Restrict before pagination and recursion so nested counts cannot include
       // target candidates excluded by their parent's membership.
       if !facet.includeAllFacets {
         let filter = TeaQLExpression.inList("id", Array(counts.keys))
         child.filter = child.filter.map { .and([$0, filter]) } ?? filter
       }
-      let loaded = try await execute(request.withQuery(child), inheritedIntent: inheritedIntent)
+      let loaded = try await execute(request.derive(child), inheritedIntent: inheritedIntent)
       let decorated = loaded.records.filter { row in
         facet.includeAllFacets || row["id"].map { counts[normalizedRelationIdentity($0)] != nil } == true
       }.map { row in
         var copy = row
-        if let id = row["id"] { copy["count"] = .int(counts[normalizedRelationIdentity(id)] ?? 0) }
+        if let id = row["id"] {
+          for alias in aliases { copy[alias] = counts[normalizedRelationIdentity(id)]?[alias] ?? .int(0) }
+        }
         return copy
       }
       facets[facet.name] = SmartList(decorated, facets: loaded.facets)
@@ -1155,9 +1230,50 @@ public struct UserContext: Sendable {
     return source
   }
 
+  private func recordTelemetrySQL(_ metadata: SQLExecutionMetadata,
+    intentSource: SQLExecutionMetadata? = nil, intentValues: [TeaQLValue] = []) async {
+    let safe = LogPrivacy.project(metadata, intentSource: intentSource, intentValues: intentValues)
+    runtimeTelemetry.recordSQL(safe)
+    await telemetrySink?.record(safe)
+  }
+
+  private func executeProviderQuery(
+    _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?
+  ) async throws -> QueryResult {
+    let result = try await runtimeTelemetry.withOperation(
+      RuntimeOperation(family: "provider", name: "\(queryExecutor.providerKind).query",
+        attributes: ["teaql.provider.kind": .string(queryExecutor.providerKind),
+          "teaql.provider.operation": .string("query")])
+    ) {
+      do {
+        if let diagnosed = queryExecutor as? any SQLDiagnosticExecutor {
+          return try await diagnosed.executeDiagnosed(request)
+        }
+        return try await queryExecutor.execute(request)
+      } catch let failure as SQLExecutionFailure {
+        for diagnostic in failure.diagnostics {
+          let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: inheritedIntent)
+          await recordTelemetrySQL(diagnostic.metadata, intentSource: source)
+          if querySQLLogEnabled {
+            await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
+              allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source))
+          }
+        }
+        throw failure.cause
+      }
+    }
+    if let metadata = result.metadata {
+      await recordTelemetrySQL(metadata, intentSource: inheritedIntent)
+      if querySQLLogEnabled { await diagnosticSQLLogSink?.write(LogPrivacy.project(metadata,
+        allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: inheritedIntent)) }
+    }
+    return result
+  }
+
   private func prepareIdSetPagination(
-    _ query: SelectQuery
+    _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?
   ) async throws -> (query: SelectQuery, execution: IdSetExecution?) {
+    let query = request.query
     guard let options = query.idSetPagination else {
       await idSetObservationState.observe("ID_SET_DISABLED")
       return (query, nil)
@@ -1192,7 +1308,9 @@ public struct UserContext: Sendable {
         idQuery.projection = [idField]
         idQuery.relations = []; idQuery.relationAggregates = []; idQuery.facets = []
         idQuery.idSetPagination = nil; idQuery.continuousPage = nil
-        let result = try await queryExecutor.execute(idQuery)
+        idQuery.requestScope = request.scope.helper(entity: query.entity.name,
+          comment: "collect \(query.entity.name) IDs for pagination")
+        let result = try await executeProviderQuery(try QueryRequest(query: idQuery), inheritedIntent: inheritedIntent)
         let ids = result.records.compactMap { $0[idField]?.int64Value }
         guard ids.count <= options.maxIds else {
           throw IdSetBuildError.limitExceeded(ids.count)
@@ -1292,8 +1410,44 @@ public struct UserContext: Sendable {
     try await count(QueryRequest(query: query))
   }
 
+  /// Runtime-owned page semantics; generated code only supplies operation
+  /// descriptors and hydrates the resulting rows into its typed entities.
+  public func executePage(_ query: SelectQuery, offset: Int, limit: Int) async throws -> TeaQLPage<TeaQLRecord> {
+    var page = query; page.offset = offset; page.limit = limit
+    return try await executePage(QueryRequest(query: page), offset: offset, limit: limit)
+  }
+
+  private func executePage(_ input: QueryRequest, offset: Int, limit: Int) async throws -> TeaQLPage<TeaQLRecord> {
+    return try await withListOperation(input, completion: { page in
+      ["teaql.result.cardinality": .integer(Int64(page.items.count))]
+    }) { authorized in
+    let query = authorized.query
+    // Page arguments were installed before policy. Never overwrite a trusted
+    // policy's bounded slice with the caller's original offset/limit here.
+    var page = query
+    if let alias = page.pageCountOperation?.alias {
+      page.aggregates.removeAll { $0.function == .count && $0.alias == alias }
+    }
+    let request = authorized.withQuery(page)
+    let result = try await execute(request)
+    let observation = await idSetPaginationObservation()
+    let total = page.idSetPagination != nil && observation.countAccuracy == "EXACT"
+      ? observation.count : try await count(request)
+    let named = page.pageCountOperation?.alias.map { [$0: TeaQLValue.int(Int64(total))] } ?? [:]
+    return TeaQLPage(items: SmartList(result.records, totalCount: total, aggregations: named, facets: result.facets),
+      total: total, offset: page.offset, limit: page.limit ?? 10_000)
+    }
+  }
+
   public func count(_ request: QueryRequest) async throws -> Int {
-    var validated = try request.withQuery(requestPolicy.apply(request.query)).query.validatedForExecution()
+    let bound = try request.bindingTree()
+    let authorized = try (scopeAlreadyAuthorized(bound.scope)
+      ? bound : bound.withQuery(requestPolicy.apply(bound.query)).bindingTree())
+    let operation = authorized.query.pageCountOperation
+    let scope = operation.map(authorized.scope.derive)
+      ?? authorized.scope.helper(entity: authorized.query.entity.name, comment: "count matching rows")
+    let request = authorized.derive(authorized.query, scope: scope)
+    var validated = try request.query.validatedForExecution()
     // Count strips eager loads, not the original invocation's redaction sources.
     let invocationIntent = try await queryIntentProvenance(request.withQuery(validated))
     validated.orderBy = []
@@ -1303,6 +1457,9 @@ public struct UserContext: Sendable {
     validated.relations = []
     validated.relationAggregates = []
     validated.partitionBy = nil
+    validated.facets = []
+    validated.aggregates = []
+    validated.groupBy = []
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).count",
@@ -1315,7 +1472,7 @@ public struct UserContext: Sendable {
       if let diagnosed = queryExecutor as? any SQLCountDiagnosticExecutor {
         do {
           let result = try await diagnosed.countDiagnosed(request.withQuery(validated))
-          await telemetrySink?.record(LogPrivacy.project(result.metadata, intentSource: invocationIntent))
+          await recordTelemetrySQL(result.metadata, intentSource: invocationIntent)
           if querySQLLogEnabled {
             await diagnosticSQLLogSink?.write(LogPrivacy.project(result.metadata,
               allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: invocationIntent))
@@ -1324,7 +1481,7 @@ public struct UserContext: Sendable {
         } catch let failure as SQLExecutionFailure {
           for diagnostic in failure.diagnostics {
             let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: invocationIntent)
-            await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata, intentSource: source))
+            await recordTelemetrySQL(diagnostic.metadata, intentSource: source)
             if querySQLLogEnabled {
               await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
                 allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source))
@@ -1413,8 +1570,8 @@ public struct UserContext: Sendable {
       } catch let failure as SQLExecutionFailure {
         for diagnostic in failure.diagnostics {
           let source = LogPrivacy.inheritIntent(diagnostic.intentSource, inherited: invocationProvenance)
-          await telemetrySink?.record(LogPrivacy.project(diagnostic.metadata,
-            intentSource: source, intentValues: submittedID.map { [$0] } ?? []))
+          await recordTelemetrySQL(diagnostic.metadata,
+            intentSource: source, intentValues: submittedID.map { [$0] } ?? [])
           if diagnostic.metadata.operation == .select ? querySQLLogEnabled : mutationSQLLogEnabled {
             await diagnosticSQLLogSink?.write(LogPrivacy.project(diagnostic.metadata,
               allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source,
@@ -1429,8 +1586,8 @@ public struct UserContext: Sendable {
     if let metadata = result.metadata {
       let source = LogPrivacy.inheritIntent(metadata, inherited: invocationProvenance)
       for statement in metadata.statements.isEmpty ? [metadata] : metadata.statements {
-        await telemetrySink?.record(LogPrivacy.project(statement,
-          intentSource: source, intentValues: auditID.map { [$0] } ?? []))
+        await recordTelemetrySQL(statement,
+          intentSource: source, intentValues: auditID.map { [$0] } ?? [])
         if statement.operation == .select ? querySQLLogEnabled : mutationSQLLogEnabled {
           await diagnosticSQLLogSink?.write(LogPrivacy.project(statement,
             allowPlaintext: LogPrivacy.plaintextEnabled(), intentSource: source,

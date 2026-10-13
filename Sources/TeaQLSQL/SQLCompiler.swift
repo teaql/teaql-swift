@@ -109,7 +109,10 @@ public struct SQLiteCompiler: Sendable {
   public func compileCount(_ rawQuery: SelectQuery) throws -> CompiledSQL {
     let query = try rawQuery.validatedForExecution()
     var parameters = SQLBindings()
-    var sql = "SELECT COUNT(*) FROM \(quote(query.entity.table))"
+    let alias = query.pageCountOperation?.alias
+    if let alias, !isSafeAlias(alias) { throw TeaQLError.execution("Invalid aggregate alias: \(alias)") }
+    var sql = "SELECT COUNT(*)" + (alias.map { " AS \(quote($0))" } ?? "")
+      + " FROM \(quote(query.entity.table))"
     if let filter = query.filter {
       sql += " WHERE " + (try expression(filter, entity: query.entity, parameters: &parameters))
     }

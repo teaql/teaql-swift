@@ -441,6 +441,18 @@ private struct SavedWidget: TeaQLEntity, TeaQLMutationRootedEntity {
   }
 }
 
+@Test(arguments: [Int64(0), Int64(1001)])
+func newLedgerCreatesEvenWhenVersionWasExplicitlyInitialized(id: Int64) async throws {
+  let service = try SQLiteDataService(path: ":memory:")
+  let active = context(service)
+  try await active.ensureSchema(RuntimeModule(name: "new-ledger-widget", entities: [SavedWidget.descriptor]))
+  let entity = SavedWidget(id: id, name: "New widget", version: 1)
+  entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
+  let saved = try await entity.auditAs("create explicitly versioned new widget").save(active)
+  #expect(saved.id > 0 && saved.version == 1)
+  if id != 0 { #expect(saved.id == id) }
+}
+
 @Test func auditedCreatePreservesExplicitIDWhenVersionIsNew() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-explicit-id-\(UUID().uuidString).db").path

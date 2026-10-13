@@ -18,6 +18,11 @@ final class RequestIntentGateTests: XCTestCase {
         var query = SelectQuery(entity: descriptor)
         query.comment = field == "comment" ? blank : "load SECRET-CANARY"
         query.purpose = field == "purpose" ? blank : "render SECRET-CANARY"
+        var child = SelectQuery(entity: descriptor)
+        child.comment = "load related schools"; child.purpose = "render related schools"
+        query.relationQuery("children", localKey: "id", foreignKey: "id", query: child)
+        XCTAssertEqual(child.comment, "load related schools")
+        XCTAssertEqual(child.purpose, "render related schools")
         do { _ = try await context.execute(query); XCTFail("missing intent was accepted") }
         catch { checkIntentError(error, field: field, kind: "query") }
         do { _ = try await context.count(query); XCTFail("missing intent reached count") }
@@ -27,6 +32,12 @@ final class RequestIntentGateTests: XCTestCase {
     XCTAssertEqual(calls.value("policy"), 0)
     XCTAssertEqual(calls.value("query"), 0)
     XCTAssertEqual(calls.value("count"), 0)
+    var control = SelectQuery(entity: descriptor)
+    control.comment = "load validation control"; control.purpose = "verify live provider probes"
+    _ = try await context.execute(control)
+    XCTAssertEqual(calls.value("policy"), 1)
+    XCTAssertEqual(calls.value("query"), 1)
+    print("RTC_COM_01_PASS logging=\(logging) fields=comment,purpose invalid_provider=0 invalid_policy=0 annotated_child=true live_control=true")
     }
   }
 

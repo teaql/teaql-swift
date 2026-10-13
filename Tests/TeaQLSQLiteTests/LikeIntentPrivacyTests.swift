@@ -107,7 +107,8 @@ func swiftLikeOriginalOperandUsesItsFieldPolicy(operation: String, logging: Bool
     #expect(facts.count == 2 && logs.count == (logging ? 2 : 0))
     for fact in facts {
       let visible = field == "name" ? "[REDACTED]" : likeCanary
-      #expect(fact.comment == "load \(visible)")
+      #expect(fact.traceChain[1].comment == "load \(visible)")
+      #expect(fact.comment == fact.traceChain.last?.comment)
       #expect(fact.purpose == "inspect \(visible)")
       #expect(fact.tracePath.map(\.name) == ["Person", "Person", "sqlite", "select"])
       #expect(fact.executionOutcome == "success")
@@ -155,15 +156,18 @@ func swiftLikeFutureOperandMasksFirstRootSQL(logging: Bool) async throws {
   #expect(raw[0].parameters == [.int(1), .int(1)])
   #expect(raw[1].parameters.contains(.string(likeCanary + "%")))
   #expect(raw[1].parameterLogPolicies.first == .masked)
-  #expect(raw.allSatisfy { $0.comment == original.comment && $0.purpose == original.purpose })
+  #expect(raw.allSatisfy { $0.traceChain[1].comment == original.comment && $0.purpose == original.purpose
+    && $0.comment == $0.traceChain.last?.comment })
   #expect(query == original && policy.snapshot().allSatisfy {
-    $0.comment == original.comment && $0.purpose == original.purpose
+    $0.traceChain[1].comment == original.comment && $0.purpose == original.purpose
+      && $0.comment == $0.traceChain.last?.comment
   })
   let facts = await evidence.snapshot(), logs = await diagnostics.snapshot()
   #expect(facts.count == 2 && logs.count == (logging ? 2 : 0))
   #expect(facts.map { $0.tracePath.filter { $0.kind == "relation" }.map(\.name) } == [[], ["children"]])
   for fact in facts {
-    #expect(fact.comment == "load future [REDACTED]")
+    #expect(fact.traceChain[1].comment == "load future [REDACTED]")
+    #expect(fact.comment == fact.traceChain.last?.comment)
     #expect(fact.purpose == "inspect future [REDACTED]")
     #expect(fact.tracePath.first?.name == "Parent")
   }

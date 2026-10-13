@@ -4,8 +4,24 @@ import TeaQLCore
 
 public struct CustomerOrderRequest<State: Sendable>: Sendable {
     private var query: SelectQuery
+    private var searchWarnings: [DynamicSearchWarning] = []
+    private var countRequested = false
 
-    init(query: SelectQuery) { self.query = query }
+    init(query: SelectQuery, searchWarnings: [DynamicSearchWarning] = [], countRequested: Bool = false) {
+        self.query = query
+        self.searchWarnings = searchWarnings
+        self.countRequested = countRequested
+    }
+
+    public var dynamicSearchWarnings: [DynamicSearchWarning] { searchWarnings }
+
+    public func filterByJson(_ source: String, warn: ((DynamicSearchWarning) -> Void)? = nil) throws -> Self {
+        let result = try DynamicSearch.mergeGeneratedScalar(query, source: source, models: GeneratedSearchModels.models, warn: warn)
+        var copy = self
+        copy.query = result.query
+        copy.searchWarnings.append(contentsOf: result.warnings)
+        return copy
+    }
 
     @discardableResult
     public func comment(_ value: String) -> Self {
@@ -14,7 +30,7 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
 
     public func purpose(_ value: String) -> CustomerOrderRequest<RequestExecutable> {
         var copy = query; copy.purpose = value
-        return CustomerOrderRequest<RequestExecutable>(query: copy)
+        return CustomerOrderRequest<RequestExecutable>(query: copy, searchWarnings: searchWarnings, countRequested: countRequested)
     }
 
     @discardableResult
@@ -141,7 +157,7 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
+        if !copy.query.projection.contains("platform") {
             copy.query.projection.append("platform")
         }
         copy.query.relationQuery(
@@ -149,8 +165,8 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
             localKey: "platform",
             foreignKey: "id",
             many: false,
-            query: child.toQuery(),
-            traceName: "platform")
+            query: child.toQuery(), traceName: "platform",
+            operation: QueryOperation("relation", method: "selectPlatformWith", relation: "platform"))
         return copy
     }
 
@@ -220,7 +236,8 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
             localKey: "id",
             foreignKey: "customerOrder",
             many: true,
-            query: child.toQuery())
+            query: child.toQuery(),
+            operation: QueryOperation("relation", method: "selectOrderItemListWith", relation: "orderItemList"))
         return copy
     }
 
@@ -240,7 +257,8 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
             localKey: "id",
             foreignKey: "customerOrder",
             many: true,
-            query: child.toQuery())
+            query: child.toQuery(),
+            operation: QueryOperation("relation", method: "selectPaymentListWith", relation: "paymentList"))
         return copy
     }
 
@@ -260,7 +278,8 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
             localKey: "id",
             foreignKey: "customerOrder",
             many: true,
-            query: child.toQuery())
+            query: child.toQuery(),
+            operation: QueryOperation("relation", method: "selectShipmentListWith", relation: "shipmentList"))
         return copy
     }
 
@@ -271,7 +290,14 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func countOrderItemsAs(_ alias: String) -> Self {
-        countOrderItemsWith(alias, Q.orderItems())
+        var copy = self
+        var childQuery = Q.orderItems().toQuery()
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
+        copy.query.relationAggregate(
+            "orderItemList", foreignKey: "customerOrder", alias: alias,
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countOrderItemsAs", alias: alias, relation: "orderItemList"))
+        return copy
     }
 
     @discardableResult
@@ -280,10 +306,11 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
         copy.query.relationAggregate(
             "orderItemList", foreignKey: "customerOrder", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countOrderItemsWith", alias: alias, relation: "orderItemList"))
         return copy
     }
 
@@ -296,7 +323,14 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func countPaymentsAs(_ alias: String) -> Self {
-        countPaymentsWith(alias, Q.payments())
+        var copy = self
+        var childQuery = Q.payments().toQuery()
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
+        copy.query.relationAggregate(
+            "paymentList", foreignKey: "customerOrder", alias: alias,
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countPaymentsAs", alias: alias, relation: "paymentList"))
+        return copy
     }
 
     @discardableResult
@@ -305,10 +339,11 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
         copy.query.relationAggregate(
             "paymentList", foreignKey: "customerOrder", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countPaymentsWith", alias: alias, relation: "paymentList"))
         return copy
     }
 
@@ -321,7 +356,14 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func countShipmentsAs(_ alias: String) -> Self {
-        countShipmentsWith(alias, Q.shipments())
+        var copy = self
+        var childQuery = Q.shipments().toQuery()
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
+        copy.query.relationAggregate(
+            "shipmentList", foreignKey: "customerOrder", alias: alias,
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countShipmentsAs", alias: alias, relation: "shipmentList"))
+        return copy
     }
 
     @discardableResult
@@ -330,10 +372,11 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
         copy.query.relationAggregate(
             "shipmentList", foreignKey: "customerOrder", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countShipmentsWith", alias: alias, relation: "shipmentList"))
         return copy
     }
 
@@ -755,7 +798,8 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
             name: name,
             relationName: "platform",
             query: request.toQuery(),
-            includeAllFacets: includeAllFacets))
+            includeAllFacets: includeAllFacets,
+            operation: QueryOperation("facet", method: "facetByPlatformAs", alias: name, relation: "platform")))
         return copy
     }
 
@@ -766,7 +810,9 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     @discardableResult
     public func countAs(_ alias: String) -> Self {
         var copy = self
+        copy.countRequested = true
         copy.query.aggregates.append(QueryAggregate(.count, field: "*", alias: alias))
+        copy.query.pageCountOperation = QueryOperation("count", method: "countAs", alias: alias)
         return copy
     }
 
@@ -838,42 +884,16 @@ public extension CustomerOrderRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<CustomerOrder> {
         try ensureIntent()
-        let result = try await context.execute(QueryRequest(query: query))
         let snapshots = LoadedEntitySnapshots()
-        return SmartList(
-            try result.records.enumerated().map { index, record in
-                try CustomerOrder.from(record: record, root: EntityRoot(), snapshots: snapshots,
-                    relations: result.loadedRelations[index] ?? [:]) },
-            facets: result.facets)
+        return try await context.executeTypedList(query, countRequested: countRequested) {
+            try CustomerOrder.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+        }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(QueryRequest(query: query))
+        let result = try await context.execute(query)
         return SmartList(result.records, facets: result.facets)
     }
 
-    func executeForPage(
-        _ context: UserContext, offset: Int, limit: Int
-    ) async throws -> TeaQLPage<CustomerOrder> {
-        try ensureIntent()
-        var pageQuery = query
-        pageQuery.offset = offset
-        pageQuery.limit = limit
-        let result = try await context.execute(QueryRequest(query: pageQuery))
-        let observation = await context.idSetPaginationObservation()
-        let total: Int
-        if pageQuery.idSetPagination != nil && observation.countAccuracy == "EXACT" {
-            total = observation.count
-        } else {
-            total = try await context.count(QueryRequest(query: pageQuery))
-        }
-        let snapshots = LoadedEntitySnapshots()
-        let items = SmartList(
-            try result.records.enumerated().map { index, record in
-                try CustomerOrder.from(record: record, root: EntityRoot(), snapshots: snapshots,
-                    relations: result.loadedRelations[index] ?? [:]) },
-            totalCount: total, facets: result.facets)
-        return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
-    }
 }

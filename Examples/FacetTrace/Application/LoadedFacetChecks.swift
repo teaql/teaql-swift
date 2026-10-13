@@ -10,7 +10,7 @@ func verifyLoaded(_ service: SQLiteDataService, runtime: TeaQLRuntime) async thr
             let evidence = SQLExecutionEvidenceStore(), diagnostic = TextDiagnosticSQLLogSink(writer: { _ in })
             let context = UserContext(runtime: runtime, queryExecutor: service, mutationExecutor: service,
                 requestPolicy: RequestPolicy { query in
-                    try require(query.comment == comment && query.purpose == purpose, "derived policy lost original intent")
+                    try require(queryOwnsRootIntent(query, comment: comment, purpose: purpose), "derived policy lost original intent")
                     return query
                 }, telemetrySink: evidence, diagnosticSQLLogSink: diagnostic, querySQLLogEnabled: logging)
             let parents = try await Q.schoolTypes().orderByIdAscending().limit(10)

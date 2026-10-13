@@ -184,6 +184,39 @@ is labeled `MASKED; NOT REPLAYABLE`; SQL that cannot be safely rendered is omitt
 Application mutation audits are delivered after commit and discarded on rollback.
 This is not a durable audit outbox. Do not put secrets in comment or purpose.
 
+The local [standard OpenTelemetry module](STANDARD_TELEMETRY.md) adds environment-
+enabled traces, metrics and safely expanded SQL diagnostics. Startup prints the
+three enablement settings. It uses isolated owned SDK providers and requires no
+per-query instrumentation. The runtime's graph-save trace also covers transaction
+completion, callbacks and post-commit audit delivery; rollback errors do not
+replace business errors, and committed delivery failures never cause rollback.
+See the [graph tests](Tests/TeaQLCoreTests/GraphTelemetryTests.swift) and
+[real SQLite/SDK tests](Tests/TeaQLStandardTelemetryTests/GraphSDKTests.swift).
+The [generated graph example](Examples/TraceChain/Sources/StandardGraphVerification/Main.swift)
+also exercises six-entity creation, actual SQLite failure/rollback, mixed retry
+and marked deletion through Q/E and audited save. Its local gate replays the
+same database twice, preserving explicit/inherited comments and generated code.
+Loaded rows own independent mutation ledgers while sharing immutable snapshots.
+The standard module also distinguishes receiver rejection from export failure,
+bounds streamed OTLP responses and preserves business results on telemetry failure.
+Its local gate has 277 native passes and all five example groups. Two actual
+Q/E replays verify 19 concurrent lifecycle callers each. Shutdown and flush
+during closing await one completed closure; callback-based prefix observation
+avoids starving SDK export workers. Late business bodies keep their results and
+errors without exporting more signals. Two real HTTP
+backlog replays each run 1,500 generated Q/E queries and close at about five
+seconds, with zero pending HTTP, records or lifecycle jobs. Final metrics include
+trace/log drain losses within the six-second caller budget. Queued, staged and
+exporting records share a 2,048-record quota per signal; timeout-pressure tests
+verify loss accounting and recovery. Closed telemetry does not prevent business
+Q/E or audit. Ten response scenarios and healthy startup/graph/Order are requalified;
+see [transport and shutdown](STANDARD_TELEMETRY.md#transport-and-shutdown).
+The [complete Order example](Examples/TraceChain/standard-order/Application/Main.swift)
+loads relations and facets through generated Q/E; explicit count is optional,
+with one trace through entity construction. Its local gate replays audited
+bootstrap twice without database cleanup. Public-release qualification is still
+in progress.
+
 ## Discover only the API needed next
 
 A coding agent does not need every generated method in its context. Start with

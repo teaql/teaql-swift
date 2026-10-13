@@ -14,6 +14,12 @@ func require(_ condition: Bool, _ message: String) throws {
 let secret = "Campus Learning Platform"
 let comment = "load \(secret) Facets"
 let purpose = "verify \(secret) generated provenance"
+func queryOwnsRootIntent(_ query: SelectQuery, comment: String, purpose: String) -> Bool {
+    let chain = query.traceChain
+    guard chain.count >= 2 else { return false }
+    return chain[0].comment == purpose && chain[1].comment == comment
+        && query.comment == chain.last?.comment && query.purpose == purpose
+}
 func facets(_ includeAll: Bool) -> SchoolRequest<RequestDraft> {
     Q.schools().filterBySchoolType(1001).orderByIdAscending().limit(1)
         .facetBySchoolTypeAs("types", Q.schoolTypes().orderByIdAscending().limit(10)
@@ -59,7 +65,10 @@ func verifySQL(_ facts: [SQLExecutionMetadata],
             "query path acquired mutation identities or lineage")
         try require(fact.executionOutcome == "success" && fact.resultCount != nil,
             "metadata must describe actual returned SQLite records")
-        try require(fact.comment == "load [REDACTED] Facets"
+        let chain = fact.traceChain
+        try require(chain.count >= 2 && chain[0].comment == "verify [REDACTED] generated provenance"
+            && chain[1].comment == "load [REDACTED] Facets"
+            && fact.comment == chain.last?.comment
             && fact.purpose == "verify [REDACTED] generated provenance", "future-only private intent leaked")
     }
     try require(facts.contains { $0.tracePath.filter { $0.kind == "relation" }.count == (loaded ? 3 : 2) },
@@ -105,8 +114,8 @@ func verifySQL(_ facts: [SQLExecutionMetadata],
                 let diagnostic = TextDiagnosticSQLLogSink(writer: { _ in })
                 let context = UserContext(runtime: runtime, queryExecutor: service, mutationExecutor: service,
                     requestPolicy: RequestPolicy { query in
-                        try require((query.comment == comment && query.purpose == purpose)
-                            || (query.comment == "independent \(secret)" && query.purpose == "verify request isolation"),
+                        try require(queryOwnsRootIntent(query, comment: comment, purpose: purpose)
+                            || queryOwnsRootIntent(query, comment: "independent \(secret)", purpose: "verify request isolation"),
                             "policy lost original intent")
                         return query
                     }, telemetrySink: evidence,

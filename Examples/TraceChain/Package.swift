@@ -13,6 +13,18 @@ let package = Package(
             .product(name: "TeaQLCore", package: "teaql-swift"),
             .product(name: "TeaQLSQLite", package: "teaql-swift"),
         ]),
+        .executableTarget(name: "StandardTelemetryVerification", dependencies: [
+            .product(name: "GeneratedTeaQL", package: "generated-trace-chain"),
+            .product(name: "TeaQLCore", package: "teaql-swift"),
+            .product(name: "TeaQLSQLite", package: "teaql-swift"),
+            .product(name: "TeaQLStandardTelemetry", package: "teaql-swift"),
+        ]),
+        .executableTarget(name: "StandardGraphVerification", dependencies: [
+            .product(name: "GeneratedTeaQL", package: "generated-trace-chain"),
+            .product(name: "TeaQLCore", package: "teaql-swift"),
+            .product(name: "TeaQLSQLite", package: "teaql-swift"),
+            .product(name: "TeaQLStandardTelemetry", package: "teaql-swift"),
+        ]),
     ],
     swiftLanguageModes: [.v6]
 )

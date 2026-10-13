@@ -3,35 +3,16 @@ import Foundation
 import TeaQLCore
 
 public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var customerOrder: Int64? = nil
     public var referenceCode: String? = nil
     public var version: Int64 = 0
-    private var _customerOrderResult: SmartList<CustomerOrder> = .empty
-    public var customerOrderResult: SmartList<CustomerOrder> { _customerOrderResult }
-    public var customerOrderEntity: CustomerOrder? {
-        get { _customerOrderResult.first }
-        set {
-            _customerOrderResult = SmartList(newValue.map { [$0] } ?? [],
-                facets: _customerOrderResult.facets)
-            _loadedFields.insert("customerOrderEntity")
-        }
-    }
-    private var _paymentAttemptListResult: SmartList<PaymentAttempt> = .empty
-    public var paymentAttemptListResult: SmartList<PaymentAttempt> { _paymentAttemptListResult }
-    public var paymentAttemptList: [PaymentAttempt] {
-        get { _paymentAttemptListResult.data }
-        set {
-            _paymentAttemptListResult = SmartList(newValue, totalCount: _paymentAttemptListResult.totalCount,
-                aggregations: _paymentAttemptListResult.aggregations, summary: _paymentAttemptListResult.summary,
-                facets: _paymentAttemptListResult.facets)
-            _loadedFields.insert("paymentAttemptList")
-        }
-    }
+    public var customerOrderEntity: CustomerOrder?
+    public var paymentAttemptList: [PaymentAttempt] = []
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
-    private var teaqlQueryProjections = QueryProjectionSnapshot()
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -68,10 +49,9 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
-                            relations: [String: QueryResult] = [:]) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
         var entity = Self()
-        // Discard the constructor's new-entity ledger during hydration.
+        // Hydration must not import the constructor's temporary new-entity ledger.
         entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
@@ -86,43 +66,40 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
-        entity.teaqlQueryProjections = QueryProjectionSnapshot(record: record, excluding: Set(
-            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
-            + ["customerOrderEntity"]
-            + ["paymentAttemptList"]))
         if let relationValue = record["customerOrderEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.customerOrderEntity = try CustomerOrder.from(record: relatedRecord,
-                    root: EntityRoot(), snapshots: snapshots,
-                    relations: relations["customerOrderEntity"]?.loadedRelations[0] ?? [:])
+                entity.customerOrderEntity = try CustomerOrder.from(
+                    record: relatedRecord, root: EntityRoot(), snapshots: snapshots)
             case .null:
                 entity.customerOrderEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: customerOrder")
             }
             entity._loadedFields.insert("customerOrderEntity")
-            entity._customerOrderResult.facets = relations["customerOrderEntity"]?.facets ?? [:]
         }
         if let relationValue = record["paymentAttemptList"] {
             switch relationValue {
             case .array(let values):
-                entity.paymentAttemptList = try values.enumerated().compactMap { index, value in
-                    guard case .object(let childRecord) = value else { return nil }
-                    return try PaymentAttempt.from(record: childRecord, root: entity.teaqlEntityRoot,
-                        snapshots: snapshots, relations: relations["paymentAttemptList"]?.loadedRelations[index] ?? [:])
+                entity.paymentAttemptList = try values.compactMap {
+                    guard case .object(let childRecord) = $0 else { return nil }
+                    return try PaymentAttempt.from(record: childRecord,
+                        root: root, snapshots: snapshots)
                 }
             case .object(let childRecord):
-                entity.paymentAttemptList = [try PaymentAttempt.from(record: childRecord, root: entity.teaqlEntityRoot,
-                    snapshots: snapshots, relations: relations["paymentAttemptList"]?.loadedRelations[0] ?? [:])]
+                entity.paymentAttemptList = [try PaymentAttempt.from(record: childRecord,
+                    root: root, snapshots: snapshots)]
             case .null:
                 entity.paymentAttemptList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: paymentAttemptList")
             }
             entity._loadedFields.insert("paymentAttemptList")
-            entity._paymentAttemptListResult.facets = relations["paymentAttemptList"]?.facets ?? [:]
         }
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set([
+            "id", "customerOrder", "referenceCode", "version"
+        ]).union(["customerOrderEntity"])
+            .union(["paymentAttemptList"]))
         return entity
     }
 
@@ -162,22 +139,14 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func isLoaded(_ field: String) -> Bool { _loadedFields.contains(field) }
 
-    /// Read a query-only alias; missing is NotLoaded, never an implicit query or zero.
-    public func queryProjection(_ alias: String) throws -> TeaQLValue {
-        try teaqlQueryProjections.get(alias)
-    }
-
-    public func hasQueryProjection(_ alias: String) -> Bool {
-        teaqlQueryProjections.contains(alias)
-    }
-
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "Payment", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -285,7 +254,8 @@ public struct PaymentAudited: Sendable {
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

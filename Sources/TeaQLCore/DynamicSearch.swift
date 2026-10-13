@@ -98,6 +98,7 @@ public enum DynamicSearch {
         warnings.append(.init(entity: entity, clause: "FILTER", fieldPath: path))
         continue
       }
+      guard kind != "unsupported" else { throw invalid("Unsupported known-field type") }
       if operation == "$contains", kind != "string" { throw invalid("String operator requires a string field") }
       if case .array(let values) = value {
         guard operation == "$in" || operation == "$notIn" else { throw invalid("Unexpected search value list") }
@@ -109,7 +110,9 @@ public enum DynamicSearch {
       guard case .object(let object) = order, Set(object.keys) == ["field", "direction"],
         case .string(let path) = object["field"], case .string(let direction) = object["direction"],
         direction == "asc" || direction == "desc" else { throw invalid("Invalid dynamic search ordering") }
-      if try fieldType(path, entity: entity, models: models) == nil {
+      let kind = try fieldType(path, entity: entity, models: models)
+      guard kind != "unsupported" else { throw invalid("Unsupported known-field type") }
+      if kind == nil {
         warnings.append(.init(entity: entity, clause: "ORDER_BY", fieldPath: path))
       } else {
         resultOrders.append(.init(fieldPath: path, direction: direction == "asc" ? .ascending : .descending))

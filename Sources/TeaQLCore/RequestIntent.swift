@@ -69,25 +69,97 @@ public struct QueryRequest: Sendable {
   private let payload: SelectQuery
   public let intent: QueryIntent
   public let originEntity: String
+  public let scope: QueryRequestScope
+  private let invalidOwner: Bool
   public init(query: SelectQuery) throws {
-    self.init(query: query, intent: try QueryIntent(comment: query.comment, purpose: query.purpose))
+    let scope = try query.requestScope ?? QueryRequestScope(entity: query.entity.name,
+      intent: QueryIntent(comment: query.comment, purpose: query.purpose))
+    self = try Self(query: query, scope: scope, originEntity: scope.root.entity).bindingTree()
   }
   public init(query: SelectQuery, intent: QueryIntent) {
-    self.init(query: query, intent: intent, originEntity: query.entity.name)
+    self.init(query: query, scope: QueryRequestScope(entity: query.entity.name, intent: intent),
+      originEntity: query.entity.name)
   }
-  private init(query: SelectQuery, intent: QueryIntent, originEntity: String) {
+  private init(query: SelectQuery, scope: QueryRequestScope, originEntity: String) {
     self.payload = query
-    self.intent = intent
+    self.invalidOwner = query.requestScope.map { $0.root !== scope.root } ?? false
+    self.scope = scope
+    self.intent = try! QueryIntent(comment: scope.comment, purpose: scope.purpose)
     self.originEntity = originEntity
   }
   public var query: SelectQuery {
     var value = payload
     value.comment = intent.comment
     value.purpose = intent.purpose
+    value.requestScope = scope
     return value
   }
   public func withQuery(_ query: SelectQuery) -> Self {
-    Self(query: query, intent: intent, originEntity: originEntity)
+    Self(query: query, scope: scope, originEntity: originEntity)
+  }
+  package func derive(_ query: SelectQuery, scope: QueryRequestScope) -> Self {
+    Self(query: query, scope: scope, originEntity: originEntity)
+  }
+  package func derive(_ query: SelectQuery) throws -> Self {
+    guard let child = query.requestScope, child !== scope, child.root === scope.root else {
+      throw TeaQLError.execution("QUERY_SCOPE_OWNER_MISMATCH")
+    }
+    return derive(query, scope: child)
+  }
+  package func bindingTree() throws -> Self {
+    guard !invalidOwner else { throw TeaQLError.execution("QUERY_SCOPE_OWNER_MISMATCH") }
+    func bind(_ body: SelectQuery, _ owner: QueryRequestScope, depth: Int = 0) throws -> SelectQuery {
+      guard depth < 128 else { throw TeaQLError.execution("QUERY_SCOPE_DEPTH_EXCEEDED") }
+      var result = body
+      result.requestScope = owner; result.comment = owner.comment; result.purpose = owner.purpose
+      func local(_ query: SelectQuery) -> String? {
+        query.requestScope?.explicitComment ?? (query.requestScope == nil ? query.comment : nil)
+      }
+      func ownedChild(_ child: SelectQuery, operation: QueryOperation?) throws -> QueryRequestScope {
+        if let captured = child.requestScope, captured !== owner, captured.root === owner.root {
+          var cursor = captured.parent
+          while let current = cursor {
+            if current === owner { return captured }; cursor = current.parent
+          }
+          if owner.parent?.isFacet == true && captured.parent === owner.parent { return captured }
+        }
+        let parent = operation.map(owner.derive) ?? owner.helper(entity: body.entity.name, comment: "load relation")
+        return try parent.child(entity: child.entity.name, comment: local(child))
+      }
+      result.relations = try body.relations.map { relation in
+        let child = relation.query.makeQuery()
+        return RelationLoad(name: relation.name, localKey: relation.localKey, foreignKey: relation.foreignKey,
+          many: relation.many, query: try bind(child, ownedChild(child, operation: relation.operation), depth: depth + 1),
+          traceName: relation.traceName, operation: relation.operation)
+      }
+      result.facets = try body.facets.map { facet in
+        let child = facet.query.makeQuery()
+        let parent = owner.facet(facet.operation, relation: facet.relationName, alias: facet.name)
+        let nested = try parent.child(entity: child.entity.name, comment: local(child))
+        return FacetRequest(name: facet.name, relationName: facet.relationName,
+          query: try bind(child, nested, depth: depth + 1), includeAllFacets: facet.includeAllFacets,
+          operation: facet.operation)
+      }
+      result.relationAggregates = try body.relationAggregates.map { aggregate in
+        let child = aggregate.query.makeQuery()
+        let nested: QueryRequestScope
+        if let facet = owner.parent, facet.isFacet {
+          let helper = facet.helper(entity: child.entity.name, comment: "aggregate \(facet.relation)")
+          if let comment = local(child) {
+            nested = try helper.child(entity: child.entity.name, comment: comment)
+          } else { nested = helper }
+        } else if let operation = aggregate.operation, local(child) == nil {
+          nested = owner.derive(operation)
+        } else {
+          nested = try ownedChild(child, operation: aggregate.operation)
+        }
+        return RelationAggregateLoad(relationName: aggregate.relationName, foreignKey: aggregate.foreignKey,
+          alias: aggregate.alias, query: try bind(child, nested, depth: depth + 1),
+          singleResult: aggregate.singleResult, operation: aggregate.operation)
+      }
+      return result
+    }
+    return withQuery(try bind(query, scope))
   }
 }
 

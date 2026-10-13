@@ -6,6 +6,16 @@ func require(_ condition: @autoclosure () throws -> Bool, _ message: String) thr
     if try !condition() { throw TeaQLError.execution(message) }
 }
 
+// Inspect the runtime's actual business evidence, never synthesize frames.
+func hasQueryBusinessIntent(_ entry: SQLExecutionMetadata, rootComment: String, purpose: String) -> Bool {
+    let chain = entry.traceChain
+    guard chain.count >= 2 else { return false }
+    return chain[0].kind == "purpose" && chain[0].comment == purpose
+        && chain[1].kind == "comment" && chain[1].comment == rootComment
+        && chain.allSatisfy { !$0.comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        && entry.comment == chain.last?.comment && entry.purpose == purpose
+}
+
 actor AuditCapture: AuditSink {
     private var events: [AuditEvent] = []
     func record(_ event: AuditEvent) { events.append(event) }

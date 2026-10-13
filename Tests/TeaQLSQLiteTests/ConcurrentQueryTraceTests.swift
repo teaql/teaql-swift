@@ -37,6 +37,15 @@ private func queryContextStorage(_ context: UserContext) -> [String: String] {
 
 @Test(arguments: [false, true])
 func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) async throws {
+  try await verifyOverlappingQueries(logging: logging, sharedTemplate: false)
+}
+
+@Test(arguments: [false, true])
+func swiftSharedTemplateConcurrentParentsKeepSeparateOwners(logging: Bool) async throws {
+  try await verifyOverlappingQueries(logging: logging, sharedTemplate: true)
+}
+
+private func verifyOverlappingQueries(logging: Bool, sharedTemplate: Bool) async throws {
   let parent = EntityDescriptor(name: "QueryParent", table: "query_parent", properties: [
     PropertyDescriptor(name: "id", type: .int, isID: true),
     PropertyDescriptor(name: "version", type: .int, isVersion: true),
@@ -62,11 +71,19 @@ func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) a
   let context = UserContext(queryExecutor: executor, mutationExecutor: service,
     requestPolicy: RequestPolicy { $0 }, telemetrySink: evidence,
     diagnosticSQLLogSink: sink, querySQLLogEnabled: logging)
+  var template = SelectQuery(entity: child); template.limit = 2
+  let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+  let templateBefore = try encoder.encode(template)
+  func expectTemplateUnchanged() throws {
+    #expect(try encoder.encode(template) == templateBefore)
+    #expect(template.comment == nil && template.purpose == nil)
+    #expect(throws: (any Error).self) { try QueryRequest(query: template) }
+  }
   func query(_ id: Int64) -> SelectQuery {
     // Keep the correlation label separate from bound IDs: safe logs mask
     // matching bound values in intent, including numeric identifiers.
     let label = id == 1 ? "alpha" : "beta"
-    var nested = SelectQuery(entity: child); nested.limit = 2
+    var nested = sharedTemplate ? template : SelectQuery(entity: child); nested.limit = 2
     var request = SelectQuery(entity: parent); request.limit = 1
     request.filter = .equal("id", .int(id))
     request.comment = "load graph \(label)"; request.purpose = "render graph \(label)"
@@ -102,6 +119,7 @@ func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) a
     #expect(request.query.tracePath.filter { $0.kind == "relation" }.isEmpty)
   }
   #expect(firstQuery.tracePath.isEmpty && secondQuery.tracePath.isEmpty)
+  try expectTemplateUnchanged()
   await expectContextUnchanged()
   await executor.release()
   let results = try await [first.value, second.value]
@@ -116,12 +134,14 @@ func swiftOverlappingQueriesKeepOwnedIntentThroughRealRelations(logging: Bool) a
   }
   await expectContextUnchanged()
   let facts = await evidence.snapshot()
+  try expectTemplateUnchanged()
   #expect(facts.count == 4)
   for label in ["alpha", "beta"] {
-    let own = facts.filter { $0.comment == "load graph \(label)" }
+    let own = facts.filter { $0.traceChain[1].comment == "load graph \(label)" }
     #expect(own.count == 2, "observed safe intents: \(facts.map { [$0.comment ?? "nil", $0.purpose ?? "nil"] })")
     for (depth, fact) in own.enumerated() {
       #expect(fact.purpose == "render graph \(label)" && fact.executionOutcome == "success")
+      #expect(fact.comment == fact.traceChain.last?.comment)
       #expect(fact.tracePath.map(\.kind) == ["operation", "request"]
         + (depth == 0 ? [] : ["relation"]) + ["provider", "sql"])
       #expect(fact.tracePath.prefix(2).map(\.name) == ["QueryParent", "QueryParent"])

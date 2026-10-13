@@ -11,7 +11,8 @@ private actor SharedSaveInvocations {
         if active == 2 { bothWaiter?.resume(); bothWaiter = nil }
         defer { active -= 1 }
         // No observer barrier before the real generated public save.
-        return try await entity.auditAs(reason).save(context)
+        do { return try await entity.auditAs(reason).save(context) }
+        catch { print("SHARED_SAVE_FAILURE type=\(type(of: error))"); throw error }
     }
     func waitForBoth() async {
         if maximum < 2 { await withCheckedContinuation { bothWaiter = $0 } }
@@ -89,6 +90,7 @@ private func observeOwnership(_ scenario: String, checks: [String: Bool],
 
 private func loadOwnershipGraph(_ context: UserContext, ids: [Int64]) async throws -> [CustomerOrder] {
     let rows = try await Q.customerOrders().withIdIn(ids).orderByIdAscending().limit(2)
+        .selectSelfFields()
         .selectPlatformWith(Q.platforms().limit(1))
         .selectOrderItemListWith(Q.orderItems().orderByIdAscending().limit(10))
         .comment("load independent roots and shared read-only Platform")

@@ -104,8 +104,8 @@ private func verifyFacetTrace(loadedRelation: Bool, logging: Bool) async throws 
   // These are provider-returned membership and materialization rows, not
   // synthetic SQL or fixture-supplied metadata. Counts are computed from them.
   for start in loadedRelation ? [2, 6] : [1] {
-    #expect(actualRows[start].records.map { $0["platform"] }
-      == (loadedRelation ? [.int(10)] : [.int(10), .int(10)]))
+    #expect(actualRows[start].records.map { $0["platform"] } == [.int(10)])
+    #expect(actualRows[start].records.map { $0["count"] } == [.int(loadedRelation ? 1 : 2)])
     #expect(actualRows[start + 1].records.map { $0["id"] } == [.int(10), .int(20)])
     #expect(actualRows[start + 2].records.map { $0["organization"] } == [.int(100), .int(200)])
     #expect(actualRows[start + 3].records.map { $0["id"] } == [.int(100)])
@@ -126,7 +126,8 @@ private func verifyFacetTrace(loadedRelation: Bool, logging: Bool) async throws 
     #expect(fact.tracePath.map(\.level) == Array(fact.tracePath.indices))
     #expect(fact.tracePath.suffix(2).map(\.name) == ["sqlite", "select"])
     #expect(fact.executionOutcome == "success" && fact.resultCount == actualRows[index].records.count)
-    #expect(fact.comment == "inspect [REDACTED] facets" && fact.purpose == query.purpose)
+    #expect(fact.traceChain[1].comment == "inspect [REDACTED] facets" && fact.purpose == query.purpose)
+    #expect(fact.comment == fact.traceChain.last?.comment)
   }
   #expect(!facts.description.contains(canary))
   #expect((await text.snapshot()).count == (logging ? facts.count : 0))
@@ -136,6 +137,59 @@ private func verifyFacetTrace(loadedRelation: Bool, logging: Bool) async throws 
   _ = try await context.execute(independent)
   let last = try #require(await evidence.snapshot().last)
   #expect(last.comment == independent.comment && last.tracePath.filter { $0.kind == "relation" }.isEmpty)
+}
+
+@Test(arguments: [false, true])
+func swiftNestedFacetSiblingsKeepNativeOperationParents(logging: Bool) async throws {
+  let order = facetEntity("CustomerOrder", fields: [PropertyDescriptor(name: "platform", type: .int)])
+  let platform = facetEntity("Platform", fields: [PropertyDescriptor(name: "organization", type: .int)])
+  let organization = facetEntity("Organization")
+  let service = try SQLiteDataService(path: ":memory:")
+  let seed = UserContext(queryExecutor: service, mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+    querySQLLogEnabled: false, mutationSQLLogEnabled: false)
+  try await seed.ensureSchema(RuntimeModule(name: "facet siblings", entities: [order, platform, organization]))
+  for (entity, values) in [(organization,["id":TeaQLValue.int(100)]),
+    (platform,["id":.int(10),"organization":.int(100)]), (order,["id":.int(1),"platform":.int(10)])] {
+    _ = try await seed.execute(Mutation(kind: .create, entity: entity, values: values, auditReason: "seed facet siblings"))
+  }
+  let capture = FacetRowCapture(service), evidence = SQLExecutionEvidenceStore()
+  let text = TextDiagnosticSQLLogSink(writer: { _ in })
+  let context = UserContext(queryExecutor: capture, mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+    telemetrySink: evidence, diagnosticSQLLogSink: text, querySQLLogEnabled: logging)
+  var query = SelectQuery(entity: order); query.limit = 10
+  query.comment = "load branches"; query.purpose = "render branches"
+  for alias in ["left", "right"] {
+    var organizations = SelectQuery(entity: organization); organizations.limit = 10
+    organizations.comment = "load \(alias) organizations"
+    organizations.aggregates = [QueryAggregate(.count, field: "id", alias: "platformCount")]
+    var platforms = SelectQuery(entity: platform); platforms.limit = 10
+    platforms.comment = "load \(alias) platforms"
+    platforms.aggregates = [QueryAggregate(.count, field: "id", alias: "orderCount")]
+    platforms.facets = [FacetRequest(name: "organizations", relationName: "organization", query: organizations,
+      operation: QueryOperation("facet", method: "facetByOrganizationAs", alias: "organizations", relation: "organization"))]
+    query.facets.append(FacetRequest(name: alias, relationName: "platform", query: platforms,
+      operation: QueryOperation("facet", method: "facetByPlatformAs", alias: alias, relation: "platform")))
+  }
+  let original = query
+  let result = try await context.execute(query)
+  let facts = await evidence.snapshot(), reads = await capture.snapshot()
+  #expect(facts.count == 9 && reads.count == 9)
+  #expect((await text.snapshot()).count == (logging ? 9 : 0))
+  for alias in ["left", "right"] {
+    let values = try #require(result.facets[alias])
+    #expect(values.first?["orderCount"] == .int(1))
+    #expect(values.facets["organizations"]?.first?["platformCount"] == .int(1))
+    let prefix = ["render branches", "load branches", "facetByPlatformAs(\"\(alias)\")"]
+    let chains = facts.map { $0.traceChain.map(\.comment) }.filter { $0.count > 2 && $0[2] == prefix[2] }
+    #expect(chains.count == 4)
+    #expect(chains.contains(prefix + ["aggregate platform"]))
+    #expect(chains.contains(prefix + ["load \(alias) platforms"]))
+    for local in ["aggregate organization", "load \(alias) organizations"] {
+      #expect(chains.contains(prefix + ["load \(alias) platforms", "facetByOrganizationAs(\"organizations\")", local]))
+    }
+  }
+  #expect(query == original)
+  print("RTC_COM_06_PASS logging=\(logging) nested=true siblings=true")
 }
 
 @Test(arguments: [false, true])

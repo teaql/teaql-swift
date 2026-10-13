@@ -203,16 +203,18 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     let query = request.query
     let compiled = try compiler.compile(query)
     let startedAt = DispatchTime.now().uptimeNanoseconds
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "select", entity: query.entity.name)
     let records: [TeaQLRecord]
-    do { records = try fetch(compiled, entity: query.entity) }
+    do { records = try fetch(compiled, entity: query.entity); observation?.finish(success: true) }
     catch {
+      observation?.finish(success: false)
       throw SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
         operation: .select, comment: query.comment, purpose: query.purpose,
-        tracePath: querySQLTrace(request),
+        tracePath: querySQLTrace(request), traceChain: request.scope.recover(),
         parameterizedSQL: compiled.sql, parameters: compiled.parameters, debugSQL: "",
         elapsedMicros: elapsedMicros(since: startedAt), resultSummary: "statement failed; row count unknown",
         parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL,
-        executionOutcome: "failure"))
+        executionOutcome: "failure").withTelemetryCorrelation(observation?.correlation))
     }
     return QueryResult(
       records: records,
@@ -224,7 +226,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         operation: .select,
         comment: query.comment,
         purpose: query.purpose,
-        tracePath: querySQLTrace(request),
+        tracePath: querySQLTrace(request), traceChain: request.scope.recover(),
         parameterizedSQL: compiled.sql,
         parameters: compiled.parameters,
         debugSQL: "",
@@ -232,7 +234,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         resultCount: records.count,
         resultSummary: "\(records.count) rows returned",
         parameterLogPolicies: compiled.parameterLogPolicies,
-        generatedSQL: compiled.generatedSQL, executionOutcome: "success")
+        generatedSQL: compiled.generatedSQL, executionOutcome: "success").withTelemetryCorrelation(observation?.correlation)
     )
   }
 
@@ -245,14 +247,17 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     let query = request.query
     let compiled = try compiler.compileCount(query)
     let startedAt = DispatchTime.now().uptimeNanoseconds
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "count", entity: query.entity.name)
+    var succeeded = false
+    defer { observation?.finish(success: succeeded) }
     func metadata(count: Int? = nil) -> SQLExecutionMetadata {
       SQLExecutionMetadata(operation: .select, comment: query.comment, purpose: query.purpose,
-        tracePath: querySQLTrace(request), parameterizedSQL: compiled.sql,
+        tracePath: querySQLTrace(request), traceChain: request.scope.recover(), parameterizedSQL: compiled.sql,
         parameters: compiled.parameters, debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt),
         resultCount: count == nil ? nil : 1,
         resultSummary: count.map { "\($0) records counted" } ?? "statement failed; count unknown",
         parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: compiled.generatedSQL,
-        executionOutcome: count == nil ? "failure" : "success")
+        executionOutcome: count == nil ? "failure" : "success").withTelemetryCorrelation(observation?.correlation)
     }
     do {
       var prepared: OpaquePointer?
@@ -263,6 +268,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       try bind(compiled.parameters, to: statement)
       guard sqlite3_step(statement) == SQLITE_ROW else { throw currentError(sql: compiled.sql) }
       let count = Int(sqlite3_column_int64(statement, 0))
+      succeeded = true
       return SQLCountResult(count: count, metadata: metadata(count: count))
     } catch {
       throw SQLExecutionFailure(cause: error, metadata: metadata())
@@ -345,7 +351,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   private func mutationFailure(_ error: any Error, mutation: Mutation, operation: SQLExecutionOperation,
     sql: String, values: [TeaQLValue], policies: [SQLParameterLogPolicy], startedAt: UInt64,
-    affectedRows: Int? = nil, executionOutcome: String = "failure") -> SQLExecutionFailure {
+    affectedRows: Int? = nil, executionOutcome: String = "failure",
+    correlation: SQLTelemetryCorrelation? = nil) -> SQLExecutionFailure {
     SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
       operation: operation, auditReason: mutation.auditReason,
       tracePath: mutationSQLTrace(mutation, operation: operation.rawValue),
@@ -353,7 +360,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       parameterizedSQL: sql, parameters: values, debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt),
       affectedRows: affectedRows,
       resultSummary: affectedRows.map { "\($0) rows affected" } ?? "statement failed; row count unknown",
-      parameterLogPolicies: policies, generatedSQL: true, executionOutcome: executionOutcome))
+      parameterLogPolicies: policies, generatedSQL: true, executionOutcome: executionOutcome)
+        .withTelemetryCorrelation(correlation))
+  }
+
+  private func runObserved(_ sql: String, parameters: [TeaQLValue],
+    observation: (any SQLTelemetryObservation)?) throws {
+    do { try run(sql, parameters: parameters); observation?.finish(success: true) }
+    catch { observation?.finish(success: false); throw error }
   }
 
   private func insert(_ mutation: Mutation) throws -> MutationResult {
@@ -382,10 +396,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       "INSERT INTO \(quote(mutation.entity.table)) (\(properties.map { quote($0.column) }.joined(separator: ", "))) VALUES (\(Array(repeating: "?", count: properties.count).joined(separator: ", ")))"
     let values = properties.map { insertValues[$0.name] ?? .null }
     let startedAt = DispatchTime.now().uptimeNanoseconds
-    do { try run(sql, parameters: values) }
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "insert", entity: mutation.entity.name)
+    do { try runObserved(sql, parameters: values, observation: observation) }
     catch {
       throw mutationFailure(error, mutation: mutation, operation: .insert, sql: sql, values: values,
-        policies: properties.map { .field($0.name, in: mutation.entity) }, startedAt: startedAt)
+        policies: properties.map { .field($0.name, in: mutation.entity) }, startedAt: startedAt,
+        correlation: observation?.correlation)
     }
     let affected = Int(sqlite3_changes(database))
     var generated: TeaQLRecord = [:]
@@ -404,6 +420,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         affectedRows: affected,
         resultSummary: "\(affected) rows affected",
         parameterLogPolicies: properties.map { .field($0.name, in: mutation.entity) }, generatedSQL: true, executionOutcome: "success")
+          .withTelemetryCorrelation(observation?.correlation)
     let (record, read) = try fetchPersistedRecord(entity: mutation.entity,
         id: generated[mutation.entity.idProperty?.name ?? "id"]
           ?? mutation.values[mutation.entity.idProperty?.name ?? "id"], write: metadata)
@@ -480,16 +497,17 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     let sql =
       "UPDATE \(quote(mutation.entity.table)) SET \(assignments.joined(separator: ", ")) WHERE \(whereSQL)"
     let startedAt = DispatchTime.now().uptimeNanoseconds
-    do { try run(sql, parameters: values) }
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "update", entity: mutation.entity.name)
+    do { try runObserved(sql, parameters: values, observation: observation) }
     catch {
       throw mutationFailure(error, mutation: mutation, operation: .update, sql: sql, values: values,
-        policies: policies, startedAt: startedAt)
+        policies: policies, startedAt: startedAt, correlation: observation?.correlation)
     }
     let changed = Int(sqlite3_changes(database))
     if changed == 0, let expected = mutation.expectedVersion {
       throw mutationFailure(TeaQLError.optimisticLock(entity: mutation.entity.name, id: id, expectedVersion: expected),
         mutation: mutation, operation: .update, sql: sql, values: values, policies: policies,
-        startedAt: startedAt, affectedRows: 0, executionOutcome: "success")
+        startedAt: startedAt, affectedRows: 0, executionOutcome: "success", correlation: observation?.correlation)
     }
     let metadata = SQLExecutionMetadata(
         operation: .update,
@@ -502,6 +520,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         elapsedMicros: elapsedMicros(since: startedAt),
         affectedRows: changed,
         resultSummary: "\(changed) rows affected", parameterLogPolicies: policies, generatedSQL: true, executionOutcome: "success")
+          .withTelemetryCorrelation(observation?.correlation)
     guard changed > 0 else { return MutationResult(affectedRows: changed, metadata: metadata) }
     let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
     return MutationResult(affectedRows: changed, persistedRecord: record,
@@ -524,16 +543,17 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     let policies: [SQLParameterLogPolicy] = [.field(versionProperty.name, in: mutation.entity),
       .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)]
     let startedAt = DispatchTime.now().uptimeNanoseconds
-    do { try run(sql, parameters: values) }
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "delete", entity: mutation.entity.name)
+    do { try runObserved(sql, parameters: values, observation: observation) }
     catch {
       throw mutationFailure(error, mutation: mutation, operation: .delete, sql: sql, values: values,
-        policies: policies, startedAt: startedAt)
+        policies: policies, startedAt: startedAt, correlation: observation?.correlation)
     }
     let changed = Int(sqlite3_changes(database))
     if changed == 0 {
       throw mutationFailure(TeaQLError.optimisticLock(entity: mutation.entity.name, id: id, expectedVersion: expected),
         mutation: mutation, operation: .delete, sql: sql, values: values, policies: policies,
-        startedAt: startedAt, affectedRows: 0, executionOutcome: "success")
+        startedAt: startedAt, affectedRows: 0, executionOutcome: "success", correlation: observation?.correlation)
     }
     let metadata = SQLExecutionMetadata(
         operation: .delete,
@@ -548,7 +568,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         resultSummary: "\(changed) rows affected",
         parameterLogPolicies: [.field(versionProperty.name, in: mutation.entity),
           .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)],
-        generatedSQL: true, executionOutcome: "success")
+        generatedSQL: true, executionOutcome: "success").withTelemetryCorrelation(observation?.correlation)
     let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
     return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: .int(deletedVersion)],
       persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
@@ -613,17 +633,23 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     )
     let startedAt = DispatchTime.now().uptimeNanoseconds
     var resultCount: Int?
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "readback", entity: entity.name)
+    defer { observation?.finish(success: resultCount != nil) }
     let intent = try MutationIntent(comment: write.auditReason).readbackIntent()
+    var readQuery = SelectQuery(entity: entity)
+    readQuery.filter = .equal(idProperty.name, id)
+    let request = QueryRequest(query: readQuery, intent: intent)
     func readMetadata(rejected: Bool = false) -> SQLExecutionMetadata {
       SQLExecutionMetadata(operation: .select, comment: intent.comment,
         purpose: intent.purpose, auditReason: write.auditReason,
-        tracePath: TraceChain.readback(write.tracePath), mutationLineage: write.mutationLineage,
+        tracePath: TraceChain.readback(write.tracePath), traceChain: request.scope.recover(),
+        mutationLineage: write.mutationLineage,
         parameterizedSQL: compiled.sql, parameters: compiled.parameters,
         debugSQL: "", elapsedMicros: elapsedMicros(since: startedAt), resultCount: resultCount,
         resultSummary: resultCount.map { "\($0) rows returned" + (rejected ? "; persisted snapshot rejected" : "") }
           ?? "readback failed; row count unknown",
         parameterLogPolicies: compiled.parameterLogPolicies, generatedSQL: true,
-        executionOutcome: resultCount == nil ? "failure" : "success")
+        executionOutcome: resultCount == nil ? "failure" : "success").withTelemetryCorrelation(observation?.correlation)
     }
     do {
       let records = try fetch(compiled, entity: entity)

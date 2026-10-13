@@ -39,6 +39,10 @@ import TeaQLSQLite
             try await generatedCheckerOverlap(runtime: runtime, service: service, base: base)
             return
         }
+        if ProcessInfo.processInfo.environment["TEAQL_SWIFT_TRACE_SCENARIO"] == "shared-ownership" {
+            try await sharedOwnershipProofs(runtime: runtime, service: service, base: base)
+            return
+        }
         let beforeStarts = await commands.starts()
         await audit.clear(); await sql.enableAll(); await commands.clear()
         do {
