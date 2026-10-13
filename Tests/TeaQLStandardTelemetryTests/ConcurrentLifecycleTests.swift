@@ -18,7 +18,7 @@ final class ConcurrentLifecycleTests: XCTestCase {
     let telemetry = try module(trace: paused, metric: capture, log: capture)
     await telemetry.withOperation(RuntimeOperation(family: "query", name: "one")) {}
     let first = Task { await telemetry.shutdown() }
-    let exporting = paused.entered.wait(timeout: .now() + 2) == .success
+    let exporting = await waitForLifecycleExport(paused.entered)
     let second = Task { await telemetry.shutdown(); returned.increment() }
     try await Task.sleep(for: .milliseconds(50))
     let premature = returned.value
@@ -36,7 +36,7 @@ final class ConcurrentLifecycleTests: XCTestCase {
     let telemetry = try module(trace: capture, metric: paused, log: capture)
     await telemetry.withOperation(RuntimeOperation(family: "query", name: "before-flush")) {}
     let flushing = Task { await telemetry.flush() }
-    let exporting = paused.entered.wait(timeout: .now() + 2) == .success
+    let exporting = await waitForLifecycleExport(paused.entered)
     let closing = Task { await telemetry.shutdown() }
     for _ in 0..<200 where !telemetry.isShutdown { try await Task.sleep(for: .milliseconds(1)) }
     let closed = telemetry.isShutdown
@@ -94,6 +94,14 @@ final class ConcurrentLifecycleTests: XCTestCase {
     XCTAssertEqual(capture.spans.count, 50); XCTAssertEqual(capture.logs.count, 50)
     XCTAssertTrue(telemetry.exportLosses.isEmpty)
     XCTAssertEqual(telemetry.exportResources["lifecycle_workers"], 0)
+  }
+}
+
+private func waitForLifecycleExport(_ semaphore: DispatchSemaphore) async -> Bool {
+  await withCheckedContinuation { continuation in
+    DispatchQueue.global().async {
+      continuation.resume(returning: semaphore.wait(timeout: .now() + 2) == .success)
+    }
   }
 }
 
