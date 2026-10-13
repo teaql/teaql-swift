@@ -181,7 +181,26 @@ private final class ControlledHTTP: URLProtocol {
   override class func canInit(with request: URLRequest) -> Bool { true }
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
   override func startLoading() {
-    Self.capture.append(request)
+    // Darwin URLSession exposes upload bodies to URLProtocol as a stream.
+    // Capture the actual bytes in both representations, rather than treating a
+    // nil httpBody as an empty protobuf upload or weakening payload assertions.
+    var captured = request
+    if captured.httpBody == nil, let stream = request.httpBodyStream {
+      stream.open()
+      defer { stream.close() }
+      var bytes = Data(), buffer = [UInt8](repeating: 0, count: 4096)
+      while stream.hasBytesAvailable {
+        let count = stream.read(&buffer, maxLength: buffer.count)
+        if count < 0 {
+          client?.urlProtocol(self, didFailWithError: stream.streamError ?? URLError(.cannotDecodeRawData))
+          return
+        }
+        if count == 0 { break }
+        bytes.append(contentsOf: buffer.prefix(count))
+      }
+      captured.httpBody = bytes
+    }
+    Self.capture.append(captured)
     if request.url?.host == "never.invalid" { return }
     if request.url?.host == "rejected.invalid" {
       client?.urlProtocol(self, didFailWithError: NSError(domain: "SecretTransport", code: 1,
