@@ -60,12 +60,15 @@ public protocol RuntimeTelemetry: Sendable {
     _ body: () throws -> Result
   ) rethrows -> Result
   func inject(_ carrier: inout [String: String])
+  /// Only runtime-projected diagnostics are accepted by standard adapters.
+  func recordSQL(_ metadata: SQLExecutionMetadata)
   func flush() async
   func shutdown() async
 }
 
 public extension RuntimeTelemetry {
   func inject(_ carrier: inout [String: String]) {}
+  func recordSQL(_ metadata: SQLExecutionMetadata) {}
 
   func withOperation<Result: Sendable>(
     _ operation: RuntimeOperation,

@@ -129,7 +129,7 @@ public enum GeneratedRuntimeModule {
         var lastError: Error?
         for attempt in 0..<5 {
             do { try await ensureGeneratedBootstrapOnce(callerContext); return }
-            catch { lastError = error; if attempt < 4 { try await Task.sleep(nanoseconds: UInt64(attempt + 1) * 10_000_000) } }
+            catch { lastError = error; if attempt < 4 { try await _Concurrency.Task<Never, Never>.sleep(nanoseconds: UInt64(attempt + 1) * 10_000_000) } }
         }
         throw lastError!
     }

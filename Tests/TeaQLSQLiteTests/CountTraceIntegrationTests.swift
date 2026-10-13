@@ -48,7 +48,8 @@ final class CountTraceIntegrationTests: XCTestCase {
     XCTAssertEqual(entry.operation, .select)
     XCTAssertEqual(entry.tracePath.map(\.kind), ["operation", "request", "provider", "sql"])
     XCTAssertEqual(entry.tracePath.map(\.name), ["CustomerOrder", "CustomerOrder", "sqlite", "select"])
-    XCTAssertEqual(entry.comment, "count [REDACTED] matching orders")
+    XCTAssertEqual(entry.comment, "count matching rows")
+    XCTAssertEqual(entry.traceChain[1].comment, "count [REDACTED] matching orders")
     XCTAssertEqual(entry.purpose, "show the [REDACTED] filtered total")
     XCTAssertTrue(entry.parameterizedSQL.contains("COUNT(*)"))
     XCTAssertFalse(entry.parameterizedSQL.contains("LIMIT")); XCTAssertFalse(entry.parameterizedSQL.contains("ORDER BY"))
@@ -74,7 +75,8 @@ final class CountTraceIntegrationTests: XCTestCase {
     XCTAssertEqual(entry.executionOutcome, "failure"); XCTAssertNil(entry.resultCount)
     XCTAssertEqual(entry.tracePath.first?.name, "CustomerOrder")
     XCTAssertEqual(entry.tracePath.last?.name, "select")
-    XCTAssertEqual(entry.comment, "count [REDACTED] matching orders")
+    XCTAssertEqual(entry.comment, "count matching rows")
+    XCTAssertEqual(entry.traceChain[1].comment, "count [REDACTED] matching orders")
     XCTAssertEqual(entry.purpose, "show the [REDACTED] filtered total")
     XCTAssertTrue(entry.debugSQL.contains("COUNT(*)")); XCTAssertFalse(entry.debugSQL.contains("COUNT-PRIVATE-CANARY"))
     let lines = await text.snapshot()
@@ -99,12 +101,13 @@ final class CountTraceIntegrationTests: XCTestCase {
     var entries = await evidence.snapshot()
     XCTAssertEqual(entries.count, 1)
     guard let counted = entries.first else { return }
-    XCTAssertEqual(counted.comment, "count [REDACTED] ancestors")
+    XCTAssertEqual(counted.comment, "count matching rows")
+    XCTAssertEqual(counted.traceChain[1].comment, "count [REDACTED] ancestors")
     XCTAssertTrue(counted.parameters.isEmpty, "count strips eager loading but keeps invocation privacy")
     request.relations = []; request.comment = "independent COUNT-PRIVATE-CANARY literal"
     _ = try await context.count(request)
     entries = await evidence.snapshot()
-    XCTAssertEqual(entries.last?.comment, request.comment, "a later independent request must not inherit hidden values")
+    XCTAssertEqual(entries.last?.traceChain[1].comment, request.comment, "a later independent request must not inherit hidden values")
   }
 
   func testCountLoggingOffStillValidatesIntentAndCapturesTelemetry() async throws {

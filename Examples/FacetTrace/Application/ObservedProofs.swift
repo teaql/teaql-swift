@@ -22,6 +22,7 @@ struct StatementProof: Codable {
     let purpose: String?
     let auditReason: String?
     let path: [TraceNode]
+    let traceChain: [TraceNode]
     let lineage: [TraceNode]
     let sql: String
     let resultCount: Int?
@@ -31,7 +32,7 @@ struct StatementProof: Codable {
     init(_ fact: SQLExecutionMetadata) {
         operation = fact.operation.rawValue
         comment = fact.comment; purpose = fact.purpose; auditReason = fact.auditReason
-        path = fact.tracePath; lineage = fact.mutationLineage
+        path = fact.tracePath; traceChain = fact.traceChain; lineage = fact.mutationLineage
         sql = fact.debugSQL; resultCount = fact.resultCount
         affectedRows = fact.affectedRows; outcome = fact.executionOutcome
     }

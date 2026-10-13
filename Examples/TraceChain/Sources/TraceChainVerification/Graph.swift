@@ -118,13 +118,16 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
     try require(entries.count == 4, "three-level query did not execute four statements")
     let names = ["payment", "customerOrder", "platform"]
     let details = ["PaymentAttempt.payment", "Payment.customerOrder", "CustomerOrder.platform"]
+    let localComments = [comment, "load Payment", "load CustomerOrder", "load Platform"]
     for (depth, entry) in entries.enumerated() {
         let relations = entry.tracePath.filter { $0.kind == "relation" }
         try require(relations.map(\.name) == Array(names.prefix(depth))
             && relations.map(\.comment) == Array(details.prefix(depth)), "relation route lost at depth \(depth)")
-        try require(entry.tracePath.first?.name == "PaymentAttempt" && entry.comment == comment
+        try require(entry.tracePath.first?.name == "PaymentAttempt" && entry.comment == localComments[depth]
             && entry.purpose == purpose && entry.tracePath.last?.name == "select",
             "derived query lost originating request intent")
+        try require(hasQueryBusinessIntent(entry, rootComment: comment, purpose: purpose)
+            && entry.traceChain.count == 2 + 2 * depth, "derived query lost operation or local-comment ancestry")
         try require(entry.tracePath.map(\.kind) == ["operation", "request"]
             + Array(repeating: "relation", count: depth) + ["provider", "sql"]
             && entry.tracePath.map(\.name) == ["PaymentAttempt", "PaymentAttempt"]

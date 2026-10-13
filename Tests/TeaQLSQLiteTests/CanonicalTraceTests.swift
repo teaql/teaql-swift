@@ -67,7 +67,8 @@ func swiftNativeThreeRelationPathsRemainCanonical(deepestFailure: Bool) async th
       == Array(["CustomerOrder.platform", "TracePlatform.organization", "TraceOrganization.region"].prefix(depth)))
     #expect(entry.tracePath.filter { ["request", "provider", "sql"].contains($0.kind) }
       .allSatisfy { $0.comment.isEmpty && $0.purpose.isEmpty })
-    #expect(entry.comment == query.comment && entry.purpose == query.purpose)
+    #expect(entry.traceChain[1].comment == query.comment && entry.purpose == query.purpose)
+    #expect(entry.comment == entry.traceChain.last?.comment)
     #expect(entry.executionOutcome == (deepestFailure && depth == 3 ? "failure" : "success"))
   }
   #expect(query.tracePath.isEmpty)

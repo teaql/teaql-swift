@@ -100,7 +100,8 @@ private func assertNumericPath(_ fact: SQLExecutionMetadata, root: String, relat
 }
 
 private func assertNumericPrivacy(_ fact: SQLExecutionMetadata, original: SelectQuery, operand: String, marked: Bool) {
-  #expect(fact.comment == (marked ? original.comment?.replacingOccurrences(of: operand, with: "[REDACTED]") : original.comment))
+  #expect(fact.traceChain[1].comment == (marked ? original.comment?.replacingOccurrences(of: operand, with: "[REDACTED]") : original.comment))
+  #expect(fact.comment == fact.traceChain.last?.comment)
   #expect(fact.purpose == (marked ? original.purpose?.replacingOccurrences(of: operand, with: "[REDACTED]") : original.purpose))
   if marked { #expect(!String(describing: fact).contains(operand)) }
 }
@@ -194,10 +195,13 @@ func swiftNumericLoadedGroupingKeepsOnlyTheActualRelationEdge(field: String, log
       #expect(!value.parameterizedSQL.contains("PARTITION BY")) // Real SQLite bounded probes, not window aggregation.
     }
     #expect(query == original && query.tracePath.isEmpty && child.tracePath.isEmpty)
-    #expect(policy.snapshot().first == original && policy.snapshot().count == 3)
-    #expect(policy.snapshot().allSatisfy { $0.comment == original.comment && $0.purpose == original.purpose })
+    #expect(policy.snapshot().first?.filter == original.filter && policy.snapshot().count == 3)
+    #expect(policy.snapshot().first?.relations.first?.query.comment == "load NumericItem")
+    #expect(policy.snapshot().allSatisfy { $0.traceChain[1].comment == original.comment
+      && $0.purpose == original.purpose && $0.comment == $0.traceChain.last?.comment })
     for (offset, value) in raw.raw.enumerated() {
-      #expect(value.comment == original.comment && value.purpose == original.purpose)
+      #expect(value.traceChain[1].comment == original.comment && value.purpose == original.purpose)
+      #expect(value.comment == value.traceChain.last?.comment)
       assertNumericPath(value, root: "NumericParent", relations: offset == 0 ? [] : ["items"])
     }
     for (offset, fact) in facts.enumerated() {

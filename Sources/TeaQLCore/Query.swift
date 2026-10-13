@@ -54,6 +54,8 @@ public struct QueryAggregate: Sendable, Hashable, Codable {
 }
 
 public struct RelationLoad: Sendable, Hashable, Codable {
+  public private(set) var operation: QueryOperation? = nil
+  private enum CodingKeys: String, CodingKey { case name, traceName, localKey, foreignKey, many, query }
   /// Hydration result key, which may differ from the logical model relation.
   public let name: String
   public let traceName: String?
@@ -64,10 +66,11 @@ public struct RelationLoad: Sendable, Hashable, Codable {
 
   public init(
     name: String, localKey: String, foreignKey: String, many: Bool, query: SelectQuery,
-    traceName: String? = nil
+    traceName: String? = nil, operation: QueryOperation? = nil
   ) {
     self.name = name
     self.traceName = traceName
+    self.operation = operation
     self.localKey = localKey
     self.foreignKey = foreignKey
     self.many = many
@@ -76,6 +79,8 @@ public struct RelationLoad: Sendable, Hashable, Codable {
 }
 
 public struct RelationAggregateLoad: Sendable, Hashable, Codable {
+  public private(set) var operation: QueryOperation? = nil
+  private enum CodingKeys: String, CodingKey { case relationName, foreignKey, alias, query, singleResult }
   public let relationName: String
   public let foreignKey: String
   public let alias: String
@@ -84,19 +89,30 @@ public struct RelationAggregateLoad: Sendable, Hashable, Codable {
 
   public init(
     relationName: String, foreignKey: String, alias: String, query: SelectQuery,
-    singleResult: Bool = true
+    singleResult: Bool = true, operation: QueryOperation? = nil
   ) {
     self.relationName = relationName
     self.foreignKey = foreignKey
     self.alias = alias
     self.query = RelationQueryPlan(query)
     self.singleResult = singleResult
+    self.operation = operation
   }
 }
 
 /// An owned child-query snapshot. Arrays break the recursive value layout while
 /// preserving nested loading plans; no ambient Context graph is retained.
 public struct RelationQueryPlan: Sendable, Hashable, Codable {
+  public static func == (left: Self, right: Self) -> Bool { left.makeQuery() == right.makeQuery() }
+  public func hash(into hasher: inout Hasher) { makeQuery().hash(into: &hasher) }
+  public let comment: String?
+  public let purpose: String?
+  package var requestScope: QueryRequestScope? = nil
+  package var pageCountOperation: QueryOperation? = nil
+  private enum CodingKeys: String, CodingKey {
+    case entity, filter, orderBy, offset, limit, hardLimit, projection, groupBy, aggregates,
+      partitionBy, topNProbeParentThreshold, relations, relationAggregates, facets, comment, purpose
+  }
   public let entity: EntityDescriptor
   public let filter: TeaQLExpression?
   public let orderBy: [OrderBy]
@@ -113,6 +129,8 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   private let facets: [FacetRequest]?
 
   public init(_ query: SelectQuery) {
+    comment = query.comment; purpose = query.purpose
+    requestScope = query.requestScope; pageCountOperation = query.pageCountOperation
     entity = query.entity
     filter = query.filter
     orderBy = query.orderBy
@@ -144,27 +162,60 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.relations = relations ?? []
     query.relationAggregates = relationAggregates ?? []
     query.facets = facets ?? []
+    query.comment = comment; query.purpose = purpose
+    query.requestScope = requestScope; query.pageCountOperation = pageCountOperation
     return query
   }
 }
 
 public struct FacetRequest: Sendable, Hashable, Codable {
+  public private(set) var operation: QueryOperation? = nil
+  private enum CodingKeys: String, CodingKey { case name, relationName, query, includeAllFacets }
   public let name: String
   public let relationName: String
   public let query: RelationQueryPlan
   public let includeAllFacets: Bool
 
   public init(
-    name: String, relationName: String, query: SelectQuery, includeAllFacets: Bool = true
+    name: String, relationName: String, query: SelectQuery, includeAllFacets: Bool = true,
+    operation: QueryOperation? = nil
   ) {
     self.name = name
     self.relationName = relationName
     self.query = RelationQueryPlan(query)
     self.includeAllFacets = includeAllFacets
+    self.operation = operation
   }
 }
 
 public struct SelectQuery: Sendable, Hashable, Codable {
+  public static func == (left: Self, right: Self) -> Bool {
+    left.entity == right.entity && left.filter == right.filter && left.orderBy == right.orderBy
+      && left.offset == right.offset && left.limit == right.limit && left.hardLimit == right.hardLimit
+      && left.projection == right.projection && left.groupBy == right.groupBy && left.aggregates == right.aggregates
+      && left.partitionBy == right.partitionBy && left.relations == right.relations
+      && left.relationAggregates == right.relationAggregates && left.facets == right.facets
+      && left.comment == right.comment && left.purpose == right.purpose && left.tracePath == right.tracePath
+      && left.continuousPage == right.continuousPage && left.idSetPagination == right.idSetPagination
+      && left.topNProbeParentThreshold == right.topNProbeParentThreshold
+      && left.pageCountOperation == right.pageCountOperation
+  }
+  public func hash(into hasher: inout Hasher) {
+    hasher.combine(entity); hasher.combine(filter); hasher.combine(orderBy); hasher.combine(offset)
+    hasher.combine(limit); hasher.combine(hardLimit); hasher.combine(projection); hasher.combine(groupBy)
+    hasher.combine(aggregates); hasher.combine(partitionBy); hasher.combine(relations); hasher.combine(relationAggregates)
+    hasher.combine(facets); hasher.combine(comment); hasher.combine(purpose); hasher.combine(tracePath)
+    hasher.combine(continuousPage); hasher.combine(idSetPagination); hasher.combine(topNProbeParentThreshold)
+    hasher.combine(pageCountOperation)
+  }
+  package var requestScope: QueryRequestScope? = nil
+  public var pageCountOperation: QueryOperation? = nil
+  public var traceChain: [TraceNode] { requestScope?.recover() ?? [] }
+  private enum CodingKeys: String, CodingKey {
+    case entity, filter, orderBy, offset, limit, hardLimit, projection, groupBy, aggregates,
+      partitionBy, relations, relationAggregates, facets, comment, purpose, tracePath,
+      continuousPage, idSetPagination, topNProbeParentThreshold
+  }
   public static let defaultHardLimit = 10_000
 
   public let entity: EntityDescriptor
@@ -201,24 +252,24 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   @discardableResult
   public mutating func relationQuery(
     _ name: String, localKey: String, foreignKey: String, many: Bool = true,
-    query: SelectQuery, traceName: String? = nil
+    query: SelectQuery, traceName: String? = nil, operation: QueryOperation? = nil
   ) -> Self {
     relations.append(
       RelationLoad(
         name: name, localKey: localKey, foreignKey: foreignKey, many: many, query: query,
-        traceName: traceName))
+        traceName: traceName, operation: operation))
     return self
   }
 
   @discardableResult
   public mutating func relationAggregate(
     _ relationName: String, foreignKey: String, alias: String, query: SelectQuery,
-    singleResult: Bool = true
+    singleResult: Bool = true, operation: QueryOperation? = nil
   ) -> Self {
     relationAggregates.append(
       RelationAggregateLoad(
         relationName: relationName, foreignKey: foreignKey, alias: alias, query: query,
-        singleResult: singleResult))
+        singleResult: singleResult, operation: operation))
     return self
   }
 

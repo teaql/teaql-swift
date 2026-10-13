@@ -15,6 +15,7 @@ let package = Package(
     .library(name: "TeaQLFederal", targets: ["TeaQLFederal"]),
     .library(name: "TeaQLTestSupport", targets: ["TeaQLTestSupport"]),
     .library(name: "TeaQLOpenTelemetry", targets: ["TeaQLOpenTelemetry"]),
+    .library(name: "TeaQLStandardTelemetry", targets: ["TeaQLStandardTelemetry"]),
     .executable(name: "teaql-order-management", targets: ["OrderManagement"]),
   ],
   dependencies: [
@@ -38,6 +39,17 @@ let package = Package(
         .product(name: "OpenTelemetryApi", package: "opentelemetry-swift-core"),
       ]
     ),
+    .target(name: "TeaQLStandardTelemetry", dependencies: [
+      "TeaQLCore",
+      .product(name: "OpenTelemetryApi", package: "opentelemetry-swift-core"),
+      .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift-core"),
+      .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
+    ]),
+    .testTarget(name: "TeaQLStandardTelemetryTests", dependencies: [
+      "TeaQLStandardTelemetry", "TeaQLCore", "TeaQLSQLite",
+      .product(name: "OpenTelemetryApi", package: "opentelemetry-swift-core"),
+      .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift-core"),
+    ]),
     .executableTarget(
       name: "OrderManagement",
       dependencies: ["TeaQLCore", "TeaQLSQLite", "TeaQLFederal"],

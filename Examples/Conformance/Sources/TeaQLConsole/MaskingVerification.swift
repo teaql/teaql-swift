@@ -113,7 +113,13 @@ private func verifyRelationFailureMasking(entity: EntityDescriptor) async throws
     }
     let entries = await evidence.snapshot()
     try require(entries.count == 2 && entries.map(\.executionOutcome) == ["success", "failure"], "relation outcomes missing")
-    try require(entries.last?.comment?.contains("what: load") == true, "relation intent lost")
+    try require(entries.last?.comment == "load MaskChild", "relation local default comment lost")
+    try require(entries.last?.purpose == "why: verify inherited intent", "relation root purpose lost")
+    let chain = entries.last?.traceChain ?? []
+    try require(chain.count == 4 && chain.first?.comment == "why: verify inherited intent"
+        && chain[1].comment.contains("what: load") && !chain[1].comment.contains("Riverside")
+        && !chain[1].comment.contains("PASSWORD-CANARY") && chain.last?.comment == "load MaskChild",
+        "relation request lost its complete redacted ancestry")
     let text = await sink.snapshot().joined(separator: "\n")
     try text.write(to: logFile, atomically: true, encoding: .utf8)
     let disk = try String(contentsOf: logFile, encoding: .utf8)

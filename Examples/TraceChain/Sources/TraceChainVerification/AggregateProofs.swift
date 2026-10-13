@@ -98,10 +98,10 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
                 else { throw TeaQLError.execution("aggregate owner missing") }
                 loaded = order
             }
-            try require(loaded.id == rootID && loaded.hasQueryProjection("eligibleItems")
-                && loaded.hasQueryProjection("emptyItems"), "generated hydration dropped aggregate aliases")
-            guard let eligible = try loaded.queryProjection("eligibleItems").int64Value,
-                  let empty = try loaded.queryProjection("emptyItems").int64Value
+            try require(loaded.id == rootID && loaded.dynamicProperties.value("eligibleItems") != nil
+                && loaded.dynamicProperties.value("emptyItems") != nil, "generated hydration dropped aggregate aliases")
+            guard let eligible = loaded.dynamicProperties.value("eligibleItems")?.int64Value,
+                  let empty = loaded.dynamicProperties.value("emptyItems")?.int64Value
             else { throw TeaQLError.execution("aggregate result was not numeric") }
             try require(eligible == 1 && empty == 0, "filtered count or empty count differs")
             try require(try E.customerOrder(loaded).orderItemList().size().eval() == 2
@@ -120,12 +120,10 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
                     try require(try E.customerOrder(target).description().eval() == "Draft order", "full forward detail missing")
                 }
             }
-            try require(!loaded.hasQueryProjection("missingAlias") && !loaded.hasQueryProjection("id")
-                && !loaded.hasQueryProjection("orderItemList"), "modeled fields leaked into alias snapshot")
-            do {
-                _ = try loaded.queryProjection("missingAlias")
-                throw TeaQLError.execution("missing alias silently became zero")
-            } catch let error as QueryProjectionNotLoaded { try require(error.alias == "missingAlias", "wrong missing alias") }
+            try require(loaded.dynamicProperties.value("missingAlias") == nil
+                && loaded.dynamicProperties.value("id") == nil
+                && loaded.dynamicProperties.value("orderItemList") == nil,
+                "absent dynamic property must be nil; modeled fields must not leak into aliases")
             try require(loaded.toMutationRecord()["eligibleItems"] == nil
                 && loaded.toRecord()["eligibleItems"] == nil && !loaded.teaqlEntityRoot.hasPending(loaded.teaqlEntityKey),
                 "query projections leaked into persistence or mutation ownership")
@@ -145,7 +143,9 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
                 try require(actual.parameterizedSQL == redacted.parameterizedSQL
                     && actual.parameters.count == redacted.parameters.count && actual.tracePath == redacted.tracePath
                     && actual.resultCount == redacted.resultCount, "safe evidence does not match native provider SQL")
-                try require(actual.comment == comment && actual.purpose == purpose
+                try require(hasQueryBusinessIntent(actual, rootComment: comment, purpose: purpose)
+                    && hasQueryBusinessIntent(redacted, rootComment: comment.replacingOccurrences(of: secret, with: "[REDACTED]"),
+                        purpose: purpose.replacingOccurrences(of: secret, with: "[REDACTED]"))
                     && redacted.comment?.contains(secret) == false && redacted.purpose?.contains(secret) == false
                     && !redacted.debugSQL.contains(secret) && !redacted.parameters.contains(.string(secret)),
                     "private aggregate operand escaped safe intent/SQL projection")

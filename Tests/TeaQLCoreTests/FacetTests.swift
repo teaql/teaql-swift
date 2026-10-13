@@ -47,6 +47,9 @@ private struct FacetFixtureExecutor: QueryExecutor {
       guard query.filter == .contains("name", "Riverside") else {
         throw TeaQLError.execution("outer facet filter was not preserved")
       }
+      if !query.aggregates.isEmpty {
+        return QueryResult(records: [["schoolType": .int(1001), "count": .int(2)]], backend: "fixture")
+      }
       return QueryResult(records: [
         ["id": .int(1), "schoolType": .int(1001)],
         ["id": .int(2), "schoolType": .int(1001)],
