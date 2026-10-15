@@ -345,6 +345,7 @@ Request JSON is not allowed to replace those trusted capabilities.
 - [School bootstrap example](Examples/SchoolManagement/README.md)
 - [Order Management example](Examples/OrderManagement/README.md)
 - [Trace Chain example](Examples/TraceChain/README.md)
+- [Binary object storage and temporary S3 URLs](Examples/ObjectStorage/README.md)
 - [Governance and SPI](RUNTIME_GUIDE.md#governance)
 
 ## Safe troubleshooting

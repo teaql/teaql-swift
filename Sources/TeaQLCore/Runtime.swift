@@ -609,6 +609,9 @@ private enum ListExecutionState {
 }
 
 public struct UserContext: Sendable {
+  var objectStorageProvider: (any ObjectStorageProvider)?
+  var objectStorageObserver: ObjectStorageObserver?
+  var objectStorageContextID: String { graphTransactionGate.id.uuidString }
   // The existing per-Context gate already supplies a stable private identity.
   // Reuse identity only, not its mutation state/lock; avoid changing value layout.
   private var queryExecutionContext: UUID { graphTransactionGate.id }
@@ -661,9 +664,13 @@ public struct UserContext: Sendable {
     entityCreationObserver: EntityCreationObserver? = nil,
     mutationPolicyRegistry: (any MutationPolicyRegistry)? = nil,
     mutationPolicyApprovalProvider: (any MutationPolicyApprovalProvider)? = nil,
-    mutationGovernanceSink: (any MutationGovernanceSink)? = nil
+    mutationGovernanceSink: (any MutationGovernanceSink)? = nil,
+    objectStorageProvider: (any ObjectStorageProvider)? = nil,
+    objectStorageObserver: ObjectStorageObserver? = nil
   ) {
     self.runtime = runtime
+    self.objectStorageProvider = objectStorageProvider
+    self.objectStorageObserver = objectStorageObserver
     self.actor = actor
     self.auditCategory = auditCategory
     self.trustedTenant = trustedTenant
@@ -840,7 +847,9 @@ public struct UserContext: Sendable {
       locale: locale,
       i18nCatalog: i18nCatalog,
       entityInitializers: entityInitializers,
-      entityCreationObserver: entityCreationObserver)
+      entityCreationObserver: entityCreationObserver,
+      objectStorageProvider: objectStorageProvider,
+      objectStorageObserver: objectStorageObserver)
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }

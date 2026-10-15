@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-expected=(Conformance FacetTrace OrderManagement SchoolManagement TraceChain)
+expected=(Conformance FacetTrace ObjectStorage OrderManagement SchoolManagement TraceChain)
 mapfile -t actual < <(find "$repo/Examples" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   echo "example inventory changed; update scripts/verify-examples.sh: ${actual[*]}" >&2
@@ -17,6 +17,7 @@ fi
 # An explicit scratch path also allows isolated ABI/layout verification without
 # deleting the normal build cache or any retained example database.
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
+bash "$repo/Examples/ObjectStorage/verify.sh"
 (cd "$repo/Examples/Conformance" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions TeaQLConsole)
 (cd "$repo/Examples/SchoolManagement" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions SchoolBootstrapVerification)
 (cd "$repo/Examples/OrderManagement" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions teaql-order-management)
