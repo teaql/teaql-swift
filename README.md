@@ -295,17 +295,20 @@ reset/repeated-run behavior is documented in its README.
 
 ## Use the published runtime
 
-Current documented runtime: **0.3.0**. Keep domain-library and runtime
+Current published runtime: **0.3.1**. Keep domain-library and runtime
 versions compatible; regenerate older libraries when their provider or graph
 adapter SPI has changed.
 
 ```swift
-.package(url: "https://github.com/teaql/teaql-swift.git", exact: "0.3.0")
+.package(url: "https://github.com/teaql/teaql-swift.git", exact: "0.3.1")
 ```
 
 Generation is a separate service; see the [Agent Kit](https://github.com/teaql/teaql-agent-kit)
 for producing the application-specific library and workspace. Repository examples
 use local source; isolated released-package regression is a separate gate.
+
+SQLite Decimal schema and migration rules are documented in
+[Exact Decimal storage](docs/sqlite-exact-decimal.md).
 
 ## Supported scope
 

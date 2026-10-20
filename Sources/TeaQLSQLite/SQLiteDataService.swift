@@ -6,6 +6,20 @@ import TeaQLSQL
 
 private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+private func decimalBytes(_ pointer: UnsafeRawPointer?, count: Int32) -> String? {
+  guard let pointer, count >= 0 else { return nil }
+  return String(bytes: UnsafeBufferPointer(
+    start: pointer.assumingMemoryBound(to: UInt8.self), count: Int(count)), encoding: .utf8)
+}
+
+private final class SQLiteDecimalAccumulator {
+  var total: Decimal?
+}
+
+private func decimalFunctionError(_ context: OpaquePointer?, _ message: String) {
+  message.withCString { sqlite3_result_error(context, $0, -1) }
+}
+
 private func sqliteCompatibleSoundex(_ input: String?) -> String {
   guard let input else { return "?000" }
   let letters = input.uppercased().utf8.filter { $0 >= 65 && $0 <= 90 }
@@ -69,12 +83,109 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
     self.handle = SQLiteHandle(handle)
     sqlite3_busy_timeout(handle, 5_000)
+    try Self.registerDecimalFunctions(handle)
     if !existed { print("TeaQL SQLite: database not found; created \(path)") }
+  }
+
+  private static func registerDecimalFunctions(_ database: OpaquePointer) throws {
+    let collationStatus = sqlite3_create_collation_v2(
+      database, "TEAQL_DECIMAL", SQLITE_UTF8, nil,
+      { _, leftCount, leftPointer, rightCount, rightPointer in
+        let left = decimalBytes(leftPointer, count: leftCount) ?? ""
+        let right = decimalBytes(rightPointer, count: rightCount) ?? ""
+        if let leftValue = parseExactDecimal(left),
+          let rightValue = parseExactDecimal(right)
+        {
+          if leftValue < rightValue { return -1 }
+          if leftValue > rightValue { return 1 }
+          return 0
+        }
+        // The CHECK constraint rejects malformed values. A collation must
+        // still define a total order for a preexisting or manually edited DB.
+        switch left.compare(right) {
+        case .orderedAscending: return -1
+        case .orderedDescending: return 1
+        case .orderedSame: return 0
+        }
+      }, nil)
+    guard collationStatus == SQLITE_OK else {
+      throw SQLiteError.sqlite(code: collationStatus,
+        message: String(cString: sqlite3_errmsg(database)), sql: nil)
+    }
+    let validationStatus = sqlite3_create_function_v2(
+      database, "teaql_decimal_valid", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil,
+      { context, count, values in
+        guard let context, count == 1, let values, let value = values[0],
+          sqlite3_value_type(value) == SQLITE_TEXT,
+          let textPointer = sqlite3_value_text(value)
+        else {
+          sqlite3_result_int(context, 0)
+          return
+        }
+        let text = String(cString: textPointer)
+        sqlite3_result_int(context, parseExactDecimal(text) == nil ? 0 : 1)
+      }, nil, nil, nil)
+    guard validationStatus == SQLITE_OK else {
+      throw SQLiteError.sqlite(code: validationStatus,
+        message: String(cString: sqlite3_errmsg(database)), sql: nil)
+    }
+    let aggregateStatus = sqlite3_create_function_v2(
+      database, "teaql_decimal_sum", 1, SQLITE_UTF8, nil, nil,
+      { context, count, values in
+        guard let context, count == 1, let values, let value = values[0] else { return }
+        if sqlite3_value_type(value) == SQLITE_NULL { return }
+        guard sqlite3_value_type(value) == SQLITE_TEXT,
+          let textPointer = sqlite3_value_text(value),
+          let next = parseExactDecimal(String(cString: textPointer))
+        else {
+          decimalFunctionError(context, "invalid exact Decimal input")
+          return
+        }
+        guard let rawSlot = sqlite3_aggregate_context(
+          context, Int32(MemoryLayout<UnsafeMutableRawPointer?>.size))
+        else { sqlite3_result_error_nomem(context); return }
+        let slot = rawSlot.assumingMemoryBound(to: UnsafeMutableRawPointer?.self)
+        if slot.pointee == nil {
+          slot.pointee = Unmanaged.passRetained(SQLiteDecimalAccumulator()).toOpaque()
+        }
+        let accumulator = Unmanaged<SQLiteDecimalAccumulator>
+          .fromOpaque(slot.pointee!).takeUnretainedValue()
+        if let current = accumulator.total {
+          var left = current
+          var right = next
+          var sum = Decimal()
+          guard NSDecimalAdd(&sum, &left, &right, .plain) == .noError else {
+            decimalFunctionError(context, "exact Decimal SUM exceeds supported precision")
+            return
+          }
+          accumulator.total = sum
+        } else {
+          accumulator.total = next
+        }
+      },
+      { context in
+        guard let context,
+          let rawSlot = sqlite3_aggregate_context(context, 0)
+        else { sqlite3_result_null(context); return }
+        let slot = rawSlot.assumingMemoryBound(to: UnsafeMutableRawPointer?.self)
+        guard let pointer = slot.pointee else { sqlite3_result_null(context); return }
+        slot.pointee = nil
+        let accumulator = Unmanaged<SQLiteDecimalAccumulator>.fromOpaque(pointer).takeRetainedValue()
+        guard let total = accumulator.total else { sqlite3_result_null(context); return }
+        String(describing: total).withCString {
+          sqlite3_result_text(context, $0, -1, sqliteTransient)
+        }
+      }, nil)
+    guard aggregateStatus == SQLITE_OK else {
+      throw SQLiteError.sqlite(code: aggregateStatus,
+        message: String(cString: sqlite3_errmsg(database)), sql: nil)
+    }
   }
 
   private func ensureEntitySchemas(_ entities: [EntityDescriptor]) throws {
     for entity in entities {
       try executeSQL(compiler.createTable(entity))
+      try ensureExactDecimalColumns(entity)
       let idColumn = entity.properties.first(where: { $0.isID })?.column ?? "id"
       for property in entity.properties
       where property.isRelation || property.name.hasSuffix("Id") || property.name.hasSuffix("_id") {
@@ -108,6 +219,56 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
           current_level INTEGER NOT NULL
       )
       """)
+  }
+
+  private func ensureExactDecimalColumns(_ entity: EntityDescriptor) throws {
+    for property in entity.properties where property.type == .decimal {
+      let count = try scalarInt64(
+        "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ? AND upper(type) = 'DECIMAL_TEXT'",
+        parameters: [.string(entity.table), .string(property.column)])
+      guard count == 1 else {
+        throw TeaQLError.execution(
+          "SQLite Decimal column \(entity.table).\(property.column) uses a legacy or missing schema; explicitly migrate exact Decimal storage before retrying")
+      }
+      let explain = "EXPLAIN SELECT 1 FROM \(quote(entity.table)) NOT INDEXED WHERE \(quote(property.column)) = ?"
+      var statement: OpaquePointer?
+      guard sqlite3_prepare_v2(database, explain, -1, &statement, nil) == SQLITE_OK,
+        let statement
+      else { throw currentError(sql: explain) }
+      defer { sqlite3_finalize(statement) }
+      var correctCollation = false
+      while sqlite3_step(statement) == SQLITE_ROW {
+        guard let opcodePointer = sqlite3_column_text(statement, 1),
+          let p4Pointer = sqlite3_column_text(statement, 5)
+        else { continue }
+        let opcode = String(cString: opcodePointer)
+        let p4 = String(cString: p4Pointer)
+        if (opcode == "Eq" || opcode == "Ne") && p4.hasPrefix("TEAQL_DECIMAL") {
+          correctCollation = true
+        }
+      }
+      guard correctCollation else {
+        throw TeaQLError.execution(
+          "SQLite Decimal column \(entity.table).\(property.column) lacks TEAQL_DECIMAL collation; explicitly migrate before retrying")
+      }
+      let ddlQuery = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?"
+      var ddlStatement: OpaquePointer?
+      guard sqlite3_prepare_v2(database, ddlQuery, -1, &ddlStatement, nil) == SQLITE_OK,
+        let ddlStatement
+      else { throw currentError(sql: ddlQuery) }
+      defer { sqlite3_finalize(ddlStatement) }
+      try bind([.string(entity.table)], to: ddlStatement)
+      guard sqlite3_step(ddlStatement) == SQLITE_ROW,
+        let ddlPointer = sqlite3_column_text(ddlStatement, 0)
+      else { throw currentError(sql: ddlQuery) }
+      let ddl = String(cString: ddlPointer)
+      let column = quote(property.column)
+      let requiredCheck = "CHECK (\(column) IS NULL OR teaql_decimal_valid(\(column)))"
+      guard sqliteDDLCode(ddl).contains(requiredCheck) else {
+        throw TeaQLError.execution(
+          "SQLite Decimal column \(entity.table).\(property.column) lacks exact-value validation; explicitly migrate before retrying")
+      }
+    }
   }
 
   /// Provider SPI. Application code calls `context.ensureSchema(module)`.
@@ -205,7 +366,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     let startedAt = DispatchTime.now().uptimeNanoseconds
     let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "select", entity: query.entity.name)
     let records: [TeaQLRecord]
-    do { records = try fetch(compiled, entity: query.entity); observation?.finish(success: true) }
+    do { records = try fetch(compiled, entity: query.entity, query: query); observation?.finish(success: true) }
     catch {
       observation?.finish(success: false)
       throw SQLExecutionFailure(cause: error, metadata: SQLExecutionMetadata(
@@ -591,7 +752,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     )
   }
 
-  private func fetch(_ compiled: CompiledSQL, entity: EntityDescriptor) throws -> [TeaQLRecord] {
+  private func fetch(_ compiled: CompiledSQL, entity: EntityDescriptor,
+    query: SelectQuery? = nil) throws -> [TeaQLRecord]
+  {
     var statement: OpaquePointer?
     guard sqlite3_prepare_v2(database, compiled.sql, -1, &statement, nil) == SQLITE_OK,
       let statement
@@ -600,6 +763,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
     defer { sqlite3_finalize(statement) }
     try bind(compiled.parameters, to: statement)
+    var aggregateTypes: [String: PropertyType] = [:]
+    for aggregate in query?.aggregates ?? [] where aggregate.function != .count {
+      if let property = entity.property(named: aggregate.field) {
+        aggregateTypes[aggregate.alias] = property.type
+      }
+    }
     var records: [TeaQLRecord] = []
     while true {
       switch sqlite3_step(statement) {
@@ -610,7 +779,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
           let property = entity.properties.first {
             $0.column.caseInsensitiveCompare(column) == .orderedSame
           }
-          record[property?.name ?? column] = decode(statement, index: index, type: property?.type)
+          record[property?.name ?? column] = try decode(statement, index: index,
+            type: property?.type ?? aggregateTypes[column])
         }
         records.append(record)
       case SQLITE_DONE: return records
@@ -750,8 +920,14 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     value.withCString { sqlite3_bind_text(statement, index, $0, -1, sqliteTransient) }
   }
 
-  private func decode(_ statement: OpaquePointer, index: Int32, type: PropertyType?) -> TeaQLValue {
-    switch sqlite3_column_type(statement, index) {
+  private func decode(_ statement: OpaquePointer, index: Int32,
+    type: PropertyType?) throws -> TeaQLValue
+  {
+    let storageType = sqlite3_column_type(statement, index)
+    if type == .decimal && storageType != SQLITE_NULL && storageType != SQLITE_TEXT {
+      throw TeaQLError.execution("SQLite Decimal value is not stored as exact text; migrate the column before reading")
+    }
+    switch storageType {
     case SQLITE_NULL: return .null
     case SQLITE_INTEGER:
       let value = sqlite3_column_int64(statement, index)
@@ -765,7 +941,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       return .data(Data(bytes: bytes, count: count))
     default:
       let text = String(cString: sqlite3_column_text(statement, index))
-      if type == .decimal, let decimal = Decimal(string: text) { return .decimal(decimal) }
+      if type == .decimal {
+        guard let decimal = parseExactDecimal(text) else {
+          throw TeaQLError.execution("SQLite Decimal text is invalid or exceeds supported precision")
+        }
+        return .decimal(decimal)
+      }
       if type == .date {
         // `.date` is used by generated Swift `Date` properties for both
         // calendar dates and audit instants. Preserve a full ISO-8601 instant
