@@ -12,6 +12,13 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
   public let nullable: Bool
   public let isID: Bool
   public let isVersion: Bool
+  /// Explicit generated forward relation marker. Native property names need
+  /// not end in `Id`, so schema indexes must not depend on that spelling.
+  public let isRelation: Bool
+
+  private enum CodingKeys: String, CodingKey {
+    case name, modelName, column, type, nullable, isID, isVersion, isRelation
+  }
 
   public init(
     name: String,
@@ -20,7 +27,8 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     type: PropertyType,
     nullable: Bool = false,
     isID: Bool = false,
-    isVersion: Bool = false
+    isVersion: Bool = false,
+    isRelation: Bool = false
   ) {
     self.name = name
     self.modelName = modelName
@@ -29,6 +37,19 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     self.nullable = nullable
     self.isID = isID
     self.isVersion = isVersion
+    self.isRelation = isRelation
+  }
+
+  public init(from decoder: Decoder) throws {
+    let fields = try decoder.container(keyedBy: CodingKeys.self)
+    name = try fields.decode(String.self, forKey: .name)
+    modelName = try fields.decodeIfPresent(String.self, forKey: .modelName)
+    column = try fields.decodeIfPresent(String.self, forKey: .column) ?? name
+    type = try fields.decode(PropertyType.self, forKey: .type)
+    nullable = try fields.decodeIfPresent(Bool.self, forKey: .nullable) ?? false
+    isID = try fields.decodeIfPresent(Bool.self, forKey: .isID) ?? false
+    isVersion = try fields.decodeIfPresent(Bool.self, forKey: .isVersion) ?? false
+    isRelation = try fields.decodeIfPresent(Bool.self, forKey: .isRelation) ?? false
   }
 }
 

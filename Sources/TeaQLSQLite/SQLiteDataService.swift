@@ -77,7 +77,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       try executeSQL(compiler.createTable(entity))
       let idColumn = entity.properties.first(where: { $0.isID })?.column ?? "id"
       for property in entity.properties
-      where property.name.hasSuffix("Id") || property.name.hasSuffix("_id") {
+      where property.isRelation || property.name.hasSuffix("Id") || property.name.hasSuffix("_id") {
         let index = "idx_\(entity.table)_\(property.column)_id_desc"
         try executeSQL("CREATE INDEX IF NOT EXISTS \(quote(index)) ON \(quote(entity.table)) (\(quote(property.column)), \(quote(idColumn)) DESC)")
       }

@@ -93,6 +93,43 @@ private let order = EntityDescriptor(
   #expect(try await service.execute(indexQuery).records.count == 1)
 }
 
+@Test func generatedForwardRelationIndexDoesNotDependOnNativeIdSuffix() async throws {
+  let legacy = Data(#"{"name":"typePlatform","modelName":"type_platform","column":"type_platform","type":"int","nullable":false,"isID":false,"isVersion":false}"#.utf8)
+  #expect(try JSONDecoder().decode(PropertyDescriptor.self, from: legacy).isRelation == false)
+  let relation = PropertyDescriptor(name: "typePlatform", modelName: "type_platform",
+    column: "type_platform", type: .int, isRelation: true)
+  #expect(try JSONDecoder().decode(PropertyDescriptor.self,
+    from: JSONEncoder().encode(relation)).isRelation)
+
+  let entity = EntityDescriptor(name: "Name93Probe", table: "name93_probe", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    relation,
+    PropertyDescriptor(name: "quantity", type: .int),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+  ])
+  let path = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-name93-index-\(UUID().uuidString).sqlite").path
+  defer { try? FileManager.default.removeItem(atPath: path) }
+  let service = try SQLiteDataService(path: path)
+  let context = UserContext(queryExecutor: service, mutationExecutor: service,
+    requestPolicy: RequestPolicy { $0 })
+  let module = RuntimeModule(name: "name93-index", entities: [entity])
+  try await context.ensureSchema(module)
+  try await context.ensureSchema(module)
+
+  let master = EntityDescriptor(name: "SQLiteSchema", table: "sqlite_master", properties: [
+    PropertyDescriptor(name: "name", type: .string),
+    PropertyDescriptor(name: "sql", type: .string, nullable: true),
+  ])
+  var query = SelectQuery(entity: master)
+  query.filter = .equal("name", .string("idx_name93_probe_type_platform_id_desc"))
+  query.comment = "inspect canonical forward relation index"
+  query.purpose = "verify explicit relation metadata and idempotent schema"
+  let rows = try await service.execute(query).records
+  #expect(rows.count == 1)
+  #expect(rows[0]["sql"]?.stringValue?.contains("\"type_platform\", \"id\" DESC") == true)
+}
+
 @Test func continuousPageUsesIdSeekWithoutDuplicateOrMissingRows() async throws {
   let path = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-continuous-page-\(UUID().uuidString).db").path
