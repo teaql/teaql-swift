@@ -28,7 +28,8 @@ final class GraphTraceScopeTests: XCTestCase {
     XCTAssertEqual(fixture.cases.flatMap(\.expected).count, 15)
     for vector in fixture.cases {
       let session = GraphMutationSession(intent: try MutationIntent(comment: vector.requestComment),
-        policy: MutationPolicyCoordinator(registry: nil, approvalProvider: nil, warningSink: nil))
+        policy: MutationPolicyCoordinator(registry: nil, approvalProvider: nil, warningSink: nil),
+        fixTime: Date(timeIntervalSince1970: 0))
       let ledger = EntityRoot()
       var scopes: [String: TraceScopeToken] = [:]
       var observations: [String: [TraceNode]] = [:]
@@ -66,7 +67,8 @@ final class GraphTraceScopeTests: XCTestCase {
   func testScopeCannotCrossSessionsOrOutliveItsInvocation() throws {
     func session(_ reason: String) throws -> GraphMutationSession {
       GraphMutationSession(intent: try MutationIntent(comment: reason),
-        policy: MutationPolicyCoordinator(registry: nil, approvalProvider: nil, warningSink: nil))
+        policy: MutationPolicyCoordinator(registry: nil, approvalProvider: nil, warningSink: nil),
+        fixTime: Date(timeIntervalSince1970: 0))
     }
     let first = try session("first graph"); let second = try session("second graph")
     let key = EntityKey(entity: "CustomerOrder", id: .int(1))

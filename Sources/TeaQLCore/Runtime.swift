@@ -641,6 +641,13 @@ public struct UserContext: Sendable {
   private let graphTransactionGate: GraphTransactionGate
   private var graphSession: GraphMutationSession?
   private var mutationPolicyCoordinator: MutationPolicyCoordinator
+  public let businessClock: any BusinessClock
+  public var businessTime: Date { businessClock.now() }
+  public var businessDate: Date {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+    return calendar.startOfDay(for: businessTime)
+  }
 
   public init(
     runtime: TeaQLRuntime = TeaQLRuntime(),
@@ -666,9 +673,11 @@ public struct UserContext: Sendable {
     mutationPolicyApprovalProvider: (any MutationPolicyApprovalProvider)? = nil,
     mutationGovernanceSink: (any MutationGovernanceSink)? = nil,
     objectStorageProvider: (any ObjectStorageProvider)? = nil,
-    objectStorageObserver: ObjectStorageObserver? = nil
+    objectStorageObserver: ObjectStorageObserver? = nil,
+    businessClock: any BusinessClock = SystemBusinessClock()
   ) {
     self.runtime = runtime
+    self.businessClock = businessClock
     self.objectStorageProvider = objectStorageProvider
     self.objectStorageObserver = objectStorageObserver
     self.actor = actor
@@ -730,7 +739,7 @@ public struct UserContext: Sendable {
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
     let policy = mutationPolicyCoordinator.fork()
-    let session = GraphMutationSession(intent: request.intent, policy: policy)
+    let session = GraphMutationSession(intent: request.intent, policy: policy, fixTime: businessTime)
     var invocation = self
     invocation.graphSession = session
     invocation.mutationPolicyCoordinator = policy
@@ -781,7 +790,7 @@ public struct UserContext: Sendable {
     return result
   }
 
-  public var fixTime: Date { graphSession?.fixTime ?? Date() }
+  public var fixTime: Date { graphSession?.fixTime ?? businessTime }
   public func recordFixEvidence(_ evidence: FixEvidence) { graphSession?.recordFixEvidence(evidence) }
   public var lastFixEvidence: [FixEvidence] { graphTransactionGate.lastFixEvidence }
 

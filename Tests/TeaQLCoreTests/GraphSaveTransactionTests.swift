@@ -59,6 +59,7 @@ final class GraphSaveTransactionTests: XCTestCase {
   }
 
   func testOneGraphUsesOneCapturedFixClock() async throws {
+    let expected = Date(timeIntervalSince1970: 1_961_662_530)
     let provider = TransactionRecorder()
     let checker = ClockChecker()
     let descriptor = EntityDescriptor(
@@ -68,7 +69,7 @@ final class GraphSaveTransactionTests: XCTestCase {
     try runtime.install(RuntimeModule(name: "clock", entities: [descriptor], checkers: ["Task": checker]))
     let context = UserContext(
       runtime: runtime, queryExecutor: EmptyQueryExecutor(), mutationExecutor: provider,
-      requestPolicy: RequestPolicy { $0 })
+      requestPolicy: RequestPolicy { $0 }, businessClock: FixedBusinessClock(expected))
     try await context.executeGraphSave(comment: "verify graph save request") { context, _ in
       _ = try await context.execute(Mutation(kind: .create, entity: descriptor, auditReason: "first"))
       try await Task.sleep(for: .milliseconds(5))
@@ -77,6 +78,41 @@ final class GraphSaveTransactionTests: XCTestCase {
     let times = checker.values
     XCTAssertEqual(times.count, 2)
     XCTAssertEqual(times[0], times[1])
+    XCTAssertEqual(times[0], expected)
+  }
+
+  func testStandaloneFixUsesTheContextClock() {
+    let expected = Date(timeIntervalSince1970: 1_961_662_530)
+    let context = UserContext(queryExecutor: EmptyQueryExecutor(),
+      mutationExecutor: TransactionRecorder(), requestPolicy: RequestPolicy { $0 },
+      businessClock: FixedBusinessClock(expected))
+    XCTAssertEqual(context.fixTime, expected)
+    XCTAssertEqual(context.businessTime, expected)
+    let other = UserContext(queryExecutor: EmptyQueryExecutor(),
+      mutationExecutor: TransactionRecorder(), requestPolicy: RequestPolicy { $0 },
+      businessClock: FixedBusinessClock(expected.addingTimeInterval(3600)))
+    XCTAssertEqual(other.fixTime, expected.addingTimeInterval(3600))
+  }
+
+  func testFailedGraphDiscardsItsSnapshotAndTheNextGraphCapturesAgain() async throws {
+    let provider = TransactionRecorder()
+    let clock = AdvancingBusinessClock()
+    let context = UserContext(queryExecutor: EmptyQueryExecutor(), mutationExecutor: provider,
+      requestPolicy: RequestPolicy { $0 }, businessClock: clock)
+    do {
+      _ = try await context.executeGraphSave(comment: "failed clock graph") { graph, _ in
+        XCTAssertEqual(graph.fixTime.timeIntervalSince1970, 1000)
+        XCTAssertEqual(graph.fixTime.timeIntervalSince1970, 1000)
+        throw TeaQLError.execution("injected failure")
+      }
+      XCTFail("missing injected failure")
+    } catch { }
+    try await context.executeGraphSave(comment: "next clock graph") { graph, _ in
+      XCTAssertEqual(graph.fixTime.timeIntervalSince1970, 1001)
+      XCTAssertEqual(graph.fixTime.timeIntervalSince1970, 1001)
+    }
+    XCTAssertEqual(clock.calls, 2)
+    XCTAssertEqual(context.fixTime.timeIntervalSince1970, 1002)
   }
 
   private func makeContext(_ provider: TransactionRecorder) -> UserContext {
@@ -121,4 +157,14 @@ private final class ClockChecker: @unchecked Sendable, EntityChecker {
     lock.withLock { times.append(now) }; return []
   }
   var values: [Date] { lock.withLock { times } }
+}
+
+private final class AdvancingBusinessClock: @unchecked Sendable, BusinessClock {
+  private let lock = NSLock()
+  private var value: TimeInterval = 1000
+  private var count = 0
+  func now() -> Date {
+    lock.withLock { defer { value += 1; count += 1 }; return Date(timeIntervalSince1970: value) }
+  }
+  var calls: Int { lock.withLock { count } }
 }

@@ -59,8 +59,8 @@ public final class GraphMutationSession: @unchecked Sendable {
   private var loadedProvenance: SQLExecutionMetadata?
   private var fixEvidence: [FixEvidence] = []
 
-  package init(intent: MutationIntent, policy: MutationPolicyCoordinator) {
-    self.intent = intent; self.policy = policy; fixTime = Date()
+  package init(intent: MutationIntent, policy: MutationPolicyCoordinator, fixTime: Date) {
+    self.intent = intent; self.policy = policy; self.fixTime = fixTime
   }
 
   package func ensureActive() throws {
