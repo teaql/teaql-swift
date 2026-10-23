@@ -84,8 +84,8 @@ public struct EntityDescriptor: Sendable, Hashable, Codable {
 public protocol TeaQLEntity: Sendable, Codable {
   static var descriptor: EntityDescriptor { get }
   static func from(record: TeaQLRecord) throws -> Self
-  var id: Int64 { get set }
-  var version: Int64 { get set }
+  var id: Int64 { get }
+  var version: Int64 { get }
   func toRecord() -> TeaQLRecord
   /// Returns only fields that are loaded and eligible for persistence.
   func toMutationRecord() -> TeaQLRecord
