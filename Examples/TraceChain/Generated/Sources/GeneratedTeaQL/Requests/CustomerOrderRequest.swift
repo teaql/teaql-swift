@@ -157,7 +157,7 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("platform") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
             copy.query.projection.append("platform")
         }
         copy.query.relationQuery(
@@ -885,15 +885,17 @@ public extension CustomerOrderRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<CustomerOrder> {
         try ensureIntent()
         let snapshots = LoadedEntitySnapshots()
-        return try await context.executeTypedList(query, countRequested: countRequested) {
-            try CustomerOrder.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try CustomerOrder.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
         }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
+
 
 }

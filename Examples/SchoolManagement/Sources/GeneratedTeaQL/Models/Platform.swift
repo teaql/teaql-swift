@@ -3,17 +3,39 @@ import Foundation
 import TeaQLCore
 
 public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var name: String? = nil
     public var baseUrl: String? = nil
     public var createTime: Date? = nil
     public var updateTime: Date? = nil
     public var version: Int64 = 0
-    public var schoolTypeList: [SchoolType] = []
-    public var schoolList: [School] = []
+    private var _schoolTypeListResult: SmartList<SchoolType> = .empty
+    public var schoolTypeListResult: SmartList<SchoolType> { _schoolTypeListResult }
+    public var schoolTypeList: [SchoolType] {
+        get { _schoolTypeListResult.data }
+        set {
+            _schoolTypeListResult = SmartList(newValue, totalCount: _schoolTypeListResult.totalCount,
+                aggregations: _schoolTypeListResult.aggregations, summary: _schoolTypeListResult.summary,
+                facets: _schoolTypeListResult.facets)
+            _loadedFields.insert("schoolTypeList")
+        }
+    }
+    private var _schoolListResult: SmartList<School> = .empty
+    public var schoolListResult: SmartList<School> { _schoolListResult }
+    public var schoolList: [School] {
+        get { _schoolListResult.data }
+        set {
+            _schoolListResult = SmartList(newValue, totalCount: _schoolListResult.totalCount,
+                aggregations: _schoolListResult.aggregations, summary: _schoolListResult.summary,
+                facets: _schoolListResult.facets)
+            _loadedFields.insert("schoolList")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -54,7 +76,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
@@ -75,37 +98,47 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + []
+            + ["schoolTypeList", "schoolList"]))
         if let relationValue = record["schoolTypeList"] {
             switch relationValue {
             case .array(let values):
-                entity.schoolTypeList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try SchoolType.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.schoolTypeList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try SchoolType.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["schoolTypeList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.schoolTypeList = [try SchoolType.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.schoolTypeList = [try SchoolType.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["schoolTypeList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.schoolTypeList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: schoolTypeList")
             }
             entity._loadedFields.insert("schoolTypeList")
+            entity._schoolTypeListResult.facets = relations["schoolTypeList"]?.facets ?? [:]
         }
         if let relationValue = record["schoolList"] {
             switch relationValue {
             case .array(let values):
-                entity.schoolList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try School.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.schoolList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try School.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["schoolList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.schoolList = [try School.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.schoolList = [try School.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["schoolList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.schoolList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: schoolList")
             }
             entity._loadedFields.insert("schoolList")
+            entity._schoolListResult.facets = relations["schoolList"]?.facets ?? [:]
         }
         return entity
     }
@@ -159,9 +192,11 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "Platform", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -311,7 +346,8 @@ public struct PlatformAudited: Sendable {
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

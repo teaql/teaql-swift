@@ -3,15 +3,26 @@ import Foundation
 import TeaQLCore
 
 public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var title: String? = nil
     public var description: String? = nil
     public var platform: Int64? = nil
     public var version: Int64 = 0
-    public var platformEntity: Platform?
+    private var _platformResult: SmartList<Platform> = .empty
+    public var platformResult: SmartList<Platform> { _platformResult }
+    public var platformEntity: Platform? {
+        get { _platformResult.first }
+        set {
+            _platformResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _platformResult.facets)
+            _loadedFields.insert("platformEntity")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -39,7 +50,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
             PropertyDescriptor(name: "title", modelName: "title", column: "title", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "description", modelName: "description", column: "description", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
@@ -50,7 +61,8 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
@@ -69,17 +81,23 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["platformEntity"]
+            + []))
         if let relationValue = record["platformEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
                 entity.platformEntity = try Platform.from(record: relatedRecord,
-                    root: EntityRoot(), snapshots: snapshots)
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["platformEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.platformEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: platform")
             }
             entity._loadedFields.insert("platformEntity")
+            entity._platformResult.facets = relations["platformEntity"]?.facets ?? [:]
         }
         return entity
     }
@@ -127,9 +145,11 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "WorkItem", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -220,7 +240,8 @@ public struct WorkItemAudited: Sendable {
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

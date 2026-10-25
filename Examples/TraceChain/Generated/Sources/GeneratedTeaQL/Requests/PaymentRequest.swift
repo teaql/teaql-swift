@@ -147,7 +147,7 @@ public struct PaymentRequest<State: Sendable>: Sendable {
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("customerOrder") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customerOrder") {
             copy.query.projection.append("customerOrder")
         }
         copy.query.relationQuery(
@@ -608,15 +608,17 @@ public extension PaymentRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<Payment> {
         try ensureIntent()
         let snapshots = LoadedEntitySnapshots()
-        return try await context.executeTypedList(query, countRequested: countRequested) {
-            try Payment.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try Payment.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
         }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
+
 
 }

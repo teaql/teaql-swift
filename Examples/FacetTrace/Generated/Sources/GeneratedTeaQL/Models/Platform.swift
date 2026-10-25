@@ -3,6 +3,7 @@ import Foundation
 import TeaQLCore
 
 public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var name: String? = nil
     public var baseUrl: String? = nil
@@ -34,6 +35,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -96,6 +98,10 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + []
+            + ["schoolTypeList", "schoolList"]))
         if let relationValue = record["schoolTypeList"] {
             switch relationValue {
             case .array(let values):
@@ -186,9 +192,11 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "Platform", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -338,7 +346,8 @@ public struct PlatformAudited: Sendable {
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

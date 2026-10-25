@@ -175,7 +175,7 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("platform") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
             copy.query.projection.append("platform")
         }
         copy.query.relationQuery(
@@ -754,48 +754,48 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
 
 
     @discardableResult
-    public func withDisplayOrderIs(_ value: Int64) -> Self {
-        adding(.equal("displayOrder", .int(value)))
+    public func withDisplayOrderIs(_ value: Decimal) -> Self {
+        adding(.equal("displayOrder", .decimal(value)))
     }
 
     @discardableResult
-    public func withDisplayOrderIn(_ values: [Int64]) -> Self {
-        adding(.inList("displayOrder", values.map { .int($0) }))
+    public func withDisplayOrderIn(_ values: [Decimal]) -> Self {
+        adding(.inList("displayOrder", values.map { .decimal($0) }))
     }
 
     @discardableResult
-    public func withDisplayOrderIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("displayOrder", .int(value)))
+    public func withDisplayOrderIsNot(_ value: Decimal) -> Self {
+        adding(.notEqual("displayOrder", .decimal(value)))
     }
 
     @discardableResult
-    public func withDisplayOrderNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("displayOrder", values.map { .int($0) }))
+    public func withDisplayOrderNotIn(_ values: [Decimal]) -> Self {
+        adding(.notInList("displayOrder", values.map { .decimal($0) }))
     }
 
     @discardableResult
-    public func withDisplayOrderGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("displayOrder", .int(value)))
+    public func withDisplayOrderGreaterThan(_ value: Decimal) -> Self {
+        adding(.greaterThan("displayOrder", .decimal(value)))
     }
 
     @discardableResult
-    public func withDisplayOrderGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("displayOrder", .int(value)))
+    public func withDisplayOrderGreaterThanOrEqualTo(_ value: Decimal) -> Self {
+        adding(.greaterThanOrEqual("displayOrder", .decimal(value)))
     }
 
     @discardableResult
-    public func withDisplayOrderLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("displayOrder", .int(value)))
+    public func withDisplayOrderLessThan(_ value: Decimal) -> Self {
+        adding(.lessThan("displayOrder", .decimal(value)))
     }
 
     @discardableResult
-    public func withDisplayOrderLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("displayOrder", .int(value)))
+    public func withDisplayOrderLessThanOrEqualTo(_ value: Decimal) -> Self {
+        adding(.lessThanOrEqual("displayOrder", .decimal(value)))
     }
 
     @discardableResult
-    public func withDisplayOrderBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("displayOrder", .int(lower), .int(upper)))
+    public func withDisplayOrderBetween(_ lower: Decimal, _ upper: Decimal) -> Self {
+        adding(.between("displayOrder", .decimal(lower), .decimal(upper)))
     }
 
     @discardableResult
@@ -1065,14 +1065,7 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
 
 public extension OrderStatusRequest where State == RequestExecutable {
     private func ensureIntent() throws {
-        guard let comment = query.comment,
-              !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Comment is required before execution")
-        }
-        guard let purpose = query.purpose,
-              !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Purpose is required before execution")
-        }
+        _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
     func newEntity(_ context: UserContext) throws -> OrderStatus {
@@ -1082,17 +1075,18 @@ public extension OrderStatusRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderStatus> {
         try ensureIntent()
-        let queryRoot = EntityRoot()
         let snapshots = LoadedEntitySnapshots()
-        return try await context.executeTypedList(query, countRequested: countRequested) {
-            try OrderStatus.from(record: $0, root: queryRoot, snapshots: snapshots)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try OrderStatus.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
         }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
+
 
 }

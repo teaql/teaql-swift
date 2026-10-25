@@ -8,10 +8,20 @@ public struct Shipment: TeaQLEntity, TeaQLMutationRootedEntity {
     public var customerOrder: Int64? = nil
     public var referenceCode: String? = nil
     public var version: Int64 = 0
-    public var customerOrderEntity: CustomerOrder?
+    private var _customerOrderResult: SmartList<CustomerOrder> = .empty
+    public var customerOrderResult: SmartList<CustomerOrder> { _customerOrderResult }
+    public var customerOrderEntity: CustomerOrder? {
+        get { _customerOrderResult.first }
+        set {
+            _customerOrderResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _customerOrderResult.facets)
+            _loadedFields.insert("customerOrderEntity")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -36,7 +46,7 @@ public struct Shipment: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "shipment_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
             PropertyDescriptor(name: "referenceCode", modelName: "reference_code", column: "reference_code", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
@@ -48,9 +58,10 @@ public struct Shipment: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
-        // Hydration must not import the constructor's temporary new-entity ledger.
+        // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
@@ -65,22 +76,24 @@ public struct Shipment: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["customerOrderEntity"]
+            + []))
         if let relationValue = record["customerOrderEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.customerOrderEntity = try CustomerOrder.from(
-                    record: relatedRecord, root: EntityRoot(), snapshots: snapshots)
+                entity.customerOrderEntity = try CustomerOrder.from(record: relatedRecord,
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["customerOrderEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.customerOrderEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: customerOrder")
             }
             entity._loadedFields.insert("customerOrderEntity")
+            entity._customerOrderResult.facets = relations["customerOrderEntity"]?.facets ?? [:]
         }
-        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set([
-            "id", "customerOrder", "referenceCode", "version"
-        ]).union(["customerOrderEntity"])
-            .union([]))
         return entity
     }
 
@@ -127,6 +140,7 @@ public struct Shipment: TeaQLEntity, TeaQLMutationRootedEntity {
         try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -204,8 +218,6 @@ public struct ShipmentAudited: Sendable {
                             scope: TraceScopeToken) async throws -> Shipment {
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
-        let activeScope = try scope.assigning(entity.teaqlEntityKey,
-            to: EntityKey(entity: "Shipment", id: .int(saved.id)))
         return saved
     }
 

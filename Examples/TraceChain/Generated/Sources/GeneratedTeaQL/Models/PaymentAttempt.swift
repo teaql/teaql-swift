@@ -8,10 +8,20 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
     public var payment: Int64? = nil
     public var referenceCode: String? = nil
     public var version: Int64 = 0
-    public var paymentEntity: Payment?
+    private var _paymentResult: SmartList<Payment> = .empty
+    public var paymentResult: SmartList<Payment> { _paymentResult }
+    public var paymentEntity: Payment? {
+        get { _paymentResult.first }
+        set {
+            _paymentResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _paymentResult.facets)
+            _loadedFields.insert("paymentEntity")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -36,7 +46,7 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "payment_attempt_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "payment", modelName: "payment", column: "payment", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "payment", modelName: "payment", column: "payment", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
             PropertyDescriptor(name: "referenceCode", modelName: "reference_code", column: "reference_code", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
@@ -48,9 +58,10 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
-        // Hydration must not import the constructor's temporary new-entity ledger.
+        // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
@@ -65,22 +76,24 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["paymentEntity"]
+            + []))
         if let relationValue = record["paymentEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.paymentEntity = try Payment.from(
-                    record: relatedRecord, root: EntityRoot(), snapshots: snapshots)
+                entity.paymentEntity = try Payment.from(record: relatedRecord,
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["paymentEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.paymentEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: payment")
             }
             entity._loadedFields.insert("paymentEntity")
+            entity._paymentResult.facets = relations["paymentEntity"]?.facets ?? [:]
         }
-        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set([
-            "id", "payment", "referenceCode", "version"
-        ]).union(["paymentEntity"])
-            .union([]))
         return entity
     }
 
@@ -127,6 +140,7 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
         try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -204,8 +218,6 @@ public struct PaymentAttemptAudited: Sendable {
                             scope: TraceScopeToken) async throws -> PaymentAttempt {
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
-        let activeScope = try scope.assigning(entity.teaqlEntityKey,
-            to: EntityKey(entity: "PaymentAttempt", id: .int(saved.id)))
         return saved
     }
 

@@ -9,13 +9,33 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
     public var name: String? = nil
     public var code: String? = nil
     public var color: String? = nil
-    public var displayOrder: Int64? = nil
+    public var displayOrder: Decimal? = nil
     public var version: Int64 = 0
-    public var platformEntity: Platform?
-    public var customerOrderList: [CustomerOrder] = []
+    private var _platformResult: SmartList<Platform> = .empty
+    public var platformResult: SmartList<Platform> { _platformResult }
+    public var platformEntity: Platform? {
+        get { _platformResult.first }
+        set {
+            _platformResult = SmartList(newValue.map { [$0] } ?? [],
+                facets: _platformResult.facets)
+            _loadedFields.insert("platformEntity")
+        }
+    }
+    private var _customerOrderListResult: SmartList<CustomerOrder> = .empty
+    public var customerOrderListResult: SmartList<CustomerOrder> { _customerOrderListResult }
+    public var customerOrderList: [CustomerOrder] {
+        get { _customerOrderListResult.data }
+        set {
+            _customerOrderListResult = SmartList(newValue, totalCount: _customerOrderListResult.totalCount,
+                aggregations: _customerOrderListResult.aggregations, summary: _customerOrderListResult.summary,
+                facets: _customerOrderListResult.facets)
+            _loadedFields.insert("customerOrderList")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -42,12 +62,12 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "OrderStatus",
         table: "order_status_data",
         properties: [
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
             PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "code", modelName: "code", column: "code", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "color", modelName: "color", column: "color", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "displayOrder", modelName: "display_order", column: "display_order", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "displayOrder", modelName: "display_order", column: "display_order", type: .decimal, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
@@ -58,9 +78,10 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
-        // Hydration must not import the constructor's temporary new-entity ledger.
+        // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.platform = record["platform"]?.int64Value
@@ -73,7 +94,7 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
         if record.keys.contains("code") { entity._loadedFields.insert("code") }
         entity.color = record["color"]?.stringValue
         if record.keys.contains("color") { entity._loadedFields.insert("color") }
-        entity.displayOrder = record["displayOrder"]?.int64Value
+        entity.displayOrder = record["displayOrder"]?.decimalValue
         if record.keys.contains("displayOrder") { entity._loadedFields.insert("displayOrder") }
         entity.version = record["version"]?.int64Value ?? 0
         if record.keys.contains("version") { entity._loadedFields.insert("version") }
@@ -81,39 +102,43 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["platformEntity"]
+            + ["customerOrderList"]))
         if let relationValue = record["platformEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
-                entity.platformEntity = try Platform.from(
-                    record: relatedRecord, root: EntityRoot(), snapshots: snapshots)
+                entity.platformEntity = try Platform.from(record: relatedRecord,
+                    root: EntityRoot(), snapshots: snapshots,
+                    relations: relations["platformEntity"]?.loadedRelations[0] ?? [:])
             case .null:
                 entity.platformEntity = nil
             default:
                 throw TeaQLError.execution("Invalid relation payload: platform")
             }
             entity._loadedFields.insert("platformEntity")
+            entity._platformResult.facets = relations["platformEntity"]?.facets ?? [:]
         }
         if let relationValue = record["customerOrderList"] {
             switch relationValue {
             case .array(let values):
-                entity.customerOrderList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try CustomerOrder.from(record: childRecord,
-                        root: root, snapshots: snapshots)
+                entity.customerOrderList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try CustomerOrder.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["customerOrderList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.customerOrderList = [try CustomerOrder.from(record: childRecord,
-                    root: root, snapshots: snapshots)]
+                entity.customerOrderList = [try CustomerOrder.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["customerOrderList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.customerOrderList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: customerOrderList")
             }
             entity._loadedFields.insert("customerOrderList")
+            entity._customerOrderListResult.facets = relations["customerOrderList"]?.facets ?? [:]
         }
-        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set([
-            "platform", "id", "name", "code", "color", "displayOrder", "version"
-        ]))
         return entity
     }
 
@@ -132,7 +157,7 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
             "name": name.map { .string($0) } ?? .null,
             "code": code.map { .string($0) } ?? .null,
             "color": color.map { .string($0) } ?? .null,
-            "displayOrder": displayOrder.map { .int($0) } ?? .null,
+            "displayOrder": displayOrder.map { .decimal($0) } ?? .null,
             "version": .int(version)
         ]
     }
@@ -155,7 +180,7 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
             record["color"] = color.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("displayOrder") {
-            record["display_order"] = displayOrder.map { .int($0) } ?? .null
+            record["display_order"] = displayOrder.map { .decimal($0) } ?? .null
         }
         if _loadedFields.contains("version") {
             record["version"] = .int(version)
@@ -173,6 +198,7 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
         try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -228,10 +254,10 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
 
 
     @discardableResult
-    public mutating func updateDisplayOrder(_ value: Int64?) -> Self {
+    public mutating func updateDisplayOrder(_ value: Decimal?) -> Self {
         self.displayOrder = value
         self._loadedFields.insert("displayOrder")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "display_order", value: value.map { .int($0) } ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "display_order", value: value.map { .decimal($0) } ?? .null)
         return self
     }
 

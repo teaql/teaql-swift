@@ -936,17 +936,39 @@ public struct UserContext: Sendable {
     _ query: SelectQuery, countRequested: Bool,
     hydrate: @Sendable (TeaQLRecord) throws -> Entity
   ) async throws -> SmartList<Entity> {
+    try await executeTypedList(query, countRequested: countRequested) { record, _ in
+      try hydrate(record)
+    }
+  }
+
+  /// A generated typed graph needs its per-row relation-result metadata as
+  /// well as record values. Facets remain query-only data, never ledger fields.
+  public func executeTypedList<Entity: Sendable>(
+    _ query: SelectQuery, countRequested: Bool,
+    hydrate: @Sendable (TeaQLRecord, [String: QueryResult]) throws -> Entity
+  ) async throws -> SmartList<Entity> {
     let request = try QueryRequest(query: query)
     return try await withListOperation(request, completion: { rows in
       ["teaql.result.cardinality": .integer(Int64(rows.count))]
     }) { authorized in
-      if countRequested {
-        let page = try await executePage(authorized, offset: query.offset, limit: query.limit ?? 10_000)
-        return SmartList(try page.items.map(hydrate), totalCount: page.total,
-          aggregations: page.items.aggregations, summary: page.items.summary, facets: page.items.facets)
+      var query = authorized.query
+      if countRequested, let alias = query.pageCountOperation?.alias {
+        query.aggregates.removeAll { $0.function == .count && $0.alias == alias }
       }
-      let result = try await execute(authorized)
-      return SmartList(try result.records.map(hydrate), facets: result.facets)
+      let rowsRequest = authorized.withQuery(query)
+      let result = try await execute(rowsRequest)
+      var total: Int?
+      if countRequested {
+        let observation = await idSetPaginationObservation()
+        total = query.idSetPagination != nil && observation.countAccuracy == "EXACT"
+          ? observation.count : try await count(rowsRequest)
+      }
+      let named = total.flatMap { value in
+        query.pageCountOperation?.alias.map { [$0: TeaQLValue.int(Int64(value))] }
+      } ?? [:]
+      return SmartList(try result.records.enumerated().map { index, record in
+        try hydrate(record, result.loadedRelations[index] ?? [:])
+      }, totalCount: total, aggregations: named, facets: result.facets)
     }
   }
 

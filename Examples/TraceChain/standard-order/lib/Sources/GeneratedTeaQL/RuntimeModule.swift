@@ -152,7 +152,7 @@ public enum GeneratedRuntimeModule {
             created.updateName("New")
             created.updateCode("NEW")
             created.updateColor("#94A3B8")
-            created.updateDisplayOrder(1)
+            created.updateDisplayOrder(Decimal(string: "1")!)
             do { constantOrderStatus1001 = try await created.auditAs("create model constant OrderStatus(1001)").save(rootedContext) }
             catch { constantOrderStatus1001 = try await Q.orderStatuses().withIdIs(1001).comment("what: recover concurrent constant bootstrap").purpose("why: make bootstrap idempotent").executeForList(rootedContext).first; if constantOrderStatus1001 == nil { throw error } }
         } else {
@@ -174,8 +174,8 @@ public enum GeneratedRuntimeModule {
                 current.updateColor("#94A3B8")
                 changed = true
             }
-            if current.displayOrder != 1 {
-                current.updateDisplayOrder(1)
+            if current.displayOrder != Decimal(string: "1")! {
+                current.updateDisplayOrder(Decimal(string: "1")!)
                 changed = true
             }
             if changed { constantOrderStatus1001 = try await current.auditAs("reconcile model constant OrderStatus(1001)").save(rootedContext) }
@@ -188,7 +188,7 @@ public enum GeneratedRuntimeModule {
             created.updateName("Paid")
             created.updateCode("PAID")
             created.updateColor("#22C55E")
-            created.updateDisplayOrder(2)
+            created.updateDisplayOrder(Decimal(string: "2")!)
             do { constantOrderStatus1002 = try await created.auditAs("create model constant OrderStatus(1002)").save(rootedContext) }
             catch { constantOrderStatus1002 = try await Q.orderStatuses().withIdIs(1002).comment("what: recover concurrent constant bootstrap").purpose("why: make bootstrap idempotent").executeForList(rootedContext).first; if constantOrderStatus1002 == nil { throw error } }
         } else {
@@ -210,8 +210,8 @@ public enum GeneratedRuntimeModule {
                 current.updateColor("#22C55E")
                 changed = true
             }
-            if current.displayOrder != 2 {
-                current.updateDisplayOrder(2)
+            if current.displayOrder != Decimal(string: "2")! {
+                current.updateDisplayOrder(Decimal(string: "2")!)
                 changed = true
             }
             if changed { constantOrderStatus1002 = try await current.auditAs("reconcile model constant OrderStatus(1002)").save(rootedContext) }
@@ -224,7 +224,7 @@ public enum GeneratedRuntimeModule {
             created.updateName("Cancelled")
             created.updateCode("CANCELLED")
             created.updateColor("#EF4444")
-            created.updateDisplayOrder(3)
+            created.updateDisplayOrder(Decimal(string: "3")!)
             do { constantOrderStatus1003 = try await created.auditAs("create model constant OrderStatus(1003)").save(rootedContext) }
             catch { constantOrderStatus1003 = try await Q.orderStatuses().withIdIs(1003).comment("what: recover concurrent constant bootstrap").purpose("why: make bootstrap idempotent").executeForList(rootedContext).first; if constantOrderStatus1003 == nil { throw error } }
         } else {
@@ -246,8 +246,8 @@ public enum GeneratedRuntimeModule {
                 current.updateColor("#EF4444")
                 changed = true
             }
-            if current.displayOrder != 3 {
-                current.updateDisplayOrder(3)
+            if current.displayOrder != Decimal(string: "3")! {
+                current.updateDisplayOrder(Decimal(string: "3")!)
                 changed = true
             }
             if changed { constantOrderStatus1003 = try await current.auditAs("reconcile model constant OrderStatus(1003)").save(rootedContext) }

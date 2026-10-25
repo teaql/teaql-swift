@@ -3,6 +3,7 @@ import Foundation
 import TeaQLCore
 
 public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var platform: Int64? = nil
     public var schoolType: Int64? = nil
@@ -37,6 +38,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -68,8 +70,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "school_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
             PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "address", modelName: "address", column: "address", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "establishedDate", modelName: "established_date", column: "established_date", type: .date, nullable: false, isID: false, isVersion: false),
@@ -119,6 +121,10 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + ["platformEntity", "schoolTypeEntity"]
+            + []))
         if let relationValue = record["platformEntity"] {
             switch relationValue {
             case .object(let relatedRecord):
@@ -164,7 +170,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             "schoolType": schoolType.map { .int($0) } ?? .null,
             "name": name.map { .string($0) } ?? .null,
             "address": address.map { .string($0) } ?? .null,
-            "establishedDate": establishedDate.map { .date($0) } ?? .null,
+            "establishedDate": establishedDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
             "studentCapacity": studentCapacity.map { .int($0) } ?? .null,
             "active": active.map { .bool($0) } ?? .null,
             "createTime": createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
@@ -191,7 +197,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             record["address"] = address.map { .string($0) } ?? .null
         }
         if _loadedFields.contains("establishedDate") {
-            record["established_date"] = establishedDate.map { .date($0) } ?? .null
+            record["established_date"] = establishedDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
         }
         if _loadedFields.contains("studentCapacity") {
             record["student_capacity"] = studentCapacity.map { .int($0) } ?? .null
@@ -217,9 +223,11 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "School", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -261,6 +269,13 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_type", value: .int(1001))
         return self
     }
+    @discardableResult
+    public mutating func updateSchoolTypeToSecondary() -> Self {
+        self.schoolType = 1002
+        self._loadedFields.insert("schoolType")
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_type", value: .int(1002))
+        return self
+    }
 
 
     @discardableResult
@@ -285,7 +300,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public mutating func updateEstablishedDate(_ value: Date?) -> Self {
         self.establishedDate = value
         self._loadedFields.insert("establishedDate")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "established_date", value: value.map { .date($0) } ?? .null)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: "established_date", value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
         return self
     }
 
@@ -371,7 +386,8 @@ public struct SchoolAudited: Sendable {
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }

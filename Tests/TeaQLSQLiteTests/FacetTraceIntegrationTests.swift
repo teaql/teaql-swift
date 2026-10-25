@@ -232,6 +232,27 @@ func swiftLoadedFacetCarriersKeepPerOwnerCountsAndEmptyCollections(includeAll: B
   parents.relationQuery("schoolList", localKey: "id", foreignKey: "schoolType", many: true, query: schools)
   let loaded = try await context.execute(parents)
   #expect(loaded.records.count == 2)
+  // A real requested graph, not arbitrary provider-injected metadata. Typed
+  // hydration must retain both owners' sidecars, including empty collections,
+  // for counted and uncounted lists without putting Facets into record fields.
+  for counted in [false, true] {
+    let typed: SmartList<[String: QueryResult]> = try await context.executeTypedList(
+      parents, countRequested: counted
+    ) { record, relations in
+      #expect(record["facets"] == nil && record["loadedRelations"] == nil)
+      return relations
+    }
+    #expect(typed.count == loaded.records.count)
+    #expect(typed.totalCount == (counted ? 2 : nil))
+    for index in loaded.records.indices {
+      let actual = try #require(typed[index]["schoolList"])
+      let expected = try #require(loaded.loadedRelations[index]?["schoolList"])
+      #expect(actual.records == expected.records)
+      #expect(actual.facets["types"]?.data == expected.facets["types"]?.data)
+      #expect(actual.facets["types"]?.facets["platforms"]?.data
+        == expected.facets["types"]?.facets["platforms"]?.data)
+    }
+  }
   for index in loaded.records.indices {
     let carrier = try #require(loaded.loadedRelations[index]?["schoolList"])
     #expect(carrier.records.count == (index == 0 ? 1 : 0))

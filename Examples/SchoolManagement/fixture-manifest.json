@@ -1,0 +1,73 @@
+{
+  "schema": "teaql.retained-example-fixture/v1",
+  "modelSource": "Examples/SchoolManagement/models/school-model.xml",
+  "modelSha256": "b5cd06ae44464fc29ed24de82654b47c80f546110496756aa15923cee1c511b4",
+  "evaluatedScope": "swift-lib-core",
+  "evaluationErrors": 0,
+  "evaluationWarnings": 0,
+  "producerSource": {
+    "commit": "466ddab7947223bb214edd34ead7c8455ebe885e",
+    "diff": "6d71e2f9e2349b2c4e9964357760dae1687d384f36371c40d9aae5ad0fe2fa65",
+    "status": "f97da43397ea8262d02cee4d7fe0de1d25c4b5df5a2172671313aa17347f3e7c",
+    "sourceContentsSha256": "d1021ac1c2eb502f553dddc79f9c3ed618d1eef25c7edce959e477a5d7df4912",
+    "retainedModels": [
+      {
+        "id": "conformance",
+        "model": "Examples/Conformance/model.xml",
+        "target": "Examples/Conformance",
+        "language": "swift",
+        "scope": "swift-lib-core",
+        "modelSha256": "0a59f66db2487fdd0430087dd5985ae780225c088ad800679cb57c593c6bcee7"
+      },
+      {
+        "id": "school-management",
+        "model": "Examples/SchoolManagement/models/school-model.xml",
+        "target": "Examples/SchoolManagement",
+        "language": "swift",
+        "scope": "swift-lib-core",
+        "modelSha256": "b5cd06ae44464fc29ed24de82654b47c80f546110496756aa15923cee1c511b4"
+      },
+      {
+        "id": "facet-trace",
+        "model": "Examples/FacetTrace/model.xml",
+        "target": "Examples/FacetTrace/Generated",
+        "language": "swift",
+        "scope": "swift-lib-core",
+        "modelSha256": "0e385417536df9dcacddf8cc778d2156005b766437e2644e4fa673d5783cc9cc"
+      },
+      {
+        "id": "trace-chain",
+        "model": "Examples/TraceChain/model.xml",
+        "target": "Examples/TraceChain/Generated",
+        "language": "swift",
+        "scope": "swift-lib-core",
+        "modelSha256": "e7290d70b3c977fe339828330b5553bde512d61ee3a195285d6aafd1a7c32477"
+      },
+      {
+        "id": "standard-order",
+        "model": "Examples/TraceChain/standard-order/model.xml",
+        "target": "Examples/TraceChain/standard-order/lib",
+        "language": "swift",
+        "scope": "swift-lib-core",
+        "modelSha256": "f207e9603ffa6bdc98007e61093eaa7bed51fc15f26e033fc75709dcb9cde287"
+      }
+    ],
+    "exporterProbeSha256": "28ed6118a3440044db8e7bb519ae1628702d625e819fdf5de9a87b416c8d3177"
+  },
+  "producerReceiptSha256": "e952e05057e8411c017f88811342d61fc13a1b7174a33ee978f5a8cee0e4813c",
+  "generatedManifestSha256": "1e0ff6fc83af9806e3ed4c340676ca5ee03aeea57ca0a258b7d147f8cf1f0b32",
+  "files": {
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "bc43e0a83b6e680f4101538932f39d14d47072894785da850ee291778e74c6a1",
+    "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "636de51e11502959e01afc503c8aafb92e896f8067e05cda543f0b4276c94458",
+    "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "ed7060625af9133cdb6e24d40b50eb81d50a426f6da73f64d69e9116fcdfa02d",
+    "Sources/GeneratedTeaQL/Models/SchoolType.swift": "674bec66c78c671afed41e4c9981b60b7d00cfff262619245e64ff63bc004039",
+    "Sources/GeneratedTeaQL/Models/School.swift": "3e9d94f72ab0a741912f7990a7c4edb1aefbe8996bfa150ce0c61abb677f7e25",
+    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "75a7788378ace539047bd3cb40b1d7bdbf826c54a076657bdae914f98df80f7f",
+    "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift": "411fbef3c41a0bdef7e19095ee8fedfe238f556030d5a1bb5008d6281a7d6c48",
+    "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift": "2bc73da96d225b2e4022ba2bb888e05fefd0efca1c79b79192f1753ac2750072",
+    "Sources/GeneratedTeaQL/Q.swift": "43c8f6aa5cb8f762121529babae4926a4b7668a879da509f9a0d2bb1a6ee20ce",
+    "Sources/GeneratedTeaQL/E.swift": "ccebeeeac31c89ec54d07602bdc1e5c4372abf74f9b7251d84f3673f2e8085f9"
+  },
+  "applicationManifestsPreserved": true
+}

@@ -2,12 +2,7 @@
 import Foundation
 import TeaQLCore
 
-public struct TeaQLNotLoadedError: Error, Sendable, Equatable {
-    public let root: String
-    public let accessPath: String
-    public let breakPoint: String
-    public var suggestedFix: String { "select" + breakPoint.prefix(1).uppercased() + breakPoint.dropFirst() + "(...)" }
-}
+public typealias TeaQLNotLoadedError = TeaQLCore.TeaQLNotLoadedError
 
 public struct ValueExpression<T>: Sendable where T: Sendable {
     private let value: T?
@@ -17,9 +12,11 @@ public struct ValueExpression<T>: Sendable where T: Sendable {
     public init(_ value: T?, present: Bool = true, notLoaded: TeaQLNotLoadedError? = nil) {
         self.value = value; self.present = present; self.notLoaded = notLoaded
     }
-    public func eval() throws -> T? { if let notLoaded { throw notLoaded }; return value }
-    public func isPresent() throws -> Bool { if let notLoaded { throw notLoaded }; return present }
-    public func orElse(_ fallback: T) throws -> T { try eval() ?? fallback }
+    public func eval() throws -> T? { if let notLoaded { throw notLoaded.terminal("eval()") }; return value }
+    public func isPresent() throws -> Bool { if let notLoaded { throw notLoaded.terminal("isPresent()") }; return present }
+    public func orElse(_ fallback: T) throws -> T {
+        if let notLoaded { throw notLoaded.terminal("orElse(<fallback>)") }; return value ?? fallback
+    }
     public static func missing() -> Self { Self(nil, present: false) }
     public static func notLoaded(_ error: TeaQLNotLoadedError) -> Self { Self(nil, present: false, notLoaded: error) }
 }
@@ -27,101 +24,101 @@ public struct ValueExpression<T>: Sendable where T: Sendable {
 public struct PlatformExpression: Sendable {
     private let value: Platform?
     private let root: String
-    private let path: String
+    private let path: ExpressionPath
     private let notLoaded: TeaQLNotLoadedError?
 
-    init(_ value: Platform?, root: String, path: String = "", notLoaded: TeaQLNotLoadedError? = nil) {
+    init(_ value: Platform?, root: String, path: ExpressionPath = ExpressionPath("E.platform(<root>)", profile: JsonFieldNamingProfile(rawValue: "camelCase")!), notLoaded: TeaQLNotLoadedError? = nil) {
         self.value = value; self.root = root; self.path = path; self.notLoaded = notLoaded
     }
 
     public func eval() throws -> Platform? {
-        if let notLoaded { throw notLoaded }
+        if let notLoaded { throw notLoaded.terminal("eval()") }
         return value
     }
 
     public func id() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("id", method: "id")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "id" : path + ".id"
         guard value.isLoaded("id") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "id"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "id"))
         }
         return ValueExpression(value.id)
     }
 
     public func name() -> ValueExpression<String> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("name", method: "name")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "name" : path + ".name"
         guard value.isLoaded("name") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "name"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "name"))
         }
         return ValueExpression(value.name)
     }
 
     public func baseUrl() -> ValueExpression<String> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("base_url", method: "baseUrl")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "baseUrl" : path + ".baseUrl"
         guard value.isLoaded("baseUrl") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "baseUrl"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "base_url"))
         }
         return ValueExpression(value.baseUrl)
     }
 
     public func createTime() -> ValueExpression<Date> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("create_time", method: "createTime")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "createTime" : path + ".createTime"
         guard value.isLoaded("createTime") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "createTime"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "create_time"))
         }
         return ValueExpression(value.createTime)
     }
 
     public func updateTime() -> ValueExpression<Date> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("update_time", method: "updateTime")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "updateTime" : path + ".updateTime"
         guard value.isLoaded("updateTime") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "updateTime"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "update_time"))
         }
         return ValueExpression(value.updateTime)
     }
 
     public func version() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("version", method: "version")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "version" : path + ".version"
         guard value.isLoaded("version") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "version"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "version"))
         }
         return ValueExpression(value.version)
     }
     public func schoolTypeList() -> SchoolTypeListExpression {
-        let accessPath = path.isEmpty ? "schoolTypeList" : path + ".schoolTypeList"
+        let accessPath = path.member("school_type_list", method: "schoolTypeList")
         if let notLoaded {
-            return SchoolTypeListExpression([], root: root, path: accessPath, present: false, notLoaded: notLoaded)
+            return SchoolTypeListExpression([], root: root, path: accessPath, present: false, notLoaded: notLoaded.withPath(accessPath))
         }
         guard let value else { return .missing(root: root, path: accessPath) }
         guard value.isLoaded("schoolTypeList") else {
             return SchoolTypeListExpression(
                 [], root: root, path: accessPath, present: false,
-                notLoaded: TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "schoolTypeList"))
+                notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_type_list"))
         }
         return SchoolTypeListExpression(value.schoolTypeList, root: root, path: accessPath)
     }
 
     public func schoolList() -> SchoolListExpression {
-        let accessPath = path.isEmpty ? "schoolList" : path + ".schoolList"
+        let accessPath = path.member("school_list", method: "schoolList")
         if let notLoaded {
-            return SchoolListExpression([], root: root, path: accessPath, present: false, notLoaded: notLoaded)
+            return SchoolListExpression([], root: root, path: accessPath, present: false, notLoaded: notLoaded.withPath(accessPath))
         }
         guard let value else { return .missing(root: root, path: accessPath) }
         guard value.isLoaded("schoolList") else {
             return SchoolListExpression(
                 [], root: root, path: accessPath, present: false,
-                notLoaded: TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "schoolList"))
+                notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_list"))
         }
         return SchoolListExpression(value.schoolList, root: root, path: accessPath)
     }
@@ -130,99 +127,99 @@ public struct PlatformExpression: Sendable {
 public struct SchoolTypeExpression: Sendable {
     private let value: SchoolType?
     private let root: String
-    private let path: String
+    private let path: ExpressionPath
     private let notLoaded: TeaQLNotLoadedError?
 
-    init(_ value: SchoolType?, root: String, path: String = "", notLoaded: TeaQLNotLoadedError? = nil) {
+    init(_ value: SchoolType?, root: String, path: ExpressionPath = ExpressionPath("E.schoolType(<root>)", profile: JsonFieldNamingProfile(rawValue: "camelCase")!), notLoaded: TeaQLNotLoadedError? = nil) {
         self.value = value; self.root = root; self.path = path; self.notLoaded = notLoaded
     }
 
     public func eval() throws -> SchoolType? {
-        if let notLoaded { throw notLoaded }
+        if let notLoaded { throw notLoaded.terminal("eval()") }
         return value
     }
 
     public func id() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("id", method: "id")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "id" : path + ".id"
         guard value.isLoaded("id") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "id"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "id"))
         }
         return ValueExpression(value.id)
     }
 
     public func name() -> ValueExpression<String> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("name", method: "name")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "name" : path + ".name"
         guard value.isLoaded("name") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "name"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "name"))
         }
         return ValueExpression(value.name)
     }
 
     public func code() -> ValueExpression<String> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("code", method: "code")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "code" : path + ".code"
         guard value.isLoaded("code") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "code"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "code"))
         }
         return ValueExpression(value.code)
     }
 
     public func displayOrder() -> ValueExpression<Decimal> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("display_order", method: "displayOrder")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "displayOrder" : path + ".displayOrder"
         guard value.isLoaded("displayOrder") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "displayOrder"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "display_order"))
         }
         return ValueExpression(value.displayOrder)
     }
 
     public func version() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("version", method: "version")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "version" : path + ".version"
         guard value.isLoaded("version") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "version"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "version"))
         }
         return ValueExpression(value.version)
     }
     public func platformId() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("platform", method: "platformId")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "platform" : path + ".platform"
         guard value.isLoaded("platform") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "platform"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "platform"))
         }
         return ValueExpression(value.platform)
     }
     public func platform() -> PlatformExpression {
-        let accessPath = path.isEmpty ? "platform" : path + ".platform"
+        let accessPath = path.member("platform", method: "platform")
         if let notLoaded {
-            return PlatformExpression(nil, root: root, path: accessPath, notLoaded: notLoaded)
+            return PlatformExpression(nil, root: root, path: accessPath, notLoaded: notLoaded.withPath(accessPath))
         }
         guard let value else { return PlatformExpression(nil, root: root, path: accessPath) }
         guard value.isLoaded("platformEntity") else {
             return PlatformExpression(
                 nil, root: root, path: accessPath,
-                notLoaded: TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "platform"))
+                notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "platform"))
         }
         return PlatformExpression(value.platformEntity, root: root, path: accessPath)
     }
     public func schoolList() -> SchoolListExpression {
-        let accessPath = path.isEmpty ? "schoolList" : path + ".schoolList"
+        let accessPath = path.member("school_list", method: "schoolList")
         if let notLoaded {
-            return SchoolListExpression([], root: root, path: accessPath, present: false, notLoaded: notLoaded)
+            return SchoolListExpression([], root: root, path: accessPath, present: false, notLoaded: notLoaded.withPath(accessPath))
         }
         guard let value else { return .missing(root: root, path: accessPath) }
         guard value.isLoaded("schoolList") else {
             return SchoolListExpression(
                 [], root: root, path: accessPath, present: false,
-                notLoaded: TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "schoolList"))
+                notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_list"))
         }
         return SchoolListExpression(value.schoolList, root: root, path: accessPath)
     }
@@ -231,150 +228,150 @@ public struct SchoolTypeExpression: Sendable {
 public struct SchoolExpression: Sendable {
     private let value: School?
     private let root: String
-    private let path: String
+    private let path: ExpressionPath
     private let notLoaded: TeaQLNotLoadedError?
 
-    init(_ value: School?, root: String, path: String = "", notLoaded: TeaQLNotLoadedError? = nil) {
+    init(_ value: School?, root: String, path: ExpressionPath = ExpressionPath("E.school(<root>)", profile: JsonFieldNamingProfile(rawValue: "camelCase")!), notLoaded: TeaQLNotLoadedError? = nil) {
         self.value = value; self.root = root; self.path = path; self.notLoaded = notLoaded
     }
 
     public func eval() throws -> School? {
-        if let notLoaded { throw notLoaded }
+        if let notLoaded { throw notLoaded.terminal("eval()") }
         return value
     }
 
     public func id() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("id", method: "id")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "id" : path + ".id"
         guard value.isLoaded("id") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "id"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "id"))
         }
         return ValueExpression(value.id)
     }
 
     public func name() -> ValueExpression<String> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("name", method: "name")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "name" : path + ".name"
         guard value.isLoaded("name") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "name"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "name"))
         }
         return ValueExpression(value.name)
     }
 
     public func address() -> ValueExpression<String> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("address", method: "address")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "address" : path + ".address"
         guard value.isLoaded("address") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "address"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "address"))
         }
         return ValueExpression(value.address)
     }
 
     public func establishedDate() -> ValueExpression<Date> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("established_date", method: "establishedDate")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "establishedDate" : path + ".establishedDate"
         guard value.isLoaded("establishedDate") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "establishedDate"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "established_date"))
         }
         return ValueExpression(value.establishedDate)
     }
 
     public func studentCapacity() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("student_capacity", method: "studentCapacity")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "studentCapacity" : path + ".studentCapacity"
         guard value.isLoaded("studentCapacity") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "studentCapacity"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "student_capacity"))
         }
         return ValueExpression(value.studentCapacity)
     }
 
     public func active() -> ValueExpression<Bool> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("active", method: "active")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "active" : path + ".active"
         guard value.isLoaded("active") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "active"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "active"))
         }
         return ValueExpression(value.active)
     }
 
     public func createTime() -> ValueExpression<Date> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("create_time", method: "createTime")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "createTime" : path + ".createTime"
         guard value.isLoaded("createTime") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "createTime"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "create_time"))
         }
         return ValueExpression(value.createTime)
     }
 
     public func updateTime() -> ValueExpression<Date> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("update_time", method: "updateTime")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "updateTime" : path + ".updateTime"
         guard value.isLoaded("updateTime") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "updateTime"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "update_time"))
         }
         return ValueExpression(value.updateTime)
     }
 
     public func version() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("version", method: "version")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "version" : path + ".version"
         guard value.isLoaded("version") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "version"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "version"))
         }
         return ValueExpression(value.version)
     }
     public func platformId() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("platform", method: "platformId")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "platform" : path + ".platform"
         guard value.isLoaded("platform") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "platform"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "platform"))
         }
         return ValueExpression(value.platform)
     }
 
     public func schoolTypeId() -> ValueExpression<Int64> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        let accessPath = path.member("school_type", method: "schoolTypeId")
+        if let notLoaded { return .notLoaded(notLoaded.withPath(accessPath)) }
         guard let value else { return .missing() }
-        let accessPath = path.isEmpty ? "schoolType" : path + ".schoolType"
         guard value.isLoaded("schoolType") else {
-            return .notLoaded(TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "schoolType"))
+            return .notLoaded(TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_type"))
         }
         return ValueExpression(value.schoolType)
     }
     public func platform() -> PlatformExpression {
-        let accessPath = path.isEmpty ? "platform" : path + ".platform"
+        let accessPath = path.member("platform", method: "platform")
         if let notLoaded {
-            return PlatformExpression(nil, root: root, path: accessPath, notLoaded: notLoaded)
+            return PlatformExpression(nil, root: root, path: accessPath, notLoaded: notLoaded.withPath(accessPath))
         }
         guard let value else { return PlatformExpression(nil, root: root, path: accessPath) }
         guard value.isLoaded("platformEntity") else {
             return PlatformExpression(
                 nil, root: root, path: accessPath,
-                notLoaded: TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "platform"))
+                notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "platform"))
         }
         return PlatformExpression(value.platformEntity, root: root, path: accessPath)
     }
 
     public func schoolType() -> SchoolTypeExpression {
-        let accessPath = path.isEmpty ? "schoolType" : path + ".schoolType"
+        let accessPath = path.member("school_type", method: "schoolType")
         if let notLoaded {
-            return SchoolTypeExpression(nil, root: root, path: accessPath, notLoaded: notLoaded)
+            return SchoolTypeExpression(nil, root: root, path: accessPath, notLoaded: notLoaded.withPath(accessPath))
         }
         guard let value else { return SchoolTypeExpression(nil, root: root, path: accessPath) }
         guard value.isLoaded("schoolTypeEntity") else {
             return SchoolTypeExpression(
                 nil, root: root, path: accessPath,
-                notLoaded: TeaQLNotLoadedError(root: root, accessPath: accessPath, breakPoint: "schoolType"))
+                notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_type"))
         }
         return SchoolTypeExpression(value.schoolTypeEntity, root: root, path: accessPath)
     }
@@ -383,33 +380,37 @@ public struct SchoolExpression: Sendable {
 public struct PlatformListExpression: Sendable {
     private let items: [Platform]
     private let root: String
-    private let path: String
+    private let path: ExpressionPath
     private let present: Bool
     private let notLoaded: TeaQLNotLoadedError?
 
     init(
-        _ items: [Platform], root: String, path: String,
+        _ items: [Platform], root: String, path: ExpressionPath,
         present: Bool = true, notLoaded: TeaQLNotLoadedError? = nil
     ) {
         self.items = items; self.root = root; self.path = path
         self.present = present; self.notLoaded = notLoaded
     }
 
-    static func missing(root: String, path: String) -> Self {
+    static func missing(root: String, path: ExpressionPath) -> Self {
         Self([], root: root, path: path, present: false)
     }
 
     public func size() -> ValueExpression<Int> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        if let notLoaded { return .notLoaded(notLoaded.withPath(path.operation("size()"))) }
         return present ? ValueExpression(items.count) : .missing()
     }
 
-    public func first() -> PlatformExpression { get(0) }
+    public func first() -> PlatformExpression { item(0, first: true) }
 
     public func get(_ index: Int) -> PlatformExpression {
-        let itemPath = path + ".get(\(index))"
+        item(index, first: false)
+    }
+
+    private func item(_ index: Int, first: Bool) -> PlatformExpression {
+        let itemPath = path.index(index, first: first)
         if let notLoaded {
-            return PlatformExpression(nil, root: root, path: itemPath, notLoaded: notLoaded)
+            return PlatformExpression(nil, root: root, path: itemPath, notLoaded: notLoaded.withPath(itemPath))
         }
         let value = present && items.indices.contains(index) ? items[index] : nil
         return PlatformExpression(value, root: root, path: itemPath)
@@ -419,33 +420,37 @@ public struct PlatformListExpression: Sendable {
 public struct SchoolTypeListExpression: Sendable {
     private let items: [SchoolType]
     private let root: String
-    private let path: String
+    private let path: ExpressionPath
     private let present: Bool
     private let notLoaded: TeaQLNotLoadedError?
 
     init(
-        _ items: [SchoolType], root: String, path: String,
+        _ items: [SchoolType], root: String, path: ExpressionPath,
         present: Bool = true, notLoaded: TeaQLNotLoadedError? = nil
     ) {
         self.items = items; self.root = root; self.path = path
         self.present = present; self.notLoaded = notLoaded
     }
 
-    static func missing(root: String, path: String) -> Self {
+    static func missing(root: String, path: ExpressionPath) -> Self {
         Self([], root: root, path: path, present: false)
     }
 
     public func size() -> ValueExpression<Int> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        if let notLoaded { return .notLoaded(notLoaded.withPath(path.operation("size()"))) }
         return present ? ValueExpression(items.count) : .missing()
     }
 
-    public func first() -> SchoolTypeExpression { get(0) }
+    public func first() -> SchoolTypeExpression { item(0, first: true) }
 
     public func get(_ index: Int) -> SchoolTypeExpression {
-        let itemPath = path + ".get(\(index))"
+        item(index, first: false)
+    }
+
+    private func item(_ index: Int, first: Bool) -> SchoolTypeExpression {
+        let itemPath = path.index(index, first: first)
         if let notLoaded {
-            return SchoolTypeExpression(nil, root: root, path: itemPath, notLoaded: notLoaded)
+            return SchoolTypeExpression(nil, root: root, path: itemPath, notLoaded: notLoaded.withPath(itemPath))
         }
         let value = present && items.indices.contains(index) ? items[index] : nil
         return SchoolTypeExpression(value, root: root, path: itemPath)
@@ -455,33 +460,37 @@ public struct SchoolTypeListExpression: Sendable {
 public struct SchoolListExpression: Sendable {
     private let items: [School]
     private let root: String
-    private let path: String
+    private let path: ExpressionPath
     private let present: Bool
     private let notLoaded: TeaQLNotLoadedError?
 
     init(
-        _ items: [School], root: String, path: String,
+        _ items: [School], root: String, path: ExpressionPath,
         present: Bool = true, notLoaded: TeaQLNotLoadedError? = nil
     ) {
         self.items = items; self.root = root; self.path = path
         self.present = present; self.notLoaded = notLoaded
     }
 
-    static func missing(root: String, path: String) -> Self {
+    static func missing(root: String, path: ExpressionPath) -> Self {
         Self([], root: root, path: path, present: false)
     }
 
     public func size() -> ValueExpression<Int> {
-        if let notLoaded { return .notLoaded(notLoaded) }
+        if let notLoaded { return .notLoaded(notLoaded.withPath(path.operation("size()"))) }
         return present ? ValueExpression(items.count) : .missing()
     }
 
-    public func first() -> SchoolExpression { get(0) }
+    public func first() -> SchoolExpression { item(0, first: true) }
 
     public func get(_ index: Int) -> SchoolExpression {
-        let itemPath = path + ".get(\(index))"
+        item(index, first: false)
+    }
+
+    private func item(_ index: Int, first: Bool) -> SchoolExpression {
+        let itemPath = path.index(index, first: first)
         if let notLoaded {
-            return SchoolExpression(nil, root: root, path: itemPath, notLoaded: notLoaded)
+            return SchoolExpression(nil, root: root, path: itemPath, notLoaded: notLoaded.withPath(itemPath))
         }
         let value = present && items.indices.contains(index) ? items[index] : nil
         return SchoolExpression(value, root: root, path: itemPath)
@@ -490,12 +499,12 @@ public struct SchoolListExpression: Sendable {
 
 public enum E {
     public static func platform(_ value: Platform?) -> PlatformExpression {
-        PlatformExpression(value, root: "Platform(id=\(value?.id.description ?? "null"))")
+        PlatformExpression(value, root: "Platform")
     }
     public static func schoolType(_ value: SchoolType?) -> SchoolTypeExpression {
-        SchoolTypeExpression(value, root: "SchoolType(id=\(value?.id.description ?? "null"))")
+        SchoolTypeExpression(value, root: "SchoolType")
     }
     public static func school(_ value: School?) -> SchoolExpression {
-        SchoolExpression(value, root: "School(id=\(value?.id.description ?? "null"))")
+        SchoolExpression(value, root: "School")
     }
 }

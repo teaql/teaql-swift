@@ -167,7 +167,7 @@ public struct OrderItemRequest<State: Sendable>: Sendable {
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("customerOrder") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customerOrder") {
             copy.query.projection.append("customerOrder")
         }
         copy.query.relationQuery(
@@ -805,14 +805,7 @@ public struct OrderItemRequest<State: Sendable>: Sendable {
 
 public extension OrderItemRequest where State == RequestExecutable {
     private func ensureIntent() throws {
-        guard let comment = query.comment,
-              !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Comment is required before execution")
-        }
-        guard let purpose = query.purpose,
-              !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Purpose is required before execution")
-        }
+        _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
     func newEntity(_ context: UserContext) throws -> OrderItem {
@@ -822,17 +815,18 @@ public extension OrderItemRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderItem> {
         try ensureIntent()
-        let queryRoot = EntityRoot()
         let snapshots = LoadedEntitySnapshots()
-        return try await context.executeTypedList(query, countRequested: countRequested) {
-            try OrderItem.from(record: $0, root: queryRoot, snapshots: snapshots)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try OrderItem.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
         }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
+
 
 }

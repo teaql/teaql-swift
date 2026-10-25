@@ -4,8 +4,24 @@ import TeaQLCore
 
 public struct PlatformRequest<State: Sendable>: Sendable {
     private var query: SelectQuery
+    private var searchWarnings: [DynamicSearchWarning] = []
+    private var countRequested = false
 
-    init(query: SelectQuery) { self.query = query }
+    init(query: SelectQuery, searchWarnings: [DynamicSearchWarning] = [], countRequested: Bool = false) {
+        self.query = query
+        self.searchWarnings = searchWarnings
+        self.countRequested = countRequested
+    }
+
+    public var dynamicSearchWarnings: [DynamicSearchWarning] { searchWarnings }
+
+    public func filterByJson(_ source: String, warn: ((DynamicSearchWarning) -> Void)? = nil) throws -> Self {
+        let result = try DynamicSearch.mergeGeneratedScalar(query, source: source, models: GeneratedSearchModels.models, warn: warn)
+        var copy = self
+        copy.query = result.query
+        copy.searchWarnings.append(contentsOf: result.warnings)
+        return copy
+    }
 
     @discardableResult
     public func comment(_ value: String) -> Self {
@@ -14,7 +30,7 @@ public struct PlatformRequest<State: Sendable>: Sendable {
 
     public func purpose(_ value: String) -> PlatformRequest<RequestExecutable> {
         var copy = query; copy.purpose = value
-        return PlatformRequest<RequestExecutable>(query: copy)
+        return PlatformRequest<RequestExecutable>(query: copy, searchWarnings: searchWarnings, countRequested: countRequested)
     }
 
     @discardableResult
@@ -226,7 +242,8 @@ public struct PlatformRequest<State: Sendable>: Sendable {
             localKey: "id",
             foreignKey: "platform",
             many: true,
-            query: child.toQuery())
+            query: child.toQuery(),
+            operation: QueryOperation("relation", method: "selectSchoolTypeListWith", relation: "schoolTypeList"))
         return copy
     }
 
@@ -246,7 +263,8 @@ public struct PlatformRequest<State: Sendable>: Sendable {
             localKey: "id",
             foreignKey: "platform",
             many: true,
-            query: child.toQuery())
+            query: child.toQuery(),
+            operation: QueryOperation("relation", method: "selectSchoolListWith", relation: "schoolList"))
         return copy
     }
 
@@ -257,7 +275,14 @@ public struct PlatformRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func countSchoolTypesAs(_ alias: String) -> Self {
-        countSchoolTypesWith(alias, Q.schoolTypes())
+        var copy = self
+        var childQuery = Q.schoolTypes().toQuery()
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
+        copy.query.relationAggregate(
+            "schoolTypeList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countSchoolTypesAs", alias: alias, relation: "schoolTypeList"))
+        return copy
     }
 
     @discardableResult
@@ -266,10 +291,11 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
         copy.query.relationAggregate(
             "schoolTypeList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countSchoolTypesWith", alias: alias, relation: "schoolTypeList"))
         return copy
     }
 
@@ -286,11 +312,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.min, field: "displayOrder", alias: "min_displayOrder"))
+        childQuery.aggregates = [
+            QueryAggregate(.min, field: "displayOrder", alias: alias)]
         copy.query.relationAggregate(
             "schoolTypeList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "minDisplayOrderOfSchoolTypesAs", alias: alias, relation: "schoolTypeList"))
         return copy
     }
 
@@ -308,11 +335,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.max, field: "displayOrder", alias: "max_displayOrder"))
+        childQuery.aggregates = [
+            QueryAggregate(.max, field: "displayOrder", alias: alias)]
         copy.query.relationAggregate(
             "schoolTypeList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "maxDisplayOrderOfSchoolTypesAs", alias: alias, relation: "schoolTypeList"))
         return copy
     }
 
@@ -330,11 +358,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.sum, field: "displayOrder", alias: "sum_displayOrder"))
+        childQuery.aggregates = [
+            QueryAggregate(.sum, field: "displayOrder", alias: alias)]
         copy.query.relationAggregate(
             "schoolTypeList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "sumDisplayOrderOfSchoolTypesAs", alias: alias, relation: "schoolTypeList"))
         return copy
     }
 
@@ -352,11 +381,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.avg, field: "displayOrder", alias: "avg_displayOrder"))
+        childQuery.aggregates = [
+            QueryAggregate(.avg, field: "displayOrder", alias: alias)]
         copy.query.relationAggregate(
             "schoolTypeList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "avgDisplayOrderOfSchoolTypesAs", alias: alias, relation: "schoolTypeList"))
         return copy
     }
 
@@ -372,7 +402,14 @@ public struct PlatformRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func countSchoolsAs(_ alias: String) -> Self {
-        countSchoolsWith(alias, Q.schools())
+        var copy = self
+        var childQuery = Q.schools().toQuery()
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
+        copy.query.relationAggregate(
+            "schoolList", foreignKey: "platform", alias: alias,
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countSchoolsAs", alias: alias, relation: "schoolList"))
+        return copy
     }
 
     @discardableResult
@@ -381,10 +418,11 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(QueryAggregate(.count, field: "id", alias: alias))
+        childQuery.aggregates = [QueryAggregate(.count, field: "id", alias: alias)]
         copy.query.relationAggregate(
             "schoolList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("count", method: "countSchoolsWith", alias: alias, relation: "schoolList"))
         return copy
     }
 
@@ -401,11 +439,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.min, field: "studentCapacity", alias: "min_studentCapacity"))
+        childQuery.aggregates = [
+            QueryAggregate(.min, field: "studentCapacity", alias: alias)]
         copy.query.relationAggregate(
             "schoolList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "minStudentCapacityOfSchoolsAs", alias: alias, relation: "schoolList"))
         return copy
     }
 
@@ -423,11 +462,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.max, field: "studentCapacity", alias: "max_studentCapacity"))
+        childQuery.aggregates = [
+            QueryAggregate(.max, field: "studentCapacity", alias: alias)]
         copy.query.relationAggregate(
             "schoolList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "maxStudentCapacityOfSchoolsAs", alias: alias, relation: "schoolList"))
         return copy
     }
 
@@ -445,11 +485,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.sum, field: "studentCapacity", alias: "sum_studentCapacity"))
+        childQuery.aggregates = [
+            QueryAggregate(.sum, field: "studentCapacity", alias: alias)]
         copy.query.relationAggregate(
             "schoolList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "sumStudentCapacityOfSchoolsAs", alias: alias, relation: "schoolList"))
         return copy
     }
 
@@ -467,11 +508,12 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     ) -> Self {
         var copy = self
         var childQuery = child.toQuery()
-        childQuery.aggregates.append(
-            QueryAggregate(.avg, field: "studentCapacity", alias: "avg_studentCapacity"))
+        childQuery.aggregates = [
+            QueryAggregate(.avg, field: "studentCapacity", alias: alias)]
         copy.query.relationAggregate(
             "schoolList", foreignKey: "platform", alias: alias,
-            query: childQuery, singleResult: true)
+            query: childQuery, singleResult: true,
+            operation: QueryOperation("aggregate", method: "avgStudentCapacityOfSchoolsAs", alias: alias, relation: "schoolList"))
         return copy
     }
 
@@ -944,7 +986,9 @@ public struct PlatformRequest<State: Sendable>: Sendable {
     @discardableResult
     public func countAs(_ alias: String) -> Self {
         var copy = self
+        copy.countRequested = true
         copy.query.aggregates.append(QueryAggregate(.count, field: "*", alias: alias))
+        copy.query.pageCountOperation = QueryOperation("count", method: "countAs", alias: alias)
         return copy
     }
 
@@ -1023,13 +1067,11 @@ public extension PlatformRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Platform> {
         try ensureIntent()
-        let result = try await context.execute(QueryRequest(query: query))
         let snapshots = LoadedEntitySnapshots()
-        return SmartList(
-            try result.records.enumerated().map { index, record in
-                try Platform.from(record: record, root: EntityRoot(), snapshots: snapshots,
-                    relations: result.loadedRelations[index] ?? [:]) },
-            facets: result.facets)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try Platform.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
+        }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
@@ -1038,27 +1080,5 @@ public extension PlatformRequest where State == RequestExecutable {
         return SmartList(result.records, facets: result.facets)
     }
 
-    func executeForPage(
-        _ context: UserContext, offset: Int, limit: Int
-    ) async throws -> TeaQLPage<Platform> {
-        try ensureIntent()
-        var pageQuery = query
-        pageQuery.offset = offset
-        pageQuery.limit = limit
-        let result = try await context.execute(QueryRequest(query: pageQuery))
-        let observation = await context.idSetPaginationObservation()
-        let total: Int
-        if pageQuery.idSetPagination != nil && observation.countAccuracy == "EXACT" {
-            total = observation.count
-        } else {
-            total = try await context.count(QueryRequest(query: pageQuery))
-        }
-        let snapshots = LoadedEntitySnapshots()
-        let items = SmartList(
-            try result.records.enumerated().map { index, record in
-                try Platform.from(record: record, root: EntityRoot(), snapshots: snapshots,
-                    relations: result.loadedRelations[index] ?? [:]) },
-            totalCount: total, facets: result.facets)
-        return TeaQLPage(items: items, total: total, offset: offset, limit: limit)
-    }
+
 }

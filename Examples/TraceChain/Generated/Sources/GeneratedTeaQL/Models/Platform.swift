@@ -7,10 +7,21 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     public var id: Int64 = 0
     public var name: String? = nil
     public var version: Int64 = 0
-    public var customerOrderList: [CustomerOrder] = []
+    private var _customerOrderListResult: SmartList<CustomerOrder> = .empty
+    public var customerOrderListResult: SmartList<CustomerOrder> { _customerOrderListResult }
+    public var customerOrderList: [CustomerOrder] {
+        get { _customerOrderListResult.data }
+        set {
+            _customerOrderListResult = SmartList(newValue, totalCount: _customerOrderListResult.totalCount,
+                aggregations: _customerOrderListResult.aggregations, summary: _customerOrderListResult.summary,
+                facets: _customerOrderListResult.facets)
+            _loadedFields.insert("customerOrderList")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -45,9 +56,10 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
-        // Hydration must not import the constructor's temporary new-entity ledger.
+        // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
@@ -60,28 +72,29 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + []
+            + ["customerOrderList"]))
         if let relationValue = record["customerOrderList"] {
             switch relationValue {
             case .array(let values):
-                entity.customerOrderList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try CustomerOrder.from(record: childRecord,
-                        root: root, snapshots: snapshots)
+                entity.customerOrderList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try CustomerOrder.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["customerOrderList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.customerOrderList = [try CustomerOrder.from(record: childRecord,
-                    root: root, snapshots: snapshots)]
+                entity.customerOrderList = [try CustomerOrder.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["customerOrderList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.customerOrderList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: customerOrderList")
             }
             entity._loadedFields.insert("customerOrderList")
+            entity._customerOrderListResult.facets = relations["customerOrderList"]?.facets ?? [:]
         }
-        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set([
-            "id", "name", "version"
-        ]).union([])
-            .union(["customerOrderList"]))
         return entity
     }
 
@@ -125,6 +138,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 

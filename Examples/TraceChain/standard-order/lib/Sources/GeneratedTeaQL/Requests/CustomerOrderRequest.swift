@@ -169,7 +169,7 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
         _ child: CustomerRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("customer") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customer") {
             copy.query.projection.append("customer")
         }
         copy.query.relationQuery(
@@ -192,7 +192,7 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
         _ child: OrderStatusRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("status") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("status") {
             copy.query.projection.append("status")
         }
         copy.query.relationQuery(
@@ -1118,14 +1118,7 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
 
 public extension CustomerOrderRequest where State == RequestExecutable {
     private func ensureIntent() throws {
-        guard let comment = query.comment,
-              !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Comment is required before execution")
-        }
-        guard let purpose = query.purpose,
-              !purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw TeaQLError.execution("Purpose is required before execution")
-        }
+        _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
     func newEntity(_ context: UserContext) throws -> CustomerOrder {
@@ -1135,17 +1128,18 @@ public extension CustomerOrderRequest where State == RequestExecutable {
 
     func executeForList(_ context: UserContext) async throws -> SmartList<CustomerOrder> {
         try ensureIntent()
-        let queryRoot = EntityRoot()
         let snapshots = LoadedEntitySnapshots()
-        return try await context.executeTypedList(query, countRequested: countRequested) {
-            try CustomerOrder.from(record: $0, root: queryRoot, snapshots: snapshots)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try CustomerOrder.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
         }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
+
 
 }

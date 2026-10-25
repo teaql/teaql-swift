@@ -3,13 +3,25 @@ import Foundation
 import TeaQLCore
 
 public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
+    public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var name: String? = nil
     public var version: Int64 = 0
-    public var workItemList: [WorkItem] = []
+    private var _workItemListResult: SmartList<WorkItem> = .empty
+    public var workItemListResult: SmartList<WorkItem> { _workItemListResult }
+    public var workItemList: [WorkItem] {
+        get { _workItemListResult.data }
+        set {
+            _workItemListResult = SmartList(newValue, totalCount: _workItemListResult.totalCount,
+                aggregations: _workItemListResult.aggregations, summary: _workItemListResult.summary,
+                facets: _workItemListResult.facets)
+            _loadedFields.insert("workItemList")
+        }
+    }
     private var _loadedFields: Set<String> = []
     public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
+
     private static let teaqlIDLock = NSLock()
     nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
@@ -44,7 +56,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public static func from(record: TeaQLRecord, root: EntityRoot,
-                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots()) throws -> Self {
+                            snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
+                            relations: [String: QueryResult] = [:]) throws -> Self {
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
@@ -59,21 +72,28 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
             version: entity.version, record: record)
+        entity.dynamicProperties = QueryProjectionSnapshot(record: record, excluding: Set(
+            Self.descriptor.properties.flatMap { [$0.name, $0.column] + ($0.modelName.map { [$0] } ?? []) }
+            + []
+            + ["workItemList"]))
         if let relationValue = record["workItemList"] {
             switch relationValue {
             case .array(let values):
-                entity.workItemList = try values.compactMap {
-                    guard case .object(let childRecord) = $0 else { return nil }
-                    return try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)
+                entity.workItemList = try values.enumerated().compactMap { index, value in
+                    guard case .object(let childRecord) = value else { return nil }
+                    return try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot,
+                        snapshots: snapshots, relations: relations["workItemList"]?.loadedRelations[index] ?? [:])
                 }
             case .object(let childRecord):
-                entity.workItemList = [try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot, snapshots: snapshots)]
+                entity.workItemList = [try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["workItemList"]?.loadedRelations[0] ?? [:])]
             case .null:
                 entity.workItemList = []
             default:
                 throw TeaQLError.execution("Invalid relation payload: workItemList")
             }
             entity._loadedFields.insert("workItemList")
+            entity._workItemListResult.facets = relations["workItemList"]?.facets ?? [:]
         }
         return entity
     }
@@ -114,9 +134,11 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
         let oldKey = teaqlEntityKey
+        let newKey = EntityKey(entity: "Platform", id: .int(value))
+        try teaqlEntityRoot.rekey(oldKey, to: newKey)
         id = value
         _loadedFields.insert("id")
-        try teaqlEntityRoot.rekey(oldKey, to: teaqlEntityKey)
+
         teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
     }
 
@@ -215,7 +237,8 @@ public struct PlatformAudited: Sendable {
     }
 
     func teaqlPreflightGraph(_ context: UserContext) throws {
-        if entity.version != 0 && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
+        if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
+            && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
                 throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
             }
