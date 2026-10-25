@@ -9,6 +9,8 @@ public struct QueryProjectionSnapshot: Sendable {
   }
 
   public func contains(_ alias: String) -> Bool { values[alias] != nil }
+  /// A value-semantic copy for presentation; it carries no mutation authority.
+  public var record: TeaQLRecord { values }
   /// An absent query-derived dynamic property is not a modeled NotLoaded field.
   public func value(_ alias: String) -> TeaQLValue? { values[alias] }
 
