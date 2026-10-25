@@ -57,7 +57,7 @@ let package = Package(
       exclude: ["Generated/Package.swift", "Generated/README.md", "README.md"],
       sources: ["Sources", "Generated/Sources/GeneratedTeaQL"]
     ),
-    .testTarget(name: "TeaQLCoreTests", dependencies: ["TeaQLCore"]),
+    .testTarget(name: "TeaQLCoreTests", dependencies: ["TeaQLCore"], resources: [.process("fixtures")]),
     .testTarget(name: "TeaQLSQLTests", dependencies: ["TeaQLSQL"]),
     .testTarget(name: "TeaQLSQLiteTests", dependencies: ["TeaQLSQLite", "TeaQLTestSupport"]),
     .testTarget(name: "TeaQLFederalTests", dependencies: ["TeaQLFederal"]),
