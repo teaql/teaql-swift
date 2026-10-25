@@ -2,13 +2,19 @@
 set -euo pipefail
 example="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$example/../.." && pwd)"
-evidence="$(mktemp -d -t teaql-swift-scalar.XXXXXXXX)"
+if [[ -n "${TEAQL_SWIFT_SCALAR_EVIDENCE_DIR:-}" ]]; then
+  evidence="$TEAQL_SWIFT_SCALAR_EVIDENCE_DIR"
+  if [[ -e "$evidence" ]]; then echo "refusing to overwrite scalar evidence: $evidence" >&2; exit 1; fi
+  mkdir -p "$evidence"
+else
+  evidence="$(mktemp -d -t teaql-swift-scalar.XXXXXXXX)"
+fi
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
 cd "$example"
 sha256sum -c generated.sha256
 swift build --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
   --force-resolved-versions > "$evidence/build.log" 2>&1 || {
-    tail -n 35 "$evidence/build.log"; exit 1;
+    cat "$evidence/build.log"; exit 1;
   }
 for round in 1 2; do
   TEAQL_SCALAR_DB="$evidence/scalar.sqlite" swift run --scratch-path "$scratch" \

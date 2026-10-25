@@ -9,6 +9,9 @@ if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   exit 1
 fi
 node "$repo/Examples/FixEAlignment/verify-local.cjs"
+inventory_evidence="${TEAQL_EXAMPLES_EVIDENCE_DIR:-$(mktemp -d -t teaql-swift-examples-evidence.XXXXXXXX)}"
+mkdir -p "$inventory_evidence"
+export TEAQL_SWIFT_SCALAR_EVIDENCE_DIR="$inventory_evidence/scalar"
 
 # Local runtime dependencies may gain source files without changing Package.swift.
 # Refresh the build plan so old manifests cannot omit newly added runtime code.

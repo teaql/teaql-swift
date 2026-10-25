@@ -367,7 +367,7 @@ public struct ScalarTypeProbeRequest<State: Sendable>: Sendable {
         _ child: TypePlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.contains("typePlatform") {
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("typePlatform") {
             copy.query.projection.append("typePlatform")
         }
         copy.query.relationQuery(
