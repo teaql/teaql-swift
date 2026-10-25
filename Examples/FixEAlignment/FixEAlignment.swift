@@ -27,7 +27,7 @@ private func missing<T>(
   static func main() async throws {
     let first = ISO8601DateFormatter().date(from: "2032-02-29T10:15:30Z")!
     let second = first.addingTimeInterval(25 * 3600)
-    let service = try SQLiteDataService(path: ":memory:")
+    let service = try SQLiteDataService(path: ProcessInfo.processInfo.environment["TEAQL_FIX_E_DB"] ?? ":memory:")
     let module = GeneratedRuntimeModule.module
     var runtime = TeaQLRuntime()
     try runtime.install(module)

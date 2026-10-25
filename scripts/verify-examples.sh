@@ -2,12 +2,13 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-expected=(Conformance FacetTrace ObjectStorage OrderManagement ScalarTypeProbe SchoolManagement TraceChain)
+expected=(Conformance FacetTrace FixEAlignment ObjectStorage OrderManagement ScalarTypeProbe SchoolManagement TraceChain)
 mapfile -t actual < <(find "$repo/Examples" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   echo "example inventory changed; update scripts/verify-examples.sh: ${actual[*]}" >&2
   exit 1
 fi
+node "$repo/Examples/FixEAlignment/verify-local.cjs"
 
 # Local runtime dependencies may gain source files without changing Package.swift.
 # Refresh the build plan so old manifests cannot omit newly added runtime code.
