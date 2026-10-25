@@ -1692,15 +1692,33 @@ public struct UserContext: Sendable {
     var validated = request.mutation
     validated.actor = actor
     validated.auditCategory = auditCategory
-    if let checker = runtime.checker(named: validated.entity.name) {
-      let violations = translateCheckResults(
+    let checker = runtime.checker(named: validated.entity.name)
+    var violations: [CheckResult] = []
+    if let checker {
+      violations = translateCheckResults(
         try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
+    }
+    // Validate the final custom-Fix result even without an installed checker.
+    // Keep invalid numbers away from policy snapshots and provider boundaries;
+    // do not publish a rejected Fix back into a caller's mutation ledger.
+    let invalidFields = Set(validated.values.compactMap { name, value -> String? in
+      guard case .double(let number) = value, !number.isFinite else { return nil }
+      let property = validated.entity.property(named: name)
+      return property?.modelName ?? property?.name ?? name
+    })
+    if !invalidFields.isEmpty {
+      violations.append(contentsOf: invalidFields.sorted().map {
+        CheckResult(ruleID: "invalid_type", location: .property($0),
+          message: "Expected a finite Float/Double value", entityType: validated.entity.name)
+      })
+    }
+    if !violations.isEmpty { throw CheckException(violations) }
+    if checker != nil {
       if let ledgerRoot, let ledgerKey {
         for (field, value) in validated.values {
           ledgerRoot.set(ledgerKey, field: field, value: value)
         }
       }
-      if !violations.isEmpty { throw CheckException(violations) }
     }
     return request.withMutation(validated).mutation
   }

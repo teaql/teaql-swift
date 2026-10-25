@@ -897,7 +897,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       case .int(let value): result = sqlite3_bind_int64(statement, index, value)
       case .uint(let value) where value <= UInt64(Int64.max):
         result = sqlite3_bind_int64(statement, index, Int64(value))
-      case .double(let value): result = sqlite3_bind_double(statement, index, value)
+      case .double(let value):
+        guard value.isFinite else { throw SQLiteError.unsupportedValue("non-finite floating-point value") }
+        result = sqlite3_bind_double(statement, index, value)
       case .decimal(let value): result = try bindText(String(describing: value), statement, index)
       case .string(let value): result = try bindText(value, statement, index)
       case .calendarDate(let value): result = try bindText(value, statement, index)
@@ -942,7 +944,10 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       if type == .bool { return .bool(value != 0) }
       if type == .timestamp { return .timestamp(value) }
       return .int(value)
-    case SQLITE_FLOAT: return .double(sqlite3_column_double(statement, index))
+    case SQLITE_FLOAT:
+      let value = sqlite3_column_double(statement, index)
+      guard value.isFinite else { throw SQLiteError.unsupportedValue("non-finite stored floating-point value") }
+      return .double(value)
     case SQLITE_BLOB:
       let count = Int(sqlite3_column_bytes(statement, index))
       guard let bytes = sqlite3_column_blob(statement, index) else { return .data(Data()) }
