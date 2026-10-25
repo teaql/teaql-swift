@@ -52,6 +52,7 @@ public final class GraphMutationSession: @unchecked Sendable {
   package let policy: MutationPolicyCoordinator
   private let lock = NSLock()
   private var active = true
+  private var preparing = false
   private var commitActions: [@Sendable () throws -> Void] = []
   private var rollbackActions: [@Sendable () throws -> Void] = []
   private var auditEvents: [(AuditEvent, [TeaQLValue])] = []
@@ -66,6 +67,23 @@ public final class GraphMutationSession: @unchecked Sendable {
   package func ensureActive() throws {
     try lock.withLock {
       guard active else { throw TeaQLError.execution("Graph Mutation Session is already closed") }
+    }
+  }
+
+  package func beginPreparation() throws {
+    try ensureActive()
+    lock.withLock { preparing = true }
+  }
+
+  package func endPreparation() throws {
+    try ensureActive()
+    lock.withLock { preparing = false }
+  }
+
+  package func requireProviderAccess() throws {
+    try ensureActive()
+    try lock.withLock {
+      guard !preparing else { throw TeaQLError.execution("GRAPH_PREPARATION_CANNOT_ACCESS_PROVIDER") }
     }
   }
 
@@ -135,6 +153,7 @@ public final class GraphMutationSession: @unchecked Sendable {
 /// Shared provider coordination only; never owns lineage or graph callbacks.
 package final class GraphTransactionGate: @unchecked Sendable {
   package enum Reentry { @TaskLocal static var active: Set<UUID> = [] }
+  package enum Preparation { @TaskLocal static var active: Set<UUID> = [] }
   package let id = UUID()
   private let lock = NSLock()
   private var occupied = false

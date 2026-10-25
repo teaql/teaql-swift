@@ -248,13 +248,13 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
     self.warningSink = warningSink ?? ConsoleMutationGovernanceSink()
   }
 
-  package func beginGraph(auditReason: String) throws {
+  package func beginGraph(auditReason: String, rootEntity: String? = nil) throws {
     stateLock.lock(); defer { stateLock.unlock() }
     guard !graphActive else { throw MutationPolicyError.graphAlreadyActive }
     graphActive = true
     graphReviewed = false
     preflight = []
-    rootEntity = nil
+    self.rootEntity = rootEntity
     self.auditReason = auditReason
     remaining = [:]
     graphSnapshot = nil
@@ -323,6 +323,20 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
     if count == 1 { remaining.removeValue(forKey: key) }
     else { remaining[key] = count - 1 }
     return graphSnapshot!
+  }
+
+  /// The generated preparation callback has captured every operation. Review
+  /// now, while its Context still has no provider/transaction capability.
+  package func reviewPreparedGraph(context: UserContext) throws {
+    stateLock.lock(); defer { stateLock.unlock() }
+    guard graphActive, !graphReviewed else { throw MutationPolicyError.preflightAfterReview }
+    guard !preflight.isEmpty else { return }
+    let snapshot = try review(context: context, plan: makePlan(
+      root: rootEntity!, auditReason: auditReason, operations: preflight.map(\.0)))
+    graphSnapshot = snapshot
+    remaining = [:]
+    for (_, key) in preflight { remaining[key, default: 0] += 1 }
+    graphReviewed = true
   }
 
   package func ensureGraphComplete() throws {

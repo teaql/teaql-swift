@@ -317,8 +317,9 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
 
   public func save(_ context: UserContext) async throws -> Entity {
     _ = try MutationIntent(comment: reason)
-    return try await context.executeGraphSave(comment: reason) { graphContext, session in
+    return try await context.executeGraphSave(comment: reason, rootEntityType: Entity.descriptor.name, preparing: { graphContext, _ in
       try preflight(graphContext)
+    }) { graphContext, session in
       let key = (entity as? any TeaQLMutationRootedEntity)?.teaqlEntityKey
         ?? EntityKey(entity: Entity.descriptor.name, id: .int(entity.id))
       return try await saveInGraph(graphContext, session: session,
@@ -622,8 +623,8 @@ public struct UserContext: Sendable {
   /// query or federation payloads.
   public let trustedTenant: String?
   public let activeRoot: ContextEntityRef?
-  public let queryExecutor: any QueryExecutor
-  public let mutationExecutor: any MutationExecutor
+  public private(set) var queryExecutor: any QueryExecutor
+  public private(set) var mutationExecutor: any MutationExecutor
   public let requestPolicy: RequestPolicy
   public let auditSink: (any AuditSink)?
   public let telemetrySink: (any RuntimeTelemetrySink)?
@@ -719,6 +720,27 @@ public struct UserContext: Sendable {
     _ request: GraphMutationRequest,
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
+    try await executeGraphSave(request, rootEntityType: nil, preparation: nil, operation)
+  }
+
+  /// Generated traversal prepares the complete reachable graph under the same
+  /// queue, session and captured clock, before transaction or provider entry.
+  public func executeGraphSave<T: Sendable>(
+    comment: String,
+    rootEntityType: String? = nil,
+    preparing: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> Void,
+    _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
+  ) async throws -> T {
+    try await executeGraphSave(GraphMutationRequest(comment: comment), rootEntityType: rootEntityType,
+      preparation: preparing, operation)
+  }
+
+  private func executeGraphSave<T: Sendable>(
+    _ request: GraphMutationRequest,
+    rootEntityType: String?,
+    preparation: (@Sendable (UserContext, GraphMutationSession) async throws -> Void)?,
+    _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
+  ) async throws -> T {
     guard graphSession == nil, !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
       throw TeaQLError.execution("Independent graph save cannot implicitly join an active graph; pass its explicit session for composed children")
     }
@@ -730,12 +752,15 @@ public struct UserContext: Sendable {
     // and post-commit audit delivery. Individual entity operations remain its
     // children; applications and generated libraries need no SDK calls.
     return try await runtimeTelemetry.withOperation(RuntimeOperation(family: "mutation", name: "graph.save")) {
-      try await executeGraphTransaction(request, transaction: transaction, operation)
+      try await executeGraphTransaction(request, transaction: transaction, rootEntityType: rootEntityType,
+        preparation: preparation, operation)
     }
   }
 
   private func executeGraphTransaction<T: Sendable>(
     _ request: GraphMutationRequest, transaction: any GraphTransactionExecutor,
+    rootEntityType: String?,
+    preparation: (@Sendable (UserContext, GraphMutationSession) async throws -> Void)?,
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
     let policy = mutationPolicyCoordinator.fork()
@@ -751,7 +776,26 @@ public struct UserContext: Sendable {
     defer { if !gateReleased { graphTransactionGate.release(evidence: retainedEvidence) } }
     let result: T
     do {
-      try policy.beginGraph(auditReason: request.intent.auditReason)
+      try Task.checkCancellation()
+      try policy.beginGraph(auditReason: request.intent.auditReason, rootEntity: rootEntityType)
+      if let preparation {
+        try session.beginPreparation()
+        var guarded = graphContext
+        let denied = GraphPreparationExecutor()
+        guarded.queryExecutor = denied
+        guarded.mutationExecutor = denied
+        let preparingContext = guarded
+        try await GraphTransactionGate.Reentry.$active.withValue(
+          GraphTransactionGate.Reentry.active.union([graphTransactionGate.id])) {
+            try await GraphTransactionGate.Preparation.$active.withValue(
+              GraphTransactionGate.Preparation.active.union([graphTransactionGate.id])) {
+                try await preparation(preparingContext, session)
+            }
+        }
+        try policy.reviewPreparedGraph(context: preparingContext)
+        try session.endPreparation()
+      }
+      try Task.checkCancellation()
       try await transaction.beginGraphTransaction()
       transactionStarted = true
       result = try await GraphTransactionGate.Reentry.$active.withValue(
@@ -791,6 +835,13 @@ public struct UserContext: Sendable {
   }
 
   public var fixTime: Date { graphSession?.fixTime ?? businessTime }
+
+  private func requireProviderAccess() throws {
+    guard !GraphTransactionGate.Preparation.active.contains(graphTransactionGate.id) else {
+      throw TeaQLError.execution("GRAPH_PREPARATION_CANNOT_ACCESS_PROVIDER")
+    }
+    try graphSession?.requireProviderAccess()
+  }
   public func recordFixEvidence(_ evidence: FixEvidence) { graphSession?.recordFixEvidence(evidence) }
   public var lastFixEvidence: [FixEvidence] { graphTransactionGate.lastFixEvidence }
 
@@ -822,6 +873,7 @@ public struct UserContext: Sendable {
 
   /// Explicitly reconciles a passive RuntimeModule through this context's provider.
   public func ensureSchema(_ module: RuntimeModule) async throws {
+    try requireProviderAccess()
     guard let provider = queryExecutor as? any SchemaExecutor else {
       throw TeaQLError.execution(
         "Ensure Schema requires a schema-aware provider; configured provider is \(queryExecutor.providerKind)")
@@ -910,6 +962,7 @@ public struct UserContext: Sendable {
     completion: @Sendable (Result) -> [String: RuntimeTelemetryValue],
     _ body: (QueryRequest) async throws -> Result
   ) async throws -> Result {
+    try requireProviderAccess()
     let bound = try request.bindingTree()
     if let owner = ListExecutionState.owner,
       owner.context == queryExecutionContext && owner.root === bound.scope.root {
@@ -1480,6 +1533,7 @@ public struct UserContext: Sendable {
   }
 
   public func count(_ request: QueryRequest) async throws -> Int {
+    try requireProviderAccess()
     let bound = try request.bindingTree()
     let authorized = try (scopeAlreadyAuthorized(bound.scope)
       ? bound : bound.withQuery(requestPolicy.apply(bound.query)).bindingTree())
@@ -1547,8 +1601,9 @@ public struct UserContext: Sendable {
   public func execute(_ request: MutationBatchRequest) async throws -> [MutationResult] {
     let mutations = request.mutations
     guard !mutations.isEmpty else { return [] }
-    return try await executeGraphSave(comment: request.intent.comment) { context, _ in
+    return try await executeGraphSave(comment: request.intent.comment, preparing: { context, _ in
       for mutation in mutations { _ = try context.preflightMutation(mutation) }
+    }) { context, _ in
       var results: [MutationResult] = []
       results.reserveCapacity(mutations.count)
       for mutation in mutations { results.append(try await context.execute(mutation)) }
@@ -1559,6 +1614,7 @@ public struct UserContext: Sendable {
   public func execute(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {
+    try requireProviderAccess()
     let request = try MutationRequest(mutation: mutation)
     let standalone = graphSession == nil
     if standalone {
