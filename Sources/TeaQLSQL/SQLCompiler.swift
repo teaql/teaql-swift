@@ -123,6 +123,10 @@ public struct SQLiteCompiler: Sendable {
   public func createTable(_ entity: EntityDescriptor) throws -> String {
     let columns = entity.properties.map { property in
       var result = "\(quote(property.column)) \(sqlType(property.type))"
+      if property.type == .decimal {
+        let column = quote(property.column)
+        result += " CHECK (\(column) IS NULL OR teaql_decimal_valid(\(column)))"
+      }
       if property.isID { result += " PRIMARY KEY" }
       if !property.nullable { result += " NOT NULL" }
       return result
@@ -145,7 +149,13 @@ public struct SQLiteCompiler: Sendable {
           expression = "COUNT(*)"
         } else {
           let property = try requireProperty(aggregate.field, in: query.entity)
-          expression = "\(aggregate.function.rawValue.uppercased())(\(quote(property.column)))"
+          if property.type == .decimal && aggregate.function == .avg {
+            throw TeaQLError.unsupportedQueryCapability(
+              "SQLite exact Decimal AVG is unavailable; use an explicit precision policy")
+          }
+          let function = property.type == .decimal && aggregate.function == .sum
+            ? "teaql_decimal_sum" : aggregate.function.rawValue.uppercased()
+          expression = "\(function)(\(quote(property.column)))"
         }
         items.append("\(expression) AS \(quote(aggregate.alias))")
       }
@@ -306,7 +316,9 @@ public struct SQLiteCompiler: Sendable {
     switch type {
     case .bool, .int, .uint: "INTEGER"
     case .double: "REAL"
-    case .decimal: "NUMERIC"
+    // The TEXT suffix gives SQLite text affinity. NUMERIC affinity converts
+    // even a text-bound exact Decimal to binary REAL before hydration.
+    case .decimal: "DECIMAL_TEXT COLLATE TEAQL_DECIMAL"
     case .string: "TEXT"
     case .date, .localDateTime: "TEXT"
     case .timestamp: "INTEGER"

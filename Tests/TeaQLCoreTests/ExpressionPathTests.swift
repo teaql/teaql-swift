@@ -14,6 +14,7 @@ final class ExpressionPathTests: XCTestCase {
     XCTAssertEqual(wire.expressionWithBrokenPoint, "E.node(<root>).parent()<broken>.parent().userUrl().eval()")
     XCTAssertEqual(wire.breakPointIndex, 0)
     XCTAssertEqual(wire.suggestedFix.location, wire.location)
+    XCTAssertEqual(error.description, "TeaQLNotLoadedError: access_path=parent break_point=parent — select the missing field or relation expression=" + wire.expressionWithBrokenPoint)
   }
 
   func testIndicesProfilesAndNontraversalCallsAreSeparate() {

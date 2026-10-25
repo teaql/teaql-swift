@@ -40,7 +40,7 @@ public struct ExpressionPath: Sendable, Equatable {
     }.joined()
   }
   public func diagnostic(fallback: String) -> NotLoadedDiagnostic {
-    let failure = missing.map { steps[$0].location } ?? location
+    let failure = firstMissingLocation
     let breakPoint: String
     if let last = failure.segments.last, case .property(let name) = last { breakPoint = name } else { breakPoint = fallback }
     let wire = Self.wireLocation(failure)
@@ -49,6 +49,9 @@ public struct ExpressionPath: Sendable, Equatable {
       attemptedLocation: Self.wireLocation(location), attemptedInstancePath: location.instancePath(profile: profile),
       breakPointIndex: max(0, wire.count - 1), originalExpression: render(),
       expressionWithBrokenPoint: render(broken: true), suggestedFix: ExpressionPreloadGuidance(action: "preload", location: wire))
+  }
+  fileprivate var firstMissingLocation: ObjectLocation {
+    missing.map { steps[$0].location } ?? location
   }
   private static func wireLocation(_ location: ObjectLocation) -> [WireLocationSegment] {
     location.segments.map {
@@ -87,8 +90,8 @@ public struct TeaQLNotLoadedError: Error, Sendable, Equatable, CustomStringConve
   public func terminal(_ call: String) -> Self { Self(path: path.operation(call), breakPoint: breakPoint) }
   public func toWire() -> NotLoadedDiagnostic { path.diagnostic(fallback: breakPoint) }
   public var description: String {
-    // The closed DTO contains only strings, integers and location segments.
-    guard let data = try? JSONEncoder().encode(toWire()) else { return "NOT_LOADED" }
-    return String(decoding: data, as: UTF8.self)
+    let wire = toWire()
+    return "TeaQLNotLoadedError: access_path=\(path.firstMissingLocation.nativePath) break_point=\(wire.breakPoint)"
+      + " — select the missing field or relation expression=\(wire.expressionWithBrokenPoint)"
   }
 }

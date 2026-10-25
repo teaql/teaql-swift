@@ -9,7 +9,7 @@ private func require(_ value: Bool, _ message: String) throws {
 
 private func missing<T>(
   _ read: () throws -> T, at location: String, attempted: String, expression: String
-) throws -> NotLoadedDiagnostic {
+) throws -> (diagnostic: NotLoadedDiagnostic, human: String) {
   do { _ = try read() }
   catch let error as TeaQLCore.TeaQLNotLoadedError {
     let wire = error.toWire()
@@ -18,7 +18,7 @@ private func missing<T>(
     try require(wire.attemptedInstancePath == attempted, "Lost the attempted suffix")
     try require(wire.expressionWithBrokenPoint == expression, "Wrong native chain or breakpoint")
     try require(!error.description.contains("PRIVATE-FALLBACK"), "Error exported a fallback value")
-    return wire
+    return (wire, error.description)
   }
   throw TeaQLError.execution("NotLoaded must not become null or a fallback")
 }
@@ -54,7 +54,7 @@ private func missing<T>(
       .purpose("Verify complete E diagnostics without implicit loading").executeForList(initialContext)
     try require(rows.count == 1, "Missing saved order")
     let partial = rows[0]
-    let diagnostics = [
+    let results = [
       try missing({ try E.purchaseOrder(partial).tenant().name().eval() },
         at: "/tenant", attempted: "/tenant/name",
         expression: "E.purchaseOrder(<root>).tenant()<broken>.name().eval()"),
@@ -84,12 +84,15 @@ private func missing<T>(
     try require(try E.purchaseOrder(persisted).createTime().eval() == first, "Create time was not preserved")
     try require(try E.purchaseOrder(persisted).updateTime().eval() == second, "Update time did not advance to T1")
     try require(try E.purchaseOrder(persisted).contactPhone().eval() == "5550101", "Business input was not updated")
+    try await LoadingProbe.verify(updateContext, orderId: order.id)
+    try await OwnershipProbe.verify(updateContext)
     struct Result: Encodable {
       let language = "swift", passed = true, normalGeneratedSave = true
       let createTimePreserved = true, updateTimeAdvanced = true, declaredContextRootInjected = true
       let diagnostics: [NotLoadedDiagnostic]
+      let humanMessages: [String]
     }
-    let bytes = try JSONEncoder().encode(Result(diagnostics: diagnostics))
+    let bytes = try JSONEncoder().encode(Result(diagnostics: results.map(\.diagnostic), humanMessages: results.map(\.human)))
     print("FIX_E_EXAMPLE=" + String(decoding: bytes, as: UTF8.self))
   }
 }
