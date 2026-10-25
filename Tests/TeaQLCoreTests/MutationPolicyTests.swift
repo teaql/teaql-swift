@@ -159,23 +159,22 @@ struct MutationPolicyTests {
     #expect(snapshot.warningCodes == [MutationPolicyWarningCode.missingApproval])
   }
 
-  @Test func ledgerIdentitySurvivesParentIDAssignmentDuringExecution() async throws {
+  @Test func preparedRealIDsKeepTheChildForeignKeyInsideTheReviewedPlan() async throws {
     let provider = PolicyMutationRecorder()
     let policy = ClosureMutationPolicy(identity: identity) { plan in
-      #expect(plan.operations[1].changedValues["order"] == .null)
+      #expect(plan.operations[1].changedValues["order"] == .int(1))
       return MutationPolicyDecision(verdict: .allow)
     }
     let context = approvedContext(provider: provider, policy: policy)
-    let parent = mutation(.create, order, values: ["name": .string("parent")])
-    let childBefore = mutation(.create, line, values: ["order": .null])
-    let childAfter = mutation(.create, line, values: ["order": .int(1)])
-    let parentKey = EntityKey(entity: "Order", id: .int(-1))
-    let childKey = EntityKey(entity: "OrderLine", id: .int(-2))
+    let parent = mutation(.create, order, values: ["id": .int(1), "name": .string("parent")])
+    let childBefore = mutation(.create, line, values: ["id": .int(2), "order": .int(1)])
+    let parentKey = EntityKey(entity: "Order", id: .int(1))
+    let childKey = EntityKey(entity: "OrderLine", id: .int(2))
     try await context.executeGraphSave(comment: "verify graph save request") { context, _ in
       _ = try context.preflightMutation(parent, ledgerKey: parentKey)
       _ = try context.preflightMutation(childBefore, ledgerKey: childKey)
       _ = try await context.execute(parent, ledgerRoot: nil, ledgerKey: parentKey)
-      _ = try await context.execute(childAfter, ledgerRoot: nil, ledgerKey: childKey)
+      _ = try await context.execute(childBefore, ledgerRoot: nil, ledgerKey: childKey)
     }
     #expect(await provider.persistedMutations == 2)
   }

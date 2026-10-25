@@ -1641,12 +1641,18 @@ public struct UserContext: Sendable {
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {
     try graphSession?.ensureActive()
-    let validated = try checkAndFixMutation(
-      mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    let validated: Mutation
+    if let session = graphSession, let prepared = try session.preparedMutations.consume(
+      mutation, ledger: ledgerRoot, ledgerKey: ledgerKey, rootComment: session.intent.comment) {
+      validated = prepared
+    } else {
+      validated = try checkAndFixMutation(mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    }
     let oldProvenance = LogPrivacy.loadedMutationSource(validated)
     let invocationProvenance = LogPrivacy.inheritIntent(oldProvenance, inherited: graphSession?.intentProvenance)
     let mutationGovernance = try mutationPolicyCoordinator.enter(
       context: self, mutation: validated, ledgerKey: ledgerKey)
+    try graphSession?.preparedMutations.validateLedgers()
     let submittedID = validated.id
       ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
     let result = try await runtimeTelemetry.withOperation(
@@ -1733,8 +1739,12 @@ public struct UserContext: Sendable {
   public func preflightMutation(
     _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil
   ) throws -> Mutation {
+    let original = try MutationRequest(mutation: mutation).mutation
+    let state = ledgerKey.flatMap { ledgerRoot?.mutationSnapshot($0) }
     let validated = try checkAndFixMutation(
       mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    try graphSession?.preparedMutations.record(original: original, fixed: validated,
+      ledger: ledgerRoot, ledgerKey: ledgerKey, state: state)
     try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey)
     graphSession?.recordProvenance(Array(validated.values.values))
     graphSession?.recordLoadedProvenance(LogPrivacy.loadedMutationSource(validated))
@@ -1754,6 +1764,20 @@ public struct UserContext: Sendable {
       violations = translateCheckResults(
         try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
     }
+    // A field Fix cannot retarget a loaded object or turn a stale save into a
+    // newer optimistic version. Model identities belong to the caller ledger.
+    if validated.id != request.mutation.id {
+      let property = validated.entity.idProperty
+      violations.append(CheckResult(ruleID: "invalid_type",
+        location: .property(property?.modelName ?? property?.name ?? "id"),
+        message: "Fix cannot replace the mutation identity", entityType: validated.entity.name))
+    }
+    if validated.expectedVersion != request.mutation.expectedVersion {
+      let property = validated.entity.versionProperty
+      violations.append(CheckResult(ruleID: "invalid_type",
+        location: .property(property?.modelName ?? property?.name ?? "version"),
+        message: "Fix cannot replace the original optimistic version", entityType: validated.entity.name))
+    }
     // Validate the final custom-Fix result even without an installed checker.
     // Keep invalid numbers away from policy snapshots and provider boundaries;
     // do not publish a rejected Fix back into a caller's mutation ledger.
@@ -1769,7 +1793,7 @@ public struct UserContext: Sendable {
       })
     }
     if !violations.isEmpty { throw CheckException(violations) }
-    if checker != nil {
+    if checker != nil && graphSession == nil {
       if let ledgerRoot, let ledgerKey {
         for (field, value) in validated.values {
           ledgerRoot.set(ledgerKey, field: field, value: value)

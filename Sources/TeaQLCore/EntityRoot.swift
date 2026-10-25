@@ -37,6 +37,24 @@ public final class EntityRoot: @unchecked Sendable {
     lock.lock(); defer { lock.unlock() }; return changes[key] ?? [:]
   }
 
+  package struct MutationSnapshot: Sendable {
+    let values: TeaQLRecord
+    let version: Int64?
+    let isNew: Bool
+    let isDeleted: Bool
+    func matches(_ other: Self) -> Bool {
+      version == other.version && isNew == other.isNew && isDeleted == other.isDeleted
+        && sameMutationRecord(values, other.values)
+    }
+  }
+
+  package func mutationSnapshot(_ key: EntityKey) -> MutationSnapshot {
+    lock.withLock {
+      MutationSnapshot(values: changes[key] ?? [:], version: originalVersions[key],
+        isNew: newKeys.contains(key), isDeleted: deletedKeys.contains(key))
+    }
+  }
+
   public func merge(from other: EntityRoot) throws {
     if other === self { return }
     let state = other.fullSnapshot()

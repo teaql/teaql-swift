@@ -50,6 +50,7 @@ public final class GraphMutationSession: @unchecked Sendable {
   public let intent: MutationIntent
   public let fixTime: Date
   package let policy: MutationPolicyCoordinator
+  package let preparedMutations = PreparedGraphMutations()
   private let lock = NSLock()
   private var active = true
   private var preparing = false
@@ -72,11 +73,13 @@ public final class GraphMutationSession: @unchecked Sendable {
 
   package func beginPreparation() throws {
     try ensureActive()
+    preparedMutations.requireSnapshots()
     lock.withLock { preparing = true }
   }
 
   package func endPreparation() throws {
     try ensureActive()
+    try preparedMutations.sealAndValidate()
     lock.withLock { preparing = false }
   }
 
@@ -135,6 +138,7 @@ public final class GraphMutationSession: @unchecked Sendable {
     lock.withLock {
       precondition(active)
       active = false
+      preparedMutations.clear()
       let oldSecrets = loadedProvenance.map(LogPrivacy.privateValues) ?? []
       let events = committed ? auditEvents.map { event, values in
         AuditEvent(entity: event.entity, entityID: event.entityID, operation: event.operation,
