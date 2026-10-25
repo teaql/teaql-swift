@@ -25,5 +25,9 @@ final class QueryProjectionSnapshotTests: XCTestCase {
     guard case .object(var output) = try snapshot.get("details") else { return XCTFail("missing object") }
     output["values"] = .array([.int(999)])
     XCTAssertEqual(try snapshot.get("details"), .object(["values": .array([.int(1)])]))
+    var exported = snapshot.record
+    exported["details"] = .null
+    exported["extra"] = .int(9)
+    XCTAssertEqual(snapshot.record, ["details": .object(["values": .array([.int(1)])])])
   }
 }
