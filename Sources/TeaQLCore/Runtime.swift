@@ -931,13 +931,25 @@ public struct UserContext: Sendable {
     return try await withListOperation(request, completion: { rows in
       ["teaql.result.cardinality": .integer(Int64(rows.count))]
     }) { authorized in
+      guard authorized.query.groupBy.isEmpty else {
+        throw TeaQLError.unsupportedQueryCapability("grouped projections require the record query terminal")
+      }
+      let countAlias = countRequested ? authorized.query.pageCountOperation?.alias : nil
+      let aggregateOnly = authorized.query.aggregates.contains {
+        !($0.function == .count && $0.alias == countAlias)
+      }
       if countRequested {
         let page = try await executePage(authorized, offset: query.offset, limit: query.limit ?? 10_000)
-        return SmartList(try page.items.map(hydrate), totalCount: page.total,
-          aggregations: page.items.aggregations, summary: page.items.summary, facets: page.items.facets)
+        var aggregations = page.items.aggregations
+        if aggregateOnly, let scalar = page.items.first {
+          aggregations.merge(scalar) { _, value in value }
+        }
+        return SmartList(aggregateOnly ? [] : try page.items.map(hydrate), totalCount: page.total,
+          aggregations: aggregations, summary: page.items.summary, facets: page.items.facets)
       }
       let result = try await execute(authorized)
-      return SmartList(try result.records.map(hydrate), facets: result.facets)
+      return SmartList(aggregateOnly ? [] : try result.records.map(hydrate),
+        aggregations: aggregateOnly ? result.records.first ?? [:] : [:], facets: result.facets)
     }
   }
 
