@@ -258,6 +258,67 @@ func swiftSQLiteUploadSerializesTwoConnectionsAcrossFileAndParserIO() async thro
 }
 
 @Test
+func swiftSQLiteUploadRetryRecoversOnlyIdenticalFileAfterJournalRollback() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-upload-recover-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let store = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install upload journal") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let calls = UploadVerifierCalls()
+  let service = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
+    allowed: true), verifier: FixturePDFVerifier(calls: calls), maximumBytes: 10_000)
+  let bytes = Data("%PDF-1.7\nrecover committed File content\n%%EOF".utf8)
+  let session = try await service.begin(actor,
+    target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
+    input: BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(bytes.count)),
+    replayKey: "recovery-request")
+  try await actor.executeGraphSave(comment: "inject promotion rollback") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("""
+        CREATE TRIGGER reject_upload_write BEFORE UPDATE ON teaql_blob_upload
+        WHEN NEW.state='written' BEGIN SELECT RAISE(ABORT, 'injected'); END
+        """, parameters: [])
+    }
+  }
+  do {
+    _ = try await service.write(actor, uploadID: session.uploadID, source: ObjectDataReader(bytes))
+    Issue.record("trigger accepted journal promotion")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_CATALOG_FAILED")) }
+  let raw = try #require(await uploadCatalogValue(actor,
+    sql: "SELECT object_key FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key))
+  let key = try ObjectKey(raw)
+  let stable = try #require(await actor.objectStorage("check recovery candidate").head(key))
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT state FROM teaql_blob_upload WHERE key = ?", key: session.reference.key) == "initiated")
+  try await actor.executeGraphSave(comment: "remove promotion failure") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("DROP TRIGGER reject_upload_write", parameters: [])
+    }
+  }
+  do {
+    _ = try await service.write(actor, uploadID: session.uploadID,
+      source: ObjectDataReader(Data(repeating: 0x78, count: bytes.count)))
+    Issue.record("different bytes adopted existing File object")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_STORE_FAILED")) }
+  #expect(try await service.write(actor, uploadID: session.uploadID,
+    source: ObjectDataReader(bytes)) == Int64(bytes.count))
+  let after = try #require(await actor.objectStorage("check recovered generation").head(key))
+  #expect(after.etag == stable.etag)
+  #expect(try await service.complete(actor, uploadID: session.uploadID) == session.reference)
+  #expect(await calls.value() == 1)
+}
+
+@Test
 func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
   let parent = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-upload-\(UUID().uuidString)", isDirectory: true)

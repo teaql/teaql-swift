@@ -308,6 +308,34 @@ public struct SQLiteBlobUploadService: Sendable {
     return key
   }
 
+  private func recoverExisting(_ store: ObjectStorage, key: ObjectKey,
+                               source: HashingBlobReader, row: Row, mime: String)
+    async throws -> (ObjectMetadata, HashingBlobReader.Snapshot) {
+    let observed = await source.snapshot()
+    guard observed.eof, observed.count == row.declaredSize,
+      let before = try await store.head(key), before.size == observed.count,
+      before.contentType == mime, let etag = before.etag, !etag.isEmpty else {
+      throw Self.fail("BLOB_STORE_FAILED")
+    }
+    let content = try await store.get(key)
+    do {
+      guard content.metadata.size == before.size, content.metadata.etag == etag,
+        content.metadata.contentType == mime else { throw Self.fail("BLOB_STORE_FAILED") }
+      let reader = HashingBlobReader(content.reader, maximum: row.declaredSize)
+      while !(try await reader.read(upToCount: 65536)).isEmpty {}
+      let stored = await reader.snapshot()
+      guard stored.eof, stored.count == observed.count,
+        stored.sha256 == observed.sha256 else { throw Self.fail("BLOB_STORE_FAILED") }
+      try await content.close()
+    } catch {
+      try? await content.close()
+      throw error
+    }
+    guard let after = try await store.head(key), after.size == before.size,
+      after.etag == etag, after.contentType == mime else { throw Self.fail("BLOB_STORE_FAILED") }
+    return (before, observed)
+  }
+
   public func write(_ actor: UserContext, uploadID: String,
                     source: any ObjectByteReader) async throws -> Int64 {
     do {
@@ -321,17 +349,28 @@ public struct SQLiteBlobUploadService: Sendable {
           }
           let reader = HashingBlobReader(source, maximum: entry.declaredSize)
           let metadata: ObjectMetadata
+          let recovered: HashingBlobReader.Snapshot?
+          let store: ObjectStorage
+          do { store = try actor.objectStorage("write Blob upload") }
+          catch { throw Self.fail("BLOB_STORE_FAILED") }
           do {
-            metadata = try await actor.objectStorage("write Blob upload").put(key, content: reader,
+            metadata = try await store.put(key, content: reader,
               options: ObjectPutOptions(size: entry.declaredSize, mode: .createOnly,
                 contentType: mime))
+            recovered = nil
+          } catch let error as StorageError where error.code == .conflict {
+            do { (metadata, recovered) = try await recoverExisting(store, key: key,
+              source: reader, row: entry, mime: mime) }
+            catch { throw Self.fail("BLOB_STORE_FAILED") }
           } catch { throw Self.fail("BLOB_STORE_FAILED") }
           _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
             entityID: entry.entityID, field: entry.field), action: "Write",
             input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize),
             expectedScope: entry.scope, lease: sql)
           guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
-          let observed = await reader.snapshot()
+          let observed: HashingBlobReader.Snapshot
+          if let recovered { observed = recovered }
+          else { observed = await reader.snapshot() }
           guard observed.eof, observed.count == entry.declaredSize,
             metadata.size == observed.count, let etag = metadata.etag, !etag.isEmpty else {
             throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
