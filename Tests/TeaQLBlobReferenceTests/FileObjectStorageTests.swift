@@ -20,6 +20,38 @@ private func expectStoreError(_ code: StorageErrorCode, _ work: () async throws 
 }
 
 @Test
+func swiftFileConditionalDeleteFencesSameByteReplacement() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-conditional-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let root = parent.appendingPathComponent("private").path
+  let first = try FileObjectStorage(root: root, signingKey: Data(repeating: 0x42, count: 32))
+  let second = try FileObjectStorage(root: root, signingKey: Data(repeating: 0x42, count: 32))
+  let context = UserContext(queryExecutor: FileUnusedExecutor(), mutationExecutor: FileUnusedExecutor(),
+    requestPolicy: RequestPolicy { $0 })
+  let a = try context.withObjectStorage(first).objectStorage("write version")
+  let b = try context.withObjectStorage(second).objectStorage("delete version")
+  let key = try ObjectKey("private/same-bytes.pdf"), bytes = Data("same bytes".utf8)
+  #expect(try await b.head(key)?.size == nil)
+  #expect(try await b.deleteIfVersion(key, contentVersion: "missing") == .alreadyMissing)
+  let firstVersion = try await a.putBytes(key, data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly))
+  let secondVersion = try await a.putBytes(key, data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace))
+  #expect(firstVersion.etag != secondVersion.etag)
+  #expect(try await b.deleteIfVersion(key, contentVersion: firstVersion.etag!) == .versionMismatch)
+  #expect(try await b.getBytes(key, maximumBytes: 100) == bytes)
+  #expect(try await b.deleteIfVersion(key, contentVersion: secondVersion.etag!) == .deleted)
+  #expect(try await b.head(key)?.size == nil)
+  #expect(try await b.deleteIfVersion(key, contentVersion: secondVersion.etag!) == .alreadyMissing)
+  let hash = SHA256.hash(data: Data(key.value.utf8)).map { String(format: "%02x", $0) }.joined()
+  let version = String(secondVersion.etag!.split(separator: ".").last!)
+  #expect(!FileManager.default.fileExists(atPath: "\(root)/\(hash.prefix(2))/\(hash)/data-\(version)"))
+}
+
+@Test
 func swiftFileStoreServesAuthenticatedRealBytesOverLoopback() async throws {
   let parent = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-file-\(UUID().uuidString)", isDirectory: true)

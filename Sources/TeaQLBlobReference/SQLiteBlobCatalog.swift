@@ -67,6 +67,8 @@ public struct SQLiteBlobCatalog: Sendable {
         """, parameters: [])
       _ = try await sql.execute("CREATE INDEX IF NOT EXISTS teaql_blob_binding_key ON teaql_blob_binding(key)",
         parameters: [])
+      _ = try await sql.execute("CREATE UNIQUE INDEX IF NOT EXISTS teaql_blob_catalog_object_key_unique ON teaql_blob_catalog(object_key)",
+        parameters: [])
       _ = try await sql.execute("""
         CREATE TABLE IF NOT EXISTS teaql_blob_upload (
           upload_id TEXT PRIMARY KEY, scope TEXT NOT NULL, replay_key TEXT NOT NULL,
@@ -99,6 +101,14 @@ public struct SQLiteBlobCatalog: Sendable {
       guard columns.first(where: { $0["name"]?.stringValue == "key" })?["notnull"]?.int64Value == 0,
         columns.first(where: { $0["name"]?.stringValue == "version" })?["notnull"]?.int64Value == 1
       else { throw TeaQLError.execution("BLOB_SCHEMA_MISSING") }
+      let indexes = try await sql.query("PRAGMA index_list(teaql_blob_catalog)", parameters: [])
+      guard indexes.contains(where: { $0["name"]?.stringValue == "teaql_blob_catalog_object_key_unique"
+        && $0["unique"]?.int64Value == 1 }) else { throw TeaQLError.execution("BLOB_SCHEMA_MISSING") }
+      let indexColumns = try await sql.query("PRAGMA index_info(teaql_blob_catalog_object_key_unique)",
+        parameters: [])
+      guard indexColumns.count == 1, indexColumns[0]["name"]?.stringValue == "object_key" else {
+        throw TeaQLError.execution("BLOB_SCHEMA_MISSING")
+      }
     }
   }
 

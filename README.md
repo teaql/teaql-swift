@@ -54,6 +54,12 @@ We make no numerical token-saving claim. Loading guidance only when needed
 is a context-management strategy; the smaller application review surface is
 visible in the examples, not a measured percentage reduction in review time.
 
+## Optional Blob upload maintenance
+
+`TeaQLBlobReference` exposes `SQLiteBlobMaintenanceService` for an application-owned scheduled job. Pass a host `BlobMaintenanceAuthorization`, install and validate `SQLiteBlobCatalog`, then call `runBatch(context, cursor:)` outside graph saves. The module can expose it as `BlobReferenceModule(..., maintenance: service)`; installation never starts a job. The bounded cursor belongs to one tenant scope.
+
+This job handles expired, uncompleted, unbound server-stream uploads. It claims a catalog row in SQLite, captures the storage version, conditionally removes that version, and marks the row deleted. A failed catalog receipt can be retried. `FileObjectStorage` uses a persistent per-key `flock` across processes for manifest writes and conditional deletion; its version includes a random generation, so a same-byte replacement cannot match an older version. The current data generation is removed, while older immutable generations remain for a separate collector. Hosts must use unique immutable object keys and keep the File root's parent private. Completed uploads, old bindings, direct-upload quiescence, and general retention cleanup require separate lifecycle work.
+
 ## See a business operation execute
 
 The [Robot Task Board showcase](https://teaql.io/blog/robot-task-board-showcase/)

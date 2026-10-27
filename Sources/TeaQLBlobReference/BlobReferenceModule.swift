@@ -33,13 +33,16 @@ public struct BlobReferenceModule: Sendable {
   public let upload: SQLiteBlobUploadService
   public let read: SQLiteBlobResponseContributor
   public let bindingAuthorization: any BlobBindingAuthorization
+  public let maintenance: SQLiteBlobMaintenanceService?
 
   public init(catalog: SQLiteBlobCatalog = SQLiteBlobCatalog(), upload: SQLiteBlobUploadService,
               readAuthorization: any BlobReadAuthorization,
               bindingAuthorization: any BlobBindingAuthorization,
-              maximumURLSeconds: Int = 600) throws {
+              maximumURLSeconds: Int = 600,
+              maintenance: SQLiteBlobMaintenanceService? = nil) throws {
     self.catalog = catalog; self.upload = upload
     self.bindingAuthorization = bindingAuthorization
+    self.maintenance = maintenance
     self.read = try SQLiteBlobResponseContributor(catalog: catalog,
       authorization: readAuthorization, maximumURLSeconds: maximumURLSeconds)
   }

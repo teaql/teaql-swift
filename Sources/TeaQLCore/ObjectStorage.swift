@@ -159,6 +159,7 @@ private struct StorageObservation: Sendable {
 public struct ObjectStorage: Sendable {
   let invocation: StorageInvocation
   let provider: any ObjectStorageProvider
+  public var supportsVersionConditionalDelete: Bool { provider is any ObjectStorageConditionalDeleter }
   private func execute<T: Sendable>(_ operation: String, _ body: () async throws -> T) async throws -> T {
     let observation = StorageObservation(invocation: invocation, operation: operation)
     do {

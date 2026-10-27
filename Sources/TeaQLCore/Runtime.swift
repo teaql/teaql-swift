@@ -839,6 +839,14 @@ public struct UserContext: Sendable {
   public func recordFixEvidence(_ evidence: FixEvidence) { graphSession?.recordFixEvidence(evidence) }
   public var lastFixEvidence: [FixEvidence] { graphTransactionGate.lastFixEvidence }
 
+  /// Maintenance must start its own physical SQL owner, never nest in a graph save.
+  public func requireNoActiveGraphSQL() throws {
+    guard graphSession == nil,
+      !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+  }
+
   package func requireGraphSession(_ session: GraphMutationSession) throws {
     guard graphSession === session else {
       throw TeaQLError.execution("Graph mutation requires its explicit invocation context and session")

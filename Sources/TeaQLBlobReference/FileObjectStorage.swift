@@ -44,7 +44,7 @@ private actor FileObjectReader: ObjectByteReader {
 /// A private local store. The host must protect the root's parent against untrusted writers.
 /// Old immutable generations remain until a separate collector is installed.
 /// The loopback read gateway starts only when `start()` is called.
-public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable {
+public final class FileObjectStorage: ObjectStorageProvider, ObjectStorageConditionalDeleter, @unchecked Sendable {
   private let root: String
   private let key: SymmetricKey
   private let gatewayLock = NSLock()
@@ -64,6 +64,16 @@ public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable
   private func directory(_ hash: String) -> String { "\(root)/\(hash.prefix(2))/\(hash)" }
   private func dataPath(_ hash: String, _ version: String) -> String { "\(directory(hash))/data-\(version)" }
   private func manifestPath(_ hash: String) -> String { "\(directory(hash))/manifest.json" }
+  private func withManifestLock<T>(_ hash: String, _ operation: () throws -> T) throws -> T {
+    let fd = open("\(directory(hash))/manifest.lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
+    guard fd >= 0 else { throw StorageError(.io) }
+    defer { _ = DarwinOrGlibcClose(fd) }
+    var info = stat()
+    guard fstat(fd, &info) == 0, info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
+      info.st_mode & 0o077 == 0, flock(fd, LOCK_EX) == 0 else { throw StorageError(.unavailable) }
+    defer { _ = flock(fd, LOCK_UN) }
+    return try operation()
+  }
   private static func version() -> String { Data((0..<24).map { _ in UInt8.random(in: 0...255) }).base64URLEncodedString() }
   private static func validVersion(_ value: String) -> Bool {
     value.utf8.count == 32 && value.utf8.allSatisfy { (48...57).contains($0) || (65...90).contains($0) ||
@@ -161,14 +171,16 @@ public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable
     do { try manifestFile.write(contentsOf: encoded); try manifestFile.synchronize(); try manifestFile.close() }
     catch { try? manifestFile.close(); throw StorageError(.io) }
     let target = manifestPath(hash)
-    if options.mode == .createOnly {
-      guard link(tempPath, target) == 0 else {
-        if errno == EEXIST { throw StorageError(.conflict) }
-        throw StorageError(.io)
+    try withManifestLock(hash) {
+      if options.mode == .createOnly {
+        guard link(tempPath, target) == 0 else {
+          if errno == EEXIST { throw StorageError(.conflict) }
+          throw StorageError(.io)
+        }
+        _ = unlink(tempPath)
+      } else {
+        guard rename(tempPath, target) == 0 else { throw StorageError(.io) }
       }
-      _ = unlink(tempPath)
-    } else {
-      guard rename(tempPath, target) == 0 else { throw StorageError(.io) }
     }
     installed = true
     return try metadata(key, manifest)
@@ -182,6 +194,7 @@ public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable
   }
 
   public func head(_ invocation: StorageInvocation, key: ObjectKey) throws -> ObjectMetadata? {
+    if !FileManager.default.fileExists(atPath: root) { return nil }
     try ensureRoot(create: false)
     let hash = Self.hash(key)
     guard let value = try readManifest(hash) else { return nil }
@@ -192,8 +205,28 @@ public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable
 
   public func delete(_ invocation: StorageInvocation, key: ObjectKey) throws {
     try ensureRoot(create: false)
-    let path = manifestPath(Self.hash(key))
-    guard unlink(path) == 0 || errno == ENOENT else { throw StorageError(.io) }
+    let hash = Self.hash(key)
+    guard FileManager.default.fileExists(atPath: directory(hash)) else { return }
+    try withManifestLock(hash) {
+      guard unlink(manifestPath(hash)) == 0 || errno == ENOENT else { throw StorageError(.io) }
+    }
+  }
+
+  /// Compare and remove the current manifest under a persistent cross-process key lock.
+  /// Immutable data generations remain for a separate storage collector.
+  public func deleteIfVersion(_ invocation: StorageInvocation, key: ObjectKey,
+                              contentVersion: String) throws -> ObjectConditionalDeleteResult {
+    if !FileManager.default.fileExists(atPath: root) { return .alreadyMissing }
+    try ensureRoot(create: false)
+    let hash = Self.hash(key)
+    guard FileManager.default.fileExists(atPath: directory(hash)) else { return .alreadyMissing }
+    return try withManifestLock(hash) {
+      guard let manifest = try readManifest(hash) else { return .alreadyMissing }
+      guard try metadata(key, manifest).etag == contentVersion else { return .versionMismatch }
+      guard unlink(dataPath(hash, manifest.version)) == 0 || errno == ENOENT else { throw StorageError(.io) }
+      guard unlink(manifestPath(hash)) == 0 else { throw StorageError(.io) }
+      return .deleted
+    }
   }
 
   private func seal(_ ticket: FileTicket) throws -> String {
