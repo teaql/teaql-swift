@@ -338,6 +338,46 @@ public struct SQLiteBlobUploadService: Sendable {
 
   public func complete(_ actor: UserContext, uploadID: String) async throws -> BlobRef {
     let entry = try await row(actor, uploadID: uploadID, action: "Confirm")
+    if entry.state == "completed" {
+      guard let writtenHash = entry.writtenSHA256, writtenHash.utf8.count == 64,
+        writtenHash.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }),
+        let writtenETag = entry.writtenETag, !writtenETag.isEmpty,
+        let mime = BlobFieldSpec.mime(forExtension: entry.ext) else {
+        throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+      }
+      let key = try await actor.executeGraphSave(comment: "recheck completed Blob upload") { graph, session in
+        try await graph.withPhysicalSQL(session) { sql in
+          let rows: [TeaQLRecord]
+          do { rows = try await sql.query("""
+            SELECT object_key,content_version,content_type,size_bytes,status
+            FROM teaql_blob_catalog WHERE key = ? AND scope = ?
+            """, parameters: [.string(entry.key), .string(entry.scope)]) }
+          catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+          guard rows.count == 1, let raw = rows[0]["object_key"]?.stringValue,
+            let key = try? ObjectKey(raw),
+            rows[0]["content_version"]?.stringValue == writtenETag,
+            rows[0]["content_type"]?.stringValue == mime,
+            rows[0]["size_bytes"]?.int64Value == entry.declaredSize,
+            ["uploaded_unbound", "available"].contains(rows[0]["status"]?.stringValue ?? "") else {
+            throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+          }
+          return key
+        }
+      }
+      let store: ObjectStorage
+      do { store = try actor.objectStorage("recheck completed Blob upload") }
+      catch { throw Self.fail("BLOB_STORE_FAILED") }
+      do {
+        guard let head = try await store.head(key), head.size == entry.declaredSize,
+          head.etag == writtenETag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+      } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+      _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
+        entityID: entry.entityID, field: entry.field), action: "Confirm",
+        input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize,
+          declaredContentType: mime), expectedScope: entry.scope)
+      guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
+      return try BlobRef(entry.key)
+    }
     guard entry.state == "written", let writtenHash = entry.writtenSHA256,
       let writtenETag = entry.writtenETag, !writtenHash.isEmpty, !writtenETag.isEmpty else {
       throw Self.fail("BLOB_UPLOAD_INCOMPLETE")

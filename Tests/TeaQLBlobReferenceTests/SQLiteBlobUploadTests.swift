@@ -65,11 +65,21 @@ func swiftBlobModuleRequiresInstalledProviderAndCatalogSchema() async throws {
 }
 
 // The test verifier only checks a fixture PDF; it is not production format parsing.
+private actor UploadVerifierCalls {
+  private var count = 0
+  func record() { count += 1 }
+  func value() -> Int { count }
+}
+
 private struct FixturePDFVerifier: BlobContentVerifier {
   let early: Bool
-  init(early: Bool = false) { self.early = early }
+  let calls: UploadVerifierCalls?
+  init(early: Bool = false, calls: UploadVerifierCalls? = nil) {
+    self.early = early; self.calls = calls
+  }
   func verify(reader: any ObjectByteReader, extension ext: String,
               maximumBytes: Int64) async throws -> BlobVerifiedContent {
+    await calls?.record()
     if early { return BlobVerifiedContent(sizeBytes: 1, sha256: String(repeating: "0", count: 64),
       contentType: "application/pdf") }
     var data = Data()
@@ -124,8 +134,9 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
     try await catalog.installSchema(graph, session: session)
     try await catalog.validateSchema(graph, session: session)
   }
+  let calls = UploadVerifierCalls()
   let service = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a", allowed: true),
-    verifier: FixturePDFVerifier(), maximumBytes: 10_000)
+    verifier: FixturePDFVerifier(calls: calls), maximumBytes: 10_000)
   let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
   let data = Data("%PDF-1.7\nreal file bytes\n%%EOF".utf8)
   let input = BlobUploadInput(fileName: "path/report.pdf", declaredSize: Int64(data.count),
@@ -159,6 +170,11 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
   catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
   let reference = try await service.complete(context, uploadID: session.uploadID)
   #expect(reference == session.reference)
+  #expect(await calls.value() == 1)
+  #expect(try await service.complete(context, uploadID: session.uploadID) == reference)
+  #expect(await calls.value() == 1)
+  do { _ = try await revoked.complete(context, uploadID: session.uploadID); Issue.record("revoked replayed") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
   #expect(try await uploadCatalogValue(context,
     sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: reference.key) == "uploaded_unbound")
   try await context.executeGraphSave(comment: "bind verified upload") { actor, session in
@@ -171,6 +187,16 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
   }
   #expect(try await uploadCatalogValue(context,
     sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: reference.key) == "available")
+  #expect(try await service.complete(context, uploadID: session.uploadID) == reference)
+  #expect(await calls.value() == 1)
+  let completedKey = try #require(await uploadCatalogValue(context,
+    sql: "SELECT object_key FROM teaql_blob_catalog WHERE key = ?", key: reference.key))
+  _ = try await context.objectStorage("replace completed generation").putBytes(
+    try ObjectKey(completedKey), data: data,
+    options: ObjectPutOptions(size: Int64(data.count), mode: .replace, contentType: "application/pdf"))
+  do { _ = try await service.complete(context, uploadID: session.uploadID); Issue.record("replaced replayed") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_INCOMPLETE")) }
+  #expect(await calls.value() == 1)
 
   let second = try await service.begin(context, target: target, input: input, replayKey: "request-2")
   _ = try await service.write(context, uploadID: second.uploadID, source: ObjectDataReader(data))
