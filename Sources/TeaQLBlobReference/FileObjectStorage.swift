@@ -103,7 +103,8 @@ public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable
 
   private func metadata(_ key: ObjectKey, _ value: FileManifest) throws -> ObjectMetadata {
     try ObjectMetadata(key: key, size: value.size, contentType: value.contentType,
-      etag: value.sha256, lastModified: value.modified, customMetadata: value.metadata)
+      etag: value.sha256 + "." + value.version, lastModified: value.modified,
+      customMetadata: value.metadata)
   }
 
   private func openData(_ hash: String, _ value: FileManifest) throws -> FileHandle {
@@ -307,7 +308,7 @@ public final class FileObjectStorage: ObjectStorageProvider, @unchecked Sendable
     response.headers.add(name: "Cache-Control", value: "private, no-store")
     response.headers.add(name: "X-Content-Type-Options", value: "nosniff")
     response.headers.add(name: "Accept-Ranges", value: "bytes")
-    response.headers.add(name: "ETag", value: "\"\(manifest.sha256)\"")
+    response.headers.add(name: "ETag", value: "\"\(manifest.sha256).\(manifest.version)\"")
     if let disposition = ticket.disposition { response.headers.add(name: "Content-Disposition", value: disposition) }
     return (response, request.method == .HEAD ? nil : dataPath(ticket.hash, manifest.version), start, end + 1)
   }

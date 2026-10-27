@@ -41,6 +41,10 @@ func swiftFileStoreServesAuthenticatedRealBytesOverLoopback() async throws {
     contentType: "application/pdf")
   let metadata = try await storage.putBytes(key, data: bytes, options: create)
   #expect(metadata.size == Int64(bytes.count))
+  let same = try await storage.putBytes(key, data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace,
+      contentType: "application/pdf"))
+  #expect(same.etag != metadata.etag)
   await expectStoreError(.conflict) { _ = try await storage.putBytes(key, data: bytes, options: create) }
   let short = try ObjectPutOptions(size: Int64(bytes.count + 1), mode: .replace)
   await expectStoreError(.invalidInput) { _ = try await storage.putBytes(key, data: bytes, options: short) }
@@ -55,6 +59,7 @@ func swiftFileStoreServesAuthenticatedRealBytesOverLoopback() async throws {
   #expect((got as? HTTPURLResponse)?.statusCode == 200)
   #expect(body == bytes)
   #expect((got as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type") == "application/pdf")
+  #expect((got as? HTTPURLResponse)?.value(forHTTPHeaderField: "ETag") == "\"\(same.etag!)\"")
   #expect((got as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition") ==
     "attachment; filename=\"report.pdf\"")
   var head = URLRequest(url: link.url); head.httpMethod = "HEAD"
