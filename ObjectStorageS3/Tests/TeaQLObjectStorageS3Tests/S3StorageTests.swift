@@ -1,4 +1,5 @@
 import Foundation
+import FoundationNetworking
 import XCTest
 import SotoS3
 import TeaQLCore
@@ -14,6 +15,50 @@ private actor FailingStorageInput: ObjectByteReader {
 }
 @MainActor
 final class S3StorageTests: XCTestCase {
+  func testMinioRealSignedRangeAndExpiry() async throws {
+    // Explicit local S3-compatible gate; the host owns the disposable bucket.
+    let env = ProcessInfo.processInfo.environment
+    guard let endpoint = env["TEAQL_S3_TEST_ENDPOINT"], let bucket = env["TEAQL_S3_TEST_BUCKET"],
+      let access = env["TEAQL_S3_TEST_ACCESS_KEY"], let secret = env["TEAQL_S3_TEST_SECRET_KEY"] else {
+      throw XCTSkip("explicit S3-compatible endpoint, bucket and credentials required")
+    }
+    let client = AWSClient(credentialProvider: .static(accessKeyId: access, secretAccessKey: secret), retryPolicy: .noRetry)
+    let service = S3(client: client, region: .useast1, endpoint: endpoint, options: [.s3Disable100Continue])
+    let provider = try S3ObjectStorage(service: service, bucket: bucket)
+    let context = UserContext(queryExecutor: UnusedStorageExecutor(), mutationExecutor: UnusedStorageExecutor(), requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
+    let storage = try context.objectStorage("F4 real S3-compatible Swift")
+    let key = try ObjectKey("f4/swift/" + UUID().uuidString)
+    let bytes = Data("%PDF-1.7\nF4 real S3-compatible bytes\n%%EOF".utf8)
+    do {
+      let written = try await storage.putBytes(key, data: bytes, options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace, contentType: "application/pdf"))
+      let head = try await storage.head(key)
+      XCTAssertEqual(head?.size, Int64(bytes.count))
+      XCTAssertEqual(head?.etag, written.etag)
+      XCTAssertEqual(head?.contentType, "application/pdf")
+      let fetched = try await storage.getBytes(key, maximumBytes: 1024)
+      XCTAssertEqual(fetched, bytes)
+      let ticket = try await storage.getReadUrl(key, options: ObjectReadUrlOptions(seconds: 2, disposition: "attachment", filename: "report.pdf"))
+      var request = URLRequest(url: ticket.url)
+      request.setValue("bytes=0-7", forHTTPHeaderField: "Range")
+      let (partial, response) = try await URLSession.shared.data(for: request)
+      let http = try XCTUnwrap(response as? HTTPURLResponse)
+      XCTAssertEqual(http.statusCode, 206)
+      XCTAssertEqual(partial, bytes.prefix(8))
+      XCTAssertEqual(http.value(forHTTPHeaderField: "Content-Type"), "application/pdf")
+      XCTAssertTrue(http.value(forHTTPHeaderField: "Content-Disposition")?.contains("report.pdf") == true)
+      let delay = ticket.expiresAt.addingTimeInterval(1.3).timeIntervalSinceNow
+      if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
+      let (_, expired) = try await URLSession.shared.data(from: ticket.url)
+      XCTAssertEqual((expired as? HTTPURLResponse)?.statusCode, 403)
+    } catch {
+      try? await storage.delete(key)
+      try? await client.shutdown()
+      throw error
+    }
+    try await storage.delete(key)
+    try await client.shutdown()
+  }
+
   func expect(_ code: StorageErrorCode, _ operation: () async throws -> Void) async {
     do { try await operation(); XCTFail("Expected storage failure") }
     catch let error as StorageError { XCTAssertEqual(error.code, code); XCTAssertFalse(String(describing: error).contains("CANARY")) }
