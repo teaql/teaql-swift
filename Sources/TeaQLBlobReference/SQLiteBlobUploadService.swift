@@ -312,28 +312,37 @@ public struct SQLiteBlobUploadService: Sendable {
                                source: HashingBlobReader, row: Row, mime: String)
     async throws -> (ObjectMetadata, HashingBlobReader.Snapshot) {
     let observed = await source.snapshot()
+    let metadata = try await verifyStored(store, key: key, observed: observed, row: row,
+      mime: mime, expectedETag: nil, mismatch: "BLOB_STORE_FAILED")
+    return (metadata, observed)
+  }
+
+  private func verifyStored(_ store: ObjectStorage, key: ObjectKey,
+                            observed: HashingBlobReader.Snapshot, row: Row, mime: String,
+                            expectedETag: String?, mismatch: String) async throws -> ObjectMetadata {
     guard observed.eof, observed.count == row.declaredSize,
       let before = try await store.head(key), before.size == observed.count,
-      before.contentType == mime, let etag = before.etag, !etag.isEmpty else {
-      throw Self.fail("BLOB_STORE_FAILED")
+      before.contentType == mime, let etag = before.etag, !etag.isEmpty,
+      expectedETag.map({ $0 == etag }) ?? true else {
+      throw Self.fail(mismatch)
     }
     let content = try await store.get(key)
     do {
       guard content.metadata.size == before.size, content.metadata.etag == etag,
-        content.metadata.contentType == mime else { throw Self.fail("BLOB_STORE_FAILED") }
+        content.metadata.contentType == mime else { throw Self.fail(mismatch) }
       let reader = HashingBlobReader(content.reader, maximum: row.declaredSize)
       while !(try await reader.read(upToCount: 65536)).isEmpty {}
       let stored = await reader.snapshot()
       guard stored.eof, stored.count == observed.count,
-        stored.sha256 == observed.sha256 else { throw Self.fail("BLOB_STORE_FAILED") }
+        stored.sha256 == observed.sha256 else { throw Self.fail(mismatch) }
       try await content.close()
     } catch {
       try? await content.close()
       throw error
     }
     guard let after = try await store.head(key), after.size == before.size,
-      after.etag == etag, after.contentType == mime else { throw Self.fail("BLOB_STORE_FAILED") }
-    return (before, observed)
+      after.etag == etag, after.contentType == mime else { throw Self.fail(mismatch) }
+    return before
   }
 
   public func write(_ actor: UserContext, uploadID: String,
@@ -342,10 +351,62 @@ public struct SQLiteBlobUploadService: Sendable {
       return try await actor.executeGraphSave(comment: "journal Blob write") { graph, session in
         try await graph.withPhysicalSQL(session) { sql in
           let entry = try await row(actor, uploadID: uploadID, action: "Write", lease: sql)
-          guard entry.state == "initiated" else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
-          let key = try await objectKey(entry, lease: sql)
+          let rows: [TeaQLRecord]
+          do { rows = try await sql.query("""
+            SELECT object_key,status,content_version,content_type,size_bytes
+            FROM teaql_blob_catalog WHERE key = ? AND scope = ?
+            """, parameters: [.string(entry.key), .string(entry.scope)]) }
+          catch { throw Self.fail("BLOB_CATALOG_FAILED") }
+          guard rows.count == 1, let raw = rows[0]["object_key"]?.stringValue,
+            let key = try? ObjectKey(raw) else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
+          let catalog = rows[0]
           guard let mime = BlobFieldSpec.mime(forExtension: entry.ext) else {
             throw Self.fail("BLOB_FORMAT_NOT_ALLOWED")
+          }
+          if entry.state == "written" || entry.state == "completed" {
+            guard let writtenHash = entry.writtenSHA256, writtenHash.utf8.count == 64,
+              writtenHash.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }),
+              let writtenETag = entry.writtenETag, !writtenETag.isEmpty,
+              entry.state != "written" || catalog["status"]?.stringValue == "initiated" else {
+              throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
+            }
+            if entry.state == "completed" {
+              guard ["uploaded_unbound", "available"].contains(catalog["status"]?.stringValue ?? ""),
+                catalog["content_version"]?.stringValue == writtenETag,
+                catalog["content_type"]?.stringValue == mime,
+                catalog["size_bytes"]?.int64Value == entry.declaredSize else {
+                throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
+              }
+            }
+            let target = BlobUploadTarget(entity: entry.entity, entityID: entry.entityID,
+              field: entry.field)
+            let input = BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize)
+            _ = try await current(actor, target: target, action: "Write", input: input,
+              expectedScope: entry.scope, lease: sql)
+            guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
+            let reader = HashingBlobReader(source, maximum: entry.declaredSize)
+            do { while !(try await reader.read(upToCount: 65536)).isEmpty {} }
+            catch let error as StorageError where error.code == .tooLarge {
+              throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
+            } catch { throw Self.fail("BLOB_STORE_FAILED") }
+            let observed = await reader.snapshot()
+            guard observed.eof, observed.count == entry.declaredSize,
+              observed.sha256 == writtenHash else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
+            let store: ObjectStorage
+            do { store = try actor.objectStorage("recheck committed Blob upload") }
+            catch { throw Self.fail("BLOB_STORE_FAILED") }
+            do { _ = try await verifyStored(store, key: key, observed: observed, row: entry,
+              mime: mime, expectedETag: writtenETag, mismatch: "BLOB_IDEMPOTENCY_CONFLICT") }
+            catch let error as TeaQLError where error == .execution("BLOB_IDEMPOTENCY_CONFLICT") {
+              throw error
+            } catch { throw Self.fail("BLOB_STORE_FAILED") }
+            _ = try await current(actor, target: target, action: "Write", input: input,
+              expectedScope: entry.scope, lease: sql)
+            guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
+            return observed.count
+          }
+          guard entry.state == "initiated", catalog["status"]?.stringValue == "initiated" else {
+            throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
           }
           let reader = HashingBlobReader(source, maximum: entry.declaredSize)
           let metadata: ObjectMetadata

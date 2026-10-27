@@ -127,6 +127,64 @@ private actor CountingUploadReader: ObjectByteReader {
   func close() async throws { await source.close() }
 }
 
+private actor FailedReplayReader: ObjectByteReader {
+  func read(upToCount: Int) async throws -> Data {
+    throw TeaQLError.execution("PRIVATE-REPLAY-SOURCE-CANARY")
+  }
+  func close() async throws {}
+}
+
+private actor CountingUploadStore: ObjectStorageProvider {
+  let file: FileObjectStorage
+  private var writes = 0
+  init(_ file: FileObjectStorage) { self.file = file }
+  func put(_ invocation: StorageInvocation, key: ObjectKey, content: any ObjectByteReader,
+           options: ObjectPutOptions) async throws -> ObjectMetadata {
+    writes += 1
+    return try await file.put(invocation, key: key, content: content, options: options)
+  }
+  func get(_ invocation: StorageInvocation, key: ObjectKey) async throws -> ObjectContent {
+    try await file.get(invocation, key: key)
+  }
+  func head(_ invocation: StorageInvocation, key: ObjectKey) async throws -> ObjectMetadata? {
+    try await file.head(invocation, key: key)
+  }
+  func delete(_ invocation: StorageInvocation, key: ObjectKey) async throws {
+    try await file.delete(invocation, key: key)
+  }
+  func getReadUrl(_ invocation: StorageInvocation, key: ObjectKey,
+                  options: ObjectReadUrlOptions) async throws -> ObjectReadUrl {
+    try await file.getReadUrl(invocation, key: key, options: options)
+  }
+  func count() -> Int { writes }
+}
+
+private actor LostUploadCommitReply: MutationExecutor, GraphTransactionExecutor,
+  GraphPhysicalSQLExecutor {
+  let database: SQLiteDataService
+  private var loseNext = false
+  init(_ database: SQLiteDataService) { self.database = database }
+  func loseNextCommitReply() { loseNext = true }
+  func execute(_ request: MutationRequest) async throws -> MutationResult {
+    try await database.execute(request)
+  }
+  func beginGraphTransaction() async throws { try await database.beginGraphTransaction() }
+  func commitGraphTransaction() async throws {
+    try await database.commitGraphTransaction()
+    if loseNext {
+      loseNext = false
+      throw TeaQLError.execution("BLOB_CATALOG_FAILED")
+    }
+  }
+  func rollbackGraphTransaction() async throws { try await database.rollbackGraphTransaction() }
+  func withPhysicalSQL<T: Sendable>(
+    _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
+  ) async throws -> T { try await database.withPhysicalSQL(work) }
+  func isCurrentPhysicalSQLLease(_ lease: any GraphPhysicalSQLLease) async -> Bool {
+    await database.isCurrentPhysicalSQLLease(lease)
+  }
+}
+
 private struct PausedUploadVerifier: BlobContentVerifier {
   let entered: UploadLatch
   let release: UploadLatch
@@ -243,8 +301,7 @@ func swiftSQLiteUploadSerializesTwoConnectionsAcrossFileAndParserIO() async thro
   #expect(await secondSource.count() == 0)
   await pausedSource.release.release()
   #expect(try await firstWrite.value == Int64(bytes.count))
-  do { _ = try await secondWrite.value; Issue.record("competing writer reused upload") }
-  catch { #expect(error as? TeaQLError == .execution("BLOB_IDEMPOTENCY_CONFLICT")) }
+  #expect(try await secondWrite.value == Int64(bytes.count))
 
   let firstConfirm = Task { try await first.complete(actor1, uploadID: session.uploadID) }
   await entered.wait()
@@ -316,6 +373,79 @@ func swiftSQLiteUploadRetryRecoversOnlyIdenticalFileAfterJournalRollback() async
   #expect(after.etag == stable.etag)
   #expect(try await service.complete(actor, uploadID: session.uploadID) == session.reference)
   #expect(await calls.value() == 1)
+}
+
+@Test
+func swiftSQLiteCommittedUploadWriteReplaysOnlySameBytesAndGeneration() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-upload-commit-unknown-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let file = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? file.close() }
+  let store = CountingUploadStore(file)
+  let database = try SQLiteDataService(path: parent.appendingPathComponent("upload.db").path)
+  let base = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 })
+  let catalog = SQLiteBlobCatalog()
+  try await base.executeGraphSave(comment: "install upload journal") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let transport = LostUploadCommitReply(database)
+  let actor = UserContext(queryExecutor: database, mutationExecutor: transport,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let calls = UploadVerifierCalls()
+  let service = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
+    allowed: true), verifier: FixturePDFVerifier(calls: calls), maximumBytes: 10_000)
+  let bytes = Data("%PDF-1.7\nSQL commit succeeded, reply lost\n%%EOF".utf8)
+  let session = try await service.begin(actor,
+    target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
+    input: BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(bytes.count)),
+    replayKey: "unknown-write")
+  await transport.loseNextCommitReply()
+  do {
+    _ = try await service.write(actor, uploadID: session.uploadID, source: ObjectDataReader(bytes))
+    Issue.record("lost commit reply returned success")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_CATALOG_FAILED")) }
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT state FROM teaql_blob_upload WHERE key = ?", key: session.reference.key) == "written")
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key) == "initiated")
+  #expect(await store.count() == 1)
+  let revoked = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
+    allowed: false), verifier: FixturePDFVerifier(), maximumBytes: 10_000)
+  do { _ = try await revoked.write(actor, uploadID: session.uploadID, source: ObjectDataReader(bytes))
+    Issue.record("revoked retry accepted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
+  do { _ = try await service.write(actor, uploadID: session.uploadID,
+    source: ObjectDataReader(Data(repeating: 0x78, count: bytes.count)))
+    Issue.record("changed bytes replayed") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_IDEMPOTENCY_CONFLICT")) }
+  do { _ = try await service.write(actor, uploadID: session.uploadID,
+    source: ObjectDataReader(bytes.dropLast()))
+    Issue.record("short source replayed") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_IDEMPOTENCY_CONFLICT")) }
+  do { _ = try await service.write(actor, uploadID: session.uploadID, source: FailedReplayReader())
+    Issue.record("failing source replayed") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_STORE_FAILED")) }
+  #expect(try await service.write(actor, uploadID: session.uploadID,
+    source: ObjectDataReader(bytes)) == Int64(bytes.count))
+  #expect(await store.count() == 1)
+  #expect(try await service.complete(actor, uploadID: session.uploadID) == session.reference)
+  #expect(await calls.value() == 1)
+  #expect(try await service.write(actor, uploadID: session.uploadID,
+    source: ObjectDataReader(bytes)) == Int64(bytes.count))
+  #expect(await calls.value() == 1)
+  let raw = try #require(await uploadCatalogValue(actor,
+    sql: "SELECT object_key FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key))
+  _ = try await actor.objectStorage("replace File generation").putBytes(try ObjectKey(raw), data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace,
+      contentType: "application/pdf"))
+  do { _ = try await service.write(actor, uploadID: session.uploadID, source: ObjectDataReader(bytes))
+    Issue.record("replaced generation replayed") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_IDEMPOTENCY_CONFLICT")) }
 }
 
 @Test
