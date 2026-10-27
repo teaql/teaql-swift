@@ -128,6 +128,11 @@ public struct ObjectStorageEvent: Sendable {
 }
 public typealias ObjectStorageObserver = @Sendable (ObjectStorageEvent) -> Void
 public extension UserContext {
+  /// Checks the exact installed provider without exposing storage configuration.
+  func usesObjectStorageProvider(_ provider: AnyObject) -> Bool {
+    guard let installed = objectStorageProvider as AnyObject? else { return false }
+    return installed === provider
+  }
   func withObjectStorage(_ provider: any ObjectStorageProvider) -> UserContext {
     var copy = self; copy.objectStorageProvider = provider; return copy
   }
