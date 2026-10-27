@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import TeaQLBlobReference
 import TeaQLCore
 import TeaQLSQLite
@@ -293,4 +296,60 @@ func swiftCurrentBindingReadPrecedesViewURLProjection() async throws {
   }
   do { _ = try await catalog.currentRead(context, slot: slot); Issue.record("deleted content accepted") }
   catch let error as ViewPreparationError { #expect(error.code == "BLOB_READ_DENIED") }
+}
+
+@Test
+func swiftAuthorizedViewProjectsRealFileURLAndDeniesRevokedRefresh() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-view-file-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let store = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  _ = try store.start()
+  let (context, _, _) = try await catalogFixture()
+  let storage = try context.withObjectStorage(store).objectStorage("publish current file")
+  let bytes = Data("%PDF-1x".utf8)
+  _ = try await storage.putBytes(try ObjectKey("objects/abc"), data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly,
+      contentType: "application/pdf"))
+  let catalog = SQLiteBlobCatalog(), reference = try BlobRef("blob_abc")
+  let target = BlobBindingTarget(entity: "Asset", entityID: "1", field: "file")
+  try await context.executeGraphSave(comment: "bind real file") { actor, session in
+    _ = try await catalog.bind(actor, session: session,
+      change: BlobBindingChange(target: target, next: reference,
+        expectedVersion: 0, nextVersion: 1, action: "Create"),
+      authorization: CatalogAuthorization("tenant-a"))
+  }
+  let slot = AuthorizedBlobSlot(path: [.field("document")], entity: "Asset", entityID: "1",
+    field: "file", scope: "tenant-a", bindingVersion: 1, reference: reference)
+  let authorizer = CatalogViewAuthorizer(reference: reference, slot: slot)
+  let permitted = context.withObjectStorage(store).withResponseGraphAuthorizer(authorizer)
+    .withBlobResponseContributor(try SQLiteBlobResponseContributor(catalog: catalog,
+      authorization: CatalogReadPermission(allowed: true)))
+  let options = ViewOptions(mode: .ordinary, businessOutcome: .readOnly,
+    expiresAt: Date().addingTimeInterval(60))
+  let prepared = try await ViewPreparationService().prepare(context: permitted,
+    result: "unused", options: options)
+  guard case let .object(fields) = prepared.presentation,
+    let document = fields["document"], case let .string(urlText) = document,
+    let url = URL(string: urlText) else { Issue.record("File URL not projected"); return }
+  #expect(!urlText.contains("objects/abc"))
+  let session = URLSession(configuration: .ephemeral)
+  defer { session.invalidateAndCancel() }
+  let (body, response) = try await session.data(from: url)
+  #expect((response as? HTTPURLResponse)?.statusCode == 200)
+  #expect(body == bytes)
+  #expect((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type") == "application/pdf")
+  #expect((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition") ==
+    "inline; filename=\"report.pdf\"")
+  let revoked = permitted.withBlobResponseContributor(try SQLiteBlobResponseContributor(
+    catalog: catalog, authorization: CatalogReadPermission(allowed: false)))
+  do {
+    _ = try await ViewPreparationService().prepare(context: revoked,
+      result: "unused", options: options)
+    Issue.record("revoked URL refresh accepted")
+  } catch let error as ViewPreparationError { #expect(error.code == "BLOB_READ_DENIED") }
 }

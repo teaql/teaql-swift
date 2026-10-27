@@ -20,6 +20,8 @@ let package = Package(
     .executable(name: "teaql-order-management", targets: ["OrderManagement"]),
   ],
   dependencies: [
+    .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.1"),
+    .package(url: "https://github.com/apple/swift-nio.git", from: "2.101.3"),
     .package(url: "https://github.com/open-telemetry/opentelemetry-swift-core.git", from: "2.2.0"),
     .package(url: "https://github.com/open-telemetry/opentelemetry-swift.git", from: "2.2.0"),
   ],
@@ -31,7 +33,12 @@ let package = Package(
     .target(name: "TeaQLCore", resources: [.process("Resources")]),
     .target(name: "TeaQLSQL", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLSQLite", dependencies: ["TeaQLCore", "TeaQLSQL", "CSQLite"]),
-    .target(name: "TeaQLBlobReference", dependencies: ["TeaQLCore"]),
+    .target(name: "TeaQLBlobReference", dependencies: [
+      "TeaQLCore", .product(name: "Crypto", package: "swift-crypto"),
+      .product(name: "NIOCore", package: "swift-nio"),
+      .product(name: "NIOHTTP1", package: "swift-nio"),
+      .product(name: "NIOPosix", package: "swift-nio"),
+    ]),
     .target(name: "TeaQLFederal", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLTestSupport", dependencies: ["TeaQLCore", "TeaQLSQLite"]),
     .target(
@@ -62,7 +69,9 @@ let package = Package(
     .testTarget(name: "TeaQLCoreTests", dependencies: ["TeaQLCore"], resources: [.process("fixtures")]),
     .testTarget(name: "TeaQLSQLTests", dependencies: ["TeaQLSQL"]),
     .testTarget(name: "TeaQLSQLiteTests", dependencies: ["TeaQLSQLite", "TeaQLTestSupport"]),
-    .testTarget(name: "TeaQLBlobReferenceTests", dependencies: ["TeaQLBlobReference", "TeaQLSQLite"]),
+    .testTarget(name: "TeaQLBlobReferenceTests", dependencies: [
+      "TeaQLBlobReference", "TeaQLSQLite", .product(name: "Crypto", package: "swift-crypto"),
+    ]),
     .testTarget(name: "TeaQLFederalTests", dependencies: ["TeaQLFederal"]),
     .testTarget(
       name: "TeaQLOpenTelemetryTests",
