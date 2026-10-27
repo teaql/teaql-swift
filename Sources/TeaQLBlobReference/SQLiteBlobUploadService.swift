@@ -531,6 +531,10 @@ public struct SQLiteBlobUploadService: Sendable {
           try await content.close()
         } catch {
           try? await content.close()
+          if let known = error as? TeaQLError,
+            [.execution("BLOB_FORMAT_NOT_ALLOWED"), .execution("BLOB_SIZE_EXCEEDED"),
+             .execution("BLOB_VERIFICATION_BUSY"), .execution("BLOB_CAPABILITY_MISSING")]
+              .contains(known) { throw known }
           throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
         }
         do {

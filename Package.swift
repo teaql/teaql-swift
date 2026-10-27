@@ -34,8 +34,9 @@ let package = Package(
     .target(name: "TeaQLCore", resources: [.process("Resources")]),
     .target(name: "TeaQLSQL", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLSQLite", dependencies: ["TeaQLCore", "TeaQLSQL", "CSQLite"]),
+    .target(name: "CStbImage", publicHeadersPath: "include"),
     .target(name: "TeaQLBlobReference", dependencies: [
-      "TeaQLCore", .product(name: "Crypto", package: "swift-crypto"),
+      "TeaQLCore", "CStbImage", .product(name: "Crypto", package: "swift-crypto"),
       .product(name: "NIOCore", package: "swift-nio"),
       .product(name: "NIOHTTP1", package: "swift-nio"),
       .product(name: "NIOPosix", package: "swift-nio"),
@@ -75,7 +76,7 @@ let package = Package(
     .testTarget(name: "TeaQLSQLiteTests", dependencies: ["TeaQLSQLite", "TeaQLTestSupport"]),
     .testTarget(name: "TeaQLBlobReferenceTests", dependencies: [
       "TeaQLBlobReference", "TeaQLSQLite", .product(name: "Crypto", package: "swift-crypto"),
-    ]),
+    ], resources: [.copy("fixtures")]),
     .testTarget(name: "TeaQLSecureDocumentReferenceTests", dependencies: [
       "TeaQLSecureDocumentReference", "TeaQLBlobReference", "TeaQLCore", "TeaQLSQLite",
       .product(name: "Crypto", package: "swift-crypto"),

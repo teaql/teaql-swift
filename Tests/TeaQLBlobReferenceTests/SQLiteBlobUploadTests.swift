@@ -9,9 +9,10 @@ private struct UploadPermission: BlobUploadAuthorization {
   let tenant: String
   let allowed: Bool
   var checkSQLPolicy = false
+  var extensions = ["pdf"]
   func scope(for actor: UserContext) throws -> String { tenant }
   func field(for actor: UserContext, target: BlobUploadTarget) throws -> BlobFieldSpec {
-    try BlobFieldSpec(entity: "Asset", field: "file", extensions: ["pdf"],
+    try BlobFieldSpec(entity: "Asset", field: "file", extensions: extensions,
       nullable: true, policyProfile: "default")
   }
   func authorize(actor: UserContext, target: BlobUploadTarget, action: String,
@@ -596,4 +597,119 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
     _ = try await expiring.write(context, uploadID: old.uploadID, source: ObjectDataReader(data))
     Issue.record("expired session wrote bytes")
   } catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_EXPIRED")) }
+}
+
+private func imageFixture(_ ext: String) throws -> Data {
+  let actual = ext == "jpeg" ? "jpg" : ext
+  let url = try #require(Bundle.module.url(forResource: "sample", withExtension: actual,
+    subdirectory: "fixtures"))
+  return try Data(contentsOf: url)
+}
+
+@Test
+func swiftRealImageVerifierDecodesAndBoundsSharedFixtures() async throws {
+  let verifier = try StbImageBlobContentVerifier()
+  for ext in ["jpg", "jpeg", "png"] {
+    let data = try imageFixture(ext)
+    let verified = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+      maximumBytes: 100_000)
+    #expect(verified.sizeBytes == Int64(data.count))
+    #expect(verified.contentType == (ext == "png" ? "image/png" : "image/jpeg"))
+    #expect(verified.sha256 == SHA256.hash(data: data)
+      .map { String(format: "%02x", $0) }.joined())
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(Data(data.dropLast(2))),
+        extension: ext, maximumBytes: 100_000)
+      Issue.record("truncated image accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+        maximumBytes: Int64(data.count - 1))
+      Issue.record("oversized image accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_SIZE_EXCEEDED")) }
+  }
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(try imageFixture("png")),
+      extension: "jpg", maximumBytes: 100_000)
+    Issue.record("wrong image format accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  var damaged = try imageFixture("png")
+  damaged[41] ^= 1 // First IDAT payload byte of the pinned 16x16 fixture.
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(damaged), extension: "png",
+      maximumBytes: 100_000)
+    Issue.record("corrupt PNG CRC accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  let tinyPixels = try StbImageBlobContentVerifier(maximumDecodedBytes: 4)
+  do {
+    _ = try await tinyPixels.verify(reader: ObjectDataReader(try imageFixture("png")),
+      extension: "png", maximumBytes: 100_000)
+    Issue.record("decoded pixel limit bypassed")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+}
+
+@Test
+func swiftRealImageVerifierRejectsBusyAdmissionAndReleasesSlot() async throws {
+  let data = try imageFixture("png")
+  let verifier = try StbImageBlobContentVerifier(concurrentVerifications: 1)
+  let slow = PausedUploadReader(data)
+  let first = Task { try await verifier.verify(reader: slow, extension: "png", maximumBytes: 100_000) }
+  await slow.entered.wait()
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(data), extension: "png",
+      maximumBytes: 100_000)
+    Issue.record("busy verifier admitted another decode")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_VERIFICATION_BUSY")) }
+  await slow.release.release()
+  #expect(try await first.value.sizeBytes == Int64(data.count))
+  #expect(try await verifier.verify(reader: ObjectDataReader(data), extension: "png",
+    maximumBytes: 100_000).sizeBytes == Int64(data.count))
+}
+
+@Test
+func swiftSQLiteFileImageUploadRequiresFullDecode() async throws {
+  let root = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-image-upload-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: root) }
+  let store = try FileObjectStorage(root: root.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install image upload schema") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let service = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true,
+      extensions: ["jpg", "png"]),
+    verifier: StbImageBlobContentVerifier(), maximumBytes: 100_000)
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  for ext in ["jpg", "png"] {
+    let data = try imageFixture(ext)
+    let input = BlobUploadInput(fileName: "sample.\(ext)", declaredSize: Int64(data.count))
+    let good = try await service.begin(actor, target: target, input: input,
+      replayKey: "image-valid-\(ext)")
+    _ = try await service.write(actor, uploadID: good.uploadID, source: ObjectDataReader(data))
+    #expect(try await service.complete(actor, uploadID: good.uploadID) == good.reference)
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: good.reference.key)
+      == "uploaded_unbound")
+
+    let truncated = Data(data.dropLast(2))
+    let bad = try await service.begin(actor, target: target,
+      input: BlobUploadInput(fileName: "sample.\(ext)", declaredSize: Int64(truncated.count)),
+      replayKey: "image-truncated-\(ext)")
+    _ = try await service.write(actor, uploadID: bad.uploadID, source: ObjectDataReader(truncated))
+    do {
+      _ = try await service.complete(actor, uploadID: bad.uploadID)
+      Issue.record("truncated upload promoted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: bad.reference.key)
+      == "initiated")
+  }
 }
