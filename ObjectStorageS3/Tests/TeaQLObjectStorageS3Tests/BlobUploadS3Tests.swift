@@ -1,4 +1,5 @@
 import Foundation
+import FoundationNetworking
 import XCTest
 import SotoS3
 import TeaQLBlobReference
@@ -53,6 +54,32 @@ private struct S3FixturePDFVerifier: BlobContentVerifier {
   }
 }
 
+private struct S3BindingPermission: BlobBindingAuthorization {
+  func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
+  func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
+                 next: BlobRef?, action: String) async throws -> Bool {
+    target.entity == "Asset" && target.entityID == "1" && target.field == "file"
+      && previous == nil && next != nil && action == "Create"
+  }
+}
+
+private struct S3ReadPermission: BlobReadAuthorization {
+  let allowed: Bool
+  func authorize(actor: UserContext, slot: AuthorizedBlobSlot) async throws -> Bool { allowed }
+}
+
+private struct S3ViewAuthorizer: ResponseGraphAuthorizer {
+  let reference: BlobRef
+  let version: Int64
+  func authorize(context: UserContext, result: any Sendable, options: ViewOptions)
+    async throws -> AuthorizedResponseGraph {
+    AuthorizedResponseGraph(presentation: .object(["document": .blob(reference)]),
+      blobSlots: [AuthorizedBlobSlot(path: [.field("document")], entity: "Asset",
+        entityID: "1", field: "file", scope: "f4-s3-upload",
+        bindingVersion: version, reference: reference)])
+  }
+}
+
 private func s3UploadCatalogValue(_ context: UserContext, sql: String,
                                   key: String) async throws -> String? {
   try await context.executeGraphSave(comment: "inspect S3 Blob upload") { graph, session in
@@ -81,12 +108,18 @@ final class BlobUploadS3Tests: XCTestCase {
       options: [.s3Disable100Continue])
     let provider = try S3ObjectStorage(service: service, bucket: bucket)
     let database = try SQLiteDataService(path: ":memory:")
+    let asset = EntityDescriptor(name: "Asset", table: "asset", properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "version", type: .int, isVersion: true),
+      PropertyDescriptor(name: "name", type: .string),
+    ])
     let context = UserContext(queryExecutor: database, mutationExecutor: database,
       requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
       .withObjectStorageObserver { _ in }
     let storage = try context.objectStorage("verify S3 Blob upload")
     var objectKey: ObjectKey?
     do {
+      try await context.ensureSchema(RuntimeModule(name: "s3-upload-test", entities: [asset]))
       let catalog = SQLiteBlobCatalog()
       try await context.executeGraphSave(comment: "install S3 Blob schema") { graph, session in
         try await catalog.installSchema(graph, session: session)
@@ -130,6 +163,65 @@ final class BlobUploadS3Tests: XCTestCase {
         sql: "SELECT content_version FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
       XCTAssertEqual(status, "uploaded_unbound")
       XCTAssertEqual(version, head?.etag)
+      try await context.executeGraphSave(comment: "bind S3 Blob in business graph") { actor, session in
+        _ = try await actor.execute(Mutation(kind: .create, entity: asset,
+          values: ["id": .int(1), "name": .string("document")],
+          auditReason: session.intent.comment))
+        let bound = try await catalog.bind(actor, session: session,
+          change: BlobBindingChange(target: BlobBindingTarget(entity: "Asset", entityID: "1",
+            field: "file"), next: reference, expectedVersion: 0, nextVersion: 1,
+            action: "Create"), authorization: S3BindingPermission())
+        XCTAssertEqual(bound, 1)
+      }
+      let businessName = try await s3UploadCatalogValue(context,
+        sql: "SELECT name FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
+      let boundStatus = try await s3UploadCatalogValue(context,
+        sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
+      XCTAssertEqual(businessName, "document")
+      XCTAssertEqual(boundStatus, "available")
+
+      let permitted = context.withResponseGraphAuthorizer(
+        S3ViewAuthorizer(reference: reference, version: 1))
+        .withBlobResponseContributor(try SQLiteBlobResponseContributor(catalog: catalog,
+          authorization: S3ReadPermission(allowed: true), maximumURLSeconds: 3))
+      let options = ViewOptions(mode: .ordinary, businessOutcome: .readOnly,
+        expiresAt: Date().addingTimeInterval(60))
+      let prepared = try await ViewPreparationService().prepare(context: permitted,
+        result: "unused", options: options)
+      guard case let .object(fields) = prepared.presentation,
+        let document = fields["document"], case let .string(urlText) = document,
+        let url = URL(string: urlText) else {
+        throw TeaQLError.execution("S3 Blob signed view missing")
+      }
+      XCTAssertEqual(prepared.cacheControl, "private, no-store")
+      var request = URLRequest(url: url)
+      request.setValue("bytes=0-7", forHTTPHeaderField: "Range")
+      let (partial, response) = try await URLSession.shared.data(for: request)
+      XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 206)
+      XCTAssertEqual(partial, data.prefix(8))
+      XCTAssertEqual((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type"),
+        "application/pdf")
+      XCTAssertTrue((response as? HTTPURLResponse)?
+        .value(forHTTPHeaderField: "Content-Disposition")?.contains("report.pdf") == true)
+      let revokedRead = permitted.withBlobResponseContributor(
+        try SQLiteBlobResponseContributor(catalog: catalog,
+          authorization: S3ReadPermission(allowed: false), maximumURLSeconds: 3))
+      do {
+        _ = try await ViewPreparationService().prepare(context: revokedRead,
+          result: "unused", options: options)
+        XCTFail("revoked S3 Blob view signed")
+      } catch let error as ViewPreparationError { XCTAssertEqual(error.code, "BLOB_READ_DENIED") }
+      let staleRead = permitted.withResponseGraphAuthorizer(
+        S3ViewAuthorizer(reference: reference, version: 0))
+      do {
+        _ = try await ViewPreparationService().prepare(context: staleRead,
+          result: "unused", options: ViewOptions(mode: .ordinary,
+            businessOutcome: .committed, expiresAt: Date().addingTimeInterval(60)))
+        XCTFail("stale S3 Blob binding signed")
+      } catch let error as ViewPreparationError {
+        XCTAssertEqual(error.code, "BLOB_READ_DENIED")
+        XCTAssertEqual(error.businessState, "committed")
+      }
     } catch {
       if let objectKey { try? await storage.delete(objectKey) }
       try? await client.shutdown()
