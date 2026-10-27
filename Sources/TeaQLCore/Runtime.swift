@@ -278,6 +278,19 @@ public protocol GraphTransactionExecutor: MutationExecutor {
   func rollbackGraphTransaction() async throws
 }
 
+/// A temporary, graph-owned SQL capability for optional infrastructure modules.
+/// The lease deliberately has no commit or rollback operation.
+public protocol GraphPhysicalSQLLease: Sendable {
+  func execute(_ sql: String, parameters: [TeaQLValue]) async throws -> Int
+  func query(_ sql: String, parameters: [TeaQLValue]) async throws -> [TeaQLRecord]
+}
+
+public protocol GraphPhysicalSQLExecutor: Sendable {
+  func withPhysicalSQL<T: Sendable>(
+    _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
+  ) async throws -> T
+}
+
 public extension MutationExecutor {
   var providerKind: String { String(describing: type(of: self)) }
   func execute(_ mutation: Mutation) async throws -> MutationResult {
@@ -710,6 +723,17 @@ public struct UserContext: Sendable {
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
     try await executeGraphSave(GraphMutationRequest(comment: comment), operation)
+  }
+
+  public func withPhysicalSQL<T: Sendable>(
+    _ session: GraphMutationSession,
+    _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
+  ) async throws -> T {
+    try requireGraphSession(session)
+    guard let owner = mutationExecutor as? any GraphPhysicalSQLExecutor else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    return try await owner.withPhysicalSQL(work)
   }
 
   public func executeGraphSave<T: Sendable>(

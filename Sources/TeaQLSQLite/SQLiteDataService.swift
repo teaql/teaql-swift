@@ -48,11 +48,13 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, GraphPhysicalSQLExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
   private var graphTransactionActive = false
+  private var graphRollbackOnly = false
+  private var physicalSQLLease: UUID?
   public let path: String
   public nonisolated var idSetDataSourceIdentity: String { "sqlite:\(path)" }
   public nonisolated var relationTopNPolicy: RelationTopNPolicy { .alwaysProbe }
@@ -281,6 +283,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   package func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult {
+    if graphTransactionActive && graphRollbackOnly {
+      throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY")
+    }
     let mutation = request.mutation
     if graphTransactionActive {
       let result = try performMutation(mutation)
@@ -305,17 +310,88 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
     try executeSQL("BEGIN IMMEDIATE")
     graphTransactionActive = true
+    graphRollbackOnly = false
+  }
+
+  public func withPhysicalSQL<T: Sendable>(
+    _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
+  ) async throws -> T {
+    guard graphTransactionActive, !graphRollbackOnly else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    guard physicalSQLLease == nil else {
+      graphRollbackOnly = true
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    let token = UUID()
+    physicalSQLLease = token
+    defer { physicalSQLLease = nil }
+    do {
+      let result = try await work(SQLitePhysicalSQLLease(owner: self, token: token))
+      guard !graphRollbackOnly else { throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY") }
+      return result
+    } catch {
+      graphRollbackOnly = true
+      throw error
+    }
+  }
+
+  fileprivate func executePhysicalSQL(_ sql: String, parameters: [TeaQLValue], token: UUID) throws -> Int {
+    guard graphTransactionActive, physicalSQLLease == token else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    guard !graphRollbackOnly else { throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY") }
+    do {
+      try run(sql, parameters: parameters)
+      return Int(sqlite3_changes(database))
+    } catch {
+      graphRollbackOnly = true
+      throw TeaQLError.execution("BLOB_CATALOG_ERROR")
+    }
+  }
+
+  fileprivate func queryPhysicalSQL(_ sql: String, parameters: [TeaQLValue], token: UUID) throws -> [TeaQLRecord] {
+    guard graphTransactionActive, physicalSQLLease == token else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    guard !graphRollbackOnly else { throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY") }
+    do {
+      var prepared: OpaquePointer?
+      guard sqlite3_prepare_v2(database, sql, -1, &prepared, nil) == SQLITE_OK,
+        let statement = prepared else { throw currentError(sql: sql) }
+      defer { sqlite3_finalize(statement) }
+      try bind(parameters, to: statement)
+      var rows: [TeaQLRecord] = []
+      while true {
+        switch sqlite3_step(statement) {
+        case SQLITE_ROW:
+          var row: TeaQLRecord = [:]
+          for index in 0..<sqlite3_column_count(statement) {
+            row[String(cString: sqlite3_column_name(statement, index))] = decode(statement, index: index, type: nil)
+          }
+          rows.append(row)
+        case SQLITE_DONE: return rows
+        default: throw currentError(sql: sql)
+        }
+      }
+    } catch {
+      graphRollbackOnly = true
+      throw TeaQLError.execution("BLOB_CATALOG_ERROR")
+    }
   }
 
   public func commitGraphTransaction() async throws {
     guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
+    guard !graphRollbackOnly, physicalSQLLease == nil else {
+      throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY")
+    }
     try executeSQL("COMMIT")
     graphTransactionActive = false
   }
 
   public func rollbackGraphTransaction() async throws {
     guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
-    defer { graphTransactionActive = false }
+    defer { graphTransactionActive = false; graphRollbackOnly = false; physicalSQLLease = nil }
     try executeSQL("ROLLBACK")
   }
 
@@ -844,4 +920,17 @@ private final class SQLiteHandle: @unchecked Sendable {
 
   init(_ pointer: OpaquePointer) { self.pointer = pointer }
   deinit { sqlite3_close(pointer) }
+}
+
+private struct SQLitePhysicalSQLLease: GraphPhysicalSQLLease {
+  let owner: SQLiteDataService
+  let token: UUID
+
+  func execute(_ sql: String, parameters: [TeaQLValue]) async throws -> Int {
+    try await owner.executePhysicalSQL(sql, parameters: parameters, token: token)
+  }
+
+  func query(_ sql: String, parameters: [TeaQLValue]) async throws -> [TeaQLRecord] {
+    try await owner.queryPhysicalSQL(sql, parameters: parameters, token: token)
+  }
 }
