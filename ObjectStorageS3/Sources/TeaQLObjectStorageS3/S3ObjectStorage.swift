@@ -83,7 +83,8 @@ private actor S3BodyReader: ObjectByteReader {
   }
 }
 
-public struct S3ObjectStorage: ObjectStorageProvider, CustomStringConvertible, CustomDebugStringConvertible {
+public struct S3ObjectStorage: ObjectStorageProvider, ObjectStorageConditionalDeleter,
+  CustomStringConvertible, CustomDebugStringConvertible {
   private let service: S3
   private let bucket: String
   public init(service: S3, bucket: String) throws {
@@ -149,6 +150,26 @@ public struct S3ObjectStorage: ObjectStorageProvider, CustomStringConvertible, C
     do { _ = try await service.deleteObject(.init(bucket: bucket, key: key.value)) }
     catch is CancellationError { throw CancellationError() }
     catch { throw storageError(error) }
+  }
+  public func deleteIfVersion(_ invocation: StorageInvocation, key: ObjectKey,
+    contentVersion: String) async throws -> ObjectConditionalDeleteResult {
+    guard !contentVersion.isEmpty, contentVersion != "*", contentVersion.utf8.count <= 256,
+      contentVersion == contentVersion.trimmingCharacters(in: .whitespacesAndNewlines),
+      !contentVersion.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+    else { throw StorageError(.invalidInput) }
+    do {
+      _ = try await service.deleteObject(.init(bucket: bucket, ifMatch: contentVersion, key: key.value))
+      return .deleted
+    } catch is CancellationError { throw CancellationError() }
+    catch {
+      let status = (error as? any AWSErrorType)?.context?.responseCode.code
+        ?? (error as? AWSRawError)?.context.responseCode.code
+      if status == 404 || status == 412 {
+        let current = try await head(invocation, key: key)
+        return current == nil ? .alreadyMissing : .versionMismatch
+      }
+      throw storageError(error)
+    }
   }
   public func getReadUrl(_ invocation: StorageInvocation, key: ObjectKey, options: ObjectReadUrlOptions) async throws -> ObjectReadUrl {
     try Task.checkCancellation()

@@ -15,6 +15,66 @@ private actor FailingStorageInput: ObjectByteReader {
 }
 @MainActor
 final class S3StorageTests: XCTestCase {
+  func testRealS3ConditionalDelete() async throws {
+    let env = ProcessInfo.processInfo.environment
+    guard env["TEAQL_S3_TEST_CONDITIONAL_DELETE"] == "1" else {
+      throw XCTSkip("explicit disposable S3 conditional-delete gate required")
+    }
+    guard let endpoint = env["TEAQL_S3_TEST_ENDPOINT"], let bucket = env["TEAQL_S3_TEST_BUCKET"],
+      let access = env["TEAQL_S3_TEST_ACCESS_KEY"], let secret = env["TEAQL_S3_TEST_SECRET_KEY"] else {
+      XCTFail("disposable S3 endpoint, bucket, and credentials required")
+      return
+    }
+    let client = AWSClient(credentialProvider: .static(accessKeyId: access, secretAccessKey: secret),
+      retryPolicy: .noRetry)
+    let service = S3(client: client, region: .useast1, endpoint: endpoint,
+      options: [.s3Disable100Continue])
+    let provider = try S3ObjectStorage(service: service, bucket: bucket)
+    let actor = UserContext(queryExecutor: UnusedStorageExecutor(),
+      mutationExecutor: UnusedStorageExecutor(), requestPolicy: RequestPolicy { $0 })
+      .withObjectStorage(provider)
+    let storage = try actor.objectStorage("real S3 conditional delete")
+    let key = try ObjectKey("f4/swift/conditional-delete/" + UUID().uuidString)
+    do {
+      let firstBytes = Data("first generation".utf8)
+      let first = try await storage.putBytes(key, data: firstBytes,
+        options: ObjectPutOptions(size: Int64(firstBytes.count), mode: .createOnly))
+      let firstVersion = try XCTUnwrap(first.etag)
+      guard case .versionMismatch = try await storage.deleteIfVersion(key,
+        contentVersion: "\"wrong-etag\"") else {
+        XCTFail("mismatched ETag deleted S3 object")
+        throw StorageError(.io)
+      }
+      let replacement = Data("replacement generation".utf8)
+      let second = try await storage.putBytes(key, data: replacement,
+        options: ObjectPutOptions(size: Int64(replacement.count), mode: .replace))
+      guard case .versionMismatch = try await storage.deleteIfVersion(key,
+        contentVersion: firstVersion) else {
+        XCTFail("stale ETag deleted S3 replacement")
+        throw StorageError(.io)
+      }
+      let remaining = try await storage.getBytes(key, maximumBytes: 1024)
+      XCTAssertEqual(remaining, replacement)
+      guard case .deleted = try await storage.deleteIfVersion(key,
+        contentVersion: try XCTUnwrap(second.etag)) else {
+        XCTFail("current ETag was not deleted")
+        throw StorageError(.io)
+      }
+      guard case .alreadyMissing = try await storage.deleteIfVersion(key,
+        contentVersion: try XCTUnwrap(second.etag)) else {
+        XCTFail("deleted S3 object did not replay as missing")
+        throw StorageError(.io)
+      }
+      await expect(.invalidInput) { _ = try await storage.deleteIfVersion(key, contentVersion: "*") }
+    } catch {
+      try? await storage.delete(key)
+      try? await client.shutdown()
+      throw error
+    }
+    try? await storage.delete(key)
+    try await client.shutdown()
+  }
+
   func testMinioRealSignedRangeAndExpiry() async throws {
     // Explicit local S3-compatible gate; the host owns the disposable bucket.
     let env = ProcessInfo.processInfo.environment
