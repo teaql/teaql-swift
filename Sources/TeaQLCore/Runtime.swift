@@ -318,6 +318,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
 
   public func save(_ context: UserContext) async throws -> Entity {
     _ = try MutationIntent(comment: reason)
+    try validateLoadedIdentity()
     LoadedScalarRestoration.discardRestoredFields(of: entity)
     guard try validateVersion() else { return entity }
     return try await context.executeGraphSave(comment: reason, rootEntityType: Entity.descriptor.name, preparing: { graphContext, _ in
@@ -333,8 +334,9 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   /// Generated graph infrastructure calls this for every reachable node before
   /// the first mutation of the graph is sent to the provider.
   public func preflight(_ context: UserContext) throws {
-    LoadedScalarRestoration.discardRestoredFields(of: entity)
     let rooted = entity as? any TeaQLMutationRootedEntity
+    try validateLoadedIdentity(rooted: rooted)
+    LoadedScalarRestoration.discardRestoredFields(of: entity)
     if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return }
     _ = try context.preflightMutation(
       makeMutation(rooted: rooted),
@@ -347,6 +349,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   @discardableResult
   public func validateVersion() throws -> Bool {
     let rooted = entity as? any TeaQLMutationRootedEntity
+    try validateLoadedIdentity(rooted: rooted)
     if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return false }
     _ = try makeMutation(rooted: rooted).validatedForExecution()
     return true
@@ -358,6 +361,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
                           scope: TraceScopeToken) async throws -> Entity {
     try context.requireGraphSession(session)
     let rooted = entity as? any TeaQLMutationRootedEntity
+    try validateLoadedIdentity(rooted: rooted)
     if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return entity }
     var mutation = try makeMutation(rooted: rooted)
     mutation.auditReason = session.intent.auditReason
@@ -377,16 +381,29 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     return saved
   }
 
+  /// A generated read-only graph pass uses this before relation normalization.
+  /// A harmless old read view may outlive its ledger version; it must still
+  /// retain its own immutable loaded identity, even when it has no write intent.
+  @_spi(Generated) public func validateLoadedIdentity() throws {
+    try validateLoadedIdentity(rooted: entity as? any TeaQLMutationRootedEntity)
+  }
+
+  private func validateLoadedIdentity(rooted: (any TeaQLMutationRootedEntity)?) throws {
+    if let rooted, let snapshot = rooted.teaqlLoadedSnapshot,
+      snapshot.key != rooted.teaqlEntityKey || snapshot.version != entity.version {
+      throw TeaQLError.execution("ENTITY_VERSION_CONFLICT: \(Entity.descriptor.name) must retain its loaded identity and version")
+    }
+  }
+
   private func makeMutation(rooted: (any TeaQLMutationRootedEntity)?) throws -> Mutation {
+    try validateLoadedIdentity(rooted: rooted)
     if let rooted {
       let key = rooted.teaqlEntityKey
       // A successful save advances this graph's ledger, not every Swift value
       // copy that once shared it. Only the authoritative returned snapshot may
       // use that newer version; never implicitly rebase an old dirty struct.
       let version = rooted.teaqlEntityRoot.originalVersion(key)
-      let snapshot = rooted.teaqlLoadedSnapshot
-      if version.map({ $0 != entity.version }) == true
-        || snapshot.map({ $0.key != key || $0.version != entity.version }) == true {
+      if version.map({ $0 != entity.version }) == true {
         throw TeaQLError.execution("ENTITY_VERSION_CONFLICT: \(Entity.descriptor.name) must retain its loaded identity and version")
       }
     }
