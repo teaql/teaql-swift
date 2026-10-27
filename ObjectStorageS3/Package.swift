@@ -22,7 +22,7 @@ let package = Package(
       .product(name: "TeaQLSQLite", package: "TeaQLRuntime"),
       .product(name: "TeaQLBlobReference", package: "TeaQLRuntime"),
       .product(name: "SotoS3", package: "soto"),
-    ]),
+    ], resources: [.copy("fixtures")]),
   ],
   swiftLanguageModes: [.v6]
 )

@@ -9,9 +9,10 @@ import TeaQLSQLite
 
 private struct S3UploadPermission: BlobUploadAuthorization {
   let allowed: Bool
+  let fileExtension: String
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
   func field(for actor: UserContext, target: BlobUploadTarget) throws -> BlobFieldSpec {
-    try BlobFieldSpec(entity: "Asset", field: "file", extensions: ["pdf"],
+    try BlobFieldSpec(entity: "Asset", field: "file", extensions: [fileExtension],
       nullable: true, policyProfile: "default")
   }
   func authorize(actor: UserContext, target: BlobUploadTarget, action: String,
@@ -54,6 +55,16 @@ private struct S3FixturePDFVerifier: BlobContentVerifier {
   }
 }
 
+private struct S3CountingVerifier: BlobContentVerifier {
+  let base: any BlobContentVerifier
+  let calls: S3VerifierCalls
+  func verify(reader: any ObjectByteReader, extension ext: String,
+              maximumBytes: Int64) async throws -> BlobVerifiedContent {
+    await calls.record()
+    return try await base.verify(reader: reader, extension: ext, maximumBytes: maximumBytes)
+  }
+}
+
 private struct S3BindingPermission: BlobBindingAuthorization {
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
@@ -93,6 +104,17 @@ private func s3UploadCatalogValue(_ context: UserContext, sql: String,
 @MainActor
 final class BlobUploadS3Tests: XCTestCase {
   func testRealSQLiteBlobUploadThroughS3() async throws {
+    try await runBlobUpload(realImage: false)
+  }
+
+  func testRealJPEGBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_IMAGE"] == "1" else {
+      throw XCTSkip("explicit real-image S3 gate required")
+    }
+    try await runBlobUpload(realImage: true)
+  }
+
+  private func runBlobUpload(realImage: Bool) async throws {
     let env = ProcessInfo.processInfo.environment
     guard env["TEAQL_S3_TEST_BLOB_UPLOAD"] == "1" else {
       throw XCTSkip("explicit S3-compatible Blob upload gate required")
@@ -125,14 +147,27 @@ final class BlobUploadS3Tests: XCTestCase {
         try await catalog.installSchema(graph, session: session)
       }
       let calls = S3VerifierCalls()
+      let decoder: any BlobContentVerifier
+      if realImage { decoder = try StbImageBlobContentVerifier() }
+      else { decoder = S3FixturePDFVerifier(calls: S3VerifierCalls()) }
       let upload = try SQLiteBlobUploadService(
-        authorization: S3UploadPermission(allowed: true),
-        verifier: S3FixturePDFVerifier(calls: calls), maximumBytes: 10_000)
-      let data = Data("%PDF-1.7\nreal S3 Blob upload\n%%EOF".utf8)
+        authorization: S3UploadPermission(allowed: true,
+          fileExtension: realImage ? "jpg" : "pdf"),
+        verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 10_000)
+      let data: Data
+      if realImage {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: "jpg",
+          subdirectory: "fixtures"))
+        data = try Data(contentsOf: url)
+      } else {
+        data = Data("%PDF-1.7\nreal S3 Blob upload\n%%EOF".utf8)
+      }
+      let filename = realImage ? "sample.jpg" : "report.pdf"
+      let contentType = realImage ? "image/jpeg" : "application/pdf"
       let session = try await upload.begin(context,
         target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
-        input: BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(data.count),
-          declaredContentType: "application/pdf"), replayKey: UUID().uuidString)
+        input: BlobUploadInput(fileName: filename, declaredSize: Int64(data.count),
+          declaredContentType: contentType), replayKey: UUID().uuidString)
       let raw = try await s3UploadCatalogValue(context,
         sql: "SELECT object_key FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key)
       objectKey = try ObjectKey(try XCTUnwrap(raw))
@@ -140,8 +175,9 @@ final class BlobUploadS3Tests: XCTestCase {
         source: ObjectDataReader(data))
       XCTAssertEqual(written, Int64(data.count))
       let revoked = try SQLiteBlobUploadService(
-        authorization: S3UploadPermission(allowed: false),
-        verifier: S3FixturePDFVerifier(calls: calls), maximumBytes: 10_000)
+        authorization: S3UploadPermission(allowed: false,
+          fileExtension: realImage ? "jpg" : "pdf"),
+        verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 10_000)
       do { _ = try await revoked.complete(context, uploadID: session.uploadID)
         XCTFail("revoked S3 Blob confirmation accepted") }
       catch let error as TeaQLError { XCTAssertEqual(error, .execution("BLOB_UPLOAD_DENIED")) }
@@ -163,6 +199,9 @@ final class BlobUploadS3Tests: XCTestCase {
         sql: "SELECT content_version FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
       XCTAssertEqual(status, "uploaded_unbound")
       XCTAssertEqual(version, head?.etag)
+      let catalogContentType = try await s3UploadCatalogValue(context,
+        sql: "SELECT content_type FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
+      XCTAssertEqual(catalogContentType, contentType)
       try await context.executeGraphSave(comment: "bind S3 Blob in business graph") { actor, session in
         _ = try await actor.execute(Mutation(kind: .create, entity: asset,
           values: ["id": .int(1), "name": .string("document")],
@@ -200,9 +239,9 @@ final class BlobUploadS3Tests: XCTestCase {
       XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 206)
       XCTAssertEqual(partial, data.prefix(8))
       XCTAssertEqual((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type"),
-        "application/pdf")
+        contentType)
       XCTAssertTrue((response as? HTTPURLResponse)?
-        .value(forHTTPHeaderField: "Content-Disposition")?.contains("report.pdf") == true)
+        .value(forHTTPHeaderField: "Content-Disposition")?.contains(filename) == true)
       let revokedRead = permitted.withBlobResponseContributor(
         try SQLiteBlobResponseContributor(catalog: catalog,
           authorization: S3ReadPermission(allowed: false), maximumURLSeconds: 3))
