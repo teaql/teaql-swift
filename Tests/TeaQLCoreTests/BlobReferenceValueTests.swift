@@ -36,6 +36,13 @@ final class BlobReferenceValueTests: XCTestCase {
     XCTAssertEqual(spec.allowedExtensions, formats.keys.sorted())
     XCTAssertEqual(spec.allowedContentTypes, Array(Set(formats.values)).sorted())
     XCTAssertEqual(spec.maxFiles, 1)
+    XCTAssertEqual(try JSONDecoder().decode(BlobFieldSpec.self, from: JSONEncoder().encode(spec)), spec)
+    let descriptor = PropertyDescriptor(name: "file", type: .blobRef,
+      nullable: false, blobSpec: spec)
+    XCTAssertEqual(try JSONDecoder().decode(PropertyDescriptor.self,
+      from: JSONEncoder().encode(descriptor)), descriptor)
+    let invalidSpec = #"{"entity":"Document","field":"file","allowedExtensions":["exe"],"nullable":false,"policyProfile":"default"}"#
+    XCTAssertThrowsError(try JSONDecoder().decode(BlobFieldSpec.self, from: Data(invalidSpec.utf8)))
     XCTAssertThrowsError(try BlobFieldSpec(entity: "Document", field: "file",
       extensions: ["exe"], nullable: false, policyProfile: "default"))
   }

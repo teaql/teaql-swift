@@ -287,6 +287,10 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY")
     }
     let mutation = request.mutation
+    if mutation.entity.hasBlobFields {
+      if graphTransactionActive { graphRollbackOnly = true }
+      throw TeaQLError.execution("BLOB_CAPABILITY_MISSING")
+    }
     if graphTransactionActive {
       let result = try performMutation(mutation)
       if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
@@ -367,7 +371,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         case SQLITE_ROW:
           var row: TeaQLRecord = [:]
           for index in 0..<sqlite3_column_count(statement) {
-            row[String(cString: sqlite3_column_name(statement, index))] = decode(statement, index: index, type: nil)
+            row[String(cString: sqlite3_column_name(statement, index))] = try decode(statement, index: index, type: nil)
           }
           rows.append(row)
         case SQLITE_DONE: return rows
@@ -686,7 +690,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
           let property = entity.properties.first {
             $0.column.caseInsensitiveCompare(column) == .orderedSame
           }
-          record[property?.name ?? column] = decode(statement, index: index, type: property?.type)
+          record[property?.name ?? column] = try decode(statement, index: index, type: property?.type)
         }
         records.append(record)
       case SQLITE_DONE: return records
@@ -803,6 +807,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       case .double(let value): result = sqlite3_bind_double(statement, index, value)
       case .decimal(let value): result = bindText(String(describing: value), statement, index)
       case .string(let value): result = bindText(value, statement, index)
+      case .blobRef(let value): result = bindText(value.sqlText, statement, index)
       case .calendarDate(let value): result = bindText(value, statement, index)
       case .localDateTime(let value): result = bindText(value, statement, index)
       case .timestamp(let value): result = sqlite3_bind_int64(statement, index, value)
@@ -826,7 +831,13 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     value.withCString { sqlite3_bind_text(statement, index, $0, -1, sqliteTransient) }
   }
 
-  private func decode(_ statement: OpaquePointer, index: Int32, type: PropertyType?) -> TeaQLValue {
+  private func decode(_ statement: OpaquePointer, index: Int32, type: PropertyType?) throws -> TeaQLValue {
+    if type == .blobRef {
+      let storageType = sqlite3_column_type(statement, index)
+      if storageType == SQLITE_NULL { return .null }
+      guard storageType == SQLITE_TEXT else { throw TeaQLError.execution("BLOB_REFERENCE_INVALID") }
+      return .blobRef(try BlobRef(String(cString: sqlite3_column_text(statement, index))))
+    }
     switch sqlite3_column_type(statement, index) {
     case SQLITE_NULL: return .null
     case SQLITE_INTEGER:
@@ -873,6 +884,20 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     var normalized: TeaQLRecord = [:]
     for (inputName, value) in values {
       let property = try requireProperty(inputName, entity)
+      if property.type == .blobRef || property.blobSpec != nil {
+        guard property.type == .blobRef, let spec = property.blobSpec,
+          spec.entity == entity.name, spec.field == property.name,
+          spec.nullable == property.nullable, !spec.allowedExtensions.isEmpty else {
+          throw TeaQLError.execution("BLOB_CAPABILITY_MISSING")
+        }
+        switch value {
+        case .blobRef: break
+        case .null where property.nullable: break
+        default: throw TeaQLError.execution("BLOB_REFERENCE_INVALID")
+        }
+      } else if case .blobRef = value {
+        throw TeaQLError.execution("BLOB_REFERENCE_INVALID")
+      }
       if let existing = normalized[property.name], existing != value {
         throw TeaQLError.execution(
           "Conflicting mutation values for \(entity.name).\(property.name)")
@@ -904,6 +929,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     case .double(let value): String(value)
     case .decimal(let value): String(describing: value)
     case .string(let value): value
+    case .blobRef: "[REDACTED]"
     case .calendarDate(let value): value
     case .localDateTime(let value): value
     case .timestamp(let value): String(value)

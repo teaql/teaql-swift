@@ -67,6 +67,7 @@ public enum SQLLogRenderer {
     case .decimal(let v):
       guard !v.isNaN else { throw RenderError.invalidValue }; return NSDecimalNumber(decimal: v).stringValue
     case .string(let v), .calendarDate(let v), .localDateTime(let v): return try quote(v)
+    case .blobRef: return "'[REDACTED]'"
     case .date(let v): return try quote(ISO8601DateFormatter().string(from: v))
     case .data(let v): return "X'" + v.map { String(format: "%02x", $0) }.joined() + "'"
     case .array, .object:

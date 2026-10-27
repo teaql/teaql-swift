@@ -33,7 +33,7 @@ public struct BlobRef: Sendable, Hashable, Codable, CustomStringConvertible, Cus
 }
 
 /// Model-declared format restrictions; a trusted server policy may narrow these further.
-public struct BlobFieldSpec: Sendable, Hashable {
+public struct BlobFieldSpec: Sendable, Hashable, Codable {
   public static let capability = "blob.v1"
   public let entity: String
   public let field: String
@@ -41,7 +41,11 @@ public struct BlobFieldSpec: Sendable, Hashable {
   public let allowedContentTypes: [String]
   public let nullable: Bool
   public let policyProfile: String
-  public let maxFiles = 1
+  public var maxFiles: Int { 1 }
+
+  private enum CodingKeys: String, CodingKey {
+    case entity, field, allowedExtensions, nullable, policyProfile
+  }
 
   private static let contentTypes: [String: String] = [
     "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
@@ -73,5 +77,23 @@ public struct BlobFieldSpec: Sendable, Hashable {
     self.allowedContentTypes = Array(Set(normalized.compactMap { Self.contentTypes[$0] })).sorted()
     self.nullable = nullable
     self.policyProfile = policyProfile
+  }
+
+  public init(from decoder: Decoder) throws {
+    let fields = try decoder.container(keyedBy: CodingKeys.self)
+    try self.init(entity: fields.decode(String.self, forKey: .entity),
+      field: fields.decode(String.self, forKey: .field),
+      extensions: fields.decode([String].self, forKey: .allowedExtensions),
+      nullable: fields.decode(Bool.self, forKey: .nullable),
+      policyProfile: fields.decode(String.self, forKey: .policyProfile))
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var fields = encoder.container(keyedBy: CodingKeys.self)
+    try fields.encode(entity, forKey: .entity)
+    try fields.encode(field, forKey: .field)
+    try fields.encode(allowedExtensions, forKey: .allowedExtensions)
+    try fields.encode(nullable, forKey: .nullable)
+    try fields.encode(policyProfile, forKey: .policyProfile)
   }
 }
