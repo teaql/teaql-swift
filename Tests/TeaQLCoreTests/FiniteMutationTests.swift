@@ -20,7 +20,8 @@ private let finiteEntity = EntityDescriptor(name: "FiniteProbe", table: "finite_
           requestPolicy: RequestPolicy { $0 })
         do {
           _ = try await context.execute(Mutation(kind: kind, entity: finiteEntity, id: .int(1),
-            values: [field: .double(value)], auditReason: "verify finite numeric admission"))
+            values: [field: .double(value)], expectedVersion: kind == .update ? 1 : nil,
+            auditReason: "verify finite numeric admission"))
           Issue.record("Non-finite \(kind.rawValue) \(field) reached the provider")
         } catch let error as CheckException {
           #expect(error.violations.contains { $0.ruleID == "invalid_type" && $0.location.modelPath == field })
@@ -83,7 +84,8 @@ private let finiteEntity = EntityDescriptor(name: "FiniteProbe", table: "finite_
   ledger.set(key, field: "required_double", value: .double(7.25))
   do {
     _ = try context.preflightMutation(Mutation(kind: .update, entity: finiteEntity, id: .int(1),
-      values: ["required_double": .double(7.25)], auditReason: "retain the pending edit after rejected Fix"),
+      values: ["required_double": .double(7.25)], expectedVersion: 1,
+      auditReason: "retain the pending edit after rejected Fix"),
       ledgerRoot: ledger, ledgerKey: key)
     Issue.record("Invalid custom Fix was accepted")
   } catch is CheckException { }

@@ -168,9 +168,10 @@ public struct MutationRequest: Sendable {
   private let payload: Mutation
   public let intent: MutationIntent
   public init(mutation: Mutation) throws {
-    self.init(mutation: mutation, intent: try MutationIntent(comment: mutation.auditReason))
+    self.init(mutation: try mutation.validatedForExecution(), intent: try MutationIntent(comment: mutation.auditReason))
   }
   public init(mutation: Mutation, comment: String?) throws {
+    try MutationVersion.validate(mutation)
     self.init(mutation: mutation, intent: try MutationIntent(comment: comment))
   }
   public init(mutation: Mutation, intent: MutationIntent) {

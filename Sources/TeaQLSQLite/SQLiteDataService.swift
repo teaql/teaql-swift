@@ -445,7 +445,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   package func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult {
-    let mutation = request.mutation
+    // The nonthrowing intent-bearing request constructor is also used by
+    // trusted infrastructure. Re-admit here, before even opening a transaction.
+    let mutation = try request.mutation.validatedForExecution()
     if graphTransactionActive {
       let result = try performMutation(mutation)
       if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
@@ -507,9 +509,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     switch mutation.kind {
     case .create: return try insert(mutation)
     case .update: return try update(mutation)
-    case .delete: return try delete(mutation)
-    case .recover:
-      throw TeaQLError.execution("SQLite recover requires a generated soft-delete contract")
+    case .delete, .recover: return try transitionVersion(mutation)
     }
   }
 
@@ -644,14 +644,16 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     var values = properties.map { normalized[$0.name] ?? .null }
     var policies = properties.map { SQLParameterLogPolicy.field($0.name, in: mutation.entity) }
     var whereSQL = "\(quote(idProperty.column)) = ?"
+    if let versionProperty {
+      let next = try MutationVersion.next(for: .update, original: mutation.expectedVersion)
+      assignments.append("\(quote(versionProperty.column)) = ?")
+      values.append(.int(next))
+      policies.append(.field(versionProperty.name, in: mutation.entity))
+      whereSQL += " AND \(quote(versionProperty.column)) = ?"
+    }
     values.append(id)
     policies.append(.field(idProperty.name, in: mutation.entity))
-    if let versionProperty {
-      guard let expected = mutation.expectedVersion else {
-        throw TeaQLError.execution("Versioned update requires expectedVersion")
-      }
-      assignments.append("\(quote(versionProperty.column)) = \(quote(versionProperty.column)) + 1")
-      whereSQL += " AND \(quote(versionProperty.column)) = ?"
+    if let versionProperty, let expected = mutation.expectedVersion {
       values.append(.int(expected))
       policies.append(.field(versionProperty.name, in: mutation.entity))
     }
@@ -691,38 +693,39 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       metadata: metadata.includingStatements([metadata, read]))
   }
 
-  private func delete(_ mutation: Mutation) throws -> MutationResult {
+  private func transitionVersion(_ mutation: Mutation) throws -> MutationResult {
     guard let id = mutation.id, let idProperty = mutation.entity.idProperty else {
-      throw TeaQLError.execution("Delete requires entity ID metadata and an ID value")
+      throw TeaQLError.execution("Version transition requires entity ID metadata and an ID value")
     }
     guard let versionProperty = mutation.entity.versionProperty,
       let expected = mutation.expectedVersion
     else {
-      throw TeaQLError.execution("Soft delete requires version metadata and expectedVersion")
+      throw TeaQLError.execution("Version transition requires version metadata and expectedVersion")
     }
-    let deletedVersion = -(expected + 1)
+    let next = try MutationVersion.next(for: mutation.kind, original: expected)
+    let operation: SQLExecutionOperation = mutation.kind == .delete ? .delete : .recover
     let sql =
       "UPDATE \(quote(mutation.entity.table)) SET \(quote(versionProperty.column)) = ? WHERE \(quote(idProperty.column)) = ? AND \(quote(versionProperty.column)) = ?"
-    let values: [TeaQLValue] = [.int(deletedVersion), id, .int(expected)]
+    let values: [TeaQLValue] = [.int(next), id, .int(expected)]
     let policies: [SQLParameterLogPolicy] = [.field(versionProperty.name, in: mutation.entity),
       .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)]
     let startedAt = DispatchTime.now().uptimeNanoseconds
-    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: "delete", entity: mutation.entity.name)
+    let observation = SQLTelemetryObservationContext.observer?.beginSQL(operation: operation.rawValue, entity: mutation.entity.name)
     do { try runObserved(sql, parameters: values, observation: observation) }
     catch {
-      throw mutationFailure(error, mutation: mutation, operation: .delete, sql: sql, values: values,
+      throw mutationFailure(error, mutation: mutation, operation: operation, sql: sql, values: values,
         policies: policies, startedAt: startedAt, correlation: observation?.correlation)
     }
     let changed = Int(sqlite3_changes(database))
     if changed == 0 {
       throw mutationFailure(TeaQLError.optimisticLock(entity: mutation.entity.name, id: id, expectedVersion: expected),
-        mutation: mutation, operation: .delete, sql: sql, values: values, policies: policies,
+        mutation: mutation, operation: operation, sql: sql, values: values, policies: policies,
         startedAt: startedAt, affectedRows: 0, executionOutcome: "success", correlation: observation?.correlation)
     }
     let metadata = SQLExecutionMetadata(
-        operation: .delete,
+        operation: operation,
         auditReason: mutation.auditReason,
-        tracePath: mutationSQLTrace(mutation, operation: "delete"),
+        tracePath: mutationSQLTrace(mutation, operation: operation.rawValue),
         mutationLineage: mutation.mutationLineage ?? [],
         parameterizedSQL: sql,
         parameters: values,
@@ -734,7 +737,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
           .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)],
         generatedSQL: true, executionOutcome: "success").withTelemetryCorrelation(observation?.correlation)
     let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
-    return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: .int(deletedVersion)],
+    return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: .int(next)],
       persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
   }
 

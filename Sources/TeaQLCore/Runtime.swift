@@ -244,6 +244,7 @@ public struct Mutation: Sendable, Codable {
 
   public func validatedForExecution() throws -> Self {
     _ = try MutationIntent(comment: auditReason)
+    try MutationVersion.validate(self)
     return self
   }
 }
@@ -1601,6 +1602,9 @@ public struct UserContext: Sendable {
   public func execute(_ request: MutationBatchRequest) async throws -> [MutationResult] {
     let mutations = request.mutations
     guard !mutations.isEmpty else { return [] }
+    // Admission is a separate complete pass: a later exhausted row must not
+    // let an earlier sibling run customer Fix or policy code.
+    for mutation in mutations { _ = try mutation.validatedForExecution() }
     return try await executeGraphSave(comment: request.intent.comment, preparing: { context, _ in
       for mutation in mutations { _ = try context.preflightMutation(mutation) }
     }) { context, _ in
@@ -1793,6 +1797,7 @@ public struct UserContext: Sendable {
       })
     }
     if !violations.isEmpty { throw CheckException(violations) }
+    _ = try validated.validatedForExecution()
     if checker != nil && graphSession == nil {
       if let ledgerRoot, let ledgerKey {
         for (field, value) in validated.values {
