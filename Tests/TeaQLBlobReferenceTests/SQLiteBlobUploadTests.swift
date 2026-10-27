@@ -433,6 +433,15 @@ func swiftSQLiteCommittedUploadWriteReplaysOnlySameBytesAndGeneration() async th
   #expect(try await service.write(actor, uploadID: session.uploadID,
     source: ObjectDataReader(bytes)) == Int64(bytes.count))
   #expect(await store.count() == 1)
+  await transport.loseNextCommitReply()
+  do { _ = try await service.complete(actor, uploadID: session.uploadID)
+    Issue.record("lost confirmation reply returned success") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_CATALOG_FAILED")) }
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT state FROM teaql_blob_upload WHERE key = ?", key: session.reference.key) == "completed")
+  do { _ = try await revoked.complete(actor, uploadID: session.uploadID)
+    Issue.record("revoked confirmation replay accepted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
   #expect(try await service.complete(actor, uploadID: session.uploadID) == session.reference)
   #expect(await calls.value() == 1)
   #expect(try await service.write(actor, uploadID: session.uploadID,
