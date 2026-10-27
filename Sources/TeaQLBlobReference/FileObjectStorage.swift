@@ -42,7 +42,7 @@ private actor FileObjectReader: ObjectByteReader {
 }
 
 /// A private local store. The host must protect the root's parent against untrusted writers.
-/// Old immutable generations remain until a separate collector is installed.
+/// Old immutable generations may be swept explicitly by the host.
 /// The loopback read gateway starts only when `start()` is called.
 public final class FileObjectStorage: ObjectStorageProvider, ObjectStorageConditionalDeleter, @unchecked Sendable {
   private let root: String
@@ -64,15 +64,28 @@ public final class FileObjectStorage: ObjectStorageProvider, ObjectStorageCondit
   private func directory(_ hash: String) -> String { "\(root)/\(hash.prefix(2))/\(hash)" }
   private func dataPath(_ hash: String, _ version: String) -> String { "\(directory(hash))/data-\(version)" }
   private func manifestPath(_ hash: String) -> String { "\(directory(hash))/manifest.json" }
-  private func withManifestLock<T>(_ hash: String, _ operation: () throws -> T) throws -> T {
-    let fd = open("\(directory(hash))/manifest.lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
+  private func openLockedFile(_ hash: String, _ name: String) throws -> Int32 {
+    let fd = open("\(directory(hash))/\(name)", O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
     guard fd >= 0 else { throw StorageError(.io) }
-    defer { _ = DarwinOrGlibcClose(fd) }
     var info = stat()
     guard fstat(fd, &info) == 0, info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
-      info.st_mode & 0o077 == 0, flock(fd, LOCK_EX) == 0 else { throw StorageError(.unavailable) }
+      info.st_mode & 0o077 == 0, flock(fd, LOCK_EX) == 0 else {
+      _ = DarwinOrGlibcClose(fd)
+      throw StorageError(.unavailable)
+    }
+    return fd
+  }
+  private func withManifestLock<T>(_ hash: String, _ operation: () throws -> T) throws -> T {
+    let fd = try openLockedFile(hash, "manifest.lock")
+    defer { _ = DarwinOrGlibcClose(fd) }
     defer { _ = flock(fd, LOCK_UN) }
     return try operation()
+  }
+  private func withWriterLock<T>(_ hash: String, _ operation: () async throws -> T) async throws -> T {
+    let fd = try openLockedFile(hash, "writer.lock")
+    defer { _ = DarwinOrGlibcClose(fd) }
+    defer { _ = flock(fd, LOCK_UN) }
+    return try await operation()
   }
   private static func version() -> String { Data((0..<24).map { _ in UInt8.random(in: 0...255) }).base64URLEncodedString() }
   private static func validVersion(_ value: String) -> Bool {
@@ -135,6 +148,14 @@ public final class FileObjectStorage: ObjectStorageProvider, ObjectStorageCondit
       try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true,
         attributes: [.posixPermissions: 0o700])
     } catch { throw StorageError(.io) }
+    return try await withWriterLock(hash) {
+      try await putUnderWriterLock(key: key, content: content, options: options,
+        hash: hash, directory: directory, version: version)
+    }
+  }
+
+  private func putUnderWriterLock(key: ObjectKey, content: any ObjectByteReader,
+    options: ObjectPutOptions, hash: String, directory: String, version: String) async throws -> ObjectMetadata {
     let dataPath = dataPath(hash, version), tempPath = "\(directory)/manifest-\(version)"
     var installed = false
     defer {
@@ -226,6 +247,36 @@ public final class FileObjectStorage: ObjectStorageProvider, ObjectStorageCondit
       guard unlink(dataPath(hash, manifest.version)) == 0 || errno == ENOENT else { throw StorageError(.io) }
       guard unlink(manifestPath(hash)) == 0 else { throw StorageError(.io) }
       return .deleted
+    }
+  }
+
+  /// Host-scheduled cleanup for one known key. Every process using this private
+  /// root must first be upgraded to a writer-lock-capable File provider.
+  public func sweepOldGenerations(_ key: ObjectKey) async throws -> Int {
+    guard FileManager.default.fileExists(atPath: root) else { return 0 }
+    try ensureRoot(create: false)
+    let hash = Self.hash(key), path = directory(Self.hash(key))
+    guard FileManager.default.fileExists(atPath: path) else { return 0 }
+    return try await withWriterLock(hash) {
+      try withManifestLock(hash) {
+        let current = try readManifest(hash).map { "data-" + $0.version }
+        let names: [String]
+        do { names = try FileManager.default.contentsOfDirectory(atPath: path) }
+        catch { throw StorageError(.io) }
+        var removed = 0
+        for name in names {
+          try Task.checkCancellation()
+          guard name != current, name.hasPrefix("data-"), Self.validVersion(String(name.dropFirst(5))) else { continue }
+          let file = "\(path)/\(name)"
+          var info = stat()
+          guard lstat(file, &info) == 0, info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) else {
+            throw StorageError(.unavailable)
+          }
+          guard unlink(file) == 0 else { throw StorageError(.io) }
+          removed += 1
+        }
+        return removed
+      }
     }
   }
 

@@ -19,6 +19,83 @@ private func expectStoreError(_ code: StorageErrorCode, _ work: () async throws 
   catch { Issue.record("Unexpected storage error type") }
 }
 
+private actor PausedFileReader: ObjectByteReader {
+  private let data: Data
+  private var started = false
+  private var released = false
+  private var consumed = false
+  private var startWaiter: CheckedContinuation<Void, Never>?
+  private var releaseWaiter: CheckedContinuation<Void, Never>?
+  init(_ data: Data) { self.data = data }
+  func waitUntilStarted() async {
+    if started { return }
+    await withCheckedContinuation { startWaiter = $0 }
+  }
+  func release() {
+    released = true
+    releaseWaiter?.resume(); releaseWaiter = nil
+  }
+  func read(upToCount count: Int) async throws -> Data {
+    if consumed { return Data() }
+    started = true
+    startWaiter?.resume(); startWaiter = nil
+    if !released { await withCheckedContinuation { releaseWaiter = $0 } }
+    consumed = true
+    return data
+  }
+  func close() throws {}
+}
+
+private actor FileSweepFlag {
+  private var finished = false
+  func mark() { finished = true }
+  func isFinished() -> Bool { finished }
+}
+
+@Test
+func swiftFileGenerationSweepWaitsForWriterAndPreservesCurrentData() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-sweep-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let root = parent.appendingPathComponent("private").path
+  let first = try FileObjectStorage(root: root, signingKey: Data(repeating: 0x42, count: 32))
+  let second = try FileObjectStorage(root: root, signingKey: Data(repeating: 0x42, count: 32))
+  let context = UserContext(queryExecutor: FileUnusedExecutor(), mutationExecutor: FileUnusedExecutor(),
+    requestPolicy: RequestPolicy { $0 })
+  let writer = try context.withObjectStorage(first).objectStorage("write File generations")
+  let key = try ObjectKey("private/generation-sweep.pdf"), bytes = Data("same bytes".utf8)
+  let old = try await writer.putBytes(key, data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly))
+  let newer = try await writer.putBytes(key, data: bytes,
+    options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace))
+  #expect(old.etag != newer.etag)
+  let source = PausedFileReader(bytes)
+  let writing = Task {
+    try await writer.put(key, content: source,
+      options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace))
+  }
+  await source.waitUntilStarted()
+  let flag = FileSweepFlag()
+  let sweeping = Task {
+    let count = try await second.sweepOldGenerations(key)
+    await flag.mark()
+    return count
+  }
+  try await Task.sleep(for: .milliseconds(100))
+  #expect(!(await flag.isFinished()))
+  await source.release()
+  let current = try await writing.value
+  #expect(try await sweeping.value == 2)
+  #expect(try await writer.head(key)?.etag == current.etag)
+  #expect(try await second.sweepOldGenerations(key) == 0)
+  let hash = SHA256.hash(data: Data(key.value.utf8)).map { String(format: "%02x", $0) }.joined()
+  let directory = "\(root)/\(hash.prefix(2))/\(hash)"
+  #expect(!FileManager.default.fileExists(atPath: "\(directory)/data-\(old.etag!.split(separator: ".").last!)"))
+  #expect(FileManager.default.fileExists(atPath: "\(directory)/data-\(current.etag!.split(separator: ".").last!)"))
+}
+
 @Test
 func swiftFileConditionalDeleteFencesSameByteReplacement() async throws {
   let parent = FileManager.default.temporaryDirectory
