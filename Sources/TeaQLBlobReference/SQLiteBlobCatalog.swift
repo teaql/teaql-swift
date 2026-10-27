@@ -30,6 +30,14 @@ public struct BlobBindingChange: Sendable {
   }
 }
 
+public struct BlobCatalogRead: Sendable {
+  public let objectKey: String
+  public let contentVersion: String
+  public let fileName: String
+  public let contentType: String
+  public let sizeBytes: Int64
+}
+
 public protocol BlobBindingAuthorization: Sendable {
   func scope(for actor: UserContext) throws -> String
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
@@ -75,6 +83,41 @@ public struct SQLiteBlobCatalog: Sendable {
       guard columns.first(where: { $0["name"]?.stringValue == "key" })?["notnull"]?.int64Value == 0,
         columns.first(where: { $0["name"]?.stringValue == "version" })?["notnull"]?.int64Value == 1
       else { throw TeaQLError.execution("BLOB_SCHEMA_MISSING") }
+    }
+  }
+
+  /// Start a fresh owner transaction after business completion to reread the exact binding.
+  public func currentRead(_ actor: UserContext, slot: AuthorizedBlobSlot) async throws -> BlobCatalogRead {
+    guard Self.validScope(slot.scope), Self.validName(slot.entity),
+      Self.validEntityID(slot.entityID), Self.validName(slot.field), slot.bindingVersion > 0 else {
+      throw ViewPreparationError("BLOB_READ_DENIED")
+    }
+    return try await actor.executeGraphSave(comment: "recheck current Blob binding") { graph, session in
+      try await graph.withPhysicalSQL(session) { sql in
+        let rows: [TeaQLRecord]
+        do {
+          rows = try await sql.query("""
+            SELECT c.object_key,c.content_version,c.file_name,c.content_type,c.size_bytes
+            FROM teaql_blob_binding b JOIN teaql_blob_catalog c ON c.key = b.key
+            WHERE b.scope = ? AND b.entity = ? AND b.entity_id = ? AND b.field = ?
+              AND b.key = ? AND b.version = ?
+              AND c.scope = b.scope AND c.status = 'available'
+            """, parameters: [.string(slot.scope), .string(slot.entity),
+              .string(slot.entityID), .string(slot.field), .string(slot.reference.key),
+              .int(slot.bindingVersion)])
+        } catch { throw ViewPreparationError("BLOB_CATALOG_FAILED") }
+        guard rows.count == 1 else { throw ViewPreparationError("BLOB_READ_DENIED") }
+        let row = rows[0]
+        guard let objectKey = row["object_key"]?.stringValue, !objectKey.isEmpty,
+          let version = row["content_version"]?.stringValue, !version.isEmpty,
+          let fileName = row["file_name"]?.stringValue, !fileName.isEmpty,
+          let contentType = row["content_type"]?.stringValue, !contentType.isEmpty,
+          let size = row["size_bytes"]?.int64Value, size >= 0 else {
+          throw ViewPreparationError("BLOB_CATALOG_FAILED")
+        }
+        return BlobCatalogRead(objectKey: objectKey, contentVersion: version,
+          fileName: fileName, contentType: contentType, sizeBytes: size)
+      }
     }
   }
 

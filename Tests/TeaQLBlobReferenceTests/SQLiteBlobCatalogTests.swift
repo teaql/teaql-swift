@@ -1,3 +1,4 @@
+import Foundation
 import TeaQLBlobReference
 import TeaQLCore
 import TeaQLSQLite
@@ -15,6 +16,46 @@ private struct CatalogAuthorization: BlobBindingAuthorization {
   func scope(for actor: UserContext) throws -> String { tenant }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
                  next: BlobRef?, action: String) async throws -> Bool { allowed }
+}
+
+private struct CatalogReadPermission: BlobReadAuthorization {
+  let allowed: Bool
+  func authorize(actor: UserContext, slot: AuthorizedBlobSlot) async throws -> Bool { allowed }
+}
+
+private struct CatalogViewAuthorizer: ResponseGraphAuthorizer {
+  let reference: BlobRef
+  let slot: AuthorizedBlobSlot
+  func authorize(context: UserContext, result: any Sendable, options: ViewOptions)
+    async throws -> AuthorizedResponseGraph {
+    AuthorizedResponseGraph(presentation: .object(["document": .blob(reference)]), blobSlots: [slot])
+  }
+}
+
+private actor CatalogSigningStore: ObjectStorageProvider {
+  var calls = 0
+  var key: String?
+  var header: String?
+
+  func put(_ invocation: StorageInvocation, key: ObjectKey, content: any ObjectByteReader,
+           options: ObjectPutOptions) throws -> ObjectMetadata { throw StorageError(.unsupported) }
+  func get(_ invocation: StorageInvocation, key: ObjectKey) throws -> ObjectContent {
+    throw StorageError(.unsupported)
+  }
+  func head(_ invocation: StorageInvocation, key: ObjectKey) throws -> ObjectMetadata? {
+    throw StorageError(.unsupported)
+  }
+  func delete(_ invocation: StorageInvocation, key: ObjectKey) throws {
+    throw StorageError(.unsupported)
+  }
+  func getReadUrl(_ invocation: StorageInvocation, key: ObjectKey,
+                  options: ObjectReadUrlOptions) throws -> ObjectReadUrl {
+    calls += 1
+    self.key = key.value
+    header = options.contentDisposition
+    return ObjectReadUrl(url: URL(string: "https://example.invalid/opaque-ticket")!,
+      expiresAt: Date().addingTimeInterval(30))
+  }
 }
 
 private func catalogFixture() async throws -> (UserContext, SQLiteDataService, EntityDescriptor) {
@@ -173,4 +214,67 @@ func swiftCatalogRejectsLegacyNonnullableKeySchema() async throws {
     }
     Issue.record("legacy schema was accepted")
   } catch { #expect(error as? TeaQLError == .execution("BLOB_SCHEMA_MISSING")) }
+}
+
+@Test
+func swiftCurrentBindingReadPrecedesViewURLProjection() async throws {
+  let (context, _, _) = try await catalogFixture()
+  let catalog = SQLiteBlobCatalog(), reference = try BlobRef("blob_abc")
+  let target = BlobBindingTarget(entity: "Asset", entityID: "1", field: "file")
+  try await context.executeGraphSave(comment: "bind read fixture") { actor, session in
+    _ = try await catalog.bind(actor, session: session,
+      change: BlobBindingChange(target: target, next: reference,
+        expectedVersion: 0, nextVersion: 1, action: "Create"),
+      authorization: CatalogAuthorization("tenant-a"))
+  }
+  let slot = AuthorizedBlobSlot(path: [.field("document")], entity: "Asset", entityID: "1",
+    field: "file", scope: "tenant-a", bindingVersion: 1, reference: reference)
+  let record = try await catalog.currentRead(context, slot: slot)
+  #expect(record.objectKey == "objects/abc")
+  #expect(record.contentVersion == "v1")
+  #expect(record.sizeBytes == 7)
+
+  for invalid in [
+    AuthorizedBlobSlot(path: slot.path, entity: slot.entity, entityID: slot.entityID,
+      field: slot.field, scope: slot.scope, bindingVersion: 2, reference: reference),
+    AuthorizedBlobSlot(path: slot.path, entity: slot.entity, entityID: slot.entityID,
+      field: slot.field, scope: "tenant-b", bindingVersion: 1, reference: reference),
+    AuthorizedBlobSlot(path: slot.path, entity: slot.entity, entityID: slot.entityID,
+      field: slot.field, scope: slot.scope, bindingVersion: 1, reference: try BlobRef("blob_old")),
+  ] {
+    do { _ = try await catalog.currentRead(context, slot: invalid); Issue.record("stale read accepted") }
+    catch let error as ViewPreparationError { #expect(error.code == "BLOB_READ_DENIED") }
+  }
+
+  let store = CatalogSigningStore()
+  let authorizer = CatalogViewAuthorizer(reference: reference, slot: slot)
+  let permitted = context.withObjectStorage(store).withResponseGraphAuthorizer(authorizer)
+    .withBlobResponseContributor(try SQLiteBlobResponseContributor(catalog: catalog,
+      authorization: CatalogReadPermission(allowed: true)))
+  let prepared = try await ViewPreparationService().prepare(context: permitted, result: "unused",
+    options: ViewOptions(mode: .ordinary, businessOutcome: .readOnly,
+      expiresAt: Date().addingTimeInterval(60)))
+  #expect(prepared.presentation == .object(["document": .string("https://example.invalid/opaque-ticket")]))
+  #expect(await store.calls == 1)
+  #expect(await store.key == "objects/abc")
+  #expect(await store.header == "inline; filename=\"report.pdf\"")
+
+  let revoked = permitted.withBlobResponseContributor(try SQLiteBlobResponseContributor(
+    catalog: catalog, authorization: CatalogReadPermission(allowed: false)))
+  do {
+    _ = try await ViewPreparationService().prepare(context: revoked, result: "unused",
+      options: ViewOptions(mode: .ordinary, businessOutcome: .readOnly,
+        expiresAt: Date().addingTimeInterval(60)))
+    Issue.record("revoked read signed")
+  } catch let error as ViewPreparationError { #expect(error.code == "BLOB_READ_DENIED") }
+  #expect(await store.calls == 1)
+
+  try await context.executeGraphSave(comment: "delete content") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE teaql_blob_catalog SET status = 'deleted' WHERE key = ?",
+        parameters: [.string(reference.key)])
+    }
+  }
+  do { _ = try await catalog.currentRead(context, slot: slot); Issue.record("deleted content accepted") }
+  catch let error as ViewPreparationError { #expect(error.code == "BLOB_READ_DENIED") }
 }
