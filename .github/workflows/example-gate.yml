@@ -21,7 +21,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Import official Swift release signing keys
         run: |
-          curl --fail --show-error --silent --retry 3 \
+          curl --fail --show-error --silent --compressed --location --retry 3 \
             https://www.swift.org/keys/all-keys.asc \
             --output "$RUNNER_TEMP/swift-release-keys.asc"
           gpg --show-keys --with-colons "$RUNNER_TEMP/swift-release-keys.asc" \
