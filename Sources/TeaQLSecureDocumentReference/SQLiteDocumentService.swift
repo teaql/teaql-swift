@@ -45,6 +45,15 @@ public struct CurrentBoundDocument: Sendable {
   }
 }
 
+public struct VerifiedDocumentBlobSelection: Sendable, CustomStringConvertible {
+  public let target: BlobSelectionTarget
+  public let reference: BlobRef
+  public let entityID: String
+  public let expectedVersion: Int64
+  public let nextVersion: Int64
+  public var description: String { "VerifiedDocumentBlobSelection[redacted]" }
+}
+
 /// Application-owned current projection, SQL permission and allowed model mutation plan.
 public protocol SQLiteContextBoundDocumentHost: Sendable {
   func principal(context: UserContext) async throws -> TrustedReferencePrincipal
@@ -55,6 +64,11 @@ public protocol SQLiteContextBoundDocumentHost: Sendable {
   func apply(context: UserContext, issued: BoundDocumentSnapshot,
              submitted: SubmittedDocumentCommand, sql: any GraphPhysicalSQLLease) async throws
   func present(context: UserContext, document: ContextualDocument) async throws
+}
+
+public protocol SQLiteDocumentBlobSelectionHost: Sendable {
+  func bindBlobSelection(context: UserContext, session: GraphMutationSession,
+    selection: VerifiedDocumentBlobSelection, sql: any GraphPhysicalSQLLease) async throws
 }
 
 /// SQLite tqd2 open and durable accept, bound to an application-owned graph context.
@@ -95,6 +109,34 @@ public struct SQLiteContextBoundDocumentService: Sendable {
   private func fingerprint(_ document: BoundDocumentSnapshot) throws -> [UInt8] {
     try DocumentWire.encodeBound(document, actor: Array(repeating: 0, count: 32),
       issued: 0, expires: 1)
+  }
+
+  private func verifiedSelections(_ principal: TrustedReferencePrincipal,
+    issued: BoundDocumentSnapshot, command: SubmittedDocumentCommand) throws -> [VerifiedDocumentBlobSelection] {
+    var result: [VerifiedDocumentBlobSelection] = []
+    var seen: Set<String> = []
+    for selected in command.blobSelections ?? [] {
+      let target = BlobSelectionTarget(scope: issued.snapshot.scope,
+        targetEntity: selected.targetEntity, canonicalField: selected.canonicalField,
+        kind: selected.kind, targetKey: selected.targetKey, commandID: command.commandID)
+      guard seen.insert(target.targetKey + "\0" + target.canonicalField).inserted else {
+        throw failure("DOCUMENT_COMMAND_INVALID")
+      }
+      let claim = try module.runtime.consumeBlobSelection(principal,
+        documentToken: command.documentToken, token: selected.token, expectedTarget: target).document
+      guard target.kind == "EXISTING_ROW" else { throw failure("DOCUMENT_CAPABILITY_MISSING") }
+      guard let row = issued.snapshot.entities.first(where: { $0.rowKey == target.targetKey }),
+        let binding = issued.bindings.first(where: {
+          $0.rowKey == target.targetKey && $0.canonicalField == target.canonicalField
+        }), row.identity.entityType == target.targetEntity, binding.writable,
+        binding.bindingVersion < UInt64(Int64.max) else {
+        throw failure("DOCUMENT_PROJECTION_VIOLATION")
+      }
+      result.append(VerifiedDocumentBlobSelection(target: target, reference: claim.reference,
+        entityID: String(row.identity.id), expectedVersion: Int64(binding.bindingVersion),
+        nextVersion: Int64(binding.bindingVersion) + 1))
+    }
+    return result
   }
 
   private func validate(_ current: CurrentBoundDocument, businessID: String,
@@ -163,7 +205,17 @@ public struct SQLiteContextBoundDocumentService: Sendable {
           guard try fingerprint(before.document) == fingerprint(issued) else {
             throw failure("DOCUMENT_REVISION_CONFLICT")
           }
+          let selections = try verifiedSelections(initial, issued: issued, command: frozen)
+          guard selections.isEmpty || host is any SQLiteDocumentBlobSelectionHost else {
+            throw failure("DOCUMENT_CAPABILITY_MISSING")
+          }
           try await host.apply(context: graph, issued: issued, submitted: frozen, sql: sql)
+          if let binder = host as? any SQLiteDocumentBlobSelectionHost {
+            for selection in selections {
+              try await binder.bindBlobSelection(context: graph, session: session,
+                selection: selection, sql: sql)
+            }
+          }
           let after = try await host.load(context: graph, businessID: frozen.businessID, sql: sql)
           let body = try validate(after, businessID: frozen.businessID,
             aggregateType: request.aggregateType, purpose: request.purpose)
@@ -172,6 +224,16 @@ public struct SQLiteContextBoundDocumentService: Sendable {
             next.aggregateType == scope.aggregateType, next.purpose == scope.purpose,
             next.aggregateRevision >= scope.aggregateRevision else {
             throw failure("DOCUMENT_PROJECTION_VIOLATION")
+          }
+          for selection in selections {
+            guard let binding = after.document.bindings.first(where: {
+              $0.rowKey == selection.target.targetKey &&
+                $0.canonicalField == selection.target.canonicalField
+            }), binding.entityType == selection.target.targetEntity,
+              binding.reference == selection.reference,
+              binding.bindingVersion == UInt64(selection.nextVersion) else {
+              throw failure("DOCUMENT_PROJECTION_VIOLATION")
+            }
           }
           do { try await host.authorize(context: graph, principal: initial, scope: next, sql: sql) }
           catch { throw failure("DOCUMENT_AUTHORIZATION_REQUIRED") }

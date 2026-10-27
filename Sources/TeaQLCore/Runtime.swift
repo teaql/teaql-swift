@@ -289,6 +289,7 @@ public protocol GraphPhysicalSQLExecutor: Sendable {
   func withPhysicalSQL<T: Sendable>(
     _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
   ) async throws -> T
+  func isCurrentPhysicalSQLLease(_ lease: any GraphPhysicalSQLLease) async -> Bool
 }
 
 /// Optional module hook. The provider captures both authoritative row images and
@@ -748,6 +749,13 @@ public struct UserContext: Sendable {
       throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
     }
     return try await owner.withPhysicalSQL(work)
+  }
+
+  public func isCurrentPhysicalSQLLease(_ session: GraphMutationSession,
+    _ lease: any GraphPhysicalSQLLease) async -> Bool {
+    do { try requireGraphSession(session) } catch { return false }
+    guard let owner = mutationExecutor as? any GraphPhysicalSQLExecutor else { return false }
+    return await owner.isCurrentPhysicalSQLLease(lease)
   }
 
   public func executeGraphSave<T: Sendable>(

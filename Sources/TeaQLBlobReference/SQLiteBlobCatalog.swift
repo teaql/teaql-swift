@@ -140,6 +140,22 @@ public struct SQLiteBlobCatalog: Sendable {
   public func bind(_ actor: UserContext, session: GraphMutationSession,
                    change: BlobBindingChange, authorization: any BlobBindingAuthorization) async throws -> Int64 {
     try await actor.withPhysicalSQL(session) { sql in
+      try await bindOnLease(actor, sql: sql, change: change, authorization: authorization)
+    }
+  }
+
+  /// Trusted host path for a journal that already borrowed the graph SQL lease.
+  public func bindOnGraphLease(_ actor: UserContext, session: GraphMutationSession,
+    lease: any GraphPhysicalSQLLease, change: BlobBindingChange,
+    authorization: any BlobBindingAuthorization) async throws -> Int64 {
+    guard await actor.isCurrentPhysicalSQLLease(session, lease) else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    return try await bindOnLease(actor, sql: lease, change: change, authorization: authorization)
+  }
+
+  private func bindOnLease(_ actor: UserContext, sql: any GraphPhysicalSQLLease,
+    change: BlobBindingChange, authorization: any BlobBindingAuthorization) async throws -> Int64 {
       let target = change.target
       guard Self.validName(target.entity), Self.validName(target.field),
         Self.validEntityID(target.entityID), change.expectedVersion >= 0,
@@ -213,7 +229,6 @@ public struct SQLiteBlobCatalog: Sendable {
           """, parameters: [.string(previous.key), .string(scope), .string(previous.key)])
       }
       return change.nextVersion
-    }
   }
 
   private static func validName(_ value: String) -> Bool {

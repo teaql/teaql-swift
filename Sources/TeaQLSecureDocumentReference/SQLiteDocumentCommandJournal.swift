@@ -7,11 +7,28 @@ public struct SubmittedDocumentCommand: Sendable, CustomStringConvertible {
   public let documentToken: String
   public let commandID: String
   public let body: TeaQLValue
+  public let blobSelections: [DocumentBlobSelectionSubmission]?
   public var description: String { "SubmittedDocumentCommand[redacted]" }
 
-  public init(businessID: String, documentToken: String, commandID: String, body: TeaQLValue) {
+  public init(businessID: String, documentToken: String, commandID: String, body: TeaQLValue,
+    blobSelections: [DocumentBlobSelectionSubmission]? = nil) {
     self.businessID = businessID; self.documentToken = documentToken
-    self.commandID = commandID; self.body = body
+    self.commandID = commandID; self.body = body; self.blobSelections = blobSelections
+  }
+}
+
+public struct DocumentBlobSelectionSubmission: Sendable, Codable, CustomStringConvertible {
+  public let token: String
+  public let targetEntity: String
+  public let canonicalField: String
+  public let kind: String
+  public let targetKey: String
+  public var description: String { "DocumentBlobSelectionSubmission[redacted]" }
+
+  public init(token: String, targetEntity: String, canonicalField: String,
+    kind: String, targetKey: String) {
+    self.token = token; self.targetEntity = targetEntity
+    self.canonicalField = canonicalField; self.kind = kind; self.targetKey = targetKey
   }
 }
 
@@ -95,11 +112,28 @@ public struct SQLiteDocumentCommandJournal: Sendable {
       text(command.commandID, maximum: 256) else { throw failure("DOCUMENT_COMMAND_INVALID") }
     let body = try encoded(command.body)
     let frozen = try JSONDecoder().decode(TeaQLValue.self, from: body)
-    let total = try strings([command.businessID, command.documentToken,
-      command.commandID, String(decoding: body, as: UTF8.self)])
+    var parts = [command.businessID, command.documentToken,
+      command.commandID, String(decoding: body, as: UTF8.self)]
+    if let selections = command.blobSelections {
+      guard selections.count <= 100 else { throw failure("DOCUMENT_COMMAND_INVALID") }
+      for selection in selections {
+        guard text(selection.token, maximum: 256_000),
+          text(selection.targetEntity, maximum: 16_384),
+          text(selection.canonicalField, maximum: 16_384),
+          text(selection.targetKey, maximum: 16_384),
+          ["EXISTING_ROW", "NEW_CLIENT_KEY"].contains(selection.kind) else {
+          throw failure("DOCUMENT_COMMAND_INVALID")
+        }
+      }
+      let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+      parts.append(String(decoding: try encoder.encode(selections), as: UTF8.self))
+    }
+    // Four-element command digests remain valid for prior receipts.
+    let total = try strings(parts)
     guard total.count <= 256_000 else { throw failure("DOCUMENT_COMMAND_INVALID") }
     return (hash(total), SubmittedDocumentCommand(businessID: command.businessID,
-      documentToken: command.documentToken, commandID: command.commandID, body: frozen))
+      documentToken: command.documentToken, commandID: command.commandID, body: frozen,
+      blobSelections: command.blobSelections))
   }
 
   private func scopeHash(_ scope: ReferenceDocumentScope) throws -> String {

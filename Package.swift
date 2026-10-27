@@ -77,7 +77,7 @@ let package = Package(
       "TeaQLBlobReference", "TeaQLSQLite", .product(name: "Crypto", package: "swift-crypto"),
     ]),
     .testTarget(name: "TeaQLSecureDocumentReferenceTests", dependencies: [
-      "TeaQLSecureDocumentReference", "TeaQLCore", "TeaQLSQLite",
+      "TeaQLSecureDocumentReference", "TeaQLBlobReference", "TeaQLCore", "TeaQLSQLite",
       .product(name: "Crypto", package: "swift-crypto"),
     ]),
     .testTarget(name: "TeaQLFederalTests", dependencies: ["TeaQLFederal"]),

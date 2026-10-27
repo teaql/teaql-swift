@@ -382,6 +382,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, BlobMutationExe
     }
   }
 
+  public func isCurrentPhysicalSQLLease(_ lease: any GraphPhysicalSQLLease) async -> Bool {
+    guard let candidate = lease as? SQLitePhysicalSQLLease else { return false }
+    return graphTransactionActive && !graphRollbackOnly &&
+      candidate.owner === self && physicalSQLLease == candidate.token
+  }
+
   fileprivate func executePhysicalSQL(_ sql: String, parameters: [TeaQLValue], token: UUID) throws -> Int {
     guard graphTransactionActive, physicalSQLLease == token else {
       throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
