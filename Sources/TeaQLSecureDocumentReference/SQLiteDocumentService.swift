@@ -48,10 +48,17 @@ public struct CurrentBoundDocument: Sendable {
 public struct VerifiedDocumentBlobSelection: Sendable, CustomStringConvertible {
   public let target: BlobSelectionTarget
   public let reference: BlobRef
+  public let rowKey: String
   public let entityID: String
   public let expectedVersion: Int64
   public let nextVersion: Int64
   public var description: String { "VerifiedDocumentBlobSelection[redacted]" }
+}
+
+public struct DocumentBlobSelectionClaim: Sendable, CustomStringConvertible {
+  public let target: BlobSelectionTarget
+  public let reference: BlobRef
+  public var description: String { "DocumentBlobSelectionClaim[redacted]" }
 }
 
 /// Application-owned current projection, SQL permission and allowed model mutation plan.
@@ -69,6 +76,13 @@ public protocol SQLiteContextBoundDocumentHost: Sendable {
 public protocol SQLiteDocumentBlobSelectionHost: Sendable {
   func bindBlobSelection(context: UserContext, session: GraphMutationSession,
     selection: VerifiedDocumentBlobSelection, sql: any GraphPhysicalSQLLease) async throws
+}
+
+/// Resolve a sealed client key to the child persisted on the current physical lease.
+public protocol SQLiteDocumentNewBlobSelectionHost: Sendable {
+  func resolveNewBlobSelection(context: UserContext, issued: BoundDocumentSnapshot,
+    submitted: SubmittedDocumentCommand, selection: DocumentBlobSelectionClaim,
+    sql: any GraphPhysicalSQLLease) async throws -> (rowKey: String, entityID: String)
 }
 
 /// SQLite tqd2 open and durable accept, bound to an application-owned graph context.
@@ -112,8 +126,8 @@ public struct SQLiteContextBoundDocumentService: Sendable {
   }
 
   private func verifiedSelections(_ principal: TrustedReferencePrincipal,
-    issued: BoundDocumentSnapshot, command: SubmittedDocumentCommand) throws -> [VerifiedDocumentBlobSelection] {
-    var result: [VerifiedDocumentBlobSelection] = []
+    issued: BoundDocumentSnapshot, command: SubmittedDocumentCommand) throws -> [DocumentBlobSelectionClaim] {
+    var result: [DocumentBlobSelectionClaim] = []
     var seen: Set<String> = []
     for selected in command.blobSelections ?? [] {
       let target = BlobSelectionTarget(scope: issued.snapshot.scope,
@@ -124,19 +138,54 @@ public struct SQLiteContextBoundDocumentService: Sendable {
       }
       let claim = try module.runtime.consumeBlobSelection(principal,
         documentToken: command.documentToken, token: selected.token, expectedTarget: target).document
-      guard target.kind == "EXISTING_ROW" else { throw failure("DOCUMENT_CAPABILITY_MISSING") }
-      guard let row = issued.snapshot.entities.first(where: { $0.rowKey == target.targetKey }),
-        let binding = issued.bindings.first(where: {
-          $0.rowKey == target.targetKey && $0.canonicalField == target.canonicalField
-        }), row.identity.entityType == target.targetEntity, binding.writable,
-        binding.bindingVersion < UInt64(Int64.max) else {
-        throw failure("DOCUMENT_PROJECTION_VIOLATION")
-      }
-      result.append(VerifiedDocumentBlobSelection(target: target, reference: claim.reference,
-        entityID: String(row.identity.id), expectedVersion: Int64(binding.bindingVersion),
-        nextVersion: Int64(binding.bindingVersion) + 1))
+      result.append(DocumentBlobSelectionClaim(target: target, reference: claim.reference))
     }
     return result
+  }
+
+  private func mapExisting(_ issued: BoundDocumentSnapshot,
+    selection: DocumentBlobSelectionClaim) throws -> VerifiedDocumentBlobSelection {
+    let target = selection.target
+    guard let row = issued.snapshot.entities.first(where: { $0.rowKey == target.targetKey }),
+      let binding = issued.bindings.first(where: {
+        $0.rowKey == target.targetKey && $0.canonicalField == target.canonicalField
+      }), row.identity.entityType == target.targetEntity, binding.writable,
+      binding.bindingVersion < UInt64(Int64.max) else {
+      throw failure("DOCUMENT_PROJECTION_VIOLATION")
+    }
+    return VerifiedDocumentBlobSelection(target: target, reference: selection.reference,
+      rowKey: target.targetKey, entityID: String(row.identity.id),
+      expectedVersion: Int64(binding.bindingVersion),
+      nextVersion: Int64(binding.bindingVersion) + 1)
+  }
+
+  private func mapNew(_ issued: BoundDocumentSnapshot, selection: DocumentBlobSelectionClaim,
+    resolved: (rowKey: String, entityID: String)) throws -> VerifiedDocumentBlobSelection {
+    guard validText(resolved.rowKey), let id = UInt64(resolved.entityID), id > 0,
+      String(id) == resolved.entityID,
+      !issued.snapshot.entities.contains(where: { $0.rowKey == resolved.rowKey }) else {
+      throw failure("DOCUMENT_PROJECTION_VIOLATION")
+    }
+    return VerifiedDocumentBlobSelection(target: selection.target, reference: selection.reference,
+      rowKey: resolved.rowKey, entityID: resolved.entityID,
+      expectedVersion: 0, nextVersion: 1)
+  }
+
+  private func validNewChild(_ issued: BoundDocumentSnapshot, after: BoundDocumentSnapshot,
+    selection: VerifiedDocumentBlobSelection) -> Bool {
+    guard let row = after.snapshot.entities.first(where: { $0.rowKey == selection.rowKey }),
+      row.identity.entityType == selection.target.targetEntity,
+      String(row.identity.id) == selection.entityID,
+      row.writableFields.contains(selection.target.canonicalField) else { return false }
+    return after.snapshot.relations.contains { relation in
+      relation.rowKeys.contains(selection.rowKey) && relation.completeness == "COMPLETE" &&
+        relation.writable && relation.allowedMutations.contains("CREATE_CHILD") &&
+        issued.snapshot.relations.contains { previous in
+          previous.name == relation.name && previous.completeness == "COMPLETE" &&
+            previous.writable && previous.allowedMutations.contains("CREATE_CHILD") &&
+            !previous.rowKeys.contains(selection.rowKey)
+        }
+    }
   }
 
   private func validate(_ current: CurrentBoundDocument, businessID: String,
@@ -209,9 +258,30 @@ public struct SQLiteContextBoundDocumentService: Sendable {
           guard selections.isEmpty || host is any SQLiteDocumentBlobSelectionHost else {
             throw failure("DOCUMENT_CAPABILITY_MISSING")
           }
+          guard !selections.contains(where: { $0.target.kind == "NEW_CLIENT_KEY" }) ||
+            host is any SQLiteDocumentNewBlobSelectionHost else {
+            throw failure("DOCUMENT_CAPABILITY_MISSING")
+          }
           try await host.apply(context: graph, issued: issued, submitted: frozen, sql: sql)
+          var mapped: [VerifiedDocumentBlobSelection] = []
+          var mappedTargets: Set<String> = []
+          for selection in selections {
+            let bound: VerifiedDocumentBlobSelection
+            if selection.target.kind == "EXISTING_ROW" {
+              bound = try mapExisting(issued, selection: selection)
+            } else {
+              let resolver = host as! any SQLiteDocumentNewBlobSelectionHost
+              let resolved = try await resolver.resolveNewBlobSelection(context: graph,
+                issued: issued, submitted: frozen, selection: selection, sql: sql)
+              bound = try mapNew(issued, selection: selection, resolved: resolved)
+            }
+            guard mappedTargets.insert(bound.rowKey + "\0" + bound.target.canonicalField).inserted else {
+              throw failure("DOCUMENT_COMMAND_INVALID")
+            }
+            mapped.append(bound)
+          }
           if let binder = host as? any SQLiteDocumentBlobSelectionHost {
-            for selection in selections {
+            for selection in mapped {
               try await binder.bindBlobSelection(context: graph, session: session,
                 selection: selection, sql: sql)
             }
@@ -225,13 +295,17 @@ public struct SQLiteContextBoundDocumentService: Sendable {
             next.aggregateRevision >= scope.aggregateRevision else {
             throw failure("DOCUMENT_PROJECTION_VIOLATION")
           }
-          for selection in selections {
+          for selection in mapped {
             guard let binding = after.document.bindings.first(where: {
-              $0.rowKey == selection.target.targetKey &&
+              $0.rowKey == selection.rowKey &&
                 $0.canonicalField == selection.target.canonicalField
             }), binding.entityType == selection.target.targetEntity,
               binding.reference == selection.reference,
               binding.bindingVersion == UInt64(selection.nextVersion) else {
+              throw failure("DOCUMENT_PROJECTION_VIOLATION")
+            }
+            if selection.target.kind == "NEW_CLIENT_KEY" &&
+              !validNewChild(issued, after: after.document, selection: selection) {
               throw failure("DOCUMENT_PROJECTION_VIOLATION")
             }
           }
