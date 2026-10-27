@@ -164,7 +164,7 @@ public struct SQLiteBlobCatalog: Sendable {
       if let next = change.next {
         let available = try await sql.query("""
           SELECT key FROM teaql_blob_catalog
-          WHERE key = ? AND scope = ? AND status = 'available'
+          WHERE key = ? AND scope = ? AND status IN ('uploaded_unbound','available')
           """, parameters: [.string(next.key), .string(scope)])
         guard available.count == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
       }
@@ -182,6 +182,20 @@ public struct SQLiteBlobCatalog: Sendable {
           """, parameters: identity + [next, .int(change.nextVersion)])
       }
       guard affected == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+      if let next = change.next {
+        let promoted = try await sql.execute("""
+          UPDATE teaql_blob_catalog SET status = 'available'
+          WHERE key = ? AND scope = ? AND status IN ('uploaded_unbound','available')
+          """, parameters: [.string(next.key), .string(scope)])
+        guard promoted == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+      }
+      if let previous, previous != change.next {
+        _ = try await sql.execute("""
+          UPDATE teaql_blob_catalog SET status = 'uploaded_unbound'
+          WHERE key = ? AND scope = ? AND status = 'available'
+            AND NOT EXISTS (SELECT 1 FROM teaql_blob_binding WHERE key = ?)
+          """, parameters: [.string(previous.key), .string(scope), .string(previous.key)])
+      }
       return change.nextVersion
     }
   }

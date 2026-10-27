@@ -76,7 +76,7 @@ private func catalogFixture() async throws -> (UserContext, SQLiteDataService, E
       _ = try await sql.execute("""
         INSERT INTO teaql_blob_catalog
         (key, scope, object_key, content_version, file_name, content_type, size_bytes, status)
-        VALUES ('blob_abc', 'tenant-a', 'objects/abc', 'v1', 'report.pdf', 'application/pdf', 7, 'available')
+        VALUES ('blob_abc', 'tenant-a', 'objects/abc', 'v1', 'report.pdf', 'application/pdf', 7, 'uploaded_unbound')
         """, parameters: [])
     }
   }
@@ -113,6 +113,12 @@ func swiftCatalogBindingSharesNativeGraphCommitRollback() async throws {
     #expect(version == 1)
   }
   #expect(try await catalogCounts(context) == (1, 1))
+  try await context.executeGraphSave(comment: "inspect available content") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let rows = try await sql.query("SELECT status FROM teaql_blob_catalog", parameters: [])
+      #expect(rows.first?["status"]?.stringValue == "available")
+    }
+  }
 
   do {
     try await context.executeGraphSave(comment: "rollback asset") { actor, session in
@@ -177,11 +183,19 @@ func swiftCatalogVersionScopeAndTombstoneAreAuthoritative() async throws {
     }
     Issue.record("foreign actor was accepted")
   } catch { #expect(error as? TeaQLError != nil) }
-  try await context.executeGraphSave(comment: "clear and rebind") { actor, session in
+  try await context.executeGraphSave(comment: "clear binding") { actor, session in
     let cleared = try await catalog.bind(actor, session: session,
       change: BlobBindingChange(target: target, next: nil,
         expectedVersion: 1, nextVersion: 2, action: "Delete"), authorization: allowed)
     #expect(cleared == 2)
+  }
+  try await context.executeGraphSave(comment: "inspect unbound content") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let rows = try await sql.query("SELECT status FROM teaql_blob_catalog", parameters: [])
+      #expect(rows.first?["status"]?.stringValue == "uploaded_unbound")
+    }
+  }
+  try await context.executeGraphSave(comment: "rebind") { actor, session in
     let rebound = try await catalog.bind(actor, session: session,
       change: BlobBindingChange(target: target, next: reference,
         expectedVersion: 2, nextVersion: 3, action: "Update"), authorization: allowed)
@@ -193,6 +207,8 @@ func swiftCatalogVersionScopeAndTombstoneAreAuthoritative() async throws {
       #expect(rows.count == 1)
       #expect(rows.first?["key"]?.stringValue == reference.key)
       #expect(rows.first?["version"]?.int64Value == 3)
+      let catalog = try await sql.query("SELECT status FROM teaql_blob_catalog", parameters: [])
+      #expect(catalog.first?["status"]?.stringValue == "available")
     }
   }
 }
