@@ -12,6 +12,7 @@ let package = Package(
     .library(name: "TeaQLCore", targets: ["TeaQLCore"]),
     .library(name: "TeaQLSQL", targets: ["TeaQLSQL"]),
     .library(name: "TeaQLSQLite", targets: ["TeaQLSQLite"]),
+    .library(name: "TeaQLBlobReference", targets: ["TeaQLBlobReference"]),
     .library(name: "TeaQLFederal", targets: ["TeaQLFederal"]),
     .library(name: "TeaQLTestSupport", targets: ["TeaQLTestSupport"]),
     .library(name: "TeaQLOpenTelemetry", targets: ["TeaQLOpenTelemetry"]),
@@ -30,6 +31,7 @@ let package = Package(
     .target(name: "TeaQLCore", resources: [.process("Resources")]),
     .target(name: "TeaQLSQL", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLSQLite", dependencies: ["TeaQLCore", "TeaQLSQL", "CSQLite"]),
+    .target(name: "TeaQLBlobReference", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLFederal", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLTestSupport", dependencies: ["TeaQLCore", "TeaQLSQLite"]),
     .target(
@@ -60,6 +62,7 @@ let package = Package(
     .testTarget(name: "TeaQLCoreTests", dependencies: ["TeaQLCore"], resources: [.process("fixtures")]),
     .testTarget(name: "TeaQLSQLTests", dependencies: ["TeaQLSQL"]),
     .testTarget(name: "TeaQLSQLiteTests", dependencies: ["TeaQLSQLite", "TeaQLTestSupport"]),
+    .testTarget(name: "TeaQLBlobReferenceTests", dependencies: ["TeaQLBlobReference", "TeaQLSQLite"]),
     .testTarget(name: "TeaQLFederalTests", dependencies: ["TeaQLFederal"]),
     .testTarget(
       name: "TeaQLOpenTelemetryTests",
