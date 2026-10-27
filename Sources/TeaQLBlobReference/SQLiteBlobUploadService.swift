@@ -132,6 +132,16 @@ public struct SQLiteBlobUploadService: Sendable {
   }
   private func millis() -> Int64 { Int64(now().timeIntervalSince1970 * 1000) }
 
+  private func policyOnLease(_ actor: UserContext, target: BlobUploadTarget,
+    sql: any GraphPhysicalSQLLease) async throws -> BlobRetentionPolicy? {
+    guard let source = authorization as? any BlobUploadPolicyAuthorization else { return nil }
+    let policy: BlobRetentionPolicy
+    do { policy = try await source.currentPolicyOnLease(actor: actor, lease: sql, target: target) }
+    catch { throw Self.fail("BLOB_POLICY_INVALID") }
+    guard policy.uploadMode == "server_stream" else { throw Self.fail("BLOB_CAPABILITY_MISSING") }
+    return policy
+  }
+
   public init(authorization: any BlobUploadAuthorization, verifier: any BlobContentVerifier,
               maximumBytes: Int64, leaseSeconds: Int = 900,
               now: @escaping @Sendable () -> Date = { Date() }) throws {
@@ -234,13 +244,19 @@ public struct SQLiteBlobUploadService: Sendable {
         let expiry = millis() + Int64(leaseSeconds) * 1000
         _ = try await current(graph, target: target, action: "Begin", input: normalized,
           expectedScope: scope, lease: sql)
+        let policy = try await policyOnLease(graph, target: target, sql: sql)
         do {
           _ = try await sql.execute("""
             INSERT INTO teaql_blob_catalog
-            (key,scope,object_key,content_version,file_name,content_type,size_bytes,status)
-            VALUES (?,?,?,?,?,?,?,?)
+            (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,
+             policy_profile,upload_mode,unbound_retention_seconds,effective_unref_seconds)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """, parameters: [.string(reference.key), .string(scope), .string(objectKey),
-              .string(""), .string(normalized.fileName), .string(""), .int(0), .string("initiated")])
+              .string(""), .string(normalized.fileName), .string(""), .int(0), .string("initiated"),
+              policy.map { .string($0.profile) } ?? .null,
+              policy.map { .string($0.uploadMode) } ?? .null,
+              policy.map { .int($0.unboundRetentionSeconds) } ?? .null,
+              policy.map { .int($0.unreferencedRetentionSeconds) } ?? .null])
           _ = try await sql.execute("""
             INSERT INTO teaql_blob_upload
             (upload_id,scope,replay_key,request_hash,key,entity,entity_id,field,file_name,
@@ -559,9 +575,10 @@ public struct SQLiteBlobUploadService: Sendable {
         let promoted: Int
         do { promoted = try await sql.execute("""
           UPDATE teaql_blob_catalog SET content_version = ?,content_type = ?,size_bytes = ?,
-            status = 'uploaded_unbound' WHERE key = ? AND scope = ? AND status = 'initiated'
+            completed_at_ms = ?,status = 'uploaded_unbound'
+            WHERE key = ? AND scope = ? AND status = 'initiated'
           """, parameters: [.string(writtenETag), .string(verified.contentType),
-            .int(verified.sizeBytes), .string(entry.key), .string(entry.scope)]) }
+            .int(verified.sizeBytes), .int(nowMs), .string(entry.key), .string(entry.scope)]) }
         catch { throw Self.fail("BLOB_CATALOG_FAILED") }
         guard promoted == 1 else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
         return try BlobRef(entry.key)

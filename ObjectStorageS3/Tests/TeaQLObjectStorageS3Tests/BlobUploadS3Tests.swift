@@ -7,7 +7,7 @@ import TeaQLCore
 import TeaQLObjectStorageS3
 import TeaQLSQLite
 
-private struct S3UploadPermission: BlobUploadAuthorization {
+private struct S3UploadPermission: BlobUploadAuthorization, BlobUploadPolicyAuthorization {
   let allowed: Bool
   let fileExtension: String
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
@@ -26,6 +26,12 @@ private struct S3UploadPermission: BlobUploadAuthorization {
     BlobUploadAuthorizationSnapshot(scope: try scope(for: actor),
       field: try field(for: actor, target: target),
       allowed: try await authorize(actor: actor, target: target, action: action, input: input))
+  }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobUploadTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
   }
 }
 
@@ -65,12 +71,18 @@ private struct S3CountingVerifier: BlobContentVerifier {
   }
 }
 
-private struct S3BindingPermission: BlobBindingAuthorization {
+private struct S3BindingPermission: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
                  next: BlobRef?, action: String) async throws -> Bool {
     target.entity == "Asset" && target.entityID == "1" && target.field == "file"
       && previous == nil && next != nil && action == "Create"
+  }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
   }
 }
 

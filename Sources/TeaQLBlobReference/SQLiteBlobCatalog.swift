@@ -46,7 +46,16 @@ public protocol BlobBindingAuthorization: Sendable {
 
 /// An explicit SQLite schema and binding component; the host owns installation and graph calls.
 public struct SQLiteBlobCatalog: Sendable {
-  public init() {}
+  private let now: @Sendable () -> Date
+  public init(now: @escaping @Sendable () -> Date = { Date() }) { self.now = now }
+
+  private func millis() throws -> Int64 {
+    let value = now().timeIntervalSince1970 * 1000
+    guard value >= 0, value <= Double(BlobRetentionPolicy.maximumEpochMilliseconds) else {
+      throw TeaQLError.execution("BLOB_POLICY_INVALID")
+    }
+    return Int64(value)
+  }
 
   public func installSchema(_ actor: UserContext, session: GraphMutationSession) async throws {
     try await actor.withPhysicalSQL(session) { sql in
@@ -55,6 +64,9 @@ public struct SQLiteBlobCatalog: Sendable {
           key TEXT PRIMARY KEY, scope TEXT NOT NULL, object_key TEXT NOT NULL,
           content_version TEXT NOT NULL, file_name TEXT NOT NULL,
           content_type TEXT NOT NULL, size_bytes BIGINT NOT NULL,
+          completed_at_ms BIGINT, last_unbound_at_ms BIGINT,
+          policy_profile TEXT, upload_mode TEXT, unbound_retention_seconds BIGINT,
+          effective_unref_seconds BIGINT, retention_floor_until_ms BIGINT,
           status TEXT NOT NULL CHECK (status IN
             ('initiated','uploaded_unbound','available','deleting','deleted')))
         """, parameters: [])
@@ -80,13 +92,33 @@ public struct SQLiteBlobCatalog: Sendable {
           written_sha256 TEXT, written_etag TEXT,
           UNIQUE(scope,replay_key), FOREIGN KEY(key) REFERENCES teaql_blob_catalog(key))
         """, parameters: [])
+      // Existing rows have no trusted policy provenance; migration leaves
+      // every new fact NULL instead of guessing a retention duration.
+      for (name, kind) in [
+        ("completed_at_ms", "BIGINT"), ("last_unbound_at_ms", "BIGINT"),
+        ("policy_profile", "TEXT"), ("upload_mode", "TEXT"),
+        ("unbound_retention_seconds", "BIGINT"), ("effective_unref_seconds", "BIGINT"),
+        ("retention_floor_until_ms", "BIGINT")
+      ] {
+        let columns = try await sql.query("PRAGMA table_info(teaql_blob_catalog)", parameters: [])
+        if columns.contains(where: { $0["name"]?.stringValue == name }) { continue }
+        do {
+          _ = try await sql.execute("ALTER TABLE teaql_blob_catalog ADD COLUMN \(name) \(kind)",
+            parameters: [])
+        } catch {
+          let current = try await sql.query("PRAGMA table_info(teaql_blob_catalog)", parameters: [])
+          guard current.contains(where: { $0["name"]?.stringValue == name }) else { throw error }
+        }
+      }
     }
   }
 
   public func validateSchema(_ actor: UserContext, session: GraphMutationSession) async throws {
     try await actor.withPhysicalSQL(session) { sql in
       _ = try await sql.query("""
-        SELECT key,scope,object_key,content_version,file_name,content_type,size_bytes,status
+        SELECT key,scope,object_key,content_version,file_name,content_type,size_bytes,
+          completed_at_ms,last_unbound_at_ms,policy_profile,upload_mode,
+          unbound_retention_seconds,effective_unref_seconds,retention_floor_until_ms,status
         FROM teaql_blob_catalog WHERE 1 = 0
         """, parameters: [])
       _ = try await sql.query("""
@@ -203,12 +235,59 @@ public struct SQLiteBlobCatalog: Sendable {
           previous: previous, next: change.next, action: change.action)
       } catch { throw TeaQLError.execution("BLOB_BIND_DENIED") }
       guard allowed else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+      var acceptedPolicy: BlobRetentionPolicy?
+      var acceptedFloor: Int64 = 0
       if let next = change.next {
         let available = try await sql.query("""
-          SELECT key FROM teaql_blob_catalog
+          SELECT key,status,completed_at_ms,last_unbound_at_ms,policy_profile,
+            upload_mode,unbound_retention_seconds,effective_unref_seconds,
+            retention_floor_until_ms FROM teaql_blob_catalog
           WHERE key = ? AND scope = ? AND status IN ('uploaded_unbound','available')
           """, parameters: [.string(next.key), .string(scope)])
-        guard available.count == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+        guard available.count == 1, let blob = available.first,
+          let status = blob["status"]?.stringValue,
+          let profile = blob["policy_profile"]?.stringValue, Self.validScope(profile),
+          blob["upload_mode"]?.stringValue == "server_stream",
+          let completed = blob["completed_at_ms"]?.int64Value,
+          BlobRetentionPolicy.validTime(completed),
+          let unbound = blob["unbound_retention_seconds"]?.int64Value,
+          BlobRetentionPolicy.validSeconds(unbound),
+          let effective = blob["effective_unref_seconds"]?.int64Value,
+          BlobRetentionPolicy.validSeconds(effective),
+          let source = authorization as? any BlobBindingPolicyAuthorization else {
+          throw TeaQLError.execution("BLOB_BIND_DENIED")
+        }
+        let policy: BlobRetentionPolicy
+        do { policy = try await source.currentPolicyOnLease(actor: actor, lease: sql, target: target) }
+        catch { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+        guard policy.uploadMode == "server_stream" else {
+          throw TeaQLError.execution("BLOB_BIND_DENIED")
+        }
+        let time = try millis()
+        var eligibleAt: Int64?
+        if status == "available" {
+          let bindings = try await sql.query(
+            "SELECT 1 FROM teaql_blob_binding WHERE key = ? LIMIT 1",
+            parameters: [.string(next.key)])
+          if bindings.isEmpty {
+            guard let last = blob["last_unbound_at_ms"]?.int64Value,
+              BlobRetentionPolicy.validTime(last) else {
+              throw TeaQLError.execution("BLOB_BIND_DENIED")
+            }
+            let floorValue = blob["retention_floor_until_ms"]
+            let floor = floorValue?.int64Value
+            guard floorValue == .null || (floor != nil && BlobRetentionPolicy.validTime(floor!)) else {
+              throw TeaQLError.execution("BLOB_BIND_DENIED")
+            }
+            eligibleAt = try BlobRetentionPolicy.unreferencedEligibleAt(last,
+              seconds: effective, floorUntilMs: floor)
+          }
+        }
+        try BlobRetentionPolicy.requireBindable(status: status, nowMs: time,
+          completedMs: completed, unboundSeconds: unbound, unreferencedEligibleMs: eligibleAt)
+        acceptedFloor = try BlobRetentionPolicy.deadline(time,
+          seconds: policy.minimumRetentionSeconds)
+        acceptedPolicy = policy
       }
       let next: TeaQLValue = change.next.map { .string($0.key) } ?? .null
       let affected: Int
@@ -226,17 +305,30 @@ public struct SQLiteBlobCatalog: Sendable {
       guard affected == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
       if let next = change.next {
         let promoted = try await sql.execute("""
-          UPDATE teaql_blob_catalog SET status = 'available'
+          UPDATE teaql_blob_catalog SET status = 'available',last_unbound_at_ms=NULL
           WHERE key = ? AND scope = ? AND status IN ('uploaded_unbound','available')
           """, parameters: [.string(next.key), .string(scope)])
         guard promoted == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+        if let acceptedPolicy {
+          let retained = try await sql.execute("""
+            UPDATE teaql_blob_catalog SET
+              effective_unref_seconds=MAX(effective_unref_seconds,?),
+              retention_floor_until_ms=CASE WHEN retention_floor_until_ms IS NULL
+                OR retention_floor_until_ms<? THEN ? ELSE retention_floor_until_ms END
+            WHERE key=? AND scope=? AND upload_mode='server_stream'
+              AND effective_unref_seconds IS NOT NULL
+            """, parameters: [.int(acceptedPolicy.unreferencedRetentionSeconds),
+              .int(acceptedFloor), .int(acceptedFloor), .string(next.key), .string(scope)])
+          guard retained == 1 else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+        }
       }
       if let previous, previous != change.next {
         _ = try await sql.execute("""
-          UPDATE teaql_blob_catalog SET status = 'uploaded_unbound'
+          UPDATE teaql_blob_catalog SET last_unbound_at_ms = ?
           WHERE key = ? AND scope = ? AND status = 'available'
             AND NOT EXISTS (SELECT 1 FROM teaql_blob_binding WHERE key = ?)
-          """, parameters: [.string(previous.key), .string(scope), .string(previous.key)])
+          """, parameters: [.int(try millis()), .string(previous.key),
+            .string(scope), .string(previous.key)])
       }
       return change.nextVersion
   }

@@ -5,7 +5,7 @@ import TeaQLCore
 import TeaQLSQLite
 import Testing
 
-private struct UploadPermission: BlobUploadAuthorization {
+private struct UploadPermission: BlobUploadAuthorization, BlobUploadPolicyAuthorization {
   let tenant: String
   let allowed: Bool
   var checkSQLPolicy = false
@@ -32,13 +32,25 @@ private struct UploadPermission: BlobUploadAuthorization {
     return BlobUploadAuthorizationSnapshot(scope: try scope(for: actor),
       field: try field(for: actor, target: target), allowed: currentAllowed)
   }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobUploadTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
+  }
 }
 
-private struct UploadBindingPermission: BlobBindingAuthorization {
+private struct UploadBindingPermission: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
   func scope(for actor: UserContext) throws -> String { "tenant-a" }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
                  next: BlobRef?, action: String) async throws -> Bool {
     target.entity == "Asset" && target.field == "file" && action == "Create"
+  }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
   }
 }
 
@@ -491,6 +503,20 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
   let input = BlobUploadInput(fileName: "path/report.pdf", declaredSize: Int64(data.count),
     declaredContentType: "application/pdf")
   let session = try await service.begin(context, target: target, input: input, replayKey: "request-1")
+  try await context.executeGraphSave(comment: "inspect snapshotted Blob policy") { graph, lease in
+    try await graph.withPhysicalSQL(lease) { sql in
+      let rows = try await sql.query("""
+        SELECT policy_profile,upload_mode,unbound_retention_seconds,
+          effective_unref_seconds,completed_at_ms FROM teaql_blob_catalog WHERE key=?
+        """, parameters: [.string(session.reference.key)])
+      #expect(rows.count == 1)
+      #expect(rows.first?["policy_profile"]?.stringValue == "default")
+      #expect(rows.first?["upload_mode"]?.stringValue == "server_stream")
+      #expect(rows.first?["unbound_retention_seconds"]?.int64Value == 86400)
+      #expect(rows.first?["effective_unref_seconds"]?.int64Value == 604800)
+      #expect(rows.first?["completed_at_ms"] == .null)
+    }
+  }
   let replay = try await service.begin(context, target: target, input: input, replayKey: "request-1")
   #expect(replay.uploadID == session.uploadID)
   do {
@@ -520,7 +546,24 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
   let reference = try await service.complete(context, uploadID: session.uploadID)
   #expect(reference == session.reference)
   #expect(await calls.value() == 1)
+  let completedAt = try await context.executeGraphSave(comment: "inspect Blob completion time") { graph, lease in
+    try await graph.withPhysicalSQL(lease) { sql in
+      let rows = try await sql.query(
+        "SELECT completed_at_ms FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(reference.key)])
+      return rows.first?["completed_at_ms"]?.int64Value
+    }
+  }
+  #expect(completedAt != nil)
   #expect(try await service.complete(context, uploadID: session.uploadID) == reference)
+  #expect(try await context.executeGraphSave(comment: "inspect replayed Blob completion time") { graph, lease in
+    try await graph.withPhysicalSQL(lease) { sql in
+      let rows = try await sql.query(
+        "SELECT completed_at_ms FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(reference.key)])
+      return rows.first?["completed_at_ms"]?.int64Value
+    }
+  } == completedAt)
   #expect(await calls.value() == 1)
   do { _ = try await revoked.complete(context, uploadID: session.uploadID); Issue.record("revoked replayed") }
   catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }

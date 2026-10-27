@@ -4,12 +4,18 @@ import TeaQLCore
 import TeaQLSQLite
 import Testing
 
-private struct NativeBindingAuthorization: BlobBindingAuthorization {
+private struct NativeBindingAuthorization: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
   let scope: String
   let allowed: Bool
   func scope(for actor: UserContext) throws -> String { scope }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
                  next: BlobRef?, action: String) async throws -> Bool { allowed }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
+  }
 }
 
 private struct NativeReadAuthorization: BlobReadAuthorization {
@@ -76,8 +82,10 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
       for key in [first.key, second.key] {
         _ = try await sql.execute("""
           INSERT INTO teaql_blob_catalog
-            (key,scope,object_key,content_version,file_name,content_type,size_bytes,status)
-          VALUES (?,'tenant-a',?,'v1','report.pdf','application/pdf',7,'uploaded_unbound')
+            (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,
+             completed_at_ms,policy_profile,upload_mode,unbound_retention_seconds,effective_unref_seconds)
+          VALUES (?,'tenant-a',?,'v1','report.pdf','application/pdf',7,'uploaded_unbound',
+            CAST(strftime('%s','now') AS INTEGER)*1000,'default','server_stream',86400,604800)
           """, parameters: [.string(key), .string("objects/\(key)")])
       }
     }

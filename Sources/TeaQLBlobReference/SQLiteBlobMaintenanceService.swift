@@ -25,7 +25,7 @@ public struct BlobMaintenanceBatch: Sendable {
   public let next: BlobMaintenanceCursor?
 }
 
-/// Host-scheduled bounded cleanup of expired, uncompleted server-stream uploads only.
+/// Host-scheduled bounded cleanup of expired and retained server-stream objects.
 public struct SQLiteBlobMaintenanceService: Sendable {
   private let catalog: SQLiteBlobCatalog
   private let authorization: any BlobMaintenanceAuthorization
@@ -40,6 +40,14 @@ public struct SQLiteBlobMaintenanceService: Sendable {
     let status: String
     let uploadState: String
     let expiresMs: Int64
+    let completedAtMs: Int64?
+    let lastUnboundAtMs: Int64?
+    let policyProfile: String?
+    let uploadMode: String?
+    let unboundRetentionSeconds: Int64?
+    let effectiveUnrefSeconds: Int64?
+    let retentionFloorUntilMs: Int64?
+    let invalidFloor: Bool
   }
 
   private static func fail(_ code: String) -> TeaQLError { .execution(code) }
@@ -50,7 +58,9 @@ public struct SQLiteBlobMaintenanceService: Sendable {
   }
   private func millis() throws -> Int64 {
     let value = now().timeIntervalSince1970 * 1000
-    guard value >= 0, value < Double(Int64.max) else { throw Self.fail("BLOB_POLICY_INVALID") }
+    guard value >= 0, value <= Double(BlobRetentionPolicy.maximumEpochMilliseconds) else {
+      throw Self.fail("BLOB_POLICY_INVALID")
+    }
     return Int64(value)
   }
 
@@ -78,7 +88,10 @@ public struct SQLiteBlobMaintenanceService: Sendable {
   private func read(_ sql: any GraphPhysicalSQLLease, scope: String, key: String) async throws -> Row? {
     let rows: [TeaQLRecord]
     do { rows = try await sql.query("""
-      SELECT c.object_key,c.content_version,c.status,u.state,u.expires_ms,u.written_etag
+      SELECT c.object_key,c.content_version,c.status,c.completed_at_ms,
+        c.last_unbound_at_ms,c.policy_profile,c.upload_mode,
+        c.unbound_retention_seconds,c.effective_unref_seconds,
+        c.retention_floor_until_ms,u.state,u.expires_ms,u.written_etag
       FROM teaql_blob_catalog c JOIN teaql_blob_upload u ON u.key=c.key AND u.scope=c.scope
       WHERE c.scope=? AND c.key=?
       """, parameters: [.string(scope), .string(key)]) }
@@ -96,13 +109,42 @@ public struct SQLiteBlobMaintenanceService: Sendable {
       throw Self.fail("BLOB_CATALOG_FAILED")
     }
     return Row(key: key, objectKey: objectKey, version: version,
-      writtenETag: written, status: status, uploadState: state, expiresMs: expires)
+      writtenETag: written, status: status, uploadState: state, expiresMs: expires,
+      completedAtMs: value["completed_at_ms"]?.int64Value,
+      lastUnboundAtMs: value["last_unbound_at_ms"]?.int64Value,
+      policyProfile: value["policy_profile"]?.stringValue,
+      uploadMode: value["upload_mode"]?.stringValue,
+      unboundRetentionSeconds: value["unbound_retention_seconds"]?.int64Value,
+      effectiveUnrefSeconds: value["effective_unref_seconds"]?.int64Value,
+      retentionFloorUntilMs: value["retention_floor_until_ms"]?.int64Value,
+      invalidFloor: value["retention_floor_until_ms"] != .null
+        && value["retention_floor_until_ms"]?.int64Value == nil)
   }
 
   private func eligible(_ row: Row?, now: Int64) -> Bool {
     guard let row else { return false }
-    return row.expiresMs <= now && ["initiated", "written"].contains(row.uploadState)
-      && ["initiated", "deleting"].contains(row.status)
+    if ["initiated", "written"].contains(row.uploadState) {
+      return row.expiresMs <= now && ["initiated", "deleting"].contains(row.status)
+    }
+    guard row.uploadState == "completed",
+      ["uploaded_unbound", "available", "deleting"].contains(row.status),
+      let profile = row.policyProfile, Self.validText(profile),
+      row.uploadMode == "server_stream",
+      let completed = row.completedAtMs, BlobRetentionPolicy.validTime(completed),
+      let unbound = row.unboundRetentionSeconds, BlobRetentionPolicy.validSeconds(unbound),
+      let effective = row.effectiveUnrefSeconds, BlobRetentionPolicy.validSeconds(effective),
+      Self.validText(row.version) else { return false }
+    if let last = row.lastUnboundAtMs {
+      guard BlobRetentionPolicy.validTime(last), !row.invalidFloor else { return false }
+      guard let deadline = try? BlobRetentionPolicy.unreferencedEligibleAt(last,
+        seconds: effective, floorUntilMs: row.retentionFloorUntilMs) else { return false }
+      return now >= deadline
+    }
+    guard row.status != "available",
+      let deadline = try? BlobRetentionPolicy.deadline(completed, seconds: unbound) else {
+      return false
+    }
+    return now >= deadline
   }
 
   private func count(_ sql: any GraphPhysicalSQLLease, _ query: String,
@@ -125,11 +167,11 @@ public struct SQLiteBlobMaintenanceService: Sendable {
         guard try await count(sql, "SELECT count(*) AS n FROM teaql_blob_catalog WHERE object_key=?", row.objectKey) == 1 else {
           throw Self.fail("BLOB_CATALOG_FAILED")
         }
-        if row.status == "initiated" {
+        if row.status != "deleting" {
           let changed = try await sql.execute("""
             UPDATE teaql_blob_catalog SET status='deleting'
-            WHERE key=? AND scope=? AND status='initiated'
-            """, parameters: [.string(key), .string(scope)])
+            WHERE key=? AND scope=? AND status=?
+            """, parameters: [.string(key), .string(scope), .string(row.status)])
           guard changed == 1 else { throw Self.fail("BLOB_CATALOG_FAILED") }
         }
         return row
@@ -257,11 +299,21 @@ public struct SQLiteBlobMaintenanceService: Sendable {
         let rows = try await sql.query("""
           SELECT DISTINCT c.key FROM teaql_blob_catalog c JOIN teaql_blob_upload u
             ON u.key=c.key AND u.scope=c.scope
-          WHERE c.scope=? AND c.key>? AND u.expires_ms<=?
-            AND u.state IN ('initiated','written') AND c.status IN ('initiated','deleting')
+          WHERE c.scope=? AND c.key>? AND (
+            (u.expires_ms<=? AND u.state IN ('initiated','written')
+              AND c.status IN ('initiated','deleting')) OR
+            (u.state='completed' AND c.upload_mode='server_stream'
+              AND c.policy_profile IS NOT NULL AND c.completed_at_ms IS NOT NULL
+              AND c.content_version<>'' AND (c.status='deleting' OR
+                (c.status='uploaded_unbound' AND c.last_unbound_at_ms IS NULL
+                  AND c.completed_at_ms+c.unbound_retention_seconds*1000<=?) OR
+                (c.status='available' AND c.last_unbound_at_ms IS NOT NULL
+                  AND c.last_unbound_at_ms+c.effective_unref_seconds*1000<=?
+                  AND (c.retention_floor_until_ms IS NULL OR c.retention_floor_until_ms<=?)))))
             AND NOT EXISTS (SELECT 1 FROM teaql_blob_binding b WHERE b.key=c.key)
           ORDER BY c.key LIMIT ?
-          """, parameters: [.string(scope), .string(cursor?.after ?? ""), .int(time), .int(Int64(batchSize))])
+          """, parameters: [.string(scope), .string(cursor?.after ?? ""),
+            .int(time), .int(time), .int(time), .int(time), .int(Int64(batchSize))])
         return try rows.map { value in
           guard let key = value["key"]?.stringValue, (try? BlobRef(key)) != nil else {
             throw Self.fail("BLOB_CATALOG_FAILED")

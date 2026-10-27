@@ -5,7 +5,7 @@ import TeaQLSecureDocumentReference
 import TeaQLSQLite
 import Testing
 
-private struct OrderBlobAuthorization: BlobBindingAuthorization {
+private struct OrderBlobAuthorization: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
   let entity: String
   let entityID: String
   let expectedAction: String
@@ -14,6 +14,12 @@ private struct OrderBlobAuthorization: BlobBindingAuthorization {
                  next: BlobRef?, action: String) async throws -> Bool {
     target == BlobBindingTarget(entity: entity, entityID: entityID, field: "attachment") &&
       next != nil && action == expectedAction
+  }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
   }
 }
 
@@ -361,8 +367,10 @@ func swiftSQLiteDocumentBlobSelectionSharesBusinessBindingAndReceipt() async thr
       for key in ["blob_A", "blob_B", "blob_C", "blob_D"] {
         _ = try await sql.execute("""
           INSERT INTO teaql_blob_catalog
-          (key,scope,object_key,content_version,file_name,content_type,size_bytes,status)
-          VALUES (?,?,?,?,?,?,?,'uploaded_unbound')
+          (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,
+           completed_at_ms,policy_profile,upload_mode,unbound_retention_seconds,effective_unref_seconds)
+          VALUES (?,?,?,?,?,?,?,'uploaded_unbound',
+            CAST(strftime('%s','now') AS INTEGER)*1000,'default','server_stream',86400,604800)
           """, parameters: [.string(key), .string("merchant:7"), .string("objects/" + key),
             .string("v1"), .string(key + ".pdf"), .string("application/pdf"), .int(3)])
       }
