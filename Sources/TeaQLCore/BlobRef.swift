@@ -53,6 +53,9 @@ public struct BlobFieldSpec: Sendable, Hashable {
     "pdf": "application/pdf",
   ]
 
+  /// Resolve only the frozen Blob format set, never a client MIME hint.
+  public static func mime(forExtension value: String) -> String? { contentTypes[value] }
+
   public init(entity: String, field: String, extensions: [String], nullable: Bool,
               policyProfile: String) throws {
     for value in [entity, field, policyProfile] {
