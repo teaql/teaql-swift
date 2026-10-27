@@ -227,4 +227,25 @@ func swiftSQLiteFileUploadNeedsFullVerificationBeforeNativeBind() async throws {
       source: ObjectDataReader(Data(data.dropLast())))
     Issue.record("short upload accepted")
   } catch { #expect(error as? TeaQLError == .execution("BLOB_STORE_FAILED")) }
+
+  let expiring = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true),
+    verifier: FixturePDFVerifier(), maximumBytes: 10_000, leaseSeconds: 1)
+  let old = try await expiring.begin(context, target: target, input: input,
+    replayKey: "expired-request")
+  #expect(try await expiring.begin(context, target: target, input: input,
+    replayKey: "expired-request").uploadID == old.uploadID)
+  try await Task.sleep(nanoseconds: 1_100_000_000)
+  do {
+    _ = try await expiring.begin(context, target: target, input: input,
+      replayKey: "expired-request")
+    Issue.record("expired replay recovered its old session")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_EXPIRED")) }
+  let fresh = try await expiring.begin(context, target: target, input: input,
+    replayKey: "fresh-request")
+  #expect(fresh.uploadID != old.uploadID)
+  do {
+    _ = try await expiring.write(context, uploadID: old.uploadID, source: ObjectDataReader(data))
+    Issue.record("expired session wrote bytes")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_EXPIRED")) }
 }

@@ -203,6 +203,7 @@ public struct SQLiteBlobUploadService: Sendable {
             let key = old["key"]?.stringValue,
             let expiry = old["expires_ms"]?.int64Value,
             let reference = try? BlobRef(key) else { throw Self.fail("BLOB_CATALOG_FAILED") }
+          guard millis() < expiry else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
           return BlobUploadSession(uploadID: id, reference: reference,
             expiresAt: Date(timeIntervalSince1970: Double(expiry) / 1000))
         }
@@ -319,12 +320,17 @@ public struct SQLiteBlobUploadService: Sendable {
       }
       return try await actor.executeGraphSave(comment: "journal Blob write") { graph, session in
         try await graph.withPhysicalSQL(session) { sql in
+          let nowMs = millis()
+          guard nowMs < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
           let affected: Int
           do { affected = try await sql.execute("""
             UPDATE teaql_blob_upload SET state = 'written',written_sha256 = ?,written_etag = ?
-            WHERE upload_id = ? AND scope = ? AND state = 'initiated'
+            WHERE upload_id = ? AND scope = ? AND state = 'initiated' AND expires_ms > ?
+              AND EXISTS (SELECT 1 FROM teaql_blob_catalog
+                WHERE key = teaql_blob_upload.key AND scope = teaql_blob_upload.scope
+                  AND status = 'initiated')
             """, parameters: [.string(observed.sha256), .string(etag),
-              .string(uploadID), .string(entry.scope)]) }
+              .string(uploadID), .string(entry.scope), .int(nowMs)]) }
           catch { throw Self.fail("BLOB_CATALOG_FAILED") }
           guard affected == 1 else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
           return observed.count
@@ -425,13 +431,15 @@ public struct SQLiteBlobUploadService: Sendable {
     guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
     return try await actor.executeGraphSave(comment: "confirm Blob upload") { graph, session in
       try await graph.withPhysicalSQL(session) { sql in
+        let nowMs = millis()
+        guard nowMs < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
         let completed: Int
         do { completed = try await sql.execute("""
           UPDATE teaql_blob_upload SET state = 'completed'
           WHERE upload_id = ? AND scope = ? AND state = 'written'
-            AND written_sha256 = ? AND written_etag = ?
+            AND written_sha256 = ? AND written_etag = ? AND expires_ms > ?
           """, parameters: [.string(uploadID), .string(entry.scope),
-            .string(writtenHash), .string(writtenETag)]) }
+            .string(writtenHash), .string(writtenETag), .int(nowMs)]) }
         catch { throw Self.fail("BLOB_CATALOG_FAILED") }
         guard completed == 1 else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
         let promoted: Int
