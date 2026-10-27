@@ -115,6 +115,10 @@ public protocol ObjectStorageProvider: Sendable {
   func delete(_ invocation: StorageInvocation, key: ObjectKey) async throws
   func getReadUrl(_ invocation: StorageInvocation, key: ObjectKey, options: ObjectReadUrlOptions) async throws -> ObjectReadUrl
 }
+public enum ObjectConditionalDeleteResult: Sendable { case deleted, alreadyMissing, versionMismatch }
+public protocol ObjectStorageConditionalDeleter: Sendable {
+  func deleteIfVersion(_ invocation: StorageInvocation, key: ObjectKey, contentVersion: String) async throws -> ObjectConditionalDeleteResult
+}
 public struct ObjectStorageEvent: Sendable {
   public let operation: String
   public let comment: String
@@ -207,6 +211,17 @@ public struct ObjectStorage: Sendable {
   public func head(_ key: ObjectKey) async throws -> ObjectMetadata? { try await execute("head") { try await provider.head(invocation, key: key) } }
   public func exists(_ key: ObjectKey) async throws -> Bool { try await head(key) != nil }
   public func delete(_ key: ObjectKey) async throws { try await execute("delete") { try await provider.delete(invocation, key: key) } }
+  public func deleteIfVersion(_ key: ObjectKey, contentVersion: String) async throws -> ObjectConditionalDeleteResult {
+    try await execute("delete_if_version") {
+      guard !contentVersion.isEmpty, contentVersion.utf8.count <= 256, contentVersion != "*",
+        contentVersion.trimmingCharacters(in: .whitespacesAndNewlines) == contentVersion,
+        !contentVersion.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+        throw StorageError(.invalidInput)
+      }
+      guard let conditional = provider as? any ObjectStorageConditionalDeleter else { throw StorageError(.unsupported) }
+      return try await conditional.deleteIfVersion(invocation, key: key, contentVersion: contentVersion)
+    }
+  }
   public func getReadUrl(_ key: ObjectKey, options: ObjectReadUrlOptions? = nil) async throws -> ObjectReadUrl {
     let options = try options ?? ObjectReadUrlOptions()
     return try await execute("read_url") { try await provider.getReadUrl(invocation, key: key, options: options) }

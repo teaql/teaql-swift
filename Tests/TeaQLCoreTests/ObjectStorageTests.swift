@@ -9,6 +9,7 @@ private struct StorageUnusedExecutor: QueryExecutor, MutationExecutor {
 private func storageContext() -> UserContext { UserContext(queryExecutor: StorageUnusedExecutor(), mutationExecutor: StorageUnusedExecutor(), requestPolicy: RequestPolicy { $0 }) }
 private actor StorageStub: ObjectStorageProvider {
   var size: Int64 = 3
+  var deletes = 0
   var error: StorageErrorCode?
   var seenComment = "", seenContext = ""
   func configure(size: Int64 = 3, error: StorageErrorCode? = nil) { self.size = size; self.error = error }
@@ -18,7 +19,7 @@ private actor StorageStub: ObjectStorageProvider {
   }
   func put(_ invocation: StorageInvocation, key: ObjectKey, content: any ObjectByteReader, options: ObjectPutOptions) throws -> ObjectMetadata { try ObjectMetadata(key: key, size: options.size) }
   func get(_ invocation: StorageInvocation, key: ObjectKey) throws -> ObjectContent { ObjectContent(metadata: try ObjectMetadata(key: key, size: size), reader: ObjectDataReader(Data([1, 2, 3]))) }
-  func delete(_ invocation: StorageInvocation, key: ObjectKey) {}
+  func delete(_ invocation: StorageInvocation, key: ObjectKey) { deletes += 1 }
   func getReadUrl(_ invocation: StorageInvocation, key: ObjectKey, options: ObjectReadUrlOptions) throws -> ObjectReadUrl { throw StorageError(.unsupported) }
 }
 private actor CountedStorageReader: ObjectByteReader {
@@ -51,6 +52,15 @@ final class ObjectStorageTests: XCTestCase {
       await stub.configure(error: code)
       await expect(code) { _ = try await storage.exists(key) }
     }
+  }
+  func testConditionalDeleteRequiresProviderCapability() async throws {
+    let stub = StorageStub()
+    let storage = try storageContext().withObjectStorage(stub).objectStorage("conditional delete")
+    let key = try ObjectKey("f4/conditional")
+    await expect(.invalidInput) { _ = try await storage.deleteIfVersion(key, contentVersion: "*") }
+    await expect(.unsupported) { _ = try await storage.deleteIfVersion(key, contentVersion: "\"etag\"") }
+    let deletes = await stub.deletes
+    XCTAssertEqual(deletes, 0)
   }
   func testObjectStorageStreamsAndObservationBoundaries() async throws {
     let stub = StorageStub(), events = StorageEvents()
