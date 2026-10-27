@@ -13,6 +13,7 @@ let package = Package(
     .library(name: "TeaQLSQL", targets: ["TeaQLSQL"]),
     .library(name: "TeaQLSQLite", targets: ["TeaQLSQLite"]),
     .library(name: "TeaQLBlobReference", targets: ["TeaQLBlobReference"]),
+    .library(name: "TeaQLSecureDocumentReference", targets: ["TeaQLSecureDocumentReference"]),
     .library(name: "TeaQLFederal", targets: ["TeaQLFederal"]),
     .library(name: "TeaQLTestSupport", targets: ["TeaQLTestSupport"]),
     .library(name: "TeaQLOpenTelemetry", targets: ["TeaQLOpenTelemetry"]),
@@ -38,6 +39,9 @@ let package = Package(
       .product(name: "NIOCore", package: "swift-nio"),
       .product(name: "NIOHTTP1", package: "swift-nio"),
       .product(name: "NIOPosix", package: "swift-nio"),
+    ]),
+    .target(name: "TeaQLSecureDocumentReference", dependencies: [
+      "TeaQLCore", .product(name: "Crypto", package: "swift-crypto"),
     ]),
     .target(name: "TeaQLFederal", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLTestSupport", dependencies: ["TeaQLCore", "TeaQLSQLite"]),
@@ -71,6 +75,10 @@ let package = Package(
     .testTarget(name: "TeaQLSQLiteTests", dependencies: ["TeaQLSQLite", "TeaQLTestSupport"]),
     .testTarget(name: "TeaQLBlobReferenceTests", dependencies: [
       "TeaQLBlobReference", "TeaQLSQLite", .product(name: "Crypto", package: "swift-crypto"),
+    ]),
+    .testTarget(name: "TeaQLSecureDocumentReferenceTests", dependencies: [
+      "TeaQLSecureDocumentReference", "TeaQLCore", "TeaQLSQLite",
+      .product(name: "Crypto", package: "swift-crypto"),
     ]),
     .testTarget(name: "TeaQLFederalTests", dependencies: ["TeaQLFederal"]),
     .testTarget(

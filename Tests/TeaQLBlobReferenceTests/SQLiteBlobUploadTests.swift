@@ -28,6 +28,41 @@ private struct UploadBindingPermission: BlobBindingAuthorization {
   }
 }
 
+private struct ModuleReadPermission: BlobReadAuthorization {
+  func authorize(actor: UserContext, slot: AuthorizedBlobSlot) async throws -> Bool { true }
+}
+
+@Test
+func swiftBlobModuleRequiresInstalledProviderAndCatalogSchema() async throws {
+  let database = try SQLiteDataService(path: ":memory:")
+  let base = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 })
+  let upload = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true),
+    verifier: FixturePDFVerifier(), maximumBytes: 10_000)
+  let module = try BlobReferenceModule(upload: upload, readAuthorization: ModuleReadPermission())
+  let noProvider = try module.install(on: base)
+  do { try await module.ready(context: noProvider); Issue.record("missing provider accepted") }
+  catch { #expect((error as? ViewPreparationError)?.code == "BLOB_CAPABILITY_MISSING") }
+
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-module-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let store = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let context = try module.install(on: base.withObjectStorage(store))
+  do { try await module.ready(context: context); Issue.record("missing catalog accepted") }
+  catch { #expect((error as? ViewPreparationError)?.code == "BLOB_SCHEMA_MISSING") }
+  try await context.executeGraphSave(comment: "install Blob module catalog") { graph, session in
+    try await module.catalog.installSchema(graph, session: session)
+  }
+  try await module.ready(context: context)
+  do { _ = try module.install(on: context); Issue.record("duplicate Blob module accepted") }
+  catch { #expect((error as? ViewPreparationError)?.code == "BLOB_CAPABILITY_MISSING") }
+}
+
 // The test verifier only checks a fixture PDF; it is not production format parsing.
 private struct FixturePDFVerifier: BlobContentVerifier {
   let early: Bool

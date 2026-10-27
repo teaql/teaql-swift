@@ -6,6 +6,23 @@ public protocol RuntimeCapabilityProvider: Sendable {
 }
 
 public extension UserContext {
+  func hasRuntimeCapability(_ name: String) -> Bool { runtimeCapabilities[name] != nil }
+
+  func hasSecureDocumentContributor(_ candidate: any SecureDocumentContributor) -> Bool {
+    guard let installed = secureDocumentContributor else { return false }
+    return ObjectIdentifier(installed as AnyObject) == ObjectIdentifier(candidate as AnyObject)
+  }
+
+  func hasBlobResponseContributor(_ candidate: any BlobResponseContributor) -> Bool {
+    guard let installed = blobResponseContributor else { return false }
+    return ObjectIdentifier(installed as AnyObject) == ObjectIdentifier(candidate as AnyObject)
+  }
+
+  var hasObjectStorageProvider: Bool { objectStorageProvider != nil }
+
+  var hasSecureDocumentContributorInstalled: Bool { secureDocumentContributor != nil }
+  var hasBlobResponseContributorInstalled: Bool { blobResponseContributor != nil }
+
   func withRuntimeCapability(_ name: String, provider: any RuntimeCapabilityProvider) -> UserContext {
     precondition(!name.isEmpty && name == name.trimmingCharacters(in: .whitespacesAndNewlines))
     var copy = self
