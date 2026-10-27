@@ -23,7 +23,8 @@ struct SQLiteBlobMutationParticipant: BlobMutationParticipant {
     catch { throw TeaQLError.execution("BLOB_BIND_DENIED") }
     for property in mutation.entity.properties where property.type == .blobRef || property.blobSpec != nil {
       guard property.type == .blobRef, let spec = property.blobSpec,
-            spec.entity == mutation.entity.name, spec.field == property.name,
+            spec.entity == mutation.entity.name,
+            spec.field == (property.modelName ?? property.name),
             spec.nullable == property.nullable else {
         throw TeaQLError.execution("BLOB_CAPABILITY_MISSING")
       }
@@ -33,7 +34,7 @@ struct SQLiteBlobMutationParticipant: BlobMutationParticipant {
       let after = mutation.kind == .delete ? nil :
         try Self.reference(persisted[property.name], nullable: property.nullable)
       let target = BlobBindingTarget(entity: mutation.entity.name,
-        entityID: identifier, field: property.name)
+        entityID: identifier, field: property.modelName ?? property.name)
       let binding = try await context.withPhysicalSQL(session) { sql in
         let rows = try await sql.query("""
           SELECT b.key,b.version,c.status FROM teaql_blob_binding AS b

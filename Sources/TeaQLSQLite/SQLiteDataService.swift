@@ -928,7 +928,7 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, BlobMutationExe
       let property = try requireProperty(inputName, entity)
       if property.type == .blobRef || property.blobSpec != nil {
         guard property.type == .blobRef, let spec = property.blobSpec,
-          spec.entity == entity.name, spec.field == property.name,
+          spec.entity == entity.name, spec.field == (property.modelName ?? property.name),
           spec.nullable == property.nullable, !spec.allowedExtensions.isEmpty else {
           throw TeaQLError.execution("BLOB_CAPABILITY_MISSING")
         }
