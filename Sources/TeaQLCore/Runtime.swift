@@ -318,6 +318,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
 
   public func save(_ context: UserContext) async throws -> Entity {
     _ = try MutationIntent(comment: reason)
+    LoadedScalarRestoration.discardRestoredFields(of: entity)
+    guard try validateVersion() else { return entity }
     return try await context.executeGraphSave(comment: reason, rootEntityType: Entity.descriptor.name, preparing: { graphContext, _ in
       try preflight(graphContext)
     }) { graphContext, session in
@@ -331,12 +333,23 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   /// Generated graph infrastructure calls this for every reachable node before
   /// the first mutation of the graph is sent to the provider.
   public func preflight(_ context: UserContext) throws {
+    LoadedScalarRestoration.discardRestoredFields(of: entity)
     let rooted = entity as? any TeaQLMutationRootedEntity
     if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return }
     _ = try context.preflightMutation(
       makeMutation(rooted: rooted),
       ledgerRoot: rooted?.teaqlEntityRoot,
       ledgerKey: rooted?.teaqlEntityKey)
+  }
+
+  /// Generator bridge for a complete input-graph pass before its first Fix.
+  /// No Checker, policy, clock, ID allocator or provider is invoked here.
+  @discardableResult
+  public func validateVersion() throws -> Bool {
+    let rooted = entity as? any TeaQLMutationRootedEntity
+    if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return false }
+    _ = try makeMutation(rooted: rooted).validatedForExecution()
+    return true
   }
 
   /// Generated traversal uses the explicitly supplied session; it must not
@@ -793,6 +806,10 @@ public struct UserContext: Sendable {
                 try await preparation(preparingContext, session)
             }
         }
+        // A later Fix may have changed an earlier captured ledger. Reject that
+        // drift before exposing a stale plan to customer policy, then validate
+        // again after policy because it too can retain a caller-owned reference.
+        try session.preparedMutations.sealAndValidate()
         try policy.reviewPreparedGraph(context: preparingContext)
         try session.endPreparation()
       }

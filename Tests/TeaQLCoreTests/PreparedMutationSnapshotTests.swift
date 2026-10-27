@@ -217,6 +217,35 @@ struct PreparedMutationSnapshotTests {
     #expect(await provider.writes.map { $0.values["value"] } == [.double(7.5), .double(8.5)])
     #expect(await provider.commits == 2)
   }
+
+  @Test func laterFixCannotExposeAnAlreadyChangedPreparedLedgerToPolicyReview() async throws {
+    let first = descriptor("Earlier"), second = descriptor("Later"), provider = SnapshotProvider()
+    let ledger = EntityRoot(), key = EntityKey(entity: first.name, id: .int(1)), plans = SnapshotPlans()
+    ledger.set(key, field: "value", value: .double(1))
+    let context = try context(provider, entities: [first, second], checkers: [
+      first.name: SnapshotCounterFix(), second.name: SnapshotCapturedLedgerFix(ledger: ledger, key: key)],
+      policy: SnapshotPolicy { plans.add($0) })
+    let earlier = command(first), later = command(second)
+    do {
+      try await context.executeGraphSave(comment: "seal complete prepared values before reviewing policy", preparing: { context, _ in
+        _ = try context.preflightMutation(earlier, ledgerRoot: ledger, ledgerKey: key)
+        _ = try context.preflightMutation(later)
+      }) { _, _ in Issue.record("changed prepared ledger reached execution") }
+      Issue.record("changed prepared ledger was accepted")
+    } catch let error as MutationPolicyError { #expect(error == .operationOutsideReviewedPlan) }
+    #expect(plans.values.isEmpty)
+    #expect(await provider.begins == 0)
+    #expect(await provider.writes.isEmpty)
+    #expect(ledger.change(key)["value"] == .double(999))
+  }
+}
+
+private struct SnapshotCapturedLedgerFix: EntityChecker {
+  let ledger: EntityRoot
+  let key: EntityKey
+  func checkAndFix(context: UserContext, mutation: inout Mutation, now: Date) throws -> [CheckResult] {
+    ledger.set(key, field: "value", value: .double(999)); return []
+  }
 }
 
 private struct SnapshotMultiFieldFix: EntityChecker {

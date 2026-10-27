@@ -37,6 +37,21 @@ public final class EntityRoot: @unchecked Sendable {
     lock.lock(); defer { lock.unlock() }; return changes[key] ?? [:]
   }
 
+  package func discardRestoredFields(_ key: EntityKey, snapshot: LoadedEntitySnapshot, descriptor: EntityDescriptor) {
+    lock.withLock {
+      guard snapshot.key == key, snapshot.version != 0, originalVersions[key] == snapshot.version,
+        !newKeys.contains(key), !deletedKeys.contains(key), let pending = changes[key] else { return }
+      for (field, value) in pending {
+        guard let property = descriptor.property(named: field), !property.isID, !property.isVersion else { continue }
+        let aliases = [property.name, property.modelName ?? property.name, property.column]
+        let known = aliases.compactMap { snapshot.record[$0] }
+        guard !known.isEmpty, known.allSatisfy({ LoadedScalarRestoration.same(value, $0, property: property) }) else { continue }
+        changes[key]?.removeValue(forKey: field)
+      }
+      if changes[key]?.isEmpty == true { changes.removeValue(forKey: key) }
+    }
+  }
+
   package struct MutationSnapshot: Sendable {
     let values: TeaQLRecord
     let version: Int64?

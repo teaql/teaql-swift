@@ -105,7 +105,8 @@ private func sameMutationValue(_ left: TeaQLValue, _ right: TeaQLValue) -> Bool 
   switch (left, right) {
   case (.double(let a), .double(let b)): return a.bitPattern == b.bitPattern
   case (.date(let a), .date(let b)): return a.timeIntervalSinceReferenceDate.bitPattern == b.timeIntervalSinceReferenceDate.bitPattern
-  case (.decimal(let a), .decimal(let b)): return a == b || a.isNaN && b.isNaN
+  case (.decimal(let a), .decimal(let b)):
+    return a.isNaN && b.isNaN || a == b && a.exponent == b.exponent && a.sign == b.sign
   case (.array(let a), .array(let b)): return a.count == b.count && zip(a, b).allSatisfy { sameMutationValue($0, $1) }
   case (.object(let a), .object(let b)): return sameMutationRecord(a, b)
   default: return left == right

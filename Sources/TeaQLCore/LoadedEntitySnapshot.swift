@@ -22,7 +22,7 @@ public final class LoadedEntitySnapshots: @unchecked Sendable {
 
   public func capture(key: EntityKey, version: Int64, record: TeaQLRecord) -> LoadedEntitySnapshot {
     lock.withLock {
-      if let snapshot = snapshots[key]?.first(where: { $0.version == version && $0.record == record }) {
+      if let snapshot = snapshots[key]?.first(where: { $0.version == version && sameMutationRecord($0.record, record) }) {
         return snapshot
       }
       let snapshot = LoadedEntitySnapshot(key: key, version: version, record: record)
