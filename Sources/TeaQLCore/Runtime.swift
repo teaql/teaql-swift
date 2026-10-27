@@ -245,6 +245,7 @@ public struct Mutation: Sendable, Codable {
   public func validatedForExecution() throws -> Self {
     _ = try MutationIntent(comment: auditReason)
     try MutationVersion.validate(self)
+    try CanonicalMutationFields.validate(values, entity: entity)
     return self
   }
 }
@@ -399,6 +400,9 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     try validateLoadedIdentity(rooted: rooted)
     if let rooted {
       let key = rooted.teaqlEntityKey
+      // New entities may still have ID zero and use their complete scalar
+      // record below. Never lose malformed raw ledger input at that boundary.
+      try CanonicalMutationFields.validate(rooted.teaqlEntityRoot.change(key), entity: Entity.descriptor)
       // A successful save advances this graph's ledger, not every Swift value
       // copy that once shared it. Only the authoritative returned snapshot may
       // use that newer version; never implicitly rebase an old dirty struct.

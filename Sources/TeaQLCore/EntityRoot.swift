@@ -52,7 +52,8 @@ public final class EntityRoot: @unchecked Sendable {
       guard snapshot.key == key, snapshot.version != 0, originalVersions[key] == snapshot.version,
         !newKeys.contains(key), !deletedKeys.contains(key), let pending = changes[key] else { return }
       for (field, value) in pending {
-        guard let property = descriptor.property(named: field), !property.isID, !property.isVersion else { continue }
+        guard let property = descriptor.property(named: field), field == (property.modelName ?? property.name),
+          !property.isID, !property.isVersion else { continue }
         let aliases = [property.name, property.modelName ?? property.name, property.column]
         let known = aliases.compactMap { snapshot.record[$0] }
         guard !known.isEmpty, known.allSatisfy({ LoadedScalarRestoration.same(value, $0, property: property) }) else { continue }

@@ -189,7 +189,8 @@ private struct DenyFederalMutationPolicy: MutationPolicy {
     baseURL: URL(string: "https://example.test/")!, transport: transport))
   let task = EntityDescriptor(
     name: "Task", table: "task_data",
-    properties: [PropertyDescriptor(name: "id", type: .int, isID: true)])
+    properties: [PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "name", type: .string)])
   let context = UserContext(
     queryExecutor: service, mutationExecutor: service,
     requestPolicy: RequestPolicy { $0 },

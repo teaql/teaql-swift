@@ -19,13 +19,13 @@ func verifyFieldAwareSQLMasking() async throws {
         requestPolicy: RequestPolicy { $0 }, telemetrySink: evidence, diagnosticSQLLogSink: sink)
     try await context.ensureSchema(RuntimeModule(name: "masking-fixture", entities: [entity]))
     _ = try await context.execute(Mutation(kind: .create, entity: entity, values: [
-        "id": .int(1), "displayName": .string("Riverside"), "address": .string("1 Runtime Road"),
+        "id": .int(1), "display_name": .string("Riverside"), "address": .string("1 Runtime Road"),
         "password": .string("PASSWORD-CANARY")
     ], auditReason: "what: create masking fixture"))
     let beforeFailure = await evidence.snapshot().count
     do {
         _ = try await context.execute(Mutation(kind: .create, entity: entity, values: [
-            "id": .int(1), "displayName": .string("Riverside"), "address": .string("1 Runtime Road"),
+            "id": .int(1), "display_name": .string("Riverside"), "address": .string("1 Runtime Road"),
             "password": .string("PASSWORD-CANARY")
         ], auditReason: "what: verify duplicate key diagnostics"))
         try require(false, "duplicate primary key unexpectedly succeeded")
@@ -43,7 +43,7 @@ func verifyFieldAwareSQLMasking() async throws {
     try require(result.records.first?["displayName"] == .string("Riverside"), "mask changed database name")
     try require(result.records.first?["password"] == .string("PASSWORD-CANARY"), "mask changed database password")
     _ = try await context.execute(Mutation(kind: .update, entity: entity, id: .int(1),
-        values: ["displayName": .string("Lakeside")], expectedVersion: 1, auditReason: "what: update masking fixture"))
+        values: ["display_name": .string("Lakeside")], expectedVersion: 1, auditReason: "what: update masking fixture"))
     query.filter = .equal("id", .int(1))
     // Intent describes the current operation, not a previous request's private value.
     query.comment = "what: reload updated fixture by ID"
@@ -84,7 +84,7 @@ private func verifyRelationFailureMasking(entity: EntityDescriptor) async throws
         requestPolicy: RequestPolicy { $0 }, telemetrySink: evidence, diagnosticSQLLogSink: sink)
     try await context.ensureSchema(RuntimeModule(name: "relation-fixture", entities: [entity, child]))
     _ = try await context.execute(Mutation(kind: .create, entity: entity, values: [
-        "id": .int(1), "displayName": .string("Riverside"), "address": .string("1 Runtime Road"),
+        "id": .int(1), "display_name": .string("Riverside"), "address": .string("1 Runtime Road"),
         "password": .string("PASSWORD-CANARY")
     ], auditReason: "what: seed relation parent"))
     _ = try await context.execute(Mutation(kind: .create, entity: child, values: [
@@ -148,7 +148,7 @@ private func verifyReadbackFailureMasking(entity: EntityDescriptor) async throws
     try require(sqlite3_exec(db, "CREATE TRIGGER vanish AFTER INSERT ON masking_customer WHEN NEW.id=777 BEGIN DELETE FROM masking_customer WHERE id=NEW.id; END", nil, nil, nil) == SQLITE_OK,
         "fixture trigger creation failed")
     func mutation(_ id: Int64) -> Mutation {
-        Mutation(kind: .create, entity: entity, values: ["id": .int(id), "displayName": .string("Riverside"),
+        Mutation(kind: .create, entity: entity, values: ["id": .int(id), "display_name": .string("Riverside"),
             "address": .string("1 Runtime Road"), "password": .string("PASSWORD-CANARY")],
             auditReason: "what: persist Riverside PASSWORD-CANARY")
     }

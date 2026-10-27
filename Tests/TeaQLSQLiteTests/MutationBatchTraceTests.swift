@@ -51,7 +51,7 @@ func swiftBatchHasIndependentItemLineageAndSiblingPrivacyAtRealSinks() async thr
     Mutation(kind: .create, entity: entity, values: ["id": .int(101), "name": .string("first")],
       auditReason: root),
     Mutation(kind: .create, entity: entity, values: ["id": .int(102), "name": .string("second"),
-      "privateMemo": .string("PRIVATE-MEMO-CANARY")], auditReason: "inspect PRIVATE-MEMO-CANARY"),
+      "private_memo": .string("PRIVATE-MEMO-CANARY")], auditReason: "inspect PRIVATE-MEMO-CANARY"),
     Mutation(kind: .create, entity: entity, values: ["id": .int(103), "name": .string("third")]),
   ]
   let request = try MutationBatchRequest(mutations: originals, comment: root)
@@ -83,7 +83,8 @@ func swiftBatchHasIndependentItemLineageAndSiblingPrivacyAtRealSinks() async thr
   }
   #expect(request.intent.comment == root && originals[1].auditReason == "inspect PRIVATE-MEMO-CANARY")
   #expect(results[1].persistedRecord?["privateMemo"] == .string("PRIVATE-MEMO-CANARY"))
-  #expect(commands[1].values["privateMemo"] == .string("PRIVATE-MEMO-CANARY"))
+  #expect(commands[1].values["private_memo"] == .string("PRIVATE-MEMO-CANARY"))
+  #expect(commands[1].values["privateMemo"] == nil)
   // A later independent request must not retain the batch's private values.
   _ = try await context.execute(Mutation(kind: .create, entity: entity,
     values: ["id": .int(104), "name": .string("new-record")], auditReason: "after PRIVATE-MEMO-CANARY"))
@@ -103,7 +104,7 @@ func swiftBatchProviderFailureRollsBackWithoutDroppingEarlierSQLOrSiblingPrivacy
     Mutation(kind: .create, entity: entity, values: ["id": .int(101), "name": .string("alpha-record")],
       auditReason: "first item"),
     Mutation(kind: .create, entity: entity, values: ["id": .int(101), "name": .string("duplicate"),
-      "privateMemo": .string("FUTURE-SIBLING-CANARY")], auditReason: "second item"),
+      "private_memo": .string("FUTURE-SIBLING-CANARY")], auditReason: "second item"),
   ]
   do {
     _ = try await context.execute(MutationBatchRequest(mutations: items, comment: "batch FUTURE-SIBLING-CANARY"))
