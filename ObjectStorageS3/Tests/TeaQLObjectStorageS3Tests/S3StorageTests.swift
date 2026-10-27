@@ -28,6 +28,8 @@ final class S3StorageTests: XCTestCase {
     let context = UserContext(queryExecutor: UnusedStorageExecutor(), mutationExecutor: UnusedStorageExecutor(), requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
     let storage = try context.objectStorage("F4 real S3-compatible Swift")
     let key = try ObjectKey("f4/swift/" + UUID().uuidString)
+    let createKey = try ObjectKey("f4/swift/create/" + UUID().uuidString)
+    let raceKey = try ObjectKey("f4/swift/race/" + UUID().uuidString)
     let bytes = Data("%PDF-1.7\nF4 real S3-compatible bytes\n%%EOF".utf8)
     do {
       let written = try await storage.putBytes(key, data: bytes, options: ObjectPutOptions(size: Int64(bytes.count), mode: .replace, contentType: "application/pdf"))
@@ -50,12 +52,48 @@ final class S3StorageTests: XCTestCase {
       if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
       let (_, expired) = try await URLSession.shared.data(from: ticket.url)
       XCTAssertEqual((expired as? HTTPURLResponse)?.statusCode, 403)
+      if env["TEAQL_S3_TEST_CREATE_ONLY"] == "1" {
+        let create = try ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly,
+          contentType: "application/pdf")
+        let created = try await storage.putBytes(createKey, data: bytes, options: create)
+        await expect(.conflict) {
+          _ = try await storage.putBytes(createKey, data: Data(repeating: 0x78, count: bytes.count),
+            options: create)
+        }
+        let createdHead = try await storage.head(createKey)
+        let createdBytes = try await storage.getBytes(createKey, maximumBytes: 1024)
+        XCTAssertEqual(createdHead?.etag, created.etag)
+        XCTAssertEqual(createdBytes, bytes)
+        let candidates = [bytes, Data(repeating: 0x79, count: bytes.count)]
+        let tasks = candidates.map { value in
+          Task.detached { try await storage.putBytes(raceKey, data: value, options: create) }
+        }
+        var winner = -1, wins = 0
+        for (index, task) in tasks.enumerated() {
+          do { _ = try await task.value; winner = index; wins += 1 }
+          catch let error as StorageError { XCTAssertEqual(error.code, .conflict) }
+          catch { XCTFail("unexpected create-only race failure") }
+        }
+        XCTAssertEqual(wins, 1)
+        if winner >= 0 {
+          let winnerBytes = try await storage.getBytes(raceKey, maximumBytes: 1024)
+          XCTAssertEqual(winnerBytes, candidates[winner])
+        }
+      }
     } catch {
       try? await storage.delete(key)
+      if env["TEAQL_S3_TEST_CREATE_ONLY"] == "1" {
+        try? await storage.delete(createKey)
+        try? await storage.delete(raceKey)
+      }
       try? await client.shutdown()
       throw error
     }
     try await storage.delete(key)
+    if env["TEAQL_S3_TEST_CREATE_ONLY"] == "1" {
+      try await storage.delete(createKey)
+      try await storage.delete(raceKey)
+    }
     try await client.shutdown()
   }
 
