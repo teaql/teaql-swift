@@ -60,6 +60,7 @@ public final class GraphMutationSession: @unchecked Sendable {
   private var privacyValues: [TeaQLValue] = []
   private var loadedProvenance: SQLExecutionMetadata?
   private var fixEvidence: [FixEvidence] = []
+  private var persistedRecords: [EntityKey: TeaQLRecord] = [:]
 
   package init(intent: MutationIntent, policy: MutationPolicyCoordinator, fixTime: Date) {
     self.intent = intent; self.policy = policy; self.fixTime = fixTime
@@ -87,6 +88,31 @@ public final class GraphMutationSession: @unchecked Sendable {
     try ensureActive()
     try lock.withLock {
       guard !preparing else { throw TeaQLError.execution("GRAPH_PREPARATION_CANNOT_ACCESS_PROVIDER") }
+    }
+  }
+
+  /// One invocation owns these authoritative readbacks; they never live on
+  /// UserContext or on a generated entity and cannot authorize another write.
+  package func recordPersisted(_ mutation: Mutation, result: MutationResult, sourceKey: EntityKey?) throws {
+    try lock.withLock {
+      guard active && !preparing else { throw TeaQLError.execution("GRAPH_READBACK_OUTSIDE_EXECUTION") }
+      guard result.affectedRows > 0, let record = result.persistedRecord else { return }
+      let property = mutation.entity.idProperty
+      let aliases = property.map { [$0.name, $0.modelName ?? $0.name, $0.column] } ?? ["id"]
+      let id = aliases.lazy.compactMap({ record[$0] }).first
+        ?? result.generatedValues["id"] ?? mutation.id
+      if let sourceKey, sourceKey.entity != mutation.entity.name {
+        throw TeaQLError.execution("GRAPH_READBACK_ENTITY_MISMATCH")
+      }
+      if let id { persistedRecords[EntityKey(entity: mutation.entity.name, id: id)] = record }
+      if let sourceKey { persistedRecords[sourceKey] = record }
+    }
+  }
+
+  @_spi(Generated) public func readback() throws -> GraphReadback {
+    try lock.withLock {
+      guard active && !preparing else { throw TeaQLError.execution("GRAPH_READBACK_OUTSIDE_EXECUTION") }
+      return GraphReadback(records: persistedRecords)
     }
   }
 
@@ -149,6 +175,7 @@ public final class GraphMutationSession: @unchecked Sendable {
       } : []
       let actions = committed ? commitActions : rollbackActions.reversed()
       commitActions = []; rollbackActions = []; auditEvents = []; privacyValues = []; loadedProvenance = nil
+      persistedRecords = [:]
       return (Array(actions), events, fixEvidence)
     }
   }

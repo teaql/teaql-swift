@@ -44,6 +44,14 @@ public struct SmartList<Element: Sendable>: Sendable, RandomAccessCollection {
     return copy
   }
 
+  /// Preserve the original query metadata and Loaded/NotLoaded geometry. This
+  /// does not claim to recompute counts, summaries or facets after a mutation.
+  @_spi(Generated) public func replacingData(_ data: [Element]) -> Self {
+    var copy = self
+    copy.data = data
+    return copy
+  }
+
   public func withFacet(_ name: String, _ facet: SmartList<TeaQLRecord>) -> Self {
     var copy = self
     copy.facets[name] = facet

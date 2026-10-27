@@ -1774,6 +1774,7 @@ public struct UserContext: Sendable {
     if let graphSession {
       try Task.checkCancellation()
       try graphSession.preparedMutations.validateLedgers()
+      try graphSession.recordPersisted(validated, result: result, sourceKey: ledgerKey)
     }
     return result
   }
