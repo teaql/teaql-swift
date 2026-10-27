@@ -609,6 +609,7 @@ private enum ListExecutionState {
 }
 
 public struct UserContext: Sendable {
+  var runtimeCapabilities: [String: any RuntimeCapabilityProvider] = [:]
   var objectStorageProvider: (any ObjectStorageProvider)?
   var objectStorageObserver: ObjectStorageObserver?
   var objectStorageContextID: String { graphTransactionGate.id.uuidString }
@@ -666,11 +667,13 @@ public struct UserContext: Sendable {
     mutationPolicyApprovalProvider: (any MutationPolicyApprovalProvider)? = nil,
     mutationGovernanceSink: (any MutationGovernanceSink)? = nil,
     objectStorageProvider: (any ObjectStorageProvider)? = nil,
-    objectStorageObserver: ObjectStorageObserver? = nil
+    objectStorageObserver: ObjectStorageObserver? = nil,
+    runtimeCapabilities: [String: any RuntimeCapabilityProvider] = [:]
   ) {
     self.runtime = runtime
     self.objectStorageProvider = objectStorageProvider
     self.objectStorageObserver = objectStorageObserver
+    self.runtimeCapabilities = runtimeCapabilities
     self.actor = actor
     self.auditCategory = auditCategory
     self.trustedTenant = trustedTenant
@@ -710,6 +713,7 @@ public struct UserContext: Sendable {
     _ request: GraphMutationRequest,
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
+    try await requireRuntimeCapabilities(runtime.requiredCapabilities)
     guard graphSession == nil, !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
       throw TeaQLError.execution("Independent graph save cannot implicitly join an active graph; pass its explicit session for composed children")
     }
@@ -813,6 +817,7 @@ public struct UserContext: Sendable {
 
   /// Explicitly reconciles a passive RuntimeModule through this context's provider.
   public func ensureSchema(_ module: RuntimeModule) async throws {
+    try await requireRuntimeCapabilities(Array(Set(runtime.requiredCapabilities + module.requiredCapabilities)).sorted())
     guard let provider = queryExecutor as? any SchemaExecutor else {
       throw TeaQLError.execution(
         "Ensure Schema requires a schema-aware provider; configured provider is \(queryExecutor.providerKind)")
@@ -849,7 +854,8 @@ public struct UserContext: Sendable {
       entityInitializers: entityInitializers,
       entityCreationObserver: entityCreationObserver,
       objectStorageProvider: objectStorageProvider,
-      objectStorageObserver: objectStorageObserver)
+      objectStorageObserver: objectStorageObserver,
+      runtimeCapabilities: runtimeCapabilities)
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
