@@ -52,6 +52,7 @@ public final class GraphMutationSession: @unchecked Sendable {
   package let policy: MutationPolicyCoordinator
   private let lock = NSLock()
   private var active = true
+  private var rollbackOnly = false
   private var commitActions: [@Sendable () throws -> Void] = []
   private var rollbackActions: [@Sendable () throws -> Void] = []
   private var auditEvents: [(AuditEvent, [TeaQLValue])] = []
@@ -66,6 +67,13 @@ public final class GraphMutationSession: @unchecked Sendable {
   package func ensureActive() throws {
     try lock.withLock {
       guard active else { throw TeaQLError.execution("Graph Mutation Session is already closed") }
+    }
+  }
+
+  package func poison() { lock.withLock { rollbackOnly = true } }
+  package func ensureCommittable() throws {
+    try lock.withLock {
+      guard active, !rollbackOnly else { throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY") }
     }
   }
 

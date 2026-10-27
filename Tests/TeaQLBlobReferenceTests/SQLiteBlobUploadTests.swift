@@ -40,7 +40,8 @@ func swiftBlobModuleRequiresInstalledProviderAndCatalogSchema() async throws {
   let upload = try SQLiteBlobUploadService(
     authorization: UploadPermission(tenant: "tenant-a", allowed: true),
     verifier: FixturePDFVerifier(), maximumBytes: 10_000)
-  let module = try BlobReferenceModule(upload: upload, readAuthorization: ModuleReadPermission())
+  let module = try BlobReferenceModule(upload: upload, readAuthorization: ModuleReadPermission(),
+    bindingAuthorization: UploadBindingPermission())
   let noProvider = try module.install(on: base)
   do { try await module.ready(context: noProvider); Issue.record("missing provider accepted") }
   catch { #expect((error as? ViewPreparationError)?.code == "BLOB_CAPABILITY_MISSING") }

@@ -291,6 +291,19 @@ public protocol GraphPhysicalSQLExecutor: Sendable {
   ) async throws -> T
 }
 
+/// Optional module hook. The provider captures both authoritative row images and
+/// invokes this before the graph owner may commit its physical transaction.
+public protocol BlobMutationParticipant: Sendable {
+  func apply(context: UserContext, session: GraphMutationSession, mutation: Mutation,
+             previous: TeaQLRecord?, persisted: TeaQLRecord) async throws
+}
+
+public protocol BlobMutationExecutor: MutationExecutor {
+  func executeBlobMutation(_ request: MutationRequest, context: UserContext,
+                           session: GraphMutationSession,
+                           participant: (any BlobMutationParticipant)?) async throws -> MutationResult
+}
+
 public extension MutationExecutor {
   var providerKind: String { String(describing: type(of: self)) }
   func execute(_ mutation: Mutation) async throws -> MutationResult {
@@ -626,6 +639,7 @@ public struct UserContext: Sendable {
   var responseGraphAuthorizer: (any ResponseGraphAuthorizer)?
   var secureDocumentContributor: (any SecureDocumentContributor)?
   var blobResponseContributor: (any BlobResponseContributor)?
+  var blobMutationParticipant: (any BlobMutationParticipant)?
   var objectStorageProvider: (any ObjectStorageProvider)?
   var objectStorageObserver: ObjectStorageObserver?
   var objectStorageContextID: String { graphTransactionGate.id.uuidString }
@@ -780,6 +794,7 @@ public struct UserContext: Sendable {
         GraphTransactionGate.Reentry.active.union([graphTransactionGate.id])) {
           try await operation(graphContext, session)
       }
+      try session.ensureCommittable()
       try policy.ensureGraphComplete()
       try await transaction.commitGraphTransaction()
       committed = true
@@ -886,6 +901,7 @@ public struct UserContext: Sendable {
     bootstrap.responseGraphAuthorizer = responseGraphAuthorizer
     bootstrap.secureDocumentContributor = secureDocumentContributor
     bootstrap.blobResponseContributor = blobResponseContributor
+    bootstrap.blobMutationParticipant = blobMutationParticipant
     return bootstrap
   }
 
@@ -1595,7 +1611,12 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await executeMutation(request.mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+      do {
+        return try await executeMutation(request.mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+      } catch {
+        if mutation.entity.hasBlobFields { graphSession?.poison() }
+        throw error
+      }
     }
   }
 
@@ -1621,6 +1642,15 @@ public struct UserContext: Sendable {
       )
     ) {
       do {
+        if validated.entity.hasBlobFields {
+          guard let graphSession, let owner = mutationExecutor as? any BlobMutationExecutor else {
+            graphSession?.poison()
+            throw TeaQLError.execution("BLOB_CAPABILITY_MISSING")
+          }
+          return try await owner.executeBlobMutation(
+            try MutationRequest(mutation: validated), context: self, session: graphSession,
+            participant: hasRuntimeCapability("blob.v1") ? blobMutationParticipant : nil)
+        }
         if let diagnosed = mutationExecutor as? any SQLDiagnosticExecutor {
           return try await diagnosed.executeDiagnosed(validated)
         }

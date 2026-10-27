@@ -14,7 +14,9 @@ private struct BlobCapability: RuntimeCapabilityProvider {
   let catalog: SQLiteBlobCatalog
   let contributor: ModuleBlobContributor
   func checkReady(context: UserContext) async throws {
-    guard context.hasBlobResponseContributor(contributor), context.hasObjectStorageProvider else {
+    guard context.hasBlobResponseContributor(contributor), context.hasObjectStorageProvider,
+          context.hasBlobMutationParticipant,
+          context.mutationExecutor is any BlobMutationExecutor else {
       throw ViewPreparationError("BLOB_CAPABILITY_MISSING")
     }
     do {
@@ -30,21 +32,28 @@ public struct BlobReferenceModule: Sendable {
   public let catalog: SQLiteBlobCatalog
   public let upload: SQLiteBlobUploadService
   public let read: SQLiteBlobResponseContributor
+  public let bindingAuthorization: any BlobBindingAuthorization
 
   public init(catalog: SQLiteBlobCatalog = SQLiteBlobCatalog(), upload: SQLiteBlobUploadService,
-              readAuthorization: any BlobReadAuthorization, maximumURLSeconds: Int = 600) throws {
+              readAuthorization: any BlobReadAuthorization,
+              bindingAuthorization: any BlobBindingAuthorization,
+              maximumURLSeconds: Int = 600) throws {
     self.catalog = catalog; self.upload = upload
+    self.bindingAuthorization = bindingAuthorization
     self.read = try SQLiteBlobResponseContributor(catalog: catalog,
       authorization: readAuthorization, maximumURLSeconds: maximumURLSeconds)
   }
 
   public func install(on context: UserContext) throws -> UserContext {
-    guard !context.hasRuntimeCapability("blob.v1"), !context.hasBlobResponseContributorInstalled else {
+    guard !context.hasRuntimeCapability("blob.v1"), !context.hasBlobResponseContributorInstalled,
+          !context.hasBlobMutationParticipant else {
       throw ViewPreparationError("BLOB_CAPABILITY_MISSING")
     }
     let contributor = ModuleBlobContributor(read)
     return context.withRuntimeCapability("blob.v1", provider: BlobCapability(catalog: catalog, contributor: contributor))
       .withBlobResponseContributor(contributor)
+      .withBlobMutationParticipant(SQLiteBlobMutationParticipant(
+        catalog: catalog, authorization: bindingAuthorization))
   }
 
   public func ready(context: UserContext) async throws {

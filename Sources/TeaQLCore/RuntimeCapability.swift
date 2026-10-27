@@ -5,7 +5,19 @@ public protocol RuntimeCapabilityProvider: Sendable {
   func checkReady(context: UserContext) async throws
 }
 
+private enum CapabilityReadiness {
+  @TaskLocal static var checking: Set<String> = []
+}
+
 public extension UserContext {
+  package var hasBlobMutationParticipant: Bool { blobMutationParticipant != nil }
+
+  package func withBlobMutationParticipant(_ participant: any BlobMutationParticipant) -> UserContext {
+    var copy = self
+    copy.blobMutationParticipant = participant
+    return copy
+  }
+
   func hasRuntimeCapability(_ name: String) -> Bool { runtimeCapabilities[name] != nil }
 
   func hasSecureDocumentContributor(_ candidate: any SecureDocumentContributor) -> Bool {
@@ -35,7 +47,13 @@ public extension UserContext {
       guard let provider = runtimeCapabilities[name] else {
         throw TeaQLError.execution("RUNTIME_CAPABILITY_MISSING")
       }
-      try await provider.checkReady(context: self)
+      // A provider may use a read-only graph transaction to validate its own
+      // schema. The nested graph must not recursively start the same check.
+      if CapabilityReadiness.checking.contains(name) { continue }
+      try await CapabilityReadiness.$checking.withValue(
+        CapabilityReadiness.checking.union([name])) {
+          try await provider.checkReady(context: self)
+      }
     }
   }
 }

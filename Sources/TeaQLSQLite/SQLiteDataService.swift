@@ -48,7 +48,7 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, GraphPhysicalSQLExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, BlobMutationExecutor, GraphTransactionExecutor, GraphPhysicalSQLExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
@@ -306,6 +306,48 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       try? executeSQL("ROLLBACK")
       throw error
     }
+  }
+
+  public func executeBlobMutation(_ request: MutationRequest, context: UserContext,
+                                  session: GraphMutationSession,
+                                  participant: (any BlobMutationParticipant)?) async throws -> MutationResult {
+    guard graphTransactionActive, !graphRollbackOnly, physicalSQLLease == nil,
+          request.mutation.entity.hasBlobFields, let participant else {
+      graphRollbackOnly = graphTransactionActive
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    let mutation = request.mutation
+    do {
+      let previous = try authoritativeRecordBefore(mutation)
+      let result = try performMutation(mutation)
+      guard result.affectedRows == 1, let persisted = result.persistedRecord else {
+        throw TeaQLError.execution("BLOB_REFERENCE_INVALID")
+      }
+      try await participant.apply(context: context, session: session, mutation: mutation,
+        previous: previous, persisted: persisted)
+      guard !graphRollbackOnly, physicalSQLLease == nil else {
+        throw TeaQLError.execution("GRAPH_TRANSACTION_ROLLBACK_ONLY")
+      }
+      try insertAudit(mutation, generatedValues: result.generatedValues)
+      return result
+    } catch {
+      graphRollbackOnly = true
+      throw error
+    }
+  }
+
+  private func authoritativeRecordBefore(_ mutation: Mutation) throws -> TeaQLRecord? {
+    if mutation.kind == .create { return nil }
+    guard let id = mutation.id, let idProperty = mutation.entity.idProperty else {
+      throw TeaQLError.execution("BLOB_REFERENCE_INVALID")
+    }
+    let columns = mutation.entity.properties.map { quote($0.column) }.joined(separator: ", ")
+    let query = CompiledSQL(sql: "SELECT \(columns) FROM \(quote(mutation.entity.table)) WHERE \(quote(idProperty.column)) = ?",
+      parameters: [id], parameterLogPolicies: [.field(idProperty.name, in: mutation.entity)],
+      generatedSQL: true)
+    let rows = try fetch(query, entity: mutation.entity)
+    guard rows.count == 1 else { throw TeaQLError.execution("BLOB_REFERENCE_INVALID") }
+    return rows[0]
   }
 
   public func beginGraphTransaction() async throws {
