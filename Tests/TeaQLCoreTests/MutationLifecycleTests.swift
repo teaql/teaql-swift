@@ -4,6 +4,79 @@ import Testing
 
 @Suite("Mutation lifecycle safety")
 struct MutationLifecycleTests {
+  @Test(arguments: ["update", "delete"])
+  func aStaleStructCannotBorrowTheLedgersNewerCommittedVersion(_ operation: String) async throws {
+    var entity = try LifecycleEntity(); entity.assign("first save")
+    let provider = LifecycleProvider(pause: LifecyclePause()), effects = LifecycleEffects(), clock = LifecycleClock()
+    let context = try lifecycleContext(provider, effects: effects, clock: clock)
+    let saved = try await AuditedEntity(entity: entity, reason: "commit the first caller snapshot").save(context)
+    #expect(saved.version == 2 && entity.version == 1)
+    #expect(entity.teaqlEntityRoot.originalVersion(entity.teaqlEntityKey) == 2)
+    let beforeClock = clock.reads
+    if operation == "delete" { entity.teaqlEntityRoot.markAsDeleted(entity.teaqlEntityKey) }
+    else { entity.assign("stale secret intention") }
+    do {
+      _ = try await AuditedEntity(entity: entity, reason: "do not rebase an old object implicitly").save(context)
+      Issue.record("an old object silently borrowed the committed ledger version")
+    } catch let error as TeaQLError {
+      #expect(String(describing: error).contains("ENTITY_VERSION_CONFLICT"))
+      #expect(!String(describing: error).contains("stale secret intention"))
+    }
+    #expect(effects.fixes == 1 && effects.reviews == 1 && clock.reads == beforeClock)
+    #expect(await provider.commands.count == 1)
+    #expect(await provider.commits == 1)
+    #expect(await provider.stored["version"] == .int(2))
+    #expect(await provider.audits == 1)
+    #expect(entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey))
+  }
+
+  @Test func theFreshAuthoritativeReturnCanBeSavedAgain() async throws {
+    var entity = try LifecycleEntity(); entity.assign("first save")
+    let provider = LifecycleProvider(pause: LifecyclePause()), context = try lifecycleContext(provider)
+    var saved = try await AuditedEntity(entity: entity, reason: "obtain an authoritative snapshot").save(context)
+    saved.assign("second save")
+    let next = try await AuditedEntity(entity: saved, reason: "modify the returned current snapshot").save(context)
+    #expect(next.version == 3 && next.name == "second save")
+    #expect(await provider.commands.map(\.expectedVersion) == [1, 2])
+    #expect(await provider.commits == 2)
+    #expect(await provider.audits == 2)
+  }
+
+  @Test func anUnchangedOldReadViewDoesNotCreateAnotherMutation() async throws {
+    var entity = try LifecycleEntity(); entity.assign("first save")
+    let provider = LifecycleProvider(pause: LifecyclePause()), effects = LifecycleEffects(), clock = LifecycleClock()
+    let context = try lifecycleContext(provider, effects: effects, clock: clock)
+    _ = try await AuditedEntity(entity: entity, reason: "commit one snapshot").save(context)
+    let beforeClock = clock.reads
+    let unchanged = try await AuditedEntity(entity: entity, reason: "keep an unchanged old read view").save(context)
+    #expect(unchanged.version == 1 && !entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey))
+    #expect(effects.fixes == 1 && effects.reviews == 1 && clock.reads == beforeClock)
+    #expect(await provider.commands.count == 1)
+    #expect(await provider.commits == 1)
+  }
+
+  @Test(arguments: ["native", "nativeAndLedger", "identity"])
+  func aMutableNativeFieldCannotReplaceTheImmutableLoadedIdentity(_ route: String) async throws {
+    var entity = try LifecycleEntity()
+    if route == "identity" { entity.id = 2 }
+    else { entity.version = 2 }
+    if route == "nativeAndLedger" { try entity.teaqlEntityRoot.acceptCommittedVersion(entity.teaqlEntityKey, version: 2) }
+    entity.assign("unverified secret snapshot")
+    let provider = LifecycleProvider(pause: LifecyclePause()), effects = LifecycleEffects(), clock = LifecycleClock()
+    let context = try lifecycleContext(provider, effects: effects, clock: clock)
+    do {
+      _ = try await AuditedEntity(entity: entity, reason: "retain immutable loaded identity").save(context)
+      Issue.record("mutable identity fields replaced loaded provenance")
+    } catch let error as TeaQLError {
+      #expect(String(describing: error).contains("ENTITY_VERSION_CONFLICT"))
+      #expect(!String(describing: error).contains("unverified secret snapshot"))
+    }
+    #expect(effects.fixes == 0 && effects.reviews == 0 && clock.reads == 0)
+    #expect(await provider.commands.isEmpty)
+    #expect(await provider.commits == 0)
+    #expect(entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey))
+  }
+
   @Test(arguments: ["id", "version", "entity", "kind", "table", "privacy", "actor", "category", "lineage", "provenance"])
   func fieldFixCannotReplaceTheMutationEnvelope(_ field: String) async throws {
     let pause = LifecyclePause(), provider = LifecycleProvider(pause: pause), effects = LifecycleEffects(replacement: field)
@@ -294,13 +367,20 @@ private final class LifecycleEffects: @unchecked Sendable, EntityChecker, Mutati
     return []
   }
 }
-private func lifecycleContext(_ provider: LifecycleProvider, effects: LifecycleEffects = LifecycleEffects()) throws -> UserContext {
+private final class LifecycleClock: @unchecked Sendable, BusinessClock {
+  private let lock = NSLock(); private var count = 0
+  var reads: Int { lock.withLock { count } }
+  func now() -> Date { lock.withLock { count += 1; return Date(timeIntervalSince1970: 1_792_488_600.125) } }
+}
+
+private func lifecycleContext(_ provider: LifecycleProvider, effects: LifecycleEffects = LifecycleEffects(),
+  clock: any BusinessClock = SystemBusinessClock()) throws -> UserContext {
   var runtime = TeaQLRuntime()
   try runtime.install(RuntimeModule(name: "lifecycle fixture", entities: [LifecycleEntity.descriptor],
     checkers: [LifecycleEntity.descriptor.name: effects]))
   return UserContext(runtime: runtime, actor: "trusted-actor", auditCategory: "trusted-category",
     queryExecutor: provider, mutationExecutor: provider, requestPolicy: RequestPolicy { $0 }, auditSink: provider,
-    mutationPolicyRegistry: DelegatingMutationPolicyRegistry { _ in effects })
+    mutationPolicyRegistry: DelegatingMutationPolicyRegistry { _ in effects }, businessClock: clock)
 }
 private struct LifecycleEntity: TeaQLMutationRootedEntity {
   static let descriptor = EntityDescriptor(name: "LifecycleProbe", table: "lifecycle_probe", properties: [

@@ -378,6 +378,18 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   }
 
   private func makeMutation(rooted: (any TeaQLMutationRootedEntity)?) throws -> Mutation {
+    if let rooted {
+      let key = rooted.teaqlEntityKey
+      // A successful save advances this graph's ledger, not every Swift value
+      // copy that once shared it. Only the authoritative returned snapshot may
+      // use that newer version; never implicitly rebase an old dirty struct.
+      let version = rooted.teaqlEntityRoot.originalVersion(key)
+      let snapshot = rooted.teaqlLoadedSnapshot
+      if version.map({ $0 != entity.version }) == true
+        || snapshot.map({ $0.key != key || $0.version != entity.version }) == true {
+        throw TeaQLError.execution("ENTITY_VERSION_CONFLICT: \(Entity.descriptor.name) must retain its loaded identity and version")
+      }
+    }
     var values = entity.toMutationRecord()
     let originalVersion = rooted.flatMap { $0.teaqlEntityRoot.originalVersion($0.teaqlEntityKey) } ?? entity.version
     if let rooted {

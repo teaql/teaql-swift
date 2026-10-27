@@ -6,6 +6,48 @@ import TeaQLSQLite
 
 @Suite("Mutation lifecycle with real SQLite")
 struct MutationLifecycleSQLiteTests {
+  @Test(arguments: ["update", "delete"])
+  func anOldStructCannotAdvanceTheDatabaseWithABorrowedVersion(_ operation: String) async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-stale-snapshot-\(UUID())")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let path = directory.appendingPathComponent("probe.sqlite").path, service = try SQLiteDataService(path: path)
+    let bootstrap = UserContext(queryExecutor: service, mutationExecutor: service, requestPolicy: RequestPolicy { $0 },
+      diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }), runtimeTelemetry: NoopRuntimeTelemetry())
+    try await bootstrap.ensureSchema(RuntimeModule(name: "stale snapshot", entities: [SQLiteLifecycleEntity.descriptor]))
+    _ = try await bootstrap.execute(Mutation(kind: .create, entity: SQLiteLifecycleEntity.descriptor,
+      values: ["id": .int(1), "name": .string("original")], auditReason: "seed the stale-snapshot fixture"))
+    let provider = PausedSQLiteProvider(service: service, pause: SQLiteLifecyclePause(), phase: .none)
+    let audit = SQLiteLifecycleAudit()
+    let context = UserContext(queryExecutor: provider, mutationExecutor: provider, requestPolicy: RequestPolicy { $0 },
+      auditSink: audit, diagnosticSQLLogSink: TextDiagnosticSQLLogSink(writer: { _ in }), runtimeTelemetry: NoopRuntimeTelemetry())
+    let old = try SQLiteLifecycleEntity(record: ["id": .int(1), "version": .int(1), "name": .string("original")])
+    old.teaqlEntityRoot.set(old.teaqlEntityKey, field: "name", value: .string("first save"))
+    let fresh = try await AuditedEntity(entity: old, reason: "save and return the current snapshot").save(context)
+    #expect(fresh.version == 2 && old.version == 1)
+    if operation == "delete" { old.teaqlEntityRoot.markAsDeleted(old.teaqlEntityKey) }
+    else { old.teaqlEntityRoot.set(old.teaqlEntityKey, field: "name", value: .string("stale secret edit")) }
+    do {
+      _ = try await AuditedEntity(entity: old, reason: "do not borrow a committed version").save(context)
+      Issue.record("stale snapshot changed the physical database")
+    } catch let error as TeaQLError { #expect(String(describing: error).contains("ENTITY_VERSION_CONFLICT")) }
+    let rejected = try storedRow(path)
+    #expect(rejected.name == "first save" && rejected.version == 2)
+    #expect(await provider.commits == 1)
+    #expect(await provider.rollbacks == 0)
+    #expect(await audit.count == 1)
+    #expect(try await service.auditEvents().count == 2)
+    #expect(old.teaqlEntityRoot.hasPending(old.teaqlEntityKey))
+    fresh.teaqlEntityRoot.set(fresh.teaqlEntityKey, field: "name", value: .string("fresh second save"))
+    let next = try await AuditedEntity(entity: fresh, reason: "save the actual authoritative return").save(context)
+    #expect(next.version == 3 && next.name == "fresh second save")
+    #expect(try storedRow(path).version == 3)
+    #expect(await provider.commits == 2)
+    #expect(await audit.count == 2)
+    // The rejected old intention still belongs to the old read graph.
+    #expect(old.teaqlEntityRoot.hasPending(old.teaqlEntityKey))
+  }
+
   @Test(arguments: ["edit-write", "cancel-write", "edit-beforecommit", "cancel-beforecommit", "edit-commit", "cancel-commit"])
   func aPausedSavePreservesTruthAndTheCallersIntention(_ route: String) async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-lifecycle-\(UUID())")
