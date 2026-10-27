@@ -10,6 +10,16 @@ public struct EntityKey: Sendable, Hashable {
   }
 }
 
+/// The provider committed, but a later caller edit still owns this ledger entry.
+/// Reload the persisted object and reconcile that edit; do not replay the save.
+public struct EntityCommitStateConflict: Error, Sendable, CustomStringConvertible {
+  public let code = "ENTITY_PENDING_CHANGED_AFTER_COMMIT"
+  public let originalKey: EntityKey
+  public let persistedKey: EntityKey
+  public let committedVersion: Int64
+  public var description: String { "ENTITY_PENDING_CHANGED_AFTER_COMMIT: committed data must be reloaded before reconciling the preserved pending intention" }
+}
+
 /// Pending mutation ledger shared by one generated object graph.
 public final class EntityRoot: @unchecked Sendable {
   private let lock = NSLock()
@@ -57,16 +67,40 @@ public final class EntityRoot: @unchecked Sendable {
     let version: Int64?
     let isNew: Bool
     let isDeleted: Bool
+    let traceChain: [TraceNode]?
+    let localAuditReason: String?
     func matches(_ other: Self) -> Bool {
       version == other.version && isNew == other.isNew && isDeleted == other.isDeleted
+        && traceChain == other.traceChain && localAuditReason == other.localAuditReason
         && sameMutationRecord(values, other.values)
     }
   }
 
   package func mutationSnapshot(_ key: EntityKey) -> MutationSnapshot {
-    lock.withLock {
-      MutationSnapshot(values: changes[key] ?? [:], version: originalVersions[key],
-        isNew: newKeys.contains(key), isDeleted: deletedKeys.contains(key))
+    lock.withLock { mutationSnapshotLocked(key) }
+  }
+
+  private func mutationSnapshotLocked(_ key: EntityKey) -> MutationSnapshot {
+    MutationSnapshot(values: changes[key] ?? [:], version: originalVersions[key],
+      isNew: newKeys.contains(key), isDeleted: deletedKeys.contains(key),
+      traceChain: traceChains[key], localAuditReason: localAuditReasons[key])
+  }
+
+  /// Compare and clear under one lock. A setter racing a successful commit must
+  /// retain its whole intention, including responsibility metadata and version.
+  package func completeCommit(_ originalKey: EntityKey, to persistedKey: EntityKey,
+    expected: MutationSnapshot, version: Int64) throws {
+    try lock.withLock {
+      guard expected.matches(mutationSnapshotLocked(originalKey)),
+        originalKey == persistedKey || (!hasPendingLocked(persistedKey)
+          && originalVersions[persistedKey] == nil && traceChains[persistedKey] == nil
+          && localAuditReasons[persistedKey] == nil) else {
+        throw EntityCommitStateConflict(originalKey: originalKey, persistedKey: persistedKey,
+          committedVersion: version)
+      }
+      try rekeyLocked(originalKey, to: persistedKey)
+      clearEntityLocked(persistedKey)
+      originalVersions[persistedKey] = version
     }
   }
 
@@ -118,8 +152,12 @@ public final class EntityRoot: @unchecked Sendable {
   }
 
   public func rekey(_ oldKey: EntityKey, to newKey: EntityKey) throws {
-    guard oldKey != newKey else { return }
     lock.lock(); defer { lock.unlock() }
+    try rekeyLocked(oldKey, to: newKey)
+  }
+
+  private func rekeyLocked(_ oldKey: EntityKey, to newKey: EntityKey) throws {
+    guard oldKey != newKey else { return }
     try validateVersion(newKey, incoming: originalVersions[oldKey])
     if let values = changes.removeValue(forKey: oldKey) { for (field, value) in values { changes[newKey, default: [:]][field] = value } }
     if let version = originalVersions.removeValue(forKey: oldKey) { originalVersions[newKey] = version }
@@ -137,7 +175,12 @@ public final class EntityRoot: @unchecked Sendable {
   }
 
   public func clearEntity(_ key: EntityKey) {
-    lock.lock(); defer { lock.unlock() }; changes.removeValue(forKey: key); newKeys.remove(key); deletedKeys.remove(key); traceChains.removeValue(forKey: key); localAuditReasons.removeValue(forKey: key)
+    lock.lock(); defer { lock.unlock() }; clearEntityLocked(key)
+  }
+
+  private func clearEntityLocked(_ key: EntityKey) {
+    changes.removeValue(forKey: key); newKeys.remove(key); deletedKeys.remove(key)
+    traceChains.removeValue(forKey: key); localAuditReasons.removeValue(forKey: key)
   }
 
   public func setLocalAuditReason(_ key: EntityKey, reason: String) {

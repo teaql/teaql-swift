@@ -363,16 +363,15 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     mutation.auditReason = session.intent.auditReason
     mutation.mutationLineage = rooted.map { $0.teaqlEntityRoot.traceChain($0.teaqlEntityKey, fallback: scope) }
       ?? scope.recover()
+    let pending = rooted.map { $0.teaqlEntityRoot.mutationSnapshot($0.teaqlEntityKey) }
     let saved = try persistedEntity(from: await context.execute(
       mutation, ledgerRoot: rooted?.teaqlEntityRoot, ledgerKey: rooted?.teaqlEntityKey))
-    if let rooted {
+    if let rooted, let pending {
       let originalKey = rooted.teaqlEntityKey
       let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
       let root = rooted.teaqlEntityRoot
       try session.afterCommit {
-        try root.rekey(originalKey, to: savedKey)
-        root.clearEntity(savedKey)
-        try root.acceptCommittedVersion(savedKey, version: saved.version)
+        try root.completeCommit(originalKey, to: savedKey, expected: pending, version: saved.version)
       }
     }
     return saved
@@ -821,6 +820,8 @@ public struct UserContext: Sendable {
           try await operation(graphContext, session)
       }
       try policy.ensureGraphComplete()
+      try Task.checkCancellation()
+      try session.preparedMutations.validateLedgers()
       try await transaction.commitGraphTransaction()
       committed = true
       policy.endGraph()
@@ -1661,6 +1662,7 @@ public struct UserContext: Sendable {
   private func executeMutation(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {
+    try Task.checkCancellation()
     try graphSession?.ensureActive()
     let validated: Mutation
     if let session = graphSession, let prepared = try session.preparedMutations.consume(
@@ -1754,6 +1756,13 @@ public struct UserContext: Sendable {
         }
       }
     }
+    // Preserve executed SQL diagnostics before rejecting a cancelled or changed
+    // graph. Standalone providers may have already committed: only a graph can
+    // promise rollback here, and a successful COMMIT is never checked afterwards.
+    if let graphSession {
+      try Task.checkCancellation()
+      try graphSession.preparedMutations.validateLedgers()
+    }
     return result
   }
 
@@ -1785,32 +1794,44 @@ public struct UserContext: Sendable {
       violations = translateCheckResults(
         try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
     }
-    // A field Fix cannot retarget a loaded object or turn a stale save into a
-    // newer optimistic version. Model identities belong to the caller ledger.
+    // Request-owned intent has always survived a Checker attempting to replace
+    // it. Restore it here as well as at the final request/provider handoff.
+    validated.auditReason = request.intent.auditReason
+    // A field Fix may repair values, never the target, operation, schema/privacy
+    // metadata or trusted actor. Diagnose against the original model descriptor.
+    let originalEntity = request.mutation.entity
+    if validated.kind != request.mutation.kind || validated.entity != originalEntity
+      || validated.actor != actor || validated.auditCategory != auditCategory
+      || validated.mutationLineage != request.mutation.mutationLineage
+      || !sameMutationRecord(validated.loadedValues, request.mutation.loadedValues) {
+      violations.append(CheckResult(ruleID: "invalid_type", location: ObjectLocation(),
+        message: "Fix cannot replace the mutation target, operation, metadata or trusted actor",
+        entityType: originalEntity.name))
+    }
     if validated.id != request.mutation.id {
-      let property = validated.entity.idProperty
+      let property = originalEntity.idProperty
       violations.append(CheckResult(ruleID: "invalid_type",
         location: .property(property?.modelName ?? property?.name ?? "id"),
-        message: "Fix cannot replace the mutation identity", entityType: validated.entity.name))
+        message: "Fix cannot replace the mutation identity", entityType: originalEntity.name))
     }
     if validated.expectedVersion != request.mutation.expectedVersion {
-      let property = validated.entity.versionProperty
+      let property = originalEntity.versionProperty
       violations.append(CheckResult(ruleID: "invalid_type",
         location: .property(property?.modelName ?? property?.name ?? "version"),
-        message: "Fix cannot replace the original optimistic version", entityType: validated.entity.name))
+        message: "Fix cannot replace the original optimistic version", entityType: originalEntity.name))
     }
     // Validate the final custom-Fix result even without an installed checker.
     // Keep invalid numbers away from policy snapshots and provider boundaries;
     // do not publish a rejected Fix back into a caller's mutation ledger.
     let invalidFields = Set(validated.values.compactMap { name, value -> String? in
       guard case .double(let number) = value, !number.isFinite else { return nil }
-      let property = validated.entity.property(named: name)
+      let property = originalEntity.property(named: name)
       return property?.modelName ?? property?.name ?? name
     })
     if !invalidFields.isEmpty {
       violations.append(contentsOf: invalidFields.sorted().map {
         CheckResult(ruleID: "invalid_type", location: .property($0),
-          message: "Expected a finite Float/Double value", entityType: validated.entity.name)
+          message: "Expected a finite Float/Double value", entityType: originalEntity.name)
       })
     }
     if !violations.isEmpty { throw CheckException(violations) }
