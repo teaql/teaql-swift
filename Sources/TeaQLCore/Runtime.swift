@@ -610,6 +610,9 @@ private enum ListExecutionState {
 
 public struct UserContext: Sendable {
   var runtimeCapabilities: [String: any RuntimeCapabilityProvider] = [:]
+  var responseGraphAuthorizer: (any ResponseGraphAuthorizer)?
+  var secureDocumentContributor: (any SecureDocumentContributor)?
+  var blobResponseContributor: (any BlobResponseContributor)?
   var objectStorageProvider: (any ObjectStorageProvider)?
   var objectStorageObserver: ObjectStorageObserver?
   var objectStorageContextID: String { graphTransactionGate.id.uuidString }
@@ -833,7 +836,7 @@ public struct UserContext: Sendable {
     actor: String = "teaql-generated-bootstrap",
     activeRoot: ContextEntityRef? = nil
   ) -> UserContext {
-    UserContext(
+    var bootstrap = UserContext(
       runtime: runtime,
       actor: actor,
       auditCategory: "runtime-bootstrap",
@@ -856,6 +859,10 @@ public struct UserContext: Sendable {
       objectStorageProvider: objectStorageProvider,
       objectStorageObserver: objectStorageObserver,
       runtimeCapabilities: runtimeCapabilities)
+    bootstrap.responseGraphAuthorizer = responseGraphAuthorizer
+    bootstrap.secureDocumentContributor = secureDocumentContributor
+    bootstrap.blobResponseContributor = blobResponseContributor
+    return bootstrap
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
