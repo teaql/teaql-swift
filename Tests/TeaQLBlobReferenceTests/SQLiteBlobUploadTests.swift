@@ -8,6 +8,7 @@ import Testing
 private struct UploadPermission: BlobUploadAuthorization {
   let tenant: String
   let allowed: Bool
+  var checkSQLPolicy = false
   func scope(for actor: UserContext) throws -> String { tenant }
   func field(for actor: UserContext, target: BlobUploadTarget) throws -> BlobFieldSpec {
     try BlobFieldSpec(entity: "Asset", field: "file", extensions: ["pdf"],
@@ -17,6 +18,18 @@ private struct UploadPermission: BlobUploadAuthorization {
                  input: BlobUploadInput) async throws -> Bool {
     allowed && target.entity == "Asset" && target.field == "file"
       && ["Begin", "Write", "Confirm"].contains(action)
+  }
+  func currentOnLease(actor: UserContext, target: BlobUploadTarget, action: String,
+                      input: BlobUploadInput, lease: any GraphPhysicalSQLLease)
+    async throws -> BlobUploadAuthorizationSnapshot {
+    var currentAllowed = try await authorize(actor: actor, target: target,
+      action: action, input: input)
+    if checkSQLPolicy {
+      let rows = try await lease.query("SELECT allowed FROM upload_policy", parameters: [])
+      currentAllowed = currentAllowed && rows.count == 1 && rows[0]["allowed"]?.int64Value == 1
+    }
+    return BlobUploadAuthorizationSnapshot(scope: try scope(for: actor),
+      field: try field(for: actor, target: target), allowed: currentAllowed)
   }
 }
 
@@ -71,6 +84,63 @@ private actor UploadVerifierCalls {
   func value() -> Int { count }
 }
 
+private actor UploadLatch {
+  private var open = false
+  private var waiters: [CheckedContinuation<Void, Never>] = []
+  func wait() async {
+    if open { return }
+    await withCheckedContinuation { continuation in waiters.append(continuation) }
+  }
+  func release() {
+    open = true
+    for waiter in waiters { waiter.resume() }
+    waiters.removeAll()
+  }
+}
+
+private actor PausedUploadReader: ObjectByteReader {
+  let entered = UploadLatch()
+  let release = UploadLatch()
+  private let source: ObjectDataReader
+  private var paused = false
+  init(_ bytes: Data) { source = ObjectDataReader(bytes) }
+  func read(upToCount count: Int) async throws -> Data {
+    if !paused {
+      paused = true
+      await entered.release()
+      await release.wait()
+    }
+    return try await source.read(upToCount: count)
+  }
+  func close() async throws { await source.close() }
+}
+
+private actor CountingUploadReader: ObjectByteReader {
+  private let source: ObjectDataReader
+  private var reads = 0
+  init(_ bytes: Data) { source = ObjectDataReader(bytes) }
+  func read(upToCount count: Int) async throws -> Data {
+    reads += 1
+    return try await source.read(upToCount: count)
+  }
+  func count() -> Int { reads }
+  func close() async throws { await source.close() }
+}
+
+private struct PausedUploadVerifier: BlobContentVerifier {
+  let entered: UploadLatch
+  let release: UploadLatch
+  let calls: UploadVerifierCalls
+  func verify(reader: any ObjectByteReader, extension ext: String,
+              maximumBytes: Int64) async throws -> BlobVerifiedContent {
+    await calls.record()
+    await entered.release()
+    await release.wait()
+    return try await FixturePDFVerifier().verify(reader: reader, extension: ext,
+      maximumBytes: maximumBytes)
+  }
+}
+
 private struct FixturePDFVerifier: BlobContentVerifier {
   let early: Bool
   let calls: UploadVerifierCalls?
@@ -107,6 +177,84 @@ private func uploadCatalogValue(_ context: UserContext, sql: String,
       return rows.first?.values.first?.stringValue
     }
   }
+}
+
+@Test
+func swiftSQLiteUploadSerializesTwoConnectionsAcrossFileAndParserIO() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-upload-owner-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let store = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let path = parent.appendingPathComponent("upload.db").path
+  let database1 = try SQLiteDataService(path: path)
+  let database2 = try SQLiteDataService(path: path)
+  let actor1 = UserContext(queryExecutor: database1, mutationExecutor: database1,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let actor2 = UserContext(queryExecutor: database2, mutationExecutor: database2,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let catalog = SQLiteBlobCatalog()
+  try await actor1.executeGraphSave(comment: "install upload journal") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("CREATE TABLE upload_policy (allowed INTEGER NOT NULL)", parameters: [])
+      _ = try await sql.execute("INSERT INTO upload_policy VALUES (1)", parameters: [])
+    }
+  }
+  let permission = UploadPermission(tenant: "tenant-a", allowed: true, checkSQLPolicy: true)
+  let entered = UploadLatch(), release = UploadLatch(), calls = UploadVerifierCalls()
+  let verifier = PausedUploadVerifier(entered: entered, release: release, calls: calls)
+  let first = try SQLiteBlobUploadService(authorization: permission, verifier: verifier,
+    maximumBytes: 10_000)
+  let second = try SQLiteBlobUploadService(authorization: permission, verifier: verifier,
+    maximumBytes: 10_000)
+  let bytes = Data("%PDF-1.7\nconcurrent content\n%%EOF".utf8)
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  let input = BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(bytes.count))
+  let denied = try await first.begin(actor1, target: target, input: input,
+    replayKey: "policy-change")
+  try await actor1.executeGraphSave(comment: "revoke upload") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE upload_policy SET allowed = 0", parameters: [])
+    }
+  }
+  do {
+    _ = try await first.write(actor1, uploadID: denied.uploadID, source: ObjectDataReader(bytes))
+    Issue.record("revoked SQL policy wrote upload")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
+  try await actor1.executeGraphSave(comment: "restore upload") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE upload_policy SET allowed = 1", parameters: [])
+    }
+  }
+  let session = try await first.begin(actor1, target: target, input: input,
+    replayKey: "concurrent")
+  let pausedSource = PausedUploadReader(bytes)
+  let firstWrite = Task { try await first.write(actor1, uploadID: session.uploadID,
+    source: pausedSource) }
+  await pausedSource.entered.wait()
+  let secondSource = CountingUploadReader(bytes)
+  let secondWrite = Task { try await second.write(actor2, uploadID: session.uploadID,
+    source: secondSource) }
+  try await Task.sleep(nanoseconds: 100_000_000)
+  #expect(await secondSource.count() == 0)
+  await pausedSource.release.release()
+  #expect(try await firstWrite.value == Int64(bytes.count))
+  do { _ = try await secondWrite.value; Issue.record("competing writer reused upload") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_IDEMPOTENCY_CONFLICT")) }
+
+  let firstConfirm = Task { try await first.complete(actor1, uploadID: session.uploadID) }
+  await entered.wait()
+  let secondConfirm = Task { try await second.complete(actor2, uploadID: session.uploadID) }
+  try await Task.sleep(nanoseconds: 100_000_000)
+  #expect(await calls.value() == 1)
+  await release.release()
+  #expect(try await firstConfirm.value == session.reference)
+  #expect(try await secondConfirm.value == session.reference)
+  #expect(await calls.value() == 1)
 }
 
 @Test

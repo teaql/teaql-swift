@@ -24,6 +24,12 @@ private struct NativeUploadAuthorization: BlobUploadAuthorization {
   }
   func authorize(actor: UserContext, target: BlobUploadTarget, action: String,
                  input: BlobUploadInput) async throws -> Bool { true }
+  func currentOnLease(actor: UserContext, target: BlobUploadTarget, action: String,
+                      input: BlobUploadInput, lease: any GraphPhysicalSQLLease)
+    async throws -> BlobUploadAuthorizationSnapshot {
+    BlobUploadAuthorizationSnapshot(scope: try scope(for: actor),
+      field: try field(for: actor, target: target), allowed: true)
+  }
 }
 
 private struct NativeVerifier: BlobContentVerifier {

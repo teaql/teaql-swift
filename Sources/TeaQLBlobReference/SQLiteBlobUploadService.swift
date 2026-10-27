@@ -37,12 +37,25 @@ public struct BlobUploadSession: Sendable, CustomStringConvertible {
   public var description: String { "BlobUploadSession[masked]" }
 }
 
+public struct BlobUploadAuthorizationSnapshot: Sendable {
+  public let scope: String
+  public let field: BlobFieldSpec
+  public let allowed: Bool
+  public init(scope: String, field: BlobFieldSpec, allowed: Bool) {
+    self.scope = scope; self.field = field; self.allowed = allowed
+  }
+}
+
 /// Host policy must resolve the current model, scope and action on every stage.
 public protocol BlobUploadAuthorization: Sendable {
   func scope(for actor: UserContext) throws -> String
   func field(for actor: UserContext, target: BlobUploadTarget) throws -> BlobFieldSpec
   func authorize(actor: UserContext, target: BlobUploadTarget, action: String,
                  input: BlobUploadInput) async throws -> Bool
+  /// Resolve the current scope, modeled field and action on the upload's physical SQL owner.
+  func currentOnLease(actor: UserContext, target: BlobUploadTarget, action: String,
+                      input: BlobUploadInput, lease: any GraphPhysicalSQLLease)
+    async throws -> BlobUploadAuthorizationSnapshot
 }
 
 /// Host-supplied parser must consume every stored byte and report actual format.
@@ -150,7 +163,8 @@ public struct SQLiteBlobUploadService: Sendable {
   }
 
   private func current(_ actor: UserContext, target: BlobUploadTarget, action: String,
-                       input: BlobUploadInput, expectedScope: String? = nil) async throws -> String {
+                       input: BlobUploadInput, expectedScope: String? = nil,
+                       lease: (any GraphPhysicalSQLLease)? = nil) async throws -> String {
     guard Self.validText(target.entity, maximum: 256),
       target.entity.unicodeScalars.count <= 128,
       Self.validText(target.field, maximum: 256),
@@ -161,10 +175,16 @@ public struct SQLiteBlobUploadService: Sendable {
     let field: BlobFieldSpec
     let allowed: Bool
     do {
-      scope = try authorization.scope(for: actor)
-      field = try authorization.field(for: actor, target: target)
-      allowed = try await authorization.authorize(actor: actor, target: target,
-        action: action, input: input)
+      if let lease {
+        let snapshot = try await authorization.currentOnLease(actor: actor, target: target,
+          action: action, input: input, lease: lease)
+        scope = snapshot.scope; field = snapshot.field; allowed = snapshot.allowed
+      } else {
+        scope = try authorization.scope(for: actor)
+        field = try authorization.field(for: actor, target: target)
+        allowed = try await authorization.authorize(actor: actor, target: target,
+          action: action, input: input)
+      }
     } catch { throw Self.fail("BLOB_UPLOAD_DENIED") }
     guard Self.validText(scope, maximum: 256), expectedScope.map({ $0 == scope }) ?? true,
       field.entity == target.entity, field.field == target.field, allowed else {
@@ -186,6 +206,8 @@ public struct SQLiteBlobUploadService: Sendable {
     let requestHash = Self.hex(SHA256.hash(data: try JSONEncoder().encode(parts)))
     return try await actor.executeGraphSave(comment: "begin Blob upload") { graph, session in
       try await graph.withPhysicalSQL(session) { sql in
+        _ = try await current(graph, target: target, action: "Begin", input: normalized,
+          expectedScope: scope, lease: sql)
         let rows: [TeaQLRecord]
         do { rows = try await sql.query("""
           SELECT upload_id,key,request_hash,expires_ms FROM teaql_blob_upload
@@ -198,7 +220,7 @@ public struct SQLiteBlobUploadService: Sendable {
             throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
           }
           _ = try await current(graph, target: target, action: "Begin", input: normalized,
-            expectedScope: scope)
+            expectedScope: scope, lease: sql)
           guard let id = old["upload_id"]?.stringValue,
             let key = old["key"]?.stringValue,
             let expiry = old["expires_ms"]?.int64Value,
@@ -211,7 +233,7 @@ public struct SQLiteBlobUploadService: Sendable {
         let id = "bu_" + Self.token(), objectKey = "blob/" + Self.token()
         let expiry = millis() + Int64(leaseSeconds) * 1000
         _ = try await current(graph, target: target, action: "Begin", input: normalized,
-          expectedScope: scope)
+          expectedScope: scope, lease: sql)
         do {
           _ = try await sql.execute("""
             INSERT INTO teaql_blob_catalog
@@ -234,39 +256,36 @@ public struct SQLiteBlobUploadService: Sendable {
     }
   }
 
-  private func row(_ actor: UserContext, uploadID: String, action: String) async throws -> Row {
+  private func row(_ actor: UserContext, uploadID: String, action: String,
+                   lease: any GraphPhysicalSQLLease) async throws -> Row {
     guard Self.validUploadID(uploadID) else { throw Self.fail("BLOB_UPLOAD_DENIED") }
     let scope: String
     do { scope = try authorization.scope(for: actor) }
     catch { throw Self.fail("BLOB_UPLOAD_DENIED") }
     guard Self.validText(scope, maximum: 256) else { throw Self.fail("BLOB_UPLOAD_DENIED") }
-    let found = try await actor.executeGraphSave(comment: "read Blob upload journal") { graph, session in
-      try await graph.withPhysicalSQL(session) { sql in
-        let rows: [TeaQLRecord]
-        do { rows = try await sql.query("""
-          SELECT upload_id,scope,key,entity,entity_id,field,file_name,extension,
-            declared_size,expires_ms,state,written_sha256,written_etag
-          FROM teaql_blob_upload WHERE scope = ? AND upload_id = ?
-          """, parameters: [.string(scope), .string(uploadID)]) }
-        catch { throw Self.fail("BLOB_CATALOG_FAILED") }
-        guard rows.count == 1 else { throw Self.fail("BLOB_UPLOAD_DENIED") }
-        let r = rows[0]
-        guard let id = r["upload_id"]?.stringValue, let rowScope = r["scope"]?.stringValue,
-          let key = r["key"]?.stringValue, let entity = r["entity"]?.stringValue,
-          let entityID = r["entity_id"]?.stringValue, let field = r["field"]?.stringValue,
-          let fileName = r["file_name"]?.stringValue, let ext = r["extension"]?.stringValue,
-          let size = r["declared_size"]?.int64Value, let expiry = r["expires_ms"]?.int64Value,
-          let state = r["state"]?.stringValue else { throw Self.fail("BLOB_CATALOG_FAILED") }
-        return Row(id: id, scope: rowScope, key: key, entity: entity, entityID: entityID,
-          field: field, fileName: fileName, ext: ext, state: state, declaredSize: size,
-          expiresMs: expiry, writtenSHA256: r["written_sha256"]?.stringValue,
-          writtenETag: r["written_etag"]?.stringValue)
-      }
-    }
+    let rows: [TeaQLRecord]
+    do { rows = try await lease.query("""
+      SELECT upload_id,scope,key,entity,entity_id,field,file_name,extension,
+        declared_size,expires_ms,state,written_sha256,written_etag
+      FROM teaql_blob_upload WHERE scope = ? AND upload_id = ?
+      """, parameters: [.string(scope), .string(uploadID)]) }
+    catch { throw Self.fail("BLOB_CATALOG_FAILED") }
+    guard rows.count == 1 else { throw Self.fail("BLOB_UPLOAD_DENIED") }
+    let r = rows[0]
+    guard let id = r["upload_id"]?.stringValue, let rowScope = r["scope"]?.stringValue,
+      let key = r["key"]?.stringValue, let entity = r["entity"]?.stringValue,
+      let entityID = r["entity_id"]?.stringValue, let field = r["field"]?.stringValue,
+      let fileName = r["file_name"]?.stringValue, let ext = r["extension"]?.stringValue,
+      let size = r["declared_size"]?.int64Value, let expiry = r["expires_ms"]?.int64Value,
+      let state = r["state"]?.stringValue else { throw Self.fail("BLOB_CATALOG_FAILED") }
+    let found = Row(id: id, scope: rowScope, key: key, entity: entity, entityID: entityID,
+      field: field, fileName: fileName, ext: ext, state: state, declaredSize: size,
+      expiresMs: expiry, writtenSHA256: r["written_sha256"]?.stringValue,
+      writtenETag: r["written_etag"]?.stringValue)
     _ = try await current(actor, target: BlobUploadTarget(entity: found.entity,
       entityID: found.entityID, field: found.field), action: action,
       input: BlobUploadInput(fileName: found.fileName, declaredSize: found.declaredSize),
-      expectedScope: scope)
+      expectedScope: scope, lease: lease)
     guard millis() < found.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
     guard found.declaredSize >= 0, found.declaredSize <= maximumBytes else {
       throw Self.fail("BLOB_SIZE_EXCEEDED")
@@ -277,49 +296,46 @@ public struct SQLiteBlobUploadService: Sendable {
     return found
   }
 
-  private func objectKey(_ actor: UserContext, row: Row) async throws -> ObjectKey {
-    try await actor.executeGraphSave(comment: "read Blob object location") { graph, session in
-      try await graph.withPhysicalSQL(session) { sql in
-        let rows: [TeaQLRecord]
-        do { rows = try await sql.query("""
-          SELECT object_key FROM teaql_blob_catalog WHERE key = ? AND scope = ?
-          """, parameters: [.string(row.key), .string(row.scope)]) }
-        catch { throw Self.fail("BLOB_CATALOG_FAILED") }
-        guard rows.count == 1, let raw = rows[0]["object_key"]?.stringValue,
-          let key = try? ObjectKey(raw) else { throw Self.fail("BLOB_CATALOG_FAILED") }
-        return key
-      }
-    }
+  private func objectKey(_ row: Row, lease: any GraphPhysicalSQLLease) async throws -> ObjectKey {
+    let rows: [TeaQLRecord]
+    do { rows = try await lease.query("""
+      SELECT object_key,status FROM teaql_blob_catalog WHERE key = ? AND scope = ?
+      """, parameters: [.string(row.key), .string(row.scope)]) }
+    catch { throw Self.fail("BLOB_CATALOG_FAILED") }
+    guard rows.count == 1, rows[0]["status"]?.stringValue == "initiated",
+      let raw = rows[0]["object_key"]?.stringValue,
+      let key = try? ObjectKey(raw) else { throw Self.fail("BLOB_CATALOG_FAILED") }
+    return key
   }
 
   public func write(_ actor: UserContext, uploadID: String,
                     source: any ObjectByteReader) async throws -> Int64 {
     do {
-      let entry = try await row(actor, uploadID: uploadID, action: "Write")
-      guard entry.state == "initiated" else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
-      let key = try await objectKey(actor, row: entry)
-      guard let mime = BlobFieldSpec.mime(forExtension: entry.ext) else {
-        throw Self.fail("BLOB_FORMAT_NOT_ALLOWED")
-      }
-      let reader = HashingBlobReader(source, maximum: entry.declaredSize)
-      let metadata: ObjectMetadata
-      do {
-        metadata = try await actor.objectStorage("write Blob upload").put(key, content: reader,
-          options: ObjectPutOptions(size: entry.declaredSize, mode: .createOnly,
-            contentType: mime))
-      } catch { throw Self.fail("BLOB_STORE_FAILED") }
-      _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
-        entityID: entry.entityID, field: entry.field), action: "Write",
-        input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize),
-        expectedScope: entry.scope)
-      guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
-      let observed = await reader.snapshot()
-      guard observed.eof, observed.count == entry.declaredSize,
-        metadata.size == observed.count, let etag = metadata.etag, !etag.isEmpty else {
-        throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
-      }
       return try await actor.executeGraphSave(comment: "journal Blob write") { graph, session in
         try await graph.withPhysicalSQL(session) { sql in
+          let entry = try await row(actor, uploadID: uploadID, action: "Write", lease: sql)
+          guard entry.state == "initiated" else { throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT") }
+          let key = try await objectKey(entry, lease: sql)
+          guard let mime = BlobFieldSpec.mime(forExtension: entry.ext) else {
+            throw Self.fail("BLOB_FORMAT_NOT_ALLOWED")
+          }
+          let reader = HashingBlobReader(source, maximum: entry.declaredSize)
+          let metadata: ObjectMetadata
+          do {
+            metadata = try await actor.objectStorage("write Blob upload").put(key, content: reader,
+              options: ObjectPutOptions(size: entry.declaredSize, mode: .createOnly,
+                contentType: mime))
+          } catch { throw Self.fail("BLOB_STORE_FAILED") }
+          _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
+            entityID: entry.entityID, field: entry.field), action: "Write",
+            input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize),
+            expectedScope: entry.scope, lease: sql)
+          guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
+          let observed = await reader.snapshot()
+          guard observed.eof, observed.count == entry.declaredSize,
+            metadata.size == observed.count, let etag = metadata.etag, !etag.isEmpty else {
+            throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+          }
           let nowMs = millis()
           guard nowMs < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
           let affected: Int
@@ -343,16 +359,16 @@ public struct SQLiteBlobUploadService: Sendable {
   }
 
   public func complete(_ actor: UserContext, uploadID: String) async throws -> BlobRef {
-    let entry = try await row(actor, uploadID: uploadID, action: "Confirm")
-    if entry.state == "completed" {
-      guard let writtenHash = entry.writtenSHA256, writtenHash.utf8.count == 64,
-        writtenHash.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }),
-        let writtenETag = entry.writtenETag, !writtenETag.isEmpty,
-        let mime = BlobFieldSpec.mime(forExtension: entry.ext) else {
-        throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
-      }
-      let key = try await actor.executeGraphSave(comment: "recheck completed Blob upload") { graph, session in
-        try await graph.withPhysicalSQL(session) { sql in
+    try await actor.executeGraphSave(comment: "confirm Blob upload") { graph, session in
+      try await graph.withPhysicalSQL(session) { sql in
+        let entry = try await row(actor, uploadID: uploadID, action: "Confirm", lease: sql)
+        if entry.state == "completed" {
+          guard let writtenHash = entry.writtenSHA256, writtenHash.utf8.count == 64,
+            writtenHash.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }),
+            let writtenETag = entry.writtenETag, !writtenETag.isEmpty,
+            let mime = BlobFieldSpec.mime(forExtension: entry.ext) else {
+            throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+          }
           let rows: [TeaQLRecord]
           do { rows = try await sql.query("""
             SELECT object_key,content_version,content_type,size_bytes,status
@@ -367,70 +383,64 @@ public struct SQLiteBlobUploadService: Sendable {
             ["uploaded_unbound", "available"].contains(rows[0]["status"]?.stringValue ?? "") else {
             throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
           }
-          return key
+          let store: ObjectStorage
+          do { store = try actor.objectStorage("recheck completed Blob upload") }
+          catch { throw Self.fail("BLOB_STORE_FAILED") }
+          do {
+            guard let head = try await store.head(key), head.size == entry.declaredSize,
+              head.etag == writtenETag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+          } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+          _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
+            entityID: entry.entityID, field: entry.field), action: "Confirm",
+            input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize,
+              declaredContentType: mime), expectedScope: entry.scope, lease: sql)
+          guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
+          return try BlobRef(entry.key)
         }
-      }
-      let store: ObjectStorage
-      do { store = try actor.objectStorage("recheck completed Blob upload") }
-      catch { throw Self.fail("BLOB_STORE_FAILED") }
-      do {
-        guard let head = try await store.head(key), head.size == entry.declaredSize,
-          head.etag == writtenETag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-      } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-      _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
-        entityID: entry.entityID, field: entry.field), action: "Confirm",
-        input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize,
-          declaredContentType: mime), expectedScope: entry.scope)
-      guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
-      return try BlobRef(entry.key)
-    }
-    guard entry.state == "written", let writtenHash = entry.writtenSHA256,
-      let writtenETag = entry.writtenETag, !writtenHash.isEmpty, !writtenETag.isEmpty else {
-      throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
-    }
-    let key = try await objectKey(actor, row: entry)
-    let store: ObjectStorage
-    do { store = try actor.objectStorage("verify Blob upload") }
-    catch { throw Self.fail("BLOB_STORE_FAILED") }
-    let before: ObjectMetadata
-    do {
-      guard let head = try await store.head(key), head.size == entry.declaredSize,
-        head.etag == writtenETag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-      before = head
-    } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-    let content: ObjectContent
-    do { content = try await store.get(key) }
-    catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-    let verified: BlobVerifiedContent
-    do {
-      guard content.metadata.size == before.size, content.metadata.etag == before.etag else {
-        throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
-      }
-      let reader = HashingBlobReader(content.reader, maximum: maximumBytes)
-      verified = try await verifier.verify(reader: reader, extension: entry.ext,
-        maximumBytes: maximumBytes)
-      let observed = await reader.snapshot()
-      guard observed.eof, observed.count == before.size, verified.sizeBytes == observed.count,
-        verified.sha256 == observed.sha256, verified.sha256 == writtenHash,
-        verified.contentType == BlobFieldSpec.mime(forExtension: entry.ext) else {
-        throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
-      }
-      try await content.close()
-    } catch {
-      try? await content.close()
-      throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
-    }
-    do {
-      guard let after = try await store.head(key), after.size == before.size,
-        after.etag == before.etag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-    } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
-    _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
-      entityID: entry.entityID, field: entry.field), action: "Confirm",
-      input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize,
-        declaredContentType: verified.contentType), expectedScope: entry.scope)
-    guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
-    return try await actor.executeGraphSave(comment: "confirm Blob upload") { graph, session in
-      try await graph.withPhysicalSQL(session) { sql in
+        guard entry.state == "written", let writtenHash = entry.writtenSHA256,
+          let writtenETag = entry.writtenETag, !writtenHash.isEmpty, !writtenETag.isEmpty else {
+          throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+        }
+        let key = try await objectKey(entry, lease: sql)
+        let store: ObjectStorage
+        do { store = try actor.objectStorage("verify Blob upload") }
+        catch { throw Self.fail("BLOB_STORE_FAILED") }
+        let before: ObjectMetadata
+        do {
+          guard let head = try await store.head(key), head.size == entry.declaredSize,
+            head.etag == writtenETag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+          before = head
+        } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+        let content: ObjectContent
+        do { content = try await store.get(key) }
+        catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+        let verified: BlobVerifiedContent
+        do {
+          guard content.metadata.size == before.size, content.metadata.etag == before.etag else {
+            throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+          }
+          let reader = HashingBlobReader(content.reader, maximum: maximumBytes)
+          verified = try await verifier.verify(reader: reader, extension: entry.ext,
+            maximumBytes: maximumBytes)
+          let observed = await reader.snapshot()
+          guard observed.eof, observed.count == before.size, verified.sizeBytes == observed.count,
+            verified.sha256 == observed.sha256, verified.sha256 == writtenHash,
+            verified.contentType == BlobFieldSpec.mime(forExtension: entry.ext) else {
+            throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+          }
+          try await content.close()
+        } catch {
+          try? await content.close()
+          throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
+        }
+        do {
+          guard let after = try await store.head(key), after.size == before.size,
+            after.etag == before.etag else { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+        } catch { throw Self.fail("BLOB_UPLOAD_INCOMPLETE") }
+        _ = try await current(actor, target: BlobUploadTarget(entity: entry.entity,
+          entityID: entry.entityID, field: entry.field), action: "Confirm",
+          input: BlobUploadInput(fileName: entry.fileName, declaredSize: entry.declaredSize,
+            declaredContentType: verified.contentType), expectedScope: entry.scope, lease: sql)
         let nowMs = millis()
         guard nowMs < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
         let completed: Int
