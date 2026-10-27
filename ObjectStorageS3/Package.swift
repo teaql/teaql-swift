@@ -16,7 +16,13 @@ let package = Package(
       .product(name: "SotoS3", package: "soto"),
       .product(name: "AsyncHTTPClient", package: "async-http-client"),
     ]),
-    .testTarget(name: "TeaQLObjectStorageS3Tests", dependencies: ["TeaQLObjectStorageS3", .product(name: "TeaQLCore", package: "TeaQLRuntime"), .product(name: "SotoS3", package: "soto")]),
+    .testTarget(name: "TeaQLObjectStorageS3Tests", dependencies: [
+      "TeaQLObjectStorageS3",
+      .product(name: "TeaQLCore", package: "TeaQLRuntime"),
+      .product(name: "TeaQLSQLite", package: "TeaQLRuntime"),
+      .product(name: "TeaQLBlobReference", package: "TeaQLRuntime"),
+      .product(name: "SotoS3", package: "soto"),
+    ]),
   ],
   swiftLanguageModes: [.v6]
 )
