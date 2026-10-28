@@ -149,6 +149,20 @@ private actor SQLiteOrderHost: SQLiteContextBoundDocumentHost, SQLiteDocumentBlo
       throw ReferenceError("BLOB_BIND_DENIED")
     }
     guard let persistedID = Int64(selection.entityID) else { throw ReferenceError("BLOB_BIND_DENIED") }
+    if child && ProcessInfo.processInfo.environment["TEAQL_DOCUMENT_SERVICE_DYNAMIC_CHILD_IDS"] == "1" {
+      let authorized = try await sql.query("""
+        SELECT 1 AS authorized FROM document_pending_blob_intent i
+        JOIN document_order_line l ON l.order_id=i.parent_id AND l.client_key=i.client_key
+        JOIN teaql_blob_upload u ON u.entity_id=i.handle AND u.key=?
+          AND u.scope='merchant:7' AND u.entity='OrderLine'
+          AND u.field='attachment' AND u.state='completed'
+        JOIN document_permission p ON p.subject=i.subject
+        WHERE i.parent_id=10 AND i.client_key=? AND i.subject='alice'
+          AND i.can_upload=1 AND p.can_edit=1 AND l.id=?
+        """, parameters: [.string(selection.reference.key),
+          .string(selection.target.targetKey), .int(persistedID)])
+      guard authorized.count == 1 else { throw ReferenceError("BLOB_BIND_DENIED") }
+    }
     let affected = try await sql.execute(child
       ? "UPDATE document_order_line SET blob_key=? WHERE id=?"
       : "UPDATE document_order SET blob_key=? WHERE id=?",
