@@ -91,6 +91,36 @@ public struct SQLiteContextBoundDocumentService: Sendable {
     let businessID: String
     let documentToken: String
     let body: TeaQLValue
+
+    private enum CodingKeys: String, CodingKey {
+      case businessID = "businessId"
+      case legacyBusinessID = "businessID"
+      case documentToken, body
+    }
+
+    init(businessID: String, documentToken: String, body: TeaQLValue) {
+      self.businessID = businessID
+      self.documentToken = documentToken
+      self.body = body
+    }
+
+    init(from decoder: Decoder) throws {
+      let values = try decoder.container(keyedBy: CodingKeys.self)
+      if let current = try values.decodeIfPresent(String.self, forKey: .businessID) {
+        businessID = current
+      } else {
+        businessID = try values.decode(String.self, forKey: .legacyBusinessID)
+      }
+      documentToken = try values.decode(String.self, forKey: .documentToken)
+      body = try values.decode(TeaQLValue.self, forKey: .body)
+    }
+
+    func encode(to encoder: Encoder) throws {
+      var values = encoder.container(keyedBy: CodingKeys.self)
+      try values.encode(businessID, forKey: .businessID)
+      try values.encode(documentToken, forKey: .documentToken)
+      try values.encode(body, forKey: .body)
+    }
   }
 
   private let actor: UserContext

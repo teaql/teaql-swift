@@ -223,6 +223,85 @@ private func serviceState(_ context: UserContext) async throws -> (Int64, Int64,
 }
 
 @Test
+func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
+  let environment = ProcessInfo.processInfo.environment
+  guard let mode = environment["TEAQL_DOCUMENT_SERVICE_MODE"],
+    let path = environment["TEAQL_DOCUMENT_SERVICE_DB"],
+    let tokenPath = environment["TEAQL_DOCUMENT_SERVICE_TOKEN"] else { return }
+  guard ["open", "accept", "replay"].contains(mode) else {
+    throw ReferenceError("DOCUMENT_COMMAND_INVALID")
+  }
+  let database = try SQLiteDataService(path: path)
+  let context = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 })
+  let keys = try StaticReferenceKeyProvider(current: "k1", keys: [
+    ReferenceKey(keyID: "k1", masterKey: Array(repeating: 0x42, count: 32)),
+  ])
+  let runtime = try ContextBoundReferenceRuntime(service: "order-service", environment: "test",
+    keys: keys, authorize: { _, _, _ in true },
+    now: { Date(timeIntervalSince1970: 1_800_000_000) },
+    nonce: { Array(repeating: 0x33, count: 12) })
+  let module = SecureDocumentReferenceModule(runtime: runtime)
+  let journal = SQLiteDocumentCommandJournal()
+  try await journal.installSchema(context)
+  try await journal.validateSchema(context)
+  let host = SQLiteOrderHost()
+  let service = SQLiteContextBoundDocumentService(actor: context, module: module,
+    journal: journal, host: host)
+  if mode == "open" {
+    let opened = try await service.open(DocumentOpenRequest(aggregateType: "Order",
+      businessID: "ORD-10", purpose: "edit-order", lifetimeSeconds: 60))
+    guard opened.documentToken.hasPrefix("tqd2."),
+      opened.body == .object(["quantity": .int(1)]) else {
+      throw ReferenceError("DOCUMENT_PROJECTION_VIOLATION")
+    }
+    try opened.documentToken.write(to: URL(fileURLWithPath: tokenPath),
+      atomically: false, encoding: .utf8)
+  } else {
+    let token = try String(contentsOf: URL(fileURLWithPath: tokenPath), encoding: .utf8)
+    let command = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
+      commandID: "command-1", body: .object(["quantity": .int(3)]))
+    func accept(_ input: SubmittedDocumentCommand) async throws -> AcceptedDocument {
+      try await service.accept(DocumentAcceptRequest(aggregateType: "Order",
+        purpose: "edit-order", submitted: input))
+    }
+    let result: AcceptedDocument
+    do { result = try await accept(command) }
+    catch let error as GraphCommittedError {
+      print("SWIFT_SERVICE_REPLAY_CAUSE " + error.causes.map {
+        ($0 as? ReferenceError)?.code ?? String(describing: type(of: $0))
+      }.joined(separator: ","))
+      throw error
+    }
+    guard result.previousRevision == 1, result.newRevision == 2,
+      result.replayed == (mode == "replay"),
+      result.document.body == .object(["quantity": .int(3)]),
+      await host.mutations() == (mode == "accept" ? 1 : 0) else {
+      throw ReferenceError("DOCUMENT_CATALOG_FAILED")
+    }
+    if mode == "replay" {
+      do {
+        let changed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
+          commandID: "command-1", body: .object(["quantity": .int(4)]))
+        _ = try await accept(changed)
+        throw ReferenceError("changed replay accepted")
+      } catch let error as ReferenceError where error.code == "DOCUMENT_REPLAY_CONFLICT" { }
+      try await context.executeGraphSave(comment: "revoke protected order") { graph, session in
+        try await graph.withPhysicalSQL(session) { sql in
+          _ = try await sql.execute(
+            "UPDATE document_permission SET can_edit=0 WHERE subject='alice'", parameters: [])
+        }
+      }
+      do {
+        _ = try await accept(command)
+        throw ReferenceError("revoked replay accepted")
+      } catch let error as ReferenceError where error.code == "DOCUMENT_AUTHORIZATION_REQUIRED" { }
+    }
+  }
+  print("PASS Swift document service \(mode)")
+}
+
+@Test
 func swiftSQLiteSecureDocumentOpenAcceptAndReplay() async throws {
   let database = try SQLiteDataService(path: ":memory:")
   let context = UserContext(queryExecutor: database, mutationExecutor: database,
@@ -265,6 +344,17 @@ func swiftSQLiteSecureDocumentOpenAcceptAndReplay() async throws {
   #expect(first.document.body == .object(["quantity": .int(3)]))
   #expect(!first.description.contains(first.document.documentToken))
   #expect(try await serviceState(context) == (2, 3, 1))
+  try await context.executeGraphSave(comment: "emulate earlier Swift receipt") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      let changed = try await sql.execute("""
+        UPDATE teaql_document_command_receipt
+        SET response=REPLACE(response,?,?)
+        WHERE command_id='command-1' AND response LIKE ?
+        """, parameters: [.string("\"businessId\":"), .string("\"businessID\":"),
+          .string("%\"businessId\"%")])
+      #expect(changed == 1)
+    }
+  }
   let replay = try await service.accept(request)
   #expect(replay.replayed && replay.document.documentToken == first.document.documentToken)
   #expect(await host.mutations() == 1)
