@@ -73,10 +73,15 @@ private actor HashingBlobReader: ObjectByteReader {
   struct Snapshot: Sendable { let count: Int64; let eof: Bool; let sha256: String }
   let source: any ObjectByteReader
   let maximum: Int64
+  let leaveOpen: Bool
   var digest = SHA256()
   var count: Int64 = 0
   var eof = false
-  init(_ source: any ObjectByteReader, maximum: Int64) { self.source = source; self.maximum = maximum }
+  init(_ source: any ObjectByteReader, maximum: Int64, leaveOpen: Bool = false) {
+    self.source = source
+    self.maximum = maximum
+    self.leaveOpen = leaveOpen
+  }
   func read(upToCount amount: Int) async throws -> Data {
     guard amount >= 0 else { throw StorageError(.invalidInput) }
     let bytes = try await source.read(upToCount: amount)
@@ -87,10 +92,21 @@ private actor HashingBlobReader: ObjectByteReader {
     digest.update(data: bytes)
     return bytes
   }
-  func close() async throws { try await source.close() }
+  func close() async throws { if !leaveOpen { try await source.close() } }
   func snapshot() -> Snapshot {
     Snapshot(count: count, eof: eof,
       sha256: digest.finalize().map { String(format: "%02x", $0) }.joined())
+  }
+}
+
+private actor UploadSourceLifetime {
+  let source: any ObjectByteReader
+  private var closed = false
+  init(_ source: any ObjectByteReader) { self.source = source }
+  func close() async throws {
+    if closed { return }
+    closed = true
+    try await source.close()
   }
 }
 
@@ -378,6 +394,7 @@ public struct SQLiteBlobUploadService: Sendable {
 
   public func write(_ actor: UserContext, uploadID: String,
                     source: any ObjectByteReader) async throws -> Int64 {
+    let lifetime = UploadSourceLifetime(source)
     do {
       return try await actor.executeGraphSave(comment: "journal Blob write") { graph, session in
         try await graph.withPhysicalSQL(session) { sql in
@@ -415,7 +432,7 @@ public struct SQLiteBlobUploadService: Sendable {
             _ = try await current(actor, target: target, action: "Write", input: input,
               expectedScope: entry.scope, lease: sql)
             guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
-            let reader = HashingBlobReader(source, maximum: entry.declaredSize)
+            let reader = HashingBlobReader(source, maximum: entry.declaredSize, leaveOpen: true)
             do { while !(try await reader.read(upToCount: 65536)).isEmpty {} }
             catch let error as StorageError where error.code == .tooLarge {
               throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
@@ -434,12 +451,16 @@ public struct SQLiteBlobUploadService: Sendable {
             _ = try await current(actor, target: target, action: "Write", input: input,
               expectedScope: entry.scope, lease: sql)
             guard millis() < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
+            do { try await lifetime.close() }
+            catch { throw Self.fail("BLOB_STORE_FAILED") }
             return observed.count
           }
           guard entry.state == "initiated", catalog["status"]?.stringValue == "initiated" else {
             throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
           }
-          let reader = HashingBlobReader(source, maximum: entry.declaredSize)
+          // ObjectStorage.put closes its reader. Retain the caller source
+          // through File conflict recovery and close it before SQL promotion.
+          let reader = HashingBlobReader(source, maximum: entry.declaredSize, leaveOpen: true)
           let metadata: ObjectMetadata
           let recovered: HashingBlobReader.Snapshot?
           let store: ObjectStorage
@@ -467,6 +488,8 @@ public struct SQLiteBlobUploadService: Sendable {
             metadata.size == observed.count, let etag = metadata.etag, !etag.isEmpty else {
             throw Self.fail("BLOB_UPLOAD_INCOMPLETE")
           }
+          do { try await lifetime.close() }
+          catch { throw Self.fail("BLOB_STORE_FAILED") }
           let nowMs = millis()
           guard nowMs < entry.expiresMs else { throw Self.fail("BLOB_UPLOAD_EXPIRED") }
           let affected: Int
@@ -484,7 +507,7 @@ public struct SQLiteBlobUploadService: Sendable {
         }
       }
     } catch {
-      try? await source.close()
+      try? await lifetime.close()
       throw error
     }
   }

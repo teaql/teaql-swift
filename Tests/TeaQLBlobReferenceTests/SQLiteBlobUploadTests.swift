@@ -216,6 +216,29 @@ private actor CloseFailUploadStore: ObjectStorageProvider {
   }
 }
 
+private actor CountedUploadSource: ObjectByteReader {
+  private let inner: ObjectDataReader
+  private var closed = false
+  private var closeCount = 0
+  private let failClose: Bool
+  init(_ data: Data, failClose: Bool = false) {
+    inner = ObjectDataReader(data)
+    self.failClose = failClose
+  }
+  func read(upToCount count: Int) async throws -> Data {
+    if closed { throw TeaQLError.execution("PRIVATE-READ-AFTER-CLOSE-CANARY") }
+    return try await inner.read(upToCount: count)
+  }
+  func close() async throws {
+    closeCount += 1
+    closed = true
+    await inner.close()
+    if failClose { throw TeaQLError.execution("PRIVATE-UPLOAD-SOURCE-CLOSE-CANARY") }
+    if closeCount > 1 { throw TeaQLError.execution("PRIVATE-DOUBLE-CLOSE-CANARY") }
+  }
+  func count() -> Int { closeCount }
+}
+
 private actor LostUploadCommitReply: MutationExecutor, GraphTransactionExecutor,
   GraphPhysicalSQLExecutor {
   let database: SQLiteDataService
@@ -454,6 +477,51 @@ func swiftSQLiteUploadSerializesTwoConnectionsAcrossFileAndParserIO() async thro
   #expect(try await uploadCatalogValue(actor1,
     sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?",
     key: revokeSession.reference.key) == "uploaded_unbound")
+}
+
+@Test
+func swiftSQLiteWriteClosesSourceOnceBeforePromotionAndReplay() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-write-source-close-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let file = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? file.close() }
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(file)
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install upload journal") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let service = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
+    allowed: true), verifier: FixturePDFVerifier(), maximumBytes: 10_000)
+  let bytes = Data("%PDF-1.7\nsource close before promotion\n%%EOF".utf8)
+  let session = try await service.begin(actor,
+    target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
+    input: BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(bytes.count)),
+    replayKey: "source-close")
+  let failed = CountedUploadSource(bytes, failClose: true)
+  do {
+    _ = try await service.write(actor, uploadID: session.uploadID, source: failed)
+    Issue.record("failed source close promoted upload")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_STORE_FAILED")) }
+  #expect(await failed.count() == 1)
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT state FROM teaql_blob_upload WHERE key = ?", key: session.reference.key) == "initiated")
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key) == "initiated")
+  let retry = CountedUploadSource(bytes)
+  #expect(try await service.write(actor, uploadID: session.uploadID,
+    source: retry) == Int64(bytes.count))
+  #expect(await retry.count() == 1)
+  #expect(try await service.complete(actor, uploadID: session.uploadID) == session.reference)
+  let replay = CountedUploadSource(bytes)
+  #expect(try await service.write(actor, uploadID: session.uploadID,
+    source: replay) == Int64(bytes.count))
+  #expect(await replay.count() == 1)
 }
 
 @Test
