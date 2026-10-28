@@ -72,17 +72,26 @@ private struct S3CountingVerifier: BlobContentVerifier {
 }
 
 private struct S3BindingPermission: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
+  let reference: BlobRef
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
                  next: BlobRef?, action: String) async throws -> Bool {
     target.entity == "Asset" && target.entityID == "1" && target.field == "file"
-      && previous == nil && next != nil && action == "Create"
+      && ((previous == nil && next == reference && action == "Create")
+        || (previous == reference && next == nil && action == "Update"))
   }
   func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
     target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
     try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
       unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
       minimumRetentionSeconds: 3600)
+  }
+}
+
+private struct S3UploadMaintenancePermission: BlobMaintenanceAuthorization {
+  func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
+  func canMaintain(actor: UserContext, scope: String) async throws -> Bool {
+    scope == "f4-s3-upload"
   }
 }
 
@@ -113,6 +122,22 @@ private func s3UploadCatalogValue(_ context: UserContext, sql: String,
   }
 }
 
+private func s3UploadRetentionValues(_ context: UserContext,
+                                     key: String) async throws -> (Int64, Int64, Int64?) {
+  try await context.executeGraphSave(comment: "inspect S3 Blob retention") { graph, session in
+    try await graph.withPhysicalSQL(session) { lease in
+      let rows = try await lease.query("""
+        SELECT last_unbound_at_ms,effective_unref_seconds,retention_floor_until_ms
+        FROM teaql_blob_catalog WHERE key = ?
+        """, parameters: [.string(key)])
+      let row = try XCTUnwrap(rows.first)
+      return (try XCTUnwrap(row["last_unbound_at_ms"]?.int64Value),
+        try XCTUnwrap(row["effective_unref_seconds"]?.int64Value),
+        row["retention_floor_until_ms"]?.int64Value)
+    }
+  }
+}
+
 @MainActor
 final class BlobUploadS3Tests: XCTestCase {
   func testRealSQLiteBlobUploadThroughS3() async throws {
@@ -133,6 +158,20 @@ final class BlobUploadS3Tests: XCTestCase {
       throw XCTSkip("explicit real-image S3 gate required")
     }
     try await runBlobUpload(format: "jpg")
+  }
+
+  func testRealJPEGAliasBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_IMAGE"] == "1" else {
+      throw XCTSkip("explicit real-image S3 gate required")
+    }
+    try await runBlobUpload(format: "jpeg")
+  }
+
+  func testRealPNGBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_IMAGE"] == "1" else {
+      throw XCTSkip("explicit real-image S3 gate required")
+    }
+    try await runBlobUpload(format: "png")
   }
 
   func testRealDOCXBlobUploadThroughS3() async throws {
@@ -200,6 +239,7 @@ final class BlobUploadS3Tests: XCTestCase {
       PropertyDescriptor(name: "id", type: .int, isID: true),
       PropertyDescriptor(name: "version", type: .int, isVersion: true),
       PropertyDescriptor(name: "name", type: .string),
+      PropertyDescriptor(name: "file", type: .string, nullable: true),
     ])
     let context = UserContext(queryExecutor: database, mutationExecutor: database,
       requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
@@ -216,7 +256,9 @@ final class BlobUploadS3Tests: XCTestCase {
       }
       let calls = S3VerifierCalls()
       let decoder: any BlobContentVerifier
-      if format == "jpg" { decoder = try StbImageBlobContentVerifier() }
+      if ["jpg", "jpeg", "png"].contains(format) {
+        decoder = try StbImageBlobContentVerifier()
+      }
       else if format == "docx" || format == "xlsx" {
         decoder = try OfficeBlobContentVerifier()
       }
@@ -258,14 +300,16 @@ final class BlobUploadS3Tests: XCTestCase {
         verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 100_000)
       let data: Data
       if format != "pdf" {
-        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: extensionName,
+        let fixtureExtension = format == "jpeg" ? "jpg" : extensionName
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: fixtureExtension,
           subdirectory: "fixtures"))
         data = try Data(contentsOf: url)
       } else {
         data = Data("%PDF-1.7\nreal S3 Blob upload\n%%EOF".utf8)
       }
       let filename = format == "pdf" ? "report.pdf" : "sample.\(extensionName)"
-      let contentType = format == "jpg" ? "image/jpeg" : format == "mp3" ? "audio/mpeg"
+      let contentType = ["jpg", "jpeg"].contains(format) ? "image/jpeg"
+        : format == "png" ? "image/png" : format == "mp3" ? "audio/mpeg"
         : format == "mp4" ? "video/mp4" : format == "docx"
         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         : format == "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -312,12 +356,13 @@ final class BlobUploadS3Tests: XCTestCase {
       XCTAssertEqual(catalogContentType, contentType)
       try await context.executeGraphSave(comment: "bind S3 Blob in business graph") { actor, session in
         _ = try await actor.execute(Mutation(kind: .create, entity: asset,
-          values: ["id": .int(1), "name": .string("document")],
+          values: ["id": .int(1), "name": .string("document"),
+            "file": .string(reference.key)],
           auditReason: session.intent.comment))
         let bound = try await catalog.bind(actor, session: session,
           change: BlobBindingChange(target: BlobBindingTarget(entity: "Asset", entityID: "1",
             field: "file"), next: reference, expectedVersion: 0, nextVersion: 1,
-            action: "Create"), authorization: S3BindingPermission())
+            action: "Create"), authorization: S3BindingPermission(reference: reference))
         XCTAssertEqual(bound, 1)
       }
       let businessName = try await s3UploadCatalogValue(context,
@@ -325,6 +370,9 @@ final class BlobUploadS3Tests: XCTestCase {
       let boundStatus = try await s3UploadCatalogValue(context,
         sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
       XCTAssertEqual(businessName, "document")
+      let businessFile = try await s3UploadCatalogValue(context,
+        sql: "SELECT file FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
+      XCTAssertEqual(businessFile, reference.key)
       XCTAssertEqual(boundStatus, "available")
 
       let permitted = context.withResponseGraphAuthorizer(
@@ -368,6 +416,55 @@ final class BlobUploadS3Tests: XCTestCase {
       } catch let error as ViewPreparationError {
         XCTAssertEqual(error.code, "BLOB_READ_DENIED")
         XCTAssertEqual(error.businessState, "committed")
+      }
+      if env["TEAQL_S3_TEST_END_TO_END_GC"] == "1" {
+        try await context.executeGraphSave(comment: "unbind S3 Blob in business graph") { actor, session in
+          _ = try await actor.execute(Mutation(kind: .update, entity: asset, id: .int(1),
+            values: ["file": .null], expectedVersion: 1,
+            auditReason: session.intent.comment))
+          let cleared = try await catalog.bind(actor, session: session,
+            change: BlobBindingChange(target: BlobBindingTarget(entity: "Asset", entityID: "1",
+              field: "file"), next: nil, expectedVersion: 1, nextVersion: 2,
+              action: "Update"), authorization: S3BindingPermission(reference: reference))
+          XCTAssertEqual(cleared, 2)
+        }
+        let clearedFile = try await s3UploadCatalogValue(context,
+          sql: "SELECT file FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
+        XCTAssertNil(clearedFile)
+        let bindingKey = try await s3UploadCatalogValue(context,
+          sql: "SELECT key FROM teaql_blob_binding WHERE scope='f4-s3-upload' AND entity='Asset' AND entity_id=? AND field='file'", key: "1")
+        XCTAssertNil(bindingKey)
+        do {
+          _ = try await ViewPreparationService().prepare(context: permitted,
+            result: "unused", options: options)
+          XCTFail("unbound S3 Blob view signed")
+        } catch let error as ViewPreparationError {
+          XCTAssertEqual(error.code, "BLOB_READ_DENIED")
+        }
+        let (lastUnbound, effectiveSeconds, floor) = try await s3UploadRetentionValues(context,
+          key: reference.key)
+        let deadline = try BlobRetentionPolicy.unreferencedEligibleAt(lastUnbound,
+          seconds: effectiveSeconds, floorUntilMs: floor)
+        let before = try SQLiteBlobMaintenanceService(catalog: catalog,
+          authorization: S3UploadMaintenancePermission(), batchSize: 10,
+          now: { Date(timeIntervalSince1970: Double(deadline - 10) / 1000) })
+        let early = try await before.runBatch(context)
+        XCTAssertTrue(early.outcomes.isEmpty)
+        let retainedHead = try await storage.head(try XCTUnwrap(objectKey))
+        XCTAssertNotNil(retainedHead)
+        let after = try SQLiteBlobMaintenanceService(catalog: catalog,
+          authorization: S3UploadMaintenancePermission(), batchSize: 10,
+          now: { Date(timeIntervalSince1970: Double(deadline + 10) / 1000) })
+        let collected = try await after.runBatch(context)
+        XCTAssertEqual(collected.outcomes.count, 1)
+        XCTAssertEqual(collected.outcomes.first?.reference, reference)
+        XCTAssertEqual(collected.outcomes.first?.status, "deleted")
+        let deletedHead = try await storage.head(try XCTUnwrap(objectKey))
+        XCTAssertNil(deletedHead)
+        let deletedStatus = try await s3UploadCatalogValue(context,
+          sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
+        XCTAssertEqual(deletedStatus, "deleted")
+        print("PASS Swift \(format) S3 upload/confirm/graph bind/authorized view/unbind/retention GC")
       }
       if (format == "doc" || format == "xls"),
         let markerDirectory = env["TEAQL_S3_TEST_LEGACY_OFFICE_MARKER_DIR"] {
