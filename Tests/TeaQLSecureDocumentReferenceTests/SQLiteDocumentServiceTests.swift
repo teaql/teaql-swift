@@ -278,7 +278,8 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
         ("command-1", liveKey, ".selection"),
         ("command-missing", "blob_missing", ".missing"),
       ]
-      if multi { fixtures.append(("command-child-1", "blob_D", ".selection2")) }
+      if multi { fixtures.append(("command-child-1",
+        environment["TEAQL_DOCUMENT_SERVICE_BLOB_KEY_2"] ?? "blob_D", ".selection2")) }
       for (commandID, key, suffix) in fixtures {
         let target = BlobSelectionTarget(scope: issued.snapshot.scope,
           targetEntity: child ? "OrderLine" : "Order",
