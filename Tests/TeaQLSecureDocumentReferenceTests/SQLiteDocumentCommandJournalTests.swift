@@ -182,8 +182,9 @@ func swiftSQLiteDocumentJournalCrossLanguagePeer() async throws {
     domainRootType: "Merchant", domainRootID: 7)
   let selection = DocumentBlobSelectionSubmission(token: "tqs1.fixture", targetEntity: "OrderItem",
     canonicalField: "attachment", kind: "EXISTING_ROW", targetKey: "item:0")
+  let note = environment["TEAQL_JOURNAL_INTEROP_NOTE"] ?? "ok"
   let command = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: "tqd2.fixture",
-    commandID: "command-1", body: .object(["quantity": .int(3), "note": .string("ok")]),
+    commandID: "command-1", body: .object(["quantity": .int(3), "note": .string(note)]),
     blobSelections: [selection])
   let mutations = JournalMutationCount()
   func apply(_ submitted: SubmittedDocumentCommand) async throws -> (DocumentCommandReceipt, Bool) {
@@ -225,7 +226,7 @@ func swiftSQLiteDocumentJournalCrossLanguagePeer() async throws {
   if mode == "replay" {
     let changed = SubmittedDocumentCommand(businessID: command.businessID,
       documentToken: command.documentToken, commandID: command.commandID,
-      body: .object(["quantity": .int(4), "note": .string("ok")]),
+      body: .object(["quantity": .int(4), "note": .string(note)]),
       blobSelections: [selection])
     do { _ = try await apply(changed); Issue.record("changed command replay accepted") }
     catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_REPLAY_CONFLICT") }
