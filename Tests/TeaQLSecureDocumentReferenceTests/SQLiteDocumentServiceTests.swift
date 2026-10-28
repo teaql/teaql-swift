@@ -233,6 +233,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
   }
   let selected = environment["TEAQL_DOCUMENT_SERVICE_SELECTION"] == "1"
   let child = environment["TEAQL_DOCUMENT_SERVICE_CHILD"] == "1"
+  let multi = environment["TEAQL_DOCUMENT_SERVICE_MULTI"] == "1"
   let liveKey = environment["TEAQL_DOCUMENT_SERVICE_BLOB_KEY"] ?? (child ? "blob_C" : "blob_A")
   let database = try SQLiteDataService(path: path)
   let context = UserContext(queryExecutor: database, mutationExecutor: database,
@@ -270,18 +271,20 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       let principal = try await host.principal(context: context)
       let issued = try runtime.consumeBoundDocumentSnapshot(principal,
         token: opened.documentToken, aggregateType: "Order", purpose: "edit-order").document
-      let fixtures = child ? [
+      var fixtures = child ? [
         ("command-child-1", liveKey, ".selection"),
         ("command-wrong", liveKey, ".missing"),
       ] : [
         ("command-1", liveKey, ".selection"),
         ("command-missing", "blob_missing", ".missing"),
       ]
+      if multi { fixtures.append(("command-child-1", "blob_D", ".selection2")) }
       for (commandID, key, suffix) in fixtures {
         let target = BlobSelectionTarget(scope: issued.snapshot.scope,
           targetEntity: child ? "OrderLine" : "Order",
           canonicalField: "attachment", kind: child ? "NEW_CLIENT_KEY" : "EXISTING_ROW",
-          targetKey: child ? "client-line-1" : "order:10",
+          targetKey: child ? (suffix == ".selection2" ? "client-line-2" : "client-line-1") :
+            "order:10",
           commandID: commandID)
         let selection = try runtime.issueBlobSelection(principal,
           documentToken: opened.documentToken,
@@ -294,7 +297,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
   } else {
     guard mode != "reject" || selected else { throw ReferenceError("DOCUMENT_COMMAND_INVALID") }
     let token = try String(contentsOf: URL(fileURLWithPath: tokenPath), encoding: .utf8)
-    let selections: [DocumentBlobSelectionSubmission]? = selected
+    var selections: [DocumentBlobSelectionSubmission]? = selected
       ? [DocumentBlobSelectionSubmission(token: try String(
           contentsOf: URL(fileURLWithPath: tokenPath +
             (mode == "reject" ? ".missing" : ".selection")), encoding: .utf8),
@@ -302,6 +305,12 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
           kind: child ? "NEW_CLIENT_KEY" : "EXISTING_ROW",
           targetKey: child ? "client-line-1" : "order:10")]
       : nil
+    if multi && mode != "reject" {
+      selections?.append(DocumentBlobSelectionSubmission(token: try String(
+        contentsOf: URL(fileURLWithPath: tokenPath + ".selection2"), encoding: .utf8),
+        targetEntity: "OrderLine", canonicalField: "attachment",
+        kind: "NEW_CLIENT_KEY", targetKey: "client-line-2"))
+    }
     let command = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
       commandID: child
         ? mode == "reject" ? "command-wrong" : "command-child-1"
