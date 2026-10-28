@@ -233,6 +233,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
   }
   let selected = environment["TEAQL_DOCUMENT_SERVICE_SELECTION"] == "1"
   let child = environment["TEAQL_DOCUMENT_SERVICE_CHILD"] == "1"
+  let liveKey = environment["TEAQL_DOCUMENT_SERVICE_BLOB_KEY"] ?? (child ? "blob_C" : "blob_A")
   let database = try SQLiteDataService(path: path)
   let context = UserContext(queryExecutor: database, mutationExecutor: database,
     requestPolicy: RequestPolicy { $0 })
@@ -270,10 +271,10 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       let issued = try runtime.consumeBoundDocumentSnapshot(principal,
         token: opened.documentToken, aggregateType: "Order", purpose: "edit-order").document
       let fixtures = child ? [
-        ("command-child-1", "blob_C", ".selection"),
-        ("command-wrong", "blob_C", ".missing"),
+        ("command-child-1", liveKey, ".selection"),
+        ("command-wrong", liveKey, ".missing"),
       ] : [
-        ("command-1", "blob_A", ".selection"),
+        ("command-1", liveKey, ".selection"),
         ("command-missing", "blob_missing", ".missing"),
       ]
       for (commandID, key, suffix) in fixtures {
