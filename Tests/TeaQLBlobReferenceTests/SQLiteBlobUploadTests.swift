@@ -109,6 +109,7 @@ private actor UploadLatch {
     for waiter in waiters { waiter.resume() }
     waiters.removeAll()
   }
+  func isReleased() -> Bool { open }
 }
 
 private actor PausedUploadReader: ObjectByteReader {
@@ -371,6 +372,45 @@ func swiftSQLiteUploadSerializesTwoConnectionsAcrossFileAndParserIO() async thro
   #expect(try await firstConfirm.value == session.reference)
   #expect(try await secondConfirm.value == session.reference)
   #expect(await calls.value() == 1)
+
+  let revokeEntered = UploadLatch(), revokeRelease = UploadLatch()
+  let revokeCalls = UploadVerifierCalls()
+  let revokeVerifier = PausedUploadVerifier(entered: revokeEntered,
+    release: revokeRelease, calls: revokeCalls)
+  let revokeService = try SQLiteBlobUploadService(authorization: permission,
+    verifier: revokeVerifier, maximumBytes: 10_000)
+  let revokeSession = try await revokeService.begin(actor1, target: target, input: input,
+    replayKey: "revoke-during-parser")
+  #expect(try await revokeService.write(actor1, uploadID: revokeSession.uploadID,
+    source: ObjectDataReader(bytes)) == Int64(bytes.count))
+  let confirmation = Task { try await revokeService.complete(actor1,
+    uploadID: revokeSession.uploadID) }
+  await revokeEntered.wait()
+  let revokeDone = UploadLatch()
+  let revocation = Task {
+    try await actor2.executeGraphSave(comment: "revoke during parser") { graph, session in
+      try await graph.withPhysicalSQL(session) { sql in
+        _ = try await sql.execute("UPDATE upload_policy SET allowed = 0", parameters: [])
+      }
+    }
+    await revokeDone.release()
+  }
+  try await Task.sleep(nanoseconds: 100_000_000)
+  #expect(await revokeDone.isReleased() == false)
+  await revokeRelease.release()
+  #expect(try await confirmation.value == revokeSession.reference)
+  try await revocation.value
+  do {
+    _ = try await revokeService.complete(actor1, uploadID: revokeSession.uploadID)
+    Issue.record("revoked completed replay accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
+  #expect(await revokeCalls.value() == 1)
+  #expect(try await uploadCatalogValue(actor1,
+    sql: "SELECT state FROM teaql_blob_upload WHERE key = ?",
+    key: revokeSession.reference.key) == "completed")
+  #expect(try await uploadCatalogValue(actor1,
+    sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?",
+    key: revokeSession.reference.key) == "uploaded_unbound")
 }
 
 @Test
