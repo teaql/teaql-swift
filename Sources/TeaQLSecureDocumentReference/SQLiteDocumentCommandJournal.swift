@@ -106,14 +106,18 @@ public struct SQLiteDocumentCommandJournal: Sendable {
     return try encoder.encode(values)
   }
 
-  private func prepared(_ command: SubmittedDocumentCommand) throws -> (String, SubmittedDocumentCommand) {
+  private func prepared(_ command: SubmittedDocumentCommand) throws -> (String, String, SubmittedDocumentCommand) {
     guard text(command.businessID, maximum: 16_384),
       text(command.documentToken, maximum: 256_000),
       text(command.commandID, maximum: 256) else { throw failure("DOCUMENT_COMMAND_INVALID") }
     let body = try encoded(command.body)
     let frozen = try JSONDecoder().decode(TeaQLValue.self, from: body)
-    var parts = [command.businessID, command.documentToken,
+    var legacyParts = [command.businessID, command.documentToken,
       command.commandID, String(decoding: body, as: UTF8.self)]
+    var canonical = Data(try strings([command.businessID, command.documentToken,
+      command.commandID]).dropLast())
+    canonical.append(0x2c)
+    canonical.append(body)
     if let selections = command.blobSelections {
       guard selections.count <= 100 else { throw failure("DOCUMENT_COMMAND_INVALID") }
       for selection in selections {
@@ -126,12 +130,17 @@ public struct SQLiteDocumentCommandJournal: Sendable {
         }
       }
       let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-      parts.append(String(decoding: try encoder.encode(selections), as: UTF8.self))
+      let selectionBytes = try encoder.encode(selections)
+      legacyParts.append(String(decoding: selectionBytes, as: UTF8.self))
+      canonical.append(0x2c)
+      canonical.append(selectionBytes)
     }
-    // Four-element command digests remain valid for prior receipts.
-    let total = try strings(parts)
-    guard total.count <= 256_000 else { throw failure("DOCUMENT_COMMAND_INVALID") }
-    return (hash(total), SubmittedDocumentCommand(businessID: command.businessID,
+    canonical.append(0x5d)
+    let legacy = try strings(legacyParts)
+    guard canonical.count <= 256_000, legacy.count <= 256_000 else {
+      throw failure("DOCUMENT_COMMAND_INVALID")
+    }
+    return (hash(canonical), hash(legacy), SubmittedDocumentCommand(businessID: command.businessID,
       documentToken: command.documentToken, commandID: command.commandID, body: frozen,
       blobSelections: command.blobSelections))
   }
@@ -195,7 +204,7 @@ public struct SQLiteDocumentCommandJournal: Sendable {
       async throws -> DocumentCommandReceipt
   ) async throws -> (DocumentCommandReceipt, Bool) {
     let scopeKey = try scopeHash(scope)
-    let (requestHash, frozen) = try prepared(command)
+    let (requestHash, legacyHash, frozen) = try prepared(command)
     return try await graph.withPhysicalSQL(session) { sql in
       func currentActor() async throws -> String {
         do { return try actorHash(await authority(graph, scope, sql)) }
@@ -213,7 +222,8 @@ public struct SQLiteDocumentCommandJournal: Sendable {
       } catch { throw failure("DOCUMENT_CATALOG_FAILED") }
       guard rows.count <= 1 else { throw failure("DOCUMENT_CATALOG_FAILED") }
       if let row = rows.first {
-        guard row["request_hash"]?.stringValue == requestHash else {
+        guard let storedHash = row["request_hash"]?.stringValue,
+          storedHash == requestHash || storedHash == legacyHash else {
           throw failure("DOCUMENT_REPLAY_CONFLICT")
         }
         guard let previous = row["previous_revision"]?.int64Value,

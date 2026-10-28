@@ -1,3 +1,4 @@
+import Crypto
 import Foundation
 import TeaQLCore
 import TeaQLSecureDocumentReference
@@ -86,6 +87,20 @@ func swiftSQLiteDocumentJournalCommitsAndReplaysWithCurrentAuthority() async thr
   let replay = try await apply(command)
   #expect(replay.1 && replay.0 == first.0)
   #expect(await mutations.current() == 1)
+  let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+  let bodyBytes = try encoder.encode(command.body)
+  let oldRequest = try encoder.encode([command.businessID, command.documentToken,
+    command.commandID, String(decoding: bodyBytes, as: UTF8.self)])
+  let oldHash = SHA256.hash(data: oldRequest).map { String(format: "%02x", $0) }.joined()
+  try await context.executeGraphSave(comment: "restore historical document receipt hash") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE teaql_document_command_receipt SET request_hash=?",
+        parameters: [.string(oldHash)])
+    }
+  }
+  let historicalReplay = try await apply(command)
+  #expect(historicalReplay.1 && historicalReplay.0 == first.0)
+  #expect(await mutations.current() == 1)
   do {
     _ = try await apply(SubmittedDocumentCommand(businessID: command.businessID,
       documentToken: command.documentToken, commandID: command.commandID,
@@ -134,4 +149,95 @@ func swiftSQLiteDocumentJournalRejectsMissingReplayKey() async throws {
   try await journal.installSchema(context)
   do { try await journal.validateSchema(context); Issue.record("missing replay key accepted") }
   catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_SCHEMA_MISSING") }
+}
+
+@Test
+func swiftSQLiteDocumentJournalCrossLanguagePeer() async throws {
+  let environment = ProcessInfo.processInfo.environment
+  guard let database = environment["TEAQL_JOURNAL_INTEROP_DB"],
+    let mode = environment["TEAQL_JOURNAL_INTEROP_MODE"] else { return }
+  guard mode == "write" || mode == "replay" else { throw ReferenceError("invalid peer mode") }
+  let storage = try SQLiteDataService(path: database)
+  let context = UserContext(queryExecutor: storage, mutationExecutor: storage,
+    requestPolicy: RequestPolicy { $0 })
+  let journal = SQLiteDocumentCommandJournal()
+  try await context.executeGraphSave(comment: "prepare cross-language document fixture") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("""
+        CREATE TABLE IF NOT EXISTS journal_business (id INTEGER PRIMARY KEY,value TEXT NOT NULL)
+        """, parameters: [])
+      _ = try await sql.execute("""
+        CREATE TABLE IF NOT EXISTS document_permission
+        (subject TEXT PRIMARY KEY,can_edit INTEGER NOT NULL)
+        """, parameters: [])
+      _ = try await sql.execute("INSERT OR IGNORE INTO document_permission VALUES ('alice',1)",
+        parameters: [])
+    }
+  }
+  try await journal.installSchema(context)
+  try await journal.validateSchema(context)
+  let scope = ReferenceDocumentScope(documentID: "doc-1", purpose: "edit-order",
+    aggregateType: "Order", aggregateID: 10, aggregateRevision: 4)
+  let principal = TrustedReferencePrincipal(authenticationRealm: "oidc", subject: "alice",
+    domainRootType: "Merchant", domainRootID: 7)
+  let selection = DocumentBlobSelectionSubmission(token: "tqs1.fixture", targetEntity: "OrderItem",
+    canonicalField: "attachment", kind: "EXISTING_ROW", targetKey: "item:0")
+  let command = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: "tqd2.fixture",
+    commandID: "command-1", body: .object(["quantity": .int(3), "note": .string("ok")]),
+    blobSelections: [selection])
+  let mutations = JournalMutationCount()
+  func apply(_ submitted: SubmittedDocumentCommand) async throws -> (DocumentCommandReceipt, Bool) {
+    try await context.executeGraphSave(comment: "cross-language document journal") { graph, session in
+      try await journal.applyInGraph(graph, session: session, scope: scope, command: submitted,
+        authority: { _, _, sql in
+          let rows = try await sql.query("SELECT can_edit FROM document_permission WHERE subject=?",
+            parameters: [.string("alice")])
+          guard rows.count == 1, rows[0]["can_edit"]?.int64Value == 1 else {
+            throw ReferenceError("revoked")
+          }
+          return principal
+        }, mutate: { sql, frozen in
+          await mutations.increment()
+          guard mode == "write", frozen.body == command.body else {
+            throw ReferenceError("foreign replay called mutation")
+          }
+          let affected = try await sql.execute("INSERT INTO journal_business(id,value) VALUES (?,?)",
+            parameters: [.int(1), .string("accepted")])
+          guard affected == 1 else { throw ReferenceError("business insert failed") }
+          return DocumentCommandReceipt(previousRevision: 4, newRevision: 5,
+            response: "tqd2.accepted")
+        })
+    }
+  }
+  let (receipt, replayed) = try await apply(command)
+  #expect(receipt == DocumentCommandReceipt(previousRevision: 4, newRevision: 5,
+    response: "tqd2.accepted"))
+  #expect(replayed == (mode == "replay"))
+  let count = try await context.executeGraphSave(comment: "inspect cross-language business row") {
+    graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      let rows = try await sql.query("SELECT COUNT(*) AS n FROM journal_business", parameters: [])
+      return rows[0]["n"]?.int64Value
+    }
+  }
+  #expect(count == 1)
+  #expect(await mutations.current() == (mode == "write" ? 1 : 0))
+  if mode == "replay" {
+    let changed = SubmittedDocumentCommand(businessID: command.businessID,
+      documentToken: command.documentToken, commandID: command.commandID,
+      body: .object(["quantity": .int(4), "note": .string("ok")]),
+      blobSelections: [selection])
+    do { _ = try await apply(changed); Issue.record("changed command replay accepted") }
+    catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_REPLAY_CONFLICT") }
+    try await context.executeGraphSave(comment: "revoke cross-language document permission") {
+      graph, session in
+      try await graph.withPhysicalSQL(session) { sql in
+        _ = try await sql.execute("UPDATE document_permission SET can_edit=0 WHERE subject='alice'",
+          parameters: [])
+      }
+    }
+    do { _ = try await apply(command); Issue.record("revoked actor replay accepted") }
+    catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_AUTHORIZATION_REQUIRED") }
+  }
+  print("PASS Swift document journal \(mode)")
 }
