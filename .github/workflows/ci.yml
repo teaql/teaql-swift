@@ -25,6 +25,12 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+      - name: Test optional S3 package
+        working-directory: ObjectStorageS3
+        run: swift test --jobs 2
+      - name: Build optional S3 Release product
+        working-directory: ObjectStorageS3
+        run: swift build -c release --jobs 2
       - name: Compile libraries for iOS Simulator
         if: runner.os == 'macOS'
         run: >-
