@@ -232,6 +232,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
     throw ReferenceError("DOCUMENT_COMMAND_INVALID")
   }
   let selected = environment["TEAQL_DOCUMENT_SERVICE_SELECTION"] == "1"
+  let child = environment["TEAQL_DOCUMENT_SERVICE_CHILD"] == "1"
   let database = try SQLiteDataService(path: path)
   let context = UserContext(queryExecutor: database, mutationExecutor: database,
     requestPolicy: RequestPolicy { $0 })
@@ -251,7 +252,8 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
   let journal = SQLiteDocumentCommandJournal()
   try await journal.installSchema(context)
   try await journal.validateSchema(context)
-  let host = SQLiteOrderHost(blobEnabled: selected)
+  let host = SQLiteOrderHost(blobEnabled: selected, childEnabled: child)
+  if child && mode == "reject" { await host.setWrongResolve(true) }
   let service = SQLiteContextBoundDocumentService(actor: context, module: module,
     journal: journal, host: host)
   if mode == "open" {
@@ -267,12 +269,18 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       let principal = try await host.principal(context: context)
       let issued = try runtime.consumeBoundDocumentSnapshot(principal,
         token: opened.documentToken, aggregateType: "Order", purpose: "edit-order").document
-      for (commandID, key, suffix) in [
+      let fixtures = child ? [
+        ("command-child-1", "blob_C", ".selection"),
+        ("command-wrong", "blob_C", ".missing"),
+      ] : [
         ("command-1", "blob_A", ".selection"),
         ("command-missing", "blob_missing", ".missing"),
-      ] {
-        let target = BlobSelectionTarget(scope: issued.snapshot.scope, targetEntity: "Order",
-          canonicalField: "attachment", kind: "EXISTING_ROW", targetKey: "order:10",
+      ]
+      for (commandID, key, suffix) in fixtures {
+        let target = BlobSelectionTarget(scope: issued.snapshot.scope,
+          targetEntity: child ? "OrderLine" : "Order",
+          canonicalField: "attachment", kind: child ? "NEW_CLIENT_KEY" : "EXISTING_ROW",
+          targetKey: child ? "client-line-1" : "order:10",
           commandID: commandID)
         let selection = try runtime.issueBlobSelection(principal,
           documentToken: opened.documentToken,
@@ -289,11 +297,14 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       ? [DocumentBlobSelectionSubmission(token: try String(
           contentsOf: URL(fileURLWithPath: tokenPath +
             (mode == "reject" ? ".missing" : ".selection")), encoding: .utf8),
-          targetEntity: "Order", canonicalField: "attachment", kind: "EXISTING_ROW",
-          targetKey: "order:10")]
+          targetEntity: child ? "OrderLine" : "Order", canonicalField: "attachment",
+          kind: child ? "NEW_CLIENT_KEY" : "EXISTING_ROW",
+          targetKey: child ? "client-line-1" : "order:10")]
       : nil
     let command = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
-      commandID: mode == "reject" ? "command-missing" : "command-1",
+      commandID: child
+        ? mode == "reject" ? "command-wrong" : "command-child-1"
+        : mode == "reject" ? "command-missing" : "command-1",
       body: .object(["quantity": .int(3)]),
       blobSelections: selections)
     func accept(_ input: SubmittedDocumentCommand) async throws -> AcceptedDocument {
@@ -304,8 +315,9 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       do {
         _ = try await accept(command)
         throw ReferenceError("missing Blob selection accepted")
-      } catch let error as ReferenceError where error.code == "BLOB_BIND_DENIED" { }
-      catch let error as TeaQLError where error == .execution("BLOB_BIND_DENIED") { }
+      } catch let error as ReferenceError where error.code ==
+          (child ? "DOCUMENT_PROJECTION_VIOLATION" : "BLOB_BIND_DENIED") { }
+      catch let error as TeaQLError where !child && error == .execution("BLOB_BIND_DENIED") { }
       print("PASS Swift document service reject")
       return
     }
@@ -326,7 +338,8 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
     if mode == "replay" {
       do {
         let changed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
-          commandID: "command-1", body: .object(["quantity": .int(4)]),
+          commandID: child ? "command-child-1" : "command-1",
+          body: .object(["quantity": .int(4)]),
           blobSelections: selections)
         _ = try await accept(changed)
         throw ReferenceError("changed replay accepted")
@@ -334,7 +347,8 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       if selected {
         do {
           let removed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
-            commandID: "command-1", body: .object(["quantity": .int(3)]))
+            commandID: child ? "command-child-1" : "command-1",
+            body: .object(["quantity": .int(3)]))
           _ = try await accept(removed)
           throw ReferenceError("removed selection replay accepted")
         } catch let error as ReferenceError where error.code == "DOCUMENT_REPLAY_CONFLICT" { }
