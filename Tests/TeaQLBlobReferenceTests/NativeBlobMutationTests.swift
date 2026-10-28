@@ -76,10 +76,11 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
   try await context.ensureSchema(RuntimeModule(name: "native-blob-test", entities: [asset, control]))
   let first = try BlobRef("blob_native_first")
   let second = try BlobRef("blob_native_second")
+  let ledgerRef = try BlobRef("blob_native_ledger")
   try await context.executeGraphSave(comment: "install native Blob catalog") { actor, session in
     try await module.catalog.installSchema(actor, session: session)
     try await actor.withPhysicalSQL(session) { sql in
-      for key in [first.key, second.key] {
+      for key in [first.key, second.key, ledgerRef.key] {
         _ = try await sql.execute("""
           INSERT INTO teaql_blob_catalog
             (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,
@@ -198,6 +199,63 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
       #expect(rows.first?["key"] == .null)
       #expect(rows.first?["version"] == .int(4))
       #expect(rows.first?["row_version"] == .int(-4))
+    }
+  }
+
+  func saveAllocated(_ abort: Bool) async throws -> Int64 {
+    let ledger = EntityRoot()
+    let provisional = EntityKey(entity: "Asset", id: .int(-1))
+    ledger.markAsNew(provisional)
+    ledger.set(provisional, field: "document", value: .blobRef(ledgerRef))
+    return try await context.executeGraphSave(comment: "save allocated ledger Blob") { actor, session in
+      let result = try await actor.execute(Mutation(kind: .create, entity: asset,
+        values: ledger.change(provisional), auditReason: session.intent.comment),
+        ledgerRoot: ledger, ledgerKey: provisional)
+      guard case .int(let id) = result.generatedValues["id"], id > 0 else {
+        throw TeaQLError.execution("allocated Blob ID missing")
+      }
+      let actual = EntityKey(entity: "Asset", id: .int(id))
+      try ledger.rekey(provisional, to: actual)
+      #expect(ledger.isNew(actual))
+      #expect(ledger.change(actual)["document"] == .blobRef(ledgerRef))
+      if abort { throw TeaQLError.execution("outer owner rejected") }
+      return id
+    }
+  }
+  do {
+    _ = try await saveAllocated(true)
+    Issue.record("outer owner rejection committed the Blob")
+  } catch { #expect(error as? TeaQLError == .execution("outer owner rejected")) }
+  try await context.executeGraphSave(comment: "inspect allocated rollback") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let business = try await sql.query(
+        "SELECT COUNT(*) AS n FROM native_blob_asset WHERE document=?",
+        parameters: [.string(ledgerRef.key)])
+      let bindings = try await sql.query(
+        "SELECT COUNT(*) AS n FROM teaql_blob_binding WHERE key=?",
+        parameters: [.string(ledgerRef.key)])
+      let catalog = try await sql.query(
+        "SELECT status FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(ledgerRef.key)])
+      #expect(business.first?["n"] == .int(0))
+      #expect(bindings.first?["n"] == .int(0))
+      #expect(catalog.first?["status"] == .string("uploaded_unbound"))
+    }
+  }
+  let committedID = try await saveAllocated(false)
+  try await context.executeGraphSave(comment: "inspect allocated commit") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let business = try await sql.query(
+        "SELECT document FROM native_blob_asset WHERE id=?", parameters: [.int(committedID)])
+      let bindings = try await sql.query(
+        "SELECT key FROM teaql_blob_binding WHERE entity_id=?",
+        parameters: [.string(String(committedID))])
+      let catalog = try await sql.query(
+        "SELECT status FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(ledgerRef.key)])
+      #expect(business.first?["document"] == .string(ledgerRef.key))
+      #expect(bindings.first?["key"] == .string(ledgerRef.key))
+      #expect(catalog.first?["status"] == .string("available"))
     }
   }
 
