@@ -251,6 +251,46 @@ private func uploadCatalogValue(_ context: UserContext, sql: String,
 }
 
 @Test
+func swiftLegacyUploadRequestHashReplaysAfterNumericABIMigration() async throws {
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 })
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install Blob upload schema") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let service = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true),
+    verifier: FixturePDFVerifier(), maximumBytes: 10_000)
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  let input = BlobUploadInput(fileName: "sample.pdf", declaredSize: 42,
+    declaredContentType: "application/pdf")
+  let old = try await service.begin(actor, target: target, input: input,
+    replayKey: "legacy-request")
+  let legacyParts = ["Asset", "1", "file", "sample.pdf", "42", "application/pdf"]
+  let legacyHash = SHA256.hash(data: try JSONEncoder().encode(legacyParts))
+    .map { String(format: "%02x", $0) }.joined()
+  try await actor.executeGraphSave(comment: "simulate prior Swift lease") { graph, session in
+    try await graph.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE teaql_blob_upload SET request_hash=? WHERE upload_id=?",
+        parameters: [.string(legacyHash), .string(old.uploadID)])
+    }
+  }
+  let replay = try await service.begin(actor, target: target, input: input,
+    replayKey: "legacy-request")
+  #expect(replay.uploadID == old.uploadID)
+  #expect(replay.reference == old.reference)
+  let fresh = try await service.begin(actor, target: target, input: input,
+    replayKey: "numeric-request")
+  let numericParts: [Any] = ["Asset", "1", "file", "sample.pdf", Int64(42), "application/pdf"]
+  let numericHash = SHA256.hash(data: try JSONSerialization.data(withJSONObject: numericParts,
+    options: [.withoutEscapingSlashes])).map { String(format: "%02x", $0) }.joined()
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT request_hash FROM teaql_blob_upload WHERE key=?", key: fresh.reference.key)
+    == numericHash)
+}
+
+@Test
 func swiftSQLiteUploadSerializesTwoConnectionsAcrossFileAndParserIO() async throws {
   let parent = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-upload-owner-\(UUID().uuidString)", isDirectory: true)

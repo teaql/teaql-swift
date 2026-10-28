@@ -219,9 +219,15 @@ public struct SQLiteBlobUploadService: Sendable {
     let (normalized, ext) = try normalize(input)
     guard Self.validText(replayKey, maximum: 256) else { throw Self.fail("BLOB_REFERENCE_INVALID") }
     let scope = try await current(actor, target: target, action: "Begin", input: normalized)
-    let parts = [target.entity, target.entityID, target.field, normalized.fileName,
+    let parts: [Any] = [target.entity, target.entityID, target.field, normalized.fileName,
+      normalized.declaredSize, normalized.declaredContentType ?? ""]
+    let requestHash = Self.hex(SHA256.hash(data: try JSONSerialization.data(
+      withJSONObject: parts, options: [.withoutEscapingSlashes])))
+    // Existing Swift leases hashed the size as a JSON string. Accept those
+    // rows on replay, while new leases use the numeric cross-runtime ABI.
+    let legacyParts = [target.entity, target.entityID, target.field, normalized.fileName,
       String(normalized.declaredSize), normalized.declaredContentType ?? ""]
-    let requestHash = Self.hex(SHA256.hash(data: try JSONEncoder().encode(parts)))
+    let legacyHash = Self.hex(SHA256.hash(data: try JSONEncoder().encode(legacyParts)))
     return try await actor.executeGraphSave(comment: "begin Blob upload") { graph, session in
       try await graph.withPhysicalSQL(session) { sql in
         _ = try await current(graph, target: target, action: "Begin", input: normalized,
@@ -234,7 +240,8 @@ public struct SQLiteBlobUploadService: Sendable {
         catch { throw Self.fail("BLOB_CATALOG_FAILED") }
         guard rows.count <= 1 else { throw Self.fail("BLOB_CATALOG_FAILED") }
         if let old = rows.first {
-          guard old["request_hash"]?.stringValue == requestHash else {
+          guard old["request_hash"]?.stringValue == requestHash ||
+            old["request_hash"]?.stringValue == legacyHash else {
             throw Self.fail("BLOB_IDEMPOTENCY_CONFLICT")
           }
           _ = try await current(graph, target: target, action: "Begin", input: normalized,
