@@ -235,11 +235,13 @@ final class BlobUploadS3Tests: XCTestCase {
       options: [.s3Disable100Continue])
     let provider = try S3ObjectStorage(service: service, bucket: bucket)
     let database = try SQLiteDataService(path: ":memory:")
+    let blobSpec = try BlobFieldSpec(entity: "Asset", field: "file",
+      extensions: [extensionName], nullable: true, policyProfile: "default")
     let asset = EntityDescriptor(name: "Asset", table: "asset", properties: [
       PropertyDescriptor(name: "id", type: .int, isID: true),
       PropertyDescriptor(name: "version", type: .int, isVersion: true),
       PropertyDescriptor(name: "name", type: .string),
-      PropertyDescriptor(name: "file", type: .string, nullable: true),
+      PropertyDescriptor(name: "file", type: .blobRef, nullable: true, blobSpec: blobSpec),
     ])
     let context = UserContext(queryExecutor: database, mutationExecutor: database,
       requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
@@ -354,16 +356,39 @@ final class BlobUploadS3Tests: XCTestCase {
       let catalogContentType = try await s3UploadCatalogValue(context,
         sql: "SELECT content_type FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
       XCTAssertEqual(catalogContentType, contentType)
-      try await context.executeGraphSave(comment: "bind S3 Blob in business graph") { actor, session in
+      let module = try BlobReferenceModule(catalog: catalog, upload: upload,
+        readAuthorization: S3ReadPermission(allowed: true),
+        bindingAuthorization: S3BindingPermission(reference: reference), maximumURLSeconds: 3)
+      let modeled = try module.install(on: context)
+      try await module.ready(context: modeled)
+      do {
+        _ = try await modeled.executeGraphSave(comment: "reject S3 Blob outer owner") { actor, session -> Int in
+          _ = try await actor.execute(Mutation(kind: .create, entity: asset,
+            values: ["id": .int(1), "name": .string("rolled back"),
+              "file": .blobRef(reference)], auditReason: session.intent.comment))
+          throw TeaQLError.execution("S3 outer owner rejected")
+        }
+        XCTFail("S3 Blob outer owner rejection committed")
+      } catch let error as TeaQLError {
+        XCTAssertEqual(error, .execution("S3 outer owner rejected"))
+      }
+      let rolledBackBusiness = try await s3UploadCatalogValue(context,
+        sql: "SELECT CAST(COUNT(*) AS TEXT) FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
+      let rolledBackBinding = try await s3UploadCatalogValue(context,
+        sql: "SELECT CAST(COUNT(*) AS TEXT) FROM teaql_blob_binding WHERE scope='f4-s3-upload' AND entity='Asset' AND entity_id=? AND field='file'", key: "1")
+      let rolledBackStatus = try await s3UploadCatalogValue(context,
+        sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: reference.key)
+      XCTAssertEqual(rolledBackBusiness, "0")
+      XCTAssertEqual(rolledBackBinding, "0")
+      XCTAssertEqual(rolledBackStatus, "uploaded_unbound")
+      let rollbackHead = try await storage.head(try XCTUnwrap(objectKey))
+      XCTAssertNotNil(rollbackHead)
+      print("PASS Swift \(format) native module outer owner rollback")
+      try await modeled.executeGraphSave(comment: "bind S3 Blob in business graph") { actor, session in
         _ = try await actor.execute(Mutation(kind: .create, entity: asset,
           values: ["id": .int(1), "name": .string("document"),
-            "file": .string(reference.key)],
+            "file": .blobRef(reference)],
           auditReason: session.intent.comment))
-        let bound = try await catalog.bind(actor, session: session,
-          change: BlobBindingChange(target: BlobBindingTarget(entity: "Asset", entityID: "1",
-            field: "file"), next: reference, expectedVersion: 0, nextVersion: 1,
-            action: "Create"), authorization: S3BindingPermission(reference: reference))
-        XCTAssertEqual(bound, 1)
       }
       let businessName = try await s3UploadCatalogValue(context,
         sql: "SELECT name FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
@@ -374,11 +399,12 @@ final class BlobUploadS3Tests: XCTestCase {
         sql: "SELECT file FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
       XCTAssertEqual(businessFile, reference.key)
       XCTAssertEqual(boundStatus, "available")
+      let boundVersion = try await s3UploadCatalogValue(context,
+        sql: "SELECT CAST(version AS TEXT) FROM teaql_blob_binding WHERE scope='f4-s3-upload' AND entity='Asset' AND entity_id=? AND field='file'", key: "1")
+      XCTAssertEqual(boundVersion, "1")
 
-      let permitted = context.withResponseGraphAuthorizer(
+      let permitted = modeled.withResponseGraphAuthorizer(
         S3ViewAuthorizer(reference: reference, version: 1))
-        .withBlobResponseContributor(try SQLiteBlobResponseContributor(catalog: catalog,
-          authorization: S3ReadPermission(allowed: true), maximumURLSeconds: 3))
       let options = ViewOptions(mode: .ordinary, businessOutcome: .readOnly,
         expiresAt: Date().addingTimeInterval(60))
       let prepared = try await ViewPreparationService().prepare(context: permitted,
@@ -398,7 +424,8 @@ final class BlobUploadS3Tests: XCTestCase {
         contentType)
       XCTAssertTrue((response as? HTTPURLResponse)?
         .value(forHTTPHeaderField: "Content-Disposition")?.contains(filename) == true)
-      let revokedRead = permitted.withBlobResponseContributor(
+      let revokedRead = context.withResponseGraphAuthorizer(
+        S3ViewAuthorizer(reference: reference, version: 1)).withBlobResponseContributor(
         try SQLiteBlobResponseContributor(catalog: catalog,
           authorization: S3ReadPermission(allowed: false), maximumURLSeconds: 3))
       do {
@@ -418,15 +445,10 @@ final class BlobUploadS3Tests: XCTestCase {
         XCTAssertEqual(error.businessState, "committed")
       }
       if env["TEAQL_S3_TEST_END_TO_END_GC"] == "1" {
-        try await context.executeGraphSave(comment: "unbind S3 Blob in business graph") { actor, session in
+        try await modeled.executeGraphSave(comment: "unbind S3 Blob in business graph") { actor, session in
           _ = try await actor.execute(Mutation(kind: .update, entity: asset, id: .int(1),
             values: ["file": .null], expectedVersion: 1,
             auditReason: session.intent.comment))
-          let cleared = try await catalog.bind(actor, session: session,
-            change: BlobBindingChange(target: BlobBindingTarget(entity: "Asset", entityID: "1",
-              field: "file"), next: nil, expectedVersion: 1, nextVersion: 2,
-              action: "Update"), authorization: S3BindingPermission(reference: reference))
-          XCTAssertEqual(cleared, 2)
         }
         let clearedFile = try await s3UploadCatalogValue(context,
           sql: "SELECT file FROM asset WHERE CAST(id AS TEXT) = ?", key: "1")
@@ -434,6 +456,9 @@ final class BlobUploadS3Tests: XCTestCase {
         let bindingKey = try await s3UploadCatalogValue(context,
           sql: "SELECT key FROM teaql_blob_binding WHERE scope='f4-s3-upload' AND entity='Asset' AND entity_id=? AND field='file'", key: "1")
         XCTAssertNil(bindingKey)
+        let clearedVersion = try await s3UploadCatalogValue(context,
+          sql: "SELECT CAST(version AS TEXT) FROM teaql_blob_binding WHERE scope='f4-s3-upload' AND entity='Asset' AND entity_id=? AND field='file'", key: "1")
+        XCTAssertEqual(clearedVersion, "2")
         do {
           _ = try await ViewPreparationService().prepare(context: permitted,
             result: "unused", options: options)
