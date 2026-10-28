@@ -797,6 +797,136 @@ func swiftSQLiteFileOfficeUploadRequiresFullDecode() async throws {
 }
 
 #if os(Linux)
+private func pdfVerifier(maximumPages: Int = 100, maximumRenderedBytes: Int = 4 * 1024 * 1024,
+                         concurrentVerifications: Int = 2) throws -> PopplerBlobContentVerifier {
+  try PopplerBlobContentVerifier(infoPath: "/usr/bin/pdfinfo",
+    renderPath: "/usr/bin/pdftoppm", limitPath: "/usr/bin/prlimit",
+    maximumInputBytes: 100_000, maximumPages: maximumPages,
+    maximumRenderedBytes: maximumRenderedBytes,
+    concurrentVerifications: concurrentVerifications)
+}
+
+@Test
+func swiftRealPDFVerifierRendersAllPagesAndRejectsInvalidFiles() async throws {
+  let data = try imageFixture("pdf")
+  let verifier = try pdfVerifier()
+  try await verifier.validateReady()
+  let verified = try await verifier.verify(reader: ObjectDataReader(data), extension: "pdf",
+    maximumBytes: Int64(data.count))
+  #expect(verified.sizeBytes == Int64(data.count))
+  #expect(verified.sha256 == "4b6a645a3ed4736baaa092cffa6e06fd3176866f589edd2b748565ad6487731b")
+  #expect(verified.contentType == "application/pdf")
+  var trailing = data; trailing.append(0x78)
+  for invalid in [Data(data.dropLast(2)), trailing,
+                  Data("%PDF-1.7\nstartxref\n0\n%%EOF".utf8)] {
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(invalid), extension: "pdf",
+        maximumBytes: Int64(invalid.count))
+      Issue.record("malformed PDF accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  }
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(data), extension: "docx",
+      maximumBytes: Int64(data.count))
+    Issue.record("wrong PDF extension accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(data), extension: "pdf",
+      maximumBytes: Int64(data.count - 1))
+    Issue.record("oversize PDF accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_SIZE_EXCEEDED")) }
+  do {
+    _ = try await pdfVerifier(maximumRenderedBytes: 1).verify(
+      reader: ObjectDataReader(data), extension: "pdf", maximumBytes: Int64(data.count))
+    Issue.record("render output cap bypassed")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  let url = try #require(Bundle.module.url(forResource: "two-page", withExtension: "pdf",
+    subdirectory: "fixtures"))
+  let two = try Data(contentsOf: url)
+  #expect(try await verifier.verify(reader: ObjectDataReader(two), extension: "pdf",
+    maximumBytes: Int64(two.count)).sizeBytes == Int64(two.count))
+  do {
+    _ = try await pdfVerifier(maximumPages: 1).verify(reader: ObjectDataReader(two),
+      extension: "pdf", maximumBytes: Int64(two.count))
+    Issue.record("page cap bypassed")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+}
+
+@Test
+func swiftRealPDFVerifierChecksBusyReadinessAndComposite() async throws {
+  let data = try imageFixture("pdf")
+  let verifier = try pdfVerifier(concurrentVerifications: 1)
+  let slow = PausedUploadReader(data)
+  let first = Task { try await verifier.verify(reader: slow, extension: "pdf",
+    maximumBytes: Int64(data.count)) }
+  await slow.entered.wait()
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(data), extension: "pdf",
+      maximumBytes: Int64(data.count))
+    Issue.record("busy PDF verifier admitted another upload")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_VERIFICATION_BUSY")) }
+  await slow.release.release()
+  #expect(try await first.value.sizeBytes == Int64(data.count))
+  let missing = try PopplerBlobContentVerifier(infoPath: "/missing/pdfinfo",
+    renderPath: "/usr/bin/pdftoppm", limitPath: "/usr/bin/prlimit")
+  do { try await missing.validateReady(); Issue.record("missing PDF tool accepted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_CAPABILITY_MISSING")) }
+  let composite = try CompositeBlobContentVerifier(routes: [
+    BlobVerifierRoute(extensions: ["jpg"], verifier: StbImageBlobContentVerifier()),
+    BlobVerifierRoute(extensions: ["pdf"], verifier: verifier),
+  ])
+  try await composite.validateReady()
+  #expect(try await composite.verify(reader: ObjectDataReader(data), extension: "pdf",
+    maximumBytes: Int64(data.count)).contentType == "application/pdf")
+}
+
+@Test
+func swiftSQLiteFilePDFUploadRequiresFullDecode() async throws {
+  let root = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-pdf-upload-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: root) }
+  let store = try FileObjectStorage(root: root.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install PDF upload schema") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let service = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true,
+      extensions: ["pdf"]), verifier: pdfVerifier(), maximumBytes: 100_000)
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  let data = try imageFixture("pdf")
+  let good = try await service.begin(actor, target: target,
+    input: BlobUploadInput(fileName: "sample.pdf", declaredSize: Int64(data.count)),
+    replayKey: "pdf-valid")
+  _ = try await service.write(actor, uploadID: good.uploadID, source: ObjectDataReader(data))
+  #expect(try await service.complete(actor, uploadID: good.uploadID) == good.reference)
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: good.reference.key)
+    == "uploaded_unbound")
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT content_type FROM teaql_blob_catalog WHERE key = ?", key: good.reference.key)
+    == "application/pdf")
+  let truncated = Data(data.dropLast(12))
+  let bad = try await service.begin(actor, target: target,
+    input: BlobUploadInput(fileName: "broken.pdf", declaredSize: Int64(truncated.count)),
+    replayKey: "pdf-truncated")
+  _ = try await service.write(actor, uploadID: bad.uploadID,
+    source: ObjectDataReader(truncated))
+  do { _ = try await service.complete(actor, uploadID: bad.uploadID)
+    Issue.record("truncated PDF upload promoted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: bad.reference.key)
+    == "initiated")
+}
+
 private func mediaVerifier(maximumFrames: Int = 100_000, maximumVideoPixels: Int64 = 16_000_000,
                            concurrentVerifications: Int = 2) throws -> FfmpegBlobContentVerifier {
   try FfmpegBlobContentVerifier(probePath: "/usr/bin/ffprobe", decodePath: "/usr/bin/ffmpeg",

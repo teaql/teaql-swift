@@ -119,6 +119,15 @@ final class BlobUploadS3Tests: XCTestCase {
     try await runBlobUpload(format: "pdf")
   }
 
+  #if os(Linux)
+  func testProductionPDFBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_PDF"] == "1" else {
+      throw XCTSkip("explicit production PDF S3 gate required")
+    }
+    try await runBlobUpload(format: "production-pdf")
+  }
+  #endif
+
   func testRealJPEGBlobUploadThroughS3() async throws {
     guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_IMAGE"] == "1" else {
       throw XCTSkip("explicit real-image S3 gate required")
@@ -157,6 +166,7 @@ final class BlobUploadS3Tests: XCTestCase {
   #endif
 
   private func runBlobUpload(format: String) async throws {
+    let extensionName = format == "production-pdf" ? "pdf" : format
     let env = ProcessInfo.processInfo.environment
     guard env["TEAQL_S3_TEST_BLOB_UPLOAD"] == "1" else {
       throw XCTSkip("explicit S3-compatible Blob upload gate required")
@@ -202,20 +212,28 @@ final class BlobUploadS3Tests: XCTestCase {
         throw XCTSkip("Linux real-media gate required")
         #endif
       }
+      else if format == "production-pdf" {
+        #if os(Linux)
+        decoder = try PopplerBlobContentVerifier(infoPath: "/usr/bin/pdfinfo",
+          renderPath: "/usr/bin/pdftoppm", limitPath: "/usr/bin/prlimit")
+        #else
+        throw XCTSkip("Linux production PDF gate required")
+        #endif
+      }
       else { decoder = S3FixturePDFVerifier(calls: S3VerifierCalls()) }
       let upload = try SQLiteBlobUploadService(
         authorization: S3UploadPermission(allowed: true,
-          fileExtension: format),
+          fileExtension: extensionName),
         verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 100_000)
       let data: Data
       if format != "pdf" {
-        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: format,
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: extensionName,
           subdirectory: "fixtures"))
         data = try Data(contentsOf: url)
       } else {
         data = Data("%PDF-1.7\nreal S3 Blob upload\n%%EOF".utf8)
       }
-      let filename = format == "pdf" ? "report.pdf" : "sample.\(format)"
+      let filename = format == "pdf" ? "report.pdf" : "sample.\(extensionName)"
       let contentType = format == "jpg" ? "image/jpeg" : format == "mp3" ? "audio/mpeg"
         : format == "mp4" ? "video/mp4" : format == "docx"
         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -233,7 +251,7 @@ final class BlobUploadS3Tests: XCTestCase {
       XCTAssertEqual(written, Int64(data.count))
       let revoked = try SQLiteBlobUploadService(
         authorization: S3UploadPermission(allowed: false,
-          fileExtension: format),
+          fileExtension: extensionName),
         verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 100_000)
       do { _ = try await revoked.complete(context, uploadID: session.uploadID)
         XCTFail("revoked S3 Blob confirmation accepted") }
