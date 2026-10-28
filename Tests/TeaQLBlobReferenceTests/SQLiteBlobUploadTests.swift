@@ -797,6 +797,154 @@ func swiftSQLiteFileOfficeUploadRequiresFullDecode() async throws {
 }
 
 #if os(Linux)
+private func legacyOfficeVerifier(scratch: String,
+                                  maximumConvertedBytes: Int64 = 10 * 1024 * 1024,
+                                  concurrentVerifications: Int = 2) throws
+  -> LegacyOfficeBlobContentVerifier {
+  try LegacyOfficeBlobContentVerifier(sofficePath: "/usr/bin/soffice",
+    bwrapPath: "/usr/bin/bwrap", limitPath: "/usr/bin/prlimit", scratchRoot: scratch,
+    maximumInputBytes: 100_000, maximumConvertedBytes: maximumConvertedBytes,
+    concurrentVerifications: concurrentVerifications)
+}
+
+@Test
+func swiftLegacyOfficeVerifierChecksOriginalBytesAndBounds() async throws {
+  let scratch = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-legacy-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: scratch) }
+  let verifier = try legacyOfficeVerifier(scratch: scratch.path)
+  try await verifier.validateReady()
+  for (ext, mime, digest) in [
+    ("doc", "application/msword",
+     "9fca8d262d2aa905d58b1cc1c8914d1a8069c16c340f24cd3c4a77daff9c8b73"),
+    ("xls", "application/vnd.ms-excel",
+     "7f387858aaa3ed39d3c7c692aa865b36ac6620462714f3d0daa96388424cf75d"),
+  ] {
+    let data = try imageFixture(ext)
+    let verified = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+      maximumBytes: Int64(data.count))
+    #expect(verified.sizeBytes == Int64(data.count))
+    #expect(verified.sha256 == digest)
+    #expect(verified.contentType == mime)
+    for invalid in [Data(data.dropLast(1)), Data(data.prefix(600))] {
+      do {
+        _ = try await verifier.verify(reader: ObjectDataReader(invalid), extension: ext,
+          maximumBytes: Int64(invalid.count))
+        Issue.record("truncated CFB accepted")
+      } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    }
+    var tampered = data; tampered[0] ^= 1
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(tampered), extension: ext,
+        maximumBytes: Int64(tampered.count))
+      Issue.record("tampered CFB header accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+        maximumBytes: Int64(data.count - 1))
+      Issue.record("oversize CFB accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_SIZE_EXCEEDED")) }
+    do {
+      _ = try await legacyOfficeVerifier(scratch: scratch.path,
+        maximumConvertedBytes: 1).verify(reader: ObjectDataReader(data),
+          extension: ext, maximumBytes: Int64(data.count))
+      Issue.record("converted size limit bypassed")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  }
+  #expect(try FileManager.default.contentsOfDirectory(atPath: scratch.path).isEmpty)
+}
+
+@Test
+func swiftLegacyOfficeVerifierChecksAdmissionReadinessAndComposite() async throws {
+  let scratch = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-legacy-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: scratch) }
+  let data = try imageFixture("doc")
+  let verifier = try legacyOfficeVerifier(scratch: scratch.path, concurrentVerifications: 1)
+  let slow = PausedUploadReader(data)
+  let first = Task { try await verifier.verify(reader: slow, extension: "doc",
+    maximumBytes: Int64(data.count)) }
+  await slow.entered.wait()
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(data), extension: "doc",
+      maximumBytes: Int64(data.count))
+    Issue.record("busy legacy Office verifier admitted another upload")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_VERIFICATION_BUSY")) }
+  await slow.release.release()
+  #expect(try await first.value.sizeBytes == Int64(data.count))
+  let missing = try LegacyOfficeBlobContentVerifier(sofficePath: "/missing/soffice",
+    bwrapPath: "/usr/bin/bwrap", limitPath: "/usr/bin/prlimit",
+    scratchRoot: scratch.path)
+  do { try await missing.validateReady(); Issue.record("missing LibreOffice accepted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_CAPABILITY_MISSING")) }
+  let composite = try CompositeBlobContentVerifier(routes: [
+    BlobVerifierRoute(extensions: ["jpg"], verifier: StbImageBlobContentVerifier()),
+    BlobVerifierRoute(extensions: ["doc", "xls"], verifier: verifier),
+  ])
+  try await composite.validateReady()
+  #expect(try await composite.verify(reader: ObjectDataReader(data), extension: "doc",
+    maximumBytes: Int64(data.count)).contentType == "application/msword")
+}
+
+@Test
+func swiftSQLiteFileLegacyOfficeUploadRequiresFullDecode() async throws {
+  let root = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-legacy-upload-\(UUID().uuidString)",
+      isDirectory: true)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: root) }
+  let scratch = root.appendingPathComponent("scratch", isDirectory: true)
+  try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false,
+    attributes: [.posixPermissions: 0o700])
+  let store = try FileObjectStorage(root: root.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install legacy Office upload schema") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let service = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true,
+      extensions: ["doc", "xls"]), verifier: legacyOfficeVerifier(scratch: scratch.path),
+    maximumBytes: 100_000)
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  for (ext, mime) in [("doc", "application/msword"),
+                       ("xls", "application/vnd.ms-excel")] {
+    let data = try imageFixture(ext)
+    let good = try await service.begin(actor, target: target,
+      input: BlobUploadInput(fileName: "sample.\(ext)", declaredSize: Int64(data.count)),
+      replayKey: "legacy-valid-\(ext)")
+    _ = try await service.write(actor, uploadID: good.uploadID, source: ObjectDataReader(data))
+    #expect(try await service.complete(actor, uploadID: good.uploadID) == good.reference)
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: good.reference.key)
+      == "uploaded_unbound")
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT content_type FROM teaql_blob_catalog WHERE key = ?", key: good.reference.key)
+      == mime)
+    let truncated = Data(data.dropLast(1))
+    let bad = try await service.begin(actor, target: target,
+      input: BlobUploadInput(fileName: "broken.\(ext)", declaredSize: Int64(truncated.count)),
+      replayKey: "legacy-bad-\(ext)")
+    _ = try await service.write(actor, uploadID: bad.uploadID,
+      source: ObjectDataReader(truncated))
+    do { _ = try await service.complete(actor, uploadID: bad.uploadID)
+      Issue.record("truncated legacy Office upload promoted") }
+    catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: bad.reference.key)
+      == "initiated")
+  }
+}
+
 private func pdfVerifier(maximumPages: Int = 100, maximumRenderedBytes: Int = 4 * 1024 * 1024,
                          concurrentVerifications: Int = 2) throws -> PopplerBlobContentVerifier {
   try PopplerBlobContentVerifier(infoPath: "/usr/bin/pdfinfo",

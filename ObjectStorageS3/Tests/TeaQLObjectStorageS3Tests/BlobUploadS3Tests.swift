@@ -150,6 +150,20 @@ final class BlobUploadS3Tests: XCTestCase {
   }
 
   #if os(Linux)
+  func testRealDOCBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_LEGACY_OFFICE"] == "1" else {
+      throw XCTSkip("explicit real legacy Office S3 gate required")
+    }
+    try await runBlobUpload(format: "doc")
+  }
+
+  func testRealXLSBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_LEGACY_OFFICE"] == "1" else {
+      throw XCTSkip("explicit real legacy Office S3 gate required")
+    }
+    try await runBlobUpload(format: "xls")
+  }
+
   func testRealMP3BlobUploadThroughS3() async throws {
     guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_MEDIA"] == "1" else {
       throw XCTSkip("explicit real-media S3 gate required")
@@ -192,6 +206,8 @@ final class BlobUploadS3Tests: XCTestCase {
       .withObjectStorageObserver { _ in }
     let storage = try context.objectStorage("verify S3 Blob upload")
     var objectKey: ObjectKey?
+    var scratchRoot: URL?
+    defer { if let scratchRoot { try? FileManager.default.removeItem(at: scratchRoot) } }
     do {
       try await context.ensureSchema(RuntimeModule(name: "s3-upload-test", entities: [asset]))
       let catalog = SQLiteBlobCatalog()
@@ -203,6 +219,21 @@ final class BlobUploadS3Tests: XCTestCase {
       if format == "jpg" { decoder = try StbImageBlobContentVerifier() }
       else if format == "docx" || format == "xlsx" {
         decoder = try OfficeBlobContentVerifier()
+      }
+      else if format == "doc" || format == "xls" {
+        #if os(Linux)
+        let scratch = FileManager.default.temporaryDirectory
+          .appendingPathComponent("teaql-swift-legacy-s3-\(UUID().uuidString)",
+            isDirectory: true)
+        try FileManager.default.createDirectory(at: scratch,
+          withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        scratchRoot = scratch
+        decoder = try LegacyOfficeBlobContentVerifier(sofficePath: "/usr/bin/soffice",
+          bwrapPath: "/usr/bin/bwrap", limitPath: "/usr/bin/prlimit",
+          scratchRoot: scratch.path)
+        #else
+        throw XCTSkip("Linux real legacy Office gate required")
+        #endif
       }
       else if format == "mp3" || format == "mp4" {
         #if os(Linux)
@@ -238,6 +269,8 @@ final class BlobUploadS3Tests: XCTestCase {
         : format == "mp4" ? "video/mp4" : format == "docx"
         ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         : format == "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        : format == "doc" ? "application/msword"
+        : format == "xls" ? "application/vnd.ms-excel"
         : "application/pdf"
       let session = try await upload.begin(context,
         target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
@@ -335,6 +368,11 @@ final class BlobUploadS3Tests: XCTestCase {
       } catch let error as ViewPreparationError {
         XCTAssertEqual(error.code, "BLOB_READ_DENIED")
         XCTAssertEqual(error.businessState, "committed")
+      }
+      if (format == "doc" || format == "xls"),
+        let markerDirectory = env["TEAQL_S3_TEST_LEGACY_OFFICE_MARKER_DIR"] {
+        try Data("legacy-office-real-gate-passed".utf8).write(to:
+          URL(fileURLWithPath: markerDirectory).appendingPathComponent("\(format).pass"))
       }
     } catch {
       if let objectKey { try? await storage.delete(objectKey) }
