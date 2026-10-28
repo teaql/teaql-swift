@@ -112,6 +112,15 @@ final class S3StorageTests: XCTestCase {
       if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
       let (_, expired) = try await URLSession.shared.data(from: ticket.url)
       XCTAssertEqual((expired as? HTTPURLResponse)?.statusCode, 403)
+      let refreshed = try await storage.getReadUrl(key, options: ObjectReadUrlOptions(
+        seconds: 30, disposition: "attachment", filename: "report.pdf"))
+      XCTAssertNotEqual(refreshed.url, ticket.url)
+      XCTAssertGreaterThan(refreshed.expiresAt, Date())
+      var refreshRequest = URLRequest(url: refreshed.url)
+      refreshRequest.setValue("bytes=0-7", forHTTPHeaderField: "Range")
+      let (refreshBytes, refreshResponse) = try await URLSession.shared.data(for: refreshRequest)
+      XCTAssertEqual((refreshResponse as? HTTPURLResponse)?.statusCode, 206)
+      XCTAssertEqual(refreshBytes, bytes.prefix(8))
       if env["TEAQL_S3_TEST_CREATE_ONLY"] == "1" {
         let create = try ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly,
           contentType: "application/pdf")
