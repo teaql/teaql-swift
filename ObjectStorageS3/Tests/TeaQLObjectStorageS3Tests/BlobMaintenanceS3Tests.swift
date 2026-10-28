@@ -129,4 +129,125 @@ final class BlobMaintenanceS3Tests: XCTestCase {
     for key in keys { try? await store.delete(key) }
     try await client.shutdown()
   }
+
+  func testRealS3ExpiredUploadDeleteRecoveryAndStaleVersion() async throws {
+    let env = ProcessInfo.processInfo.environment
+    guard env["TEAQL_S3_TEST_BLOB_MAINTENANCE"] == "1" else {
+      throw XCTSkip("explicit disposable S3 maintenance gate required")
+    }
+    guard let endpoint = env["TEAQL_S3_TEST_ENDPOINT"], let bucket = env["TEAQL_S3_TEST_BUCKET"],
+      let access = env["TEAQL_S3_TEST_ACCESS_KEY"], let secret = env["TEAQL_S3_TEST_SECRET_KEY"] else {
+      XCTFail("disposable S3 endpoint, bucket, and credentials required")
+      return
+    }
+    let client = AWSClient(credentialProvider: .static(accessKeyId: access, secretAccessKey: secret),
+      retryPolicy: .noRetry)
+    let service = S3(client: client, region: .useast1, endpoint: endpoint,
+      options: [.s3Disable100Continue])
+    let provider = try S3ObjectStorage(service: service, bucket: bucket)
+    let parent = FileManager.default.temporaryDirectory
+      .appendingPathComponent("teaql-swift-s3-expired-upload-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: parent) }
+    let database = try SQLiteDataService(path: parent.appendingPathComponent("catalog.sqlite").path)
+    let context = UserContext(queryExecutor: database, mutationExecutor: database,
+      requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
+      .withObjectStorageObserver { _ in }
+    let store = try context.objectStorage("real S3 expired Blob upload maintenance")
+    let catalog = SQLiteBlobCatalog()
+    let maintenance = try SQLiteBlobMaintenanceService(catalog: catalog,
+      authorization: S3MaintenancePermission(), batchSize: 10,
+      now: { Date(timeIntervalSince1970: 2_000) })
+    let prefix = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+    var keys: [ObjectKey] = []
+
+    func seed(_ suffix: String, pinned: Bool = false) async throws -> (String, ObjectKey, String) {
+      let reference = "blob_\(prefix)_\(suffix)"
+      let key = try ObjectKey("f4/swift/expired-upload/\(prefix)/\(suffix)")
+      keys.append(key)
+      let bytes = Data("%PDF-1.7\n\(suffix)\n%%EOF".utf8)
+      let created = try await store.putBytes(key, data: bytes,
+        options: ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly))
+      let version = try XCTUnwrap(created.etag)
+      try await context.executeGraphSave(comment: "seed S3 expired upload") { graph, session in
+        try await graph.withPhysicalSQL(session) { sql in
+          _ = try await sql.execute("""
+            INSERT INTO teaql_blob_catalog
+            (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,upload_mode)
+            VALUES (?,'tenant-a',?,?,'file.pdf','application/pdf',?,'initiated','server_stream')
+            """, parameters: [.string(reference), .string(key.value),
+              .string(pinned ? version : ""), .int(Int64(bytes.count))])
+          _ = try await sql.execute("""
+            INSERT INTO teaql_blob_upload
+            (upload_id,scope,replay_key,request_hash,key,entity,entity_id,field,file_name,
+             extension,declared_size,expires_ms,state)
+            VALUES (?,'tenant-a',?,'hash',?,'Asset','1','file','file.pdf','pdf',?,1000000,
+              'initiated')
+            """, parameters: [.string("bu_" + reference), .string("replay_" + reference),
+              .string(reference), .int(Int64(bytes.count))])
+        }
+      }
+      return (reference, key, version)
+    }
+
+    func row(_ reference: String) async throws -> (String, String) {
+      try await context.executeGraphSave(comment: "inspect S3 expired upload") { graph, session in
+        try await graph.withPhysicalSQL(session) { sql in
+          let rows = try await sql.query(
+            "SELECT status,content_version FROM teaql_blob_catalog WHERE key=?",
+            parameters: [.string(reference)])
+          let found = try XCTUnwrap(rows.first)
+          return (try XCTUnwrap(found["status"]?.stringValue),
+                  try XCTUnwrap(found["content_version"]?.stringValue))
+        }
+      }
+    }
+
+    do {
+      try await context.executeGraphSave(comment: "install S3 expired-upload schema") { graph, session in
+        try await catalog.installSchema(graph, session: session)
+      }
+      let first = try await seed("receipt-failure")
+      try await context.executeGraphSave(comment: "fail S3 deletion receipt") { graph, session in
+        try await graph.withPhysicalSQL(session) { sql in
+          _ = try await sql.execute("""
+            CREATE TRIGGER fail_s3_maintenance_receipt BEFORE UPDATE OF status ON teaql_blob_catalog
+            WHEN NEW.status='deleted' BEGIN SELECT RAISE(ABORT,'receipt-failure'); END
+            """, parameters: [])
+        }
+      }
+      let failed = try await maintenance.runBatch(context)
+      XCTAssertEqual(failed.outcomes.map(\.status), ["failed"])
+      let claimed = try await row(first.0)
+      XCTAssertEqual(claimed.0, "deleting")
+      XCTAssertFalse(claimed.1.isEmpty)
+      let missing = try await store.head(first.1)
+      XCTAssertNil(missing)
+      try await context.executeGraphSave(comment: "repair S3 deletion receipt") { graph, session in
+        try await graph.withPhysicalSQL(session) { sql in
+          _ = try await sql.execute("DROP TRIGGER fail_s3_maintenance_receipt", parameters: [])
+        }
+      }
+      let recovered = try await maintenance.runBatch(context)
+      XCTAssertEqual(recovered.outcomes.map(\.status), ["already_missing"])
+      let finished = try await row(first.0)
+      XCTAssertEqual(finished.0, "deleted")
+
+      let stale = try await seed("stale-version", pinned: true)
+      let replacement = Data("%PDF-1.7\nnew generation\n%%EOF".utf8)
+      let newer = try await store.putBytes(stale.1, data: replacement,
+        options: ObjectPutOptions(size: Int64(replacement.count), mode: .replace))
+      XCTAssertNotEqual(newer.etag, stale.2)
+      let denied = try await maintenance.runBatch(context)
+      XCTAssertEqual(denied.outcomes.map(\.status), ["version_conflict"])
+      let retained = try await store.head(stale.1)
+      XCTAssertEqual(retained?.etag, newer.etag)
+    } catch {
+      for key in keys { try? await store.delete(key) }
+      try? await client.shutdown()
+      throw error
+    }
+    for key in keys { try? await store.delete(key) }
+    try await client.shutdown()
+  }
 }
