@@ -65,6 +65,53 @@ private func addMaintenanceUpload(_ actor: UserContext, key: String, scope: Stri
 }
 
 @Test
+func swiftSQLiteExpiredDirectUploadsRemainUntouchedWithoutQuiescence() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-direct-maintenance-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let db = try SQLiteDataService(path: parent.appendingPathComponent("catalog.sqlite").path)
+  let file = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? file.close() }
+  let context = UserContext(queryExecutor: db, mutationExecutor: db,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(file)
+  let catalog = SQLiteBlobCatalog()
+  try await context.executeGraphSave(comment: "install direct maintenance schema") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let store = try context.objectStorage("seed direct uploads")
+  let bytes = Data("%PDF-".utf8)
+  for (name, state, status) in [
+    ("blob_direct_initiated", "initiated", "initiated"),
+    ("blob_direct_written", "written", "initiated"),
+    ("blob_direct_deleting", "initiated", "deleting")
+  ] {
+    let key = try ObjectKey("objects/" + name)
+    _ = try await store.putBytes(key, data: bytes,
+      options: ObjectPutOptions(size: Int64(bytes.count), mode: .createOnly))
+    try await addMaintenanceUpload(context, key: name, scope: "tenant-a", objectKey: key.value)
+    try await context.executeGraphSave(comment: "mark direct upload catalog") { graph, session in
+      try await graph.withPhysicalSQL(session) { sql in
+        _ = try await sql.execute("UPDATE teaql_blob_catalog SET upload_mode='direct',status=? WHERE key=?",
+          parameters: [.string(status), .string(name)])
+        _ = try await sql.execute("UPDATE teaql_blob_upload SET state=? WHERE key=?",
+          parameters: [.string(state), .string(name)])
+      }
+    }
+  }
+  let maintenance = try SQLiteBlobMaintenanceService(catalog: catalog,
+    authorization: MaintenancePermission(allowed: true), batchSize: 10,
+    now: { Date(timeIntervalSince1970: 2_000) })
+  let batch = try await maintenance.runBatch(context)
+  #expect(batch.outcomes.isEmpty)
+  for name in ["blob_direct_initiated", "blob_direct_written", "blob_direct_deleting"] {
+    #expect(try await maintenanceRow(context, key: name).0 != "deleted")
+    #expect(try await store.head(ObjectKey("objects/" + name)) != nil)
+  }
+}
+
+@Test
 func swiftSQLiteExpiredUploadMaintenanceDeletesFileAndRecoversFailedReceipt() async throws {
   let parent = FileManager.default.temporaryDirectory
     .appendingPathComponent("teaql-swift-maintenance-\(UUID().uuidString)", isDirectory: true)

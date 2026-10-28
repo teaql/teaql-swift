@@ -124,7 +124,8 @@ public struct SQLiteBlobMaintenanceService: Sendable {
   private func eligible(_ row: Row?, now: Int64) -> Bool {
     guard let row else { return false }
     if ["initiated", "written"].contains(row.uploadState) {
-      return row.expiresMs <= now && ["initiated", "deleting"].contains(row.status)
+      return (row.uploadMode == nil || row.uploadMode == "server_stream")
+        && row.expiresMs <= now && ["initiated", "deleting"].contains(row.status)
     }
     guard row.uploadState == "completed",
       ["uploaded_unbound", "available", "deleting"].contains(row.status),
@@ -301,7 +302,8 @@ public struct SQLiteBlobMaintenanceService: Sendable {
             ON u.key=c.key AND u.scope=c.scope
           WHERE c.scope=? AND c.key>? AND (
             (u.expires_ms<=? AND u.state IN ('initiated','written')
-              AND c.status IN ('initiated','deleting')) OR
+              AND c.status IN ('initiated','deleting')
+              AND (c.upload_mode IS NULL OR c.upload_mode='server_stream')) OR
             (u.state='completed' AND c.upload_mode='server_stream'
               AND c.policy_profile IS NOT NULL AND c.completed_at_ms IS NOT NULL
               AND c.content_version<>'' AND (c.status='deleting' OR
