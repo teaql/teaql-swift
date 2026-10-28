@@ -228,12 +228,18 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
   guard let mode = environment["TEAQL_DOCUMENT_SERVICE_MODE"],
     let path = environment["TEAQL_DOCUMENT_SERVICE_DB"],
     let tokenPath = environment["TEAQL_DOCUMENT_SERVICE_TOKEN"] else { return }
-  guard ["open", "accept", "replay"].contains(mode) else {
+  guard ["open", "accept", "replay", "reject"].contains(mode) else {
     throw ReferenceError("DOCUMENT_COMMAND_INVALID")
   }
+  let selected = environment["TEAQL_DOCUMENT_SERVICE_SELECTION"] == "1"
   let database = try SQLiteDataService(path: path)
   let context = UserContext(queryExecutor: database, mutationExecutor: database,
     requestPolicy: RequestPolicy { $0 })
+  if selected {
+    try await context.executeGraphSave(comment: "install selected Blob catalog") { graph, session in
+      try await SQLiteBlobCatalog().installSchema(graph, session: session)
+    }
+  }
   let keys = try StaticReferenceKeyProvider(current: "k1", keys: [
     ReferenceKey(keyID: "k1", masterKey: Array(repeating: 0x42, count: 32)),
   ])
@@ -245,7 +251,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
   let journal = SQLiteDocumentCommandJournal()
   try await journal.installSchema(context)
   try await journal.validateSchema(context)
-  let host = SQLiteOrderHost()
+  let host = SQLiteOrderHost(blobEnabled: selected)
   let service = SQLiteContextBoundDocumentService(actor: context, module: module,
     journal: journal, host: host)
   if mode == "open" {
@@ -257,13 +263,51 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
     }
     try opened.documentToken.write(to: URL(fileURLWithPath: tokenPath),
       atomically: false, encoding: .utf8)
+    if selected {
+      let principal = try await host.principal(context: context)
+      let issued = try runtime.consumeBoundDocumentSnapshot(principal,
+        token: opened.documentToken, aggregateType: "Order", purpose: "edit-order").document
+      for (commandID, key, suffix) in [
+        ("command-1", "blob_A", ".selection"),
+        ("command-missing", "blob_missing", ".missing"),
+      ] {
+        let target = BlobSelectionTarget(scope: issued.snapshot.scope, targetEntity: "Order",
+          canonicalField: "attachment", kind: "EXISTING_ROW", targetKey: "order:10",
+          commandID: commandID)
+        let selection = try runtime.issueBlobSelection(principal,
+          documentToken: opened.documentToken,
+          claim: BlobSelectionClaim(target: target, reference: BlobRef(key)),
+          lifetimeSeconds: 30)
+        try selection.write(to: URL(fileURLWithPath: tokenPath + suffix),
+          atomically: false, encoding: .utf8)
+      }
+    }
   } else {
+    guard mode != "reject" || selected else { throw ReferenceError("DOCUMENT_COMMAND_INVALID") }
     let token = try String(contentsOf: URL(fileURLWithPath: tokenPath), encoding: .utf8)
+    let selections: [DocumentBlobSelectionSubmission]? = selected
+      ? [DocumentBlobSelectionSubmission(token: try String(
+          contentsOf: URL(fileURLWithPath: tokenPath +
+            (mode == "reject" ? ".missing" : ".selection")), encoding: .utf8),
+          targetEntity: "Order", canonicalField: "attachment", kind: "EXISTING_ROW",
+          targetKey: "order:10")]
+      : nil
     let command = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
-      commandID: "command-1", body: .object(["quantity": .int(3)]))
+      commandID: mode == "reject" ? "command-missing" : "command-1",
+      body: .object(["quantity": .int(3)]),
+      blobSelections: selections)
     func accept(_ input: SubmittedDocumentCommand) async throws -> AcceptedDocument {
       try await service.accept(DocumentAcceptRequest(aggregateType: "Order",
         purpose: "edit-order", submitted: input))
+    }
+    if mode == "reject" {
+      do {
+        _ = try await accept(command)
+        throw ReferenceError("missing Blob selection accepted")
+      } catch let error as ReferenceError where error.code == "BLOB_BIND_DENIED" { }
+      catch let error as TeaQLError where error == .execution("BLOB_BIND_DENIED") { }
+      print("PASS Swift document service reject")
+      return
     }
     let result: AcceptedDocument
     do { result = try await accept(command) }
@@ -282,10 +326,19 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
     if mode == "replay" {
       do {
         let changed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
-          commandID: "command-1", body: .object(["quantity": .int(4)]))
+          commandID: "command-1", body: .object(["quantity": .int(4)]),
+          blobSelections: selections)
         _ = try await accept(changed)
         throw ReferenceError("changed replay accepted")
       } catch let error as ReferenceError where error.code == "DOCUMENT_REPLAY_CONFLICT" { }
+      if selected {
+        do {
+          let removed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
+            commandID: "command-1", body: .object(["quantity": .int(3)]))
+          _ = try await accept(removed)
+          throw ReferenceError("removed selection replay accepted")
+        } catch let error as ReferenceError where error.code == "DOCUMENT_REPLAY_CONFLICT" { }
+      }
       try await context.executeGraphSave(comment: "revoke protected order") { graph, session in
         try await graph.withPhysicalSQL(session) { sql in
           _ = try await sql.execute(
