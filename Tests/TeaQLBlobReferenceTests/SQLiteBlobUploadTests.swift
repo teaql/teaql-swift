@@ -499,10 +499,32 @@ func swiftSQLiteCommittedUploadWriteReplaysOnlySameBytesAndGeneration() async th
   let service = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
     allowed: true), verifier: FixturePDFVerifier(calls: calls), maximumBytes: 10_000)
   let bytes = Data("%PDF-1.7\nSQL commit succeeded, reply lost\n%%EOF".utf8)
-  let session = try await service.begin(actor,
-    target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
-    input: BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(bytes.count)),
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  let input = BlobUploadInput(fileName: "report.pdf", declaredSize: Int64(bytes.count))
+  await transport.loseNextCommitReply()
+  do { _ = try await service.begin(actor, target: target, input: input, replayKey: "unknown-write")
+    Issue.record("lost begin reply returned success") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_CATALOG_FAILED")) }
+  let begunID = try #require(await uploadCatalogValue(base,
+    sql: "SELECT upload_id FROM teaql_blob_upload WHERE replay_key=?", key: "unknown-write"))
+  let begunKey = try #require(await uploadCatalogValue(base,
+    sql: "SELECT key FROM teaql_blob_upload WHERE replay_key=?", key: "unknown-write"))
+  let begunExpiry = try #require(await uploadCatalogValue(base,
+    sql: "SELECT CAST(expires_ms AS TEXT) FROM teaql_blob_upload WHERE replay_key=?",
+    key: "unknown-write"))
+  let revoked = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
+    allowed: false), verifier: FixturePDFVerifier(), maximumBytes: 10_000)
+  do { _ = try await revoked.begin(actor, target: target, input: input, replayKey: "unknown-write")
+    Issue.record("revoked begin replay accepted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
+  do { _ = try await service.begin(actor, target: target,
+    input: BlobUploadInput(fileName: "changed.pdf", declaredSize: Int64(bytes.count)),
     replayKey: "unknown-write")
+    Issue.record("changed begin replay accepted") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_IDEMPOTENCY_CONFLICT")) }
+  let session = try await service.begin(actor, target: target, input: input, replayKey: "unknown-write")
+  #expect(session.uploadID == begunID && session.reference.key == begunKey)
+  #expect(String(Int64((session.expiresAt.timeIntervalSince1970 * 1000).rounded())) == begunExpiry)
   await transport.loseNextCommitReply()
   do {
     _ = try await service.write(actor, uploadID: session.uploadID, source: ObjectDataReader(bytes))
@@ -513,8 +535,6 @@ func swiftSQLiteCommittedUploadWriteReplaysOnlySameBytesAndGeneration() async th
   #expect(try await uploadCatalogValue(actor,
     sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key) == "initiated")
   #expect(await store.count() == 1)
-  let revoked = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a",
-    allowed: false), verifier: FixturePDFVerifier(), maximumBytes: 10_000)
   do { _ = try await revoked.write(actor, uploadID: session.uploadID, source: ObjectDataReader(bytes))
     Issue.record("revoked retry accepted") }
   catch { #expect(error as? TeaQLError == .execution("BLOB_UPLOAD_DENIED")) }
