@@ -770,6 +770,44 @@ func swiftSQLiteFileMediaUploadRequiresFullDecode() async throws {
       == "initiated")
   }
 }
+
+private actor UnreadableCompositeSource: ObjectByteReader {
+  func read(upToCount: Int) throws -> Data { throw TeaQLError.execution("SOURCE_READ") }
+  func close() {}
+}
+
+@Test
+func swiftCompositeVerifierDispatchesRealImageAndMedia() async throws {
+  let image = try StbImageBlobContentVerifier()
+  let media = try mediaVerifier()
+  let verifier = try CompositeBlobContentVerifier(routes: [
+    BlobVerifierRoute(extensions: ["jpg", "jpeg", "png"], verifier: image),
+    BlobVerifierRoute(extensions: ["mp3", "mp4"], verifier: media),
+  ])
+  #expect(verifier.supportedExtensions == ["jpeg", "jpg", "mp3", "mp4", "png"])
+  try await verifier.validateReady()
+  for (ext, mime) in [("jpg", "image/jpeg"), ("mp3", "audio/mpeg")] {
+    let data = try imageFixture(ext)
+    let actual = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+      maximumBytes: Int64(data.count))
+    #expect(actual.sizeBytes == Int64(data.count))
+    #expect(actual.contentType == mime)
+    #expect(actual.sha256 == SHA256.hash(data: data)
+      .map { String(format: "%02x", $0) }.joined())
+  }
+  do {
+    _ = try await verifier.verify(reader: UnreadableCompositeSource(), extension: "docx",
+      maximumBytes: 1024)
+    Issue.record("unregistered route accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  do {
+    _ = try CompositeBlobContentVerifier(routes: [
+      BlobVerifierRoute(extensions: ["jpg"], verifier: image),
+      BlobVerifierRoute(extensions: ["jpg"], verifier: media),
+    ])
+    Issue.record("duplicate route accepted")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_POLICY_INVALID")) }
+}
 #endif
 
 @Test
