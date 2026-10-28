@@ -31,6 +31,8 @@ jobs:
       - name: Build optional S3 Release product
         working-directory: ObjectStorageS3
         run: swift build -c release --jobs 2
+      - name: Verify reference products from pinned Git candidate
+        run: python3 scripts/verify-reference-candidate-consumers.py
       - name: Compile libraries for iOS Simulator
         if: runner.os == 'macOS'
         run: >-
