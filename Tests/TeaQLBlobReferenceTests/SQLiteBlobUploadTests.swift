@@ -288,6 +288,12 @@ func swiftLegacyUploadRequestHashReplaysAfterNumericABIMigration() async throws 
   #expect(try await uploadCatalogValue(actor,
     sql: "SELECT request_hash FROM teaql_blob_upload WHERE key=?", key: fresh.reference.key)
     == numericHash)
+  let unicode = try await service.begin(actor, target: target,
+    input: BlobUploadInput(fileName: "报告 & review.pdf", declaredSize: 42),
+    replayKey: "unicode-no-mime")
+  #expect(try await uploadCatalogValue(actor,
+    sql: "SELECT request_hash FROM teaql_blob_upload WHERE key=?", key: unicode.reference.key)
+    == "49326c668df787833da79c84aa49ae3951ce7604e79a359ffe27cb10e15aea48")
 }
 
 @Test
