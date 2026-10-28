@@ -82,6 +82,14 @@ final class ObjectStorageTests: XCTestCase {
     XCTAssertThrowsError(try ObjectPutOptions(size: 0, mode: .createOnly, metadata: ["Bad Key": "value"]))
     for seconds in [0, -1, 604801] { XCTAssertThrowsError(try ObjectReadUrlOptions(seconds: seconds)) }
     XCTAssertThrowsError(try ObjectReadUrlOptions(disposition: "attachment", filename: "bad\nname"))
+    XCTAssertThrowsError(try ObjectReadUrlOptions(disposition: "attachment", filename: "bad/name"))
+    XCTAssertEqual(try ObjectReadUrlOptions(disposition: "inline", filename: "sample.jpg")
+      .contentDisposition, "inline; filename=\"sample.jpg\"")
+    let unicode = try ObjectReadUrlOptions(disposition: "inline",
+      filename: "报告 & 📄\u{2028}mid\u{2029}x.jpg").contentDisposition!
+    XCTAssertTrue(unicode.hasPrefix("inline; filename=\"__ & _"))
+    XCTAssertTrue(unicode.contains("filename*=UTF-8''%E6%8A%A5%E5%91%8A%20%26%20%F0%9F%93%84"))
+    XCTAssertFalse(unicode.contains("\r") || unicode.contains("\n"))
     let key = try ObjectKey("PRIVATE-KEY-CANARY")
     XCTAssertFalse(String(reflecting: key).contains("CANARY"))
     XCTAssertFalse(String(reflecting: ObjectReadUrl(url: URL(string: "https://example.invalid/PRIVATE-URL-CANARY")!, expiresAt: Date())).contains("CANARY"))

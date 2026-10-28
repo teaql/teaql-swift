@@ -63,11 +63,30 @@ public struct ObjectReadUrlOptions: Sendable, CustomStringConvertible, CustomDeb
   public init(seconds: Int = 300, disposition: String? = nil, filename: String? = nil) throws {
     guard seconds > 0, seconds <= 604800, disposition == nil || disposition == "inline" || disposition == "attachment" else { throw StorageError(.invalidInput) }
     if let filename {
-      try ObjectPutOptions.header(filename)
-      guard disposition != nil, !filename.contains(where: { "/\\\"".contains($0) }) else { throw StorageError(.invalidInput) }
+      guard disposition != nil, !filename.isEmpty, filename.utf8.count <= 1024,
+        !filename.unicodeScalars.contains(where: { scalar in
+          scalar.value < 32 || (127...159).contains(scalar.value) ||
+            scalar == "/" || scalar == "\\" || scalar == "\""
+        }) else { throw StorageError(.invalidInput) }
     }
     self.seconds = seconds
-    self.contentDisposition = disposition.map { $0 + (filename.map { "; filename=\"\($0)\"" } ?? "") }
+    if let disposition, let filename {
+      if filename.unicodeScalars.allSatisfy({ $0.value <= 126 }) {
+        self.contentDisposition = "\(disposition); filename=\"\(filename)\""
+      } else {
+        let fallback = filename.unicodeScalars.map { $0.value <= 126 ? String($0) : "_" }.joined()
+        let encoded = filename.utf8.map { byte -> String in
+          if (65...90).contains(byte) || (97...122).contains(byte) ||
+            (48...57).contains(byte) || [45, 46, 95, 126].contains(byte) {
+            return String(decoding: [byte], as: UTF8.self)
+          }
+          return String(format: "%%%02X", Int(byte))
+        }.joined()
+        self.contentDisposition = "\(disposition); filename=\"\(fallback)\"; filename*=UTF-8''\(encoded)"
+      }
+    } else {
+      self.contentDisposition = disposition
+    }
   }
   public var description: String { "ObjectReadUrlOptions[details=masked]" }
   public var debugDescription: String { description }
