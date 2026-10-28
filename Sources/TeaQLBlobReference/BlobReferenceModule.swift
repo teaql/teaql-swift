@@ -13,12 +13,14 @@ private final class ModuleBlobContributor: BlobResponseContributor {
 private struct BlobCapability: RuntimeCapabilityProvider {
   let catalog: SQLiteBlobCatalog
   let contributor: ModuleBlobContributor
+  let upload: SQLiteBlobUploadService
   func checkReady(context: UserContext) async throws {
     guard context.hasBlobResponseContributor(contributor), context.hasObjectStorageProvider,
           context.hasBlobMutationParticipant,
           context.mutationExecutor is any BlobMutationExecutor else {
       throw ViewPreparationError("BLOB_CAPABILITY_MISSING")
     }
+    try await upload.validateVerifierReady()
     do {
       try await context.executeGraphSave(comment: "validate BlobReferenceModule schema") { graph, session in
         try await catalog.validateSchema(graph, session: session)
@@ -53,7 +55,8 @@ public struct BlobReferenceModule: Sendable {
       throw ViewPreparationError("BLOB_CAPABILITY_MISSING")
     }
     let contributor = ModuleBlobContributor(read)
-    return context.withRuntimeCapability("blob.v1", provider: BlobCapability(catalog: catalog, contributor: contributor))
+    return context.withRuntimeCapability("blob.v1", provider: BlobCapability(
+      catalog: catalog, contributor: contributor, upload: upload))
       .withBlobResponseContributor(contributor)
       .withBlobMutationParticipant(SQLiteBlobMutationParticipant(
         catalog: catalog, authorization: bindingAuthorization))

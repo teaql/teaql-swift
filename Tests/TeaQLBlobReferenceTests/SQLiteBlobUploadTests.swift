@@ -649,6 +649,129 @@ private func imageFixture(_ ext: String) throws -> Data {
   return try Data(contentsOf: url)
 }
 
+#if os(Linux)
+private func mediaVerifier(maximumFrames: Int = 100_000, maximumVideoPixels: Int64 = 16_000_000,
+                           concurrentVerifications: Int = 2) throws -> FfmpegBlobContentVerifier {
+  try FfmpegBlobContentVerifier(probePath: "/usr/bin/ffprobe", decodePath: "/usr/bin/ffmpeg",
+    limitPath: "/usr/bin/prlimit", maximumFrames: maximumFrames,
+    maximumVideoPixels: maximumVideoPixels, concurrentVerifications: concurrentVerifications)
+}
+
+@Test
+func swiftRealMediaVerifierFullyDecodesAndBoundsSharedFixtures() async throws {
+  let verifier = try mediaVerifier()
+  try await verifier.validateReady()
+  for (ext, mime) in [("mp3", "audio/mpeg"), ("mp4", "video/mp4")] {
+    let data = try imageFixture(ext)
+    let verified = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+      maximumBytes: 100_000)
+    #expect(verified.sizeBytes == Int64(data.count))
+    #expect(verified.contentType == mime)
+    #expect(verified.sha256 == SHA256.hash(data: data)
+      .map { String(format: "%02x", $0) }.joined())
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(Data(data.dropLast(2))),
+        extension: ext, maximumBytes: 100_000)
+      Issue.record("truncated media accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(data), extension: ext,
+        maximumBytes: Int64(data.count - 1))
+      Issue.record("oversized media accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_SIZE_EXCEEDED")) }
+    do {
+      _ = try await verifier.verify(reader: ObjectDataReader(data),
+        extension: ext == "mp3" ? "mp4" : "mp3", maximumBytes: 100_000)
+      Issue.record("wrong media format accepted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  }
+  let audioOnly = try #require(Bundle.module.url(forResource: "audio-only",
+    withExtension: "mp4", subdirectory: "fixtures"))
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(Data(contentsOf: audioOnly)),
+      extension: "mp4", maximumBytes: 100_000)
+    Issue.record("audio-only MP4 accepted as video")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  do {
+    _ = try await mediaVerifier(maximumFrames: 1).verify(
+      reader: ObjectDataReader(try imageFixture("mp3")), extension: "mp3",
+      maximumBytes: 100_000)
+    Issue.record("frame bound bypassed")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+  do {
+    _ = try await mediaVerifier(maximumVideoPixels: 1).verify(
+      reader: ObjectDataReader(try imageFixture("mp4")), extension: "mp4",
+      maximumBytes: 100_000)
+    Issue.record("pixel bound bypassed")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+}
+
+@Test
+func swiftRealMediaVerifierRejectsBusyAndMissingHostBinary() async throws {
+  let data = try imageFixture("mp3")
+  let verifier = try mediaVerifier(concurrentVerifications: 1)
+  let slow = PausedUploadReader(data)
+  let first = Task { try await verifier.verify(reader: slow, extension: "mp3", maximumBytes: 100_000) }
+  await slow.entered.wait()
+  do {
+    _ = try await verifier.verify(reader: ObjectDataReader(data), extension: "mp3",
+      maximumBytes: 100_000)
+    Issue.record("busy media verifier admitted another decode")
+  } catch { #expect(error as? TeaQLError == .execution("BLOB_VERIFICATION_BUSY")) }
+  await slow.release.release()
+  #expect(try await first.value.sizeBytes == Int64(data.count))
+  let missing = try FfmpegBlobContentVerifier(probePath: "/missing/ffprobe",
+    decodePath: "/usr/bin/ffmpeg", limitPath: "/usr/bin/prlimit")
+  do { try await missing.validateReady(); Issue.record("missing binary was ready") }
+  catch { #expect(error as? TeaQLError == .execution("BLOB_CAPABILITY_MISSING")) }
+}
+
+@Test
+func swiftSQLiteFileMediaUploadRequiresFullDecode() async throws {
+  let root = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-media-upload-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true,
+    attributes: [.posixPermissions: 0o700])
+  defer { try? FileManager.default.removeItem(at: root) }
+  let store = try FileObjectStorage(root: root.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let database = try SQLiteDataService(path: ":memory:")
+  let actor = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
+  let catalog = SQLiteBlobCatalog()
+  try await actor.executeGraphSave(comment: "install media upload schema") { graph, session in
+    try await catalog.installSchema(graph, session: session)
+  }
+  let service = try SQLiteBlobUploadService(
+    authorization: UploadPermission(tenant: "tenant-a", allowed: true,
+      extensions: ["mp3", "mp4"]), verifier: mediaVerifier(), maximumBytes: 100_000)
+  let target = BlobUploadTarget(entity: "Asset", entityID: "1", field: "file")
+  for ext in ["mp3", "mp4"] {
+    let data = try imageFixture(ext)
+    let good = try await service.begin(actor, target: target,
+      input: BlobUploadInput(fileName: "sample.\(ext)", declaredSize: Int64(data.count)),
+      replayKey: "media-valid-\(ext)")
+    _ = try await service.write(actor, uploadID: good.uploadID, source: ObjectDataReader(data))
+    #expect(try await service.complete(actor, uploadID: good.uploadID) == good.reference)
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: good.reference.key)
+      == "uploaded_unbound")
+    let truncated = Data(data.dropLast(2))
+    let bad = try await service.begin(actor, target: target,
+      input: BlobUploadInput(fileName: "sample.\(ext)", declaredSize: Int64(truncated.count)),
+      replayKey: "media-truncated-\(ext)")
+    _ = try await service.write(actor, uploadID: bad.uploadID, source: ObjectDataReader(truncated))
+    do { _ = try await service.complete(actor, uploadID: bad.uploadID)
+      Issue.record("truncated media upload promoted")
+    } catch { #expect(error as? TeaQLError == .execution("BLOB_FORMAT_NOT_ALLOWED")) }
+    #expect(try await uploadCatalogValue(actor,
+      sql: "SELECT status FROM teaql_blob_catalog WHERE key = ?", key: bad.reference.key)
+      == "initiated")
+  }
+}
+#endif
+
 @Test
 func swiftRealImageVerifierDecodesAndBoundsSharedFixtures() async throws {
   let verifier = try StbImageBlobContentVerifier()

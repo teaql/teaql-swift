@@ -64,6 +64,11 @@ public protocol BlobContentVerifier: Sendable {
               maximumBytes: Int64) async throws -> BlobVerifiedContent
 }
 
+/// Optional explicit readiness check for host-managed parser executables.
+public protocol BlobVerifierReadiness: Sendable {
+  func validateReady() async throws
+}
+
 private actor HashingBlobReader: ObjectByteReader {
   struct Snapshot: Sendable { let count: Int64; let eof: Bool; let sha256: String }
   let source: any ObjectByteReader
@@ -93,6 +98,9 @@ private actor HashingBlobReader: ObjectByteReader {
 public struct SQLiteBlobUploadService: Sendable {
   private let authorization: any BlobUploadAuthorization
   private let verifier: any BlobContentVerifier
+  func validateVerifierReady() async throws {
+    if let ready = verifier as? any BlobVerifierReadiness { try await ready.validateReady() }
+  }
   private let maximumBytes: Int64
   private let leaseSeconds: Int
   private let now: @Sendable () -> Date

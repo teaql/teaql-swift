@@ -116,17 +116,33 @@ private func s3UploadCatalogValue(_ context: UserContext, sql: String,
 @MainActor
 final class BlobUploadS3Tests: XCTestCase {
   func testRealSQLiteBlobUploadThroughS3() async throws {
-    try await runBlobUpload(realImage: false)
+    try await runBlobUpload(format: "pdf")
   }
 
   func testRealJPEGBlobUploadThroughS3() async throws {
     guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_IMAGE"] == "1" else {
       throw XCTSkip("explicit real-image S3 gate required")
     }
-    try await runBlobUpload(realImage: true)
+    try await runBlobUpload(format: "jpg")
   }
 
-  private func runBlobUpload(realImage: Bool) async throws {
+  #if os(Linux)
+  func testRealMP3BlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_MEDIA"] == "1" else {
+      throw XCTSkip("explicit real-media S3 gate required")
+    }
+    try await runBlobUpload(format: "mp3")
+  }
+
+  func testRealMP4BlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_MEDIA"] == "1" else {
+      throw XCTSkip("explicit real-media S3 gate required")
+    }
+    try await runBlobUpload(format: "mp4")
+  }
+  #endif
+
+  private func runBlobUpload(format: String) async throws {
     let env = ProcessInfo.processInfo.environment
     guard env["TEAQL_S3_TEST_BLOB_UPLOAD"] == "1" else {
       throw XCTSkip("explicit S3-compatible Blob upload gate required")
@@ -160,22 +176,31 @@ final class BlobUploadS3Tests: XCTestCase {
       }
       let calls = S3VerifierCalls()
       let decoder: any BlobContentVerifier
-      if realImage { decoder = try StbImageBlobContentVerifier() }
+      if format == "jpg" { decoder = try StbImageBlobContentVerifier() }
+      else if format == "mp3" || format == "mp4" {
+        #if os(Linux)
+        decoder = try FfmpegBlobContentVerifier(probePath: "/usr/bin/ffprobe",
+          decodePath: "/usr/bin/ffmpeg", limitPath: "/usr/bin/prlimit")
+        #else
+        throw XCTSkip("Linux real-media gate required")
+        #endif
+      }
       else { decoder = S3FixturePDFVerifier(calls: S3VerifierCalls()) }
       let upload = try SQLiteBlobUploadService(
         authorization: S3UploadPermission(allowed: true,
-          fileExtension: realImage ? "jpg" : "pdf"),
+          fileExtension: format),
         verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 10_000)
       let data: Data
-      if realImage {
-        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: "jpg",
+      if format != "pdf" {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: format,
           subdirectory: "fixtures"))
         data = try Data(contentsOf: url)
       } else {
         data = Data("%PDF-1.7\nreal S3 Blob upload\n%%EOF".utf8)
       }
-      let filename = realImage ? "sample.jpg" : "report.pdf"
-      let contentType = realImage ? "image/jpeg" : "application/pdf"
+      let filename = format == "pdf" ? "report.pdf" : "sample.\(format)"
+      let contentType = format == "jpg" ? "image/jpeg" : format == "mp3" ? "audio/mpeg"
+        : format == "mp4" ? "video/mp4" : "application/pdf"
       let session = try await upload.begin(context,
         target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
         input: BlobUploadInput(fileName: filename, declaredSize: Int64(data.count),
@@ -188,7 +213,7 @@ final class BlobUploadS3Tests: XCTestCase {
       XCTAssertEqual(written, Int64(data.count))
       let revoked = try SQLiteBlobUploadService(
         authorization: S3UploadPermission(allowed: false,
-          fileExtension: realImage ? "jpg" : "pdf"),
+          fileExtension: format),
         verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 10_000)
       do { _ = try await revoked.complete(context, uploadID: session.uploadID)
         XCTFail("revoked S3 Blob confirmation accepted") }
