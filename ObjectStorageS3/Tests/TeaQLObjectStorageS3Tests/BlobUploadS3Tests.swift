@@ -126,6 +126,20 @@ final class BlobUploadS3Tests: XCTestCase {
     try await runBlobUpload(format: "jpg")
   }
 
+  func testRealDOCXBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_OFFICE"] == "1" else {
+      throw XCTSkip("explicit real-Office S3 gate required")
+    }
+    try await runBlobUpload(format: "docx")
+  }
+
+  func testRealXLSXBlobUploadThroughS3() async throws {
+    guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_OFFICE"] == "1" else {
+      throw XCTSkip("explicit real-Office S3 gate required")
+    }
+    try await runBlobUpload(format: "xlsx")
+  }
+
   #if os(Linux)
   func testRealMP3BlobUploadThroughS3() async throws {
     guard ProcessInfo.processInfo.environment["TEAQL_S3_TEST_REAL_MEDIA"] == "1" else {
@@ -177,6 +191,9 @@ final class BlobUploadS3Tests: XCTestCase {
       let calls = S3VerifierCalls()
       let decoder: any BlobContentVerifier
       if format == "jpg" { decoder = try StbImageBlobContentVerifier() }
+      else if format == "docx" || format == "xlsx" {
+        decoder = try OfficeBlobContentVerifier()
+      }
       else if format == "mp3" || format == "mp4" {
         #if os(Linux)
         decoder = try FfmpegBlobContentVerifier(probePath: "/usr/bin/ffprobe",
@@ -189,7 +206,7 @@ final class BlobUploadS3Tests: XCTestCase {
       let upload = try SQLiteBlobUploadService(
         authorization: S3UploadPermission(allowed: true,
           fileExtension: format),
-        verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 10_000)
+        verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 100_000)
       let data: Data
       if format != "pdf" {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "sample", withExtension: format,
@@ -200,7 +217,10 @@ final class BlobUploadS3Tests: XCTestCase {
       }
       let filename = format == "pdf" ? "report.pdf" : "sample.\(format)"
       let contentType = format == "jpg" ? "image/jpeg" : format == "mp3" ? "audio/mpeg"
-        : format == "mp4" ? "video/mp4" : "application/pdf"
+        : format == "mp4" ? "video/mp4" : format == "docx"
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : format == "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        : "application/pdf"
       let session = try await upload.begin(context,
         target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
         input: BlobUploadInput(fileName: filename, declaredSize: Int64(data.count),
@@ -214,7 +234,7 @@ final class BlobUploadS3Tests: XCTestCase {
       let revoked = try SQLiteBlobUploadService(
         authorization: S3UploadPermission(allowed: false,
           fileExtension: format),
-        verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 10_000)
+        verifier: S3CountingVerifier(base: decoder, calls: calls), maximumBytes: 100_000)
       do { _ = try await revoked.complete(context, uploadID: session.uploadID)
         XCTFail("revoked S3 Blob confirmation accepted") }
       catch let error as TeaQLError { XCTAssertEqual(error, .execution("BLOB_UPLOAD_DENIED")) }
@@ -227,7 +247,7 @@ final class BlobUploadS3Tests: XCTestCase {
       let replayedLength = try await upload.write(context, uploadID: session.uploadID,
         source: ObjectDataReader(data))
       XCTAssertEqual(replayedLength, Int64(data.count))
-      let stored = try await storage.getBytes(try XCTUnwrap(objectKey), maximumBytes: 10_000)
+      let stored = try await storage.getBytes(try XCTUnwrap(objectKey), maximumBytes: 100_000)
       XCTAssertEqual(stored, data)
       let head = try await storage.head(try XCTUnwrap(objectKey))
       let status = try await s3UploadCatalogValue(context,

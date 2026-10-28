@@ -34,7 +34,8 @@ let package = Package(
     .target(name: "TeaQLCore", resources: [.process("Resources")]),
     .target(name: "TeaQLSQL", dependencies: ["TeaQLCore"]),
     .target(name: "TeaQLSQLite", dependencies: ["TeaQLCore", "TeaQLSQL", "CSQLite"]),
-    .target(name: "CStbImage", publicHeadersPath: "include"),
+    .target(name: "CStbImage", publicHeadersPath: "include",
+      linkerSettings: [.linkedLibrary("z")]),
     .target(name: "TeaQLBlobReference", dependencies: [
       "TeaQLCore", "CStbImage", .product(name: "Crypto", package: "swift-crypto"),
       .product(name: "NIOCore", package: "swift-nio"),
