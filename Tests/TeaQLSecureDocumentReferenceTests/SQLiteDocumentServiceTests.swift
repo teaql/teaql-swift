@@ -140,6 +140,7 @@ private actor SQLiteOrderHost: SQLiteContextBoundDocumentHost, SQLiteDocumentBlo
     selection: VerifiedDocumentBlobSelection, sql: any GraphPhysicalSQLLease) async throws {
     let child = selection.target.kind == "NEW_CLIENT_KEY" &&
       selection.target.targetEntity == "OrderLine" &&
+      ["client-line-1", "client-line-2"].contains(selection.target.targetKey) &&
       selection.rowKey == "line:" + selection.entityID
     let parent = selection.target.kind == "EXISTING_ROW" &&
       selection.target.targetEntity == "Order" && selection.target.targetKey == "order:10" &&
@@ -193,10 +194,18 @@ private actor SQLiteOrderHost: SQLiteContextBoundDocumentHost, SQLiteDocumentBlo
           throw ReferenceError("DOCUMENT_PROJECTION_VIOLATION")
         }
         let childID: Int64 = selection.targetKey == "client-line-1" ? 21 : 22
-        let inserted = try await sql.execute("""
-          INSERT INTO document_order_line(id,order_id,client_key,version,blob_key)
-          VALUES (?,?,?,1,NULL)
-          """, parameters: [.int(childID), .int(10), .string(selection.targetKey)])
+        let dynamicChildIDs = ProcessInfo.processInfo.environment["TEAQL_DOCUMENT_SERVICE_DYNAMIC_CHILD_IDS"] == "1"
+        let inserted = try await sql.execute(dynamicChildIDs
+          ? """
+            INSERT INTO document_order_line(order_id,client_key,version,blob_key)
+            VALUES (?,?,1,NULL)
+            """
+          : """
+            INSERT INTO document_order_line(id,order_id,client_key,version,blob_key)
+            VALUES (?,?,?,1,NULL)
+            """, parameters: dynamicChildIDs
+            ? [.int(10), .string(selection.targetKey)]
+            : [.int(childID), .int(10), .string(selection.targetKey)])
         guard inserted == 1 else { throw ReferenceError("DOCUMENT_PROJECTION_VIOLATION") }
       }
     }
