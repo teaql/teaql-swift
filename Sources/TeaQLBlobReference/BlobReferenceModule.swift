@@ -1,6 +1,20 @@
 import Foundation
 import TeaQLCore
 
+private final class BlobModuleIdentity: Sendable {}
+
+private final class ModuleBlobMutationParticipant: BlobMutationParticipant {
+  let delegate: SQLiteBlobMutationParticipant
+  init(catalog: SQLiteBlobCatalog, authorization: any BlobBindingAuthorization) {
+    delegate = SQLiteBlobMutationParticipant(catalog: catalog, authorization: authorization)
+  }
+  func apply(context: UserContext, session: GraphMutationSession, mutation: Mutation,
+             previous: TeaQLRecord?, persisted: TeaQLRecord) async throws {
+    try await delegate.apply(context: context, session: session, mutation: mutation,
+      previous: previous, persisted: persisted)
+  }
+}
+
 private final class ModuleBlobContributor: BlobResponseContributor {
   let read: SQLiteBlobResponseContributor
   init(_ read: SQLiteBlobResponseContributor) { self.read = read }
@@ -11,12 +25,14 @@ private final class ModuleBlobContributor: BlobResponseContributor {
 }
 
 private struct BlobCapability: RuntimeCapabilityProvider {
+  let identity: BlobModuleIdentity
   let catalog: SQLiteBlobCatalog
   let contributor: ModuleBlobContributor
   let upload: SQLiteBlobUploadService
+  let participant: ModuleBlobMutationParticipant
   func checkReady(context: UserContext) async throws {
     guard context.hasBlobResponseContributor(contributor), context.hasObjectStorageProvider,
-          context.hasBlobMutationParticipant,
+          context.hasBlobMutationParticipant(participant),
           context.mutationExecutor is any BlobMutationExecutor else {
       throw ViewPreparationError("BLOB_CAPABILITY_MISSING")
     }
@@ -31,6 +47,8 @@ private struct BlobCapability: RuntimeCapabilityProvider {
 
 /// Passive optional assembly of SQLite catalog, trusted upload and authorized URL projection.
 public struct BlobReferenceModule: Sendable {
+  private let identity = BlobModuleIdentity()
+  private let participant: ModuleBlobMutationParticipant
   public let catalog: SQLiteBlobCatalog
   public let upload: SQLiteBlobUploadService
   public let read: SQLiteBlobResponseContributor
@@ -47,6 +65,7 @@ public struct BlobReferenceModule: Sendable {
     self.maintenance = maintenance
     self.read = try SQLiteBlobResponseContributor(catalog: catalog,
       authorization: readAuthorization, maximumURLSeconds: maximumURLSeconds)
+    self.participant = ModuleBlobMutationParticipant(catalog: catalog, authorization: bindingAuthorization)
   }
 
   public func install(on context: UserContext) throws -> UserContext {
@@ -56,13 +75,16 @@ public struct BlobReferenceModule: Sendable {
     }
     let contributor = ModuleBlobContributor(read)
     return context.withRuntimeCapability("blob.v1", provider: BlobCapability(
-      catalog: catalog, contributor: contributor, upload: upload))
+      identity: identity, catalog: catalog, contributor: contributor, upload: upload, participant: participant))
       .withBlobResponseContributor(contributor)
-      .withBlobMutationParticipant(SQLiteBlobMutationParticipant(
-        catalog: catalog, authorization: bindingAuthorization))
+      .withBlobMutationParticipant(participant)
   }
 
   public func ready(context: UserContext) async throws {
+    guard let installed = context.runtimeCapabilityProvider(named: "blob.v1") as? BlobCapability,
+          installed.identity === identity else {
+      throw ViewPreparationError("BLOB_CAPABILITY_MISSING")
+    }
     do { try await context.requireRuntimeCapabilities(["blob.v1"]) }
     catch let error as ViewPreparationError { throw error }
     catch { throw ViewPreparationError("BLOB_CAPABILITY_MISSING") }

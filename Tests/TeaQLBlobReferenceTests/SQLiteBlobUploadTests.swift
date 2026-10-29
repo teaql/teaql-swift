@@ -58,6 +58,63 @@ private struct ModuleReadPermission: BlobReadAuthorization {
   func authorize(actor: UserContext, slot: AuthorizedBlobSlot) async throws -> Bool { true }
 }
 
+private actor ModuleReadinessVerifier: BlobContentVerifier, BlobVerifierReadiness {
+  private var calls = 0
+  func validateReady() { calls += 1 }
+  func count() -> Int { calls }
+  func verify(reader: any ObjectByteReader, extension ext: String,
+              maximumBytes: Int64) async throws -> BlobVerifiedContent {
+    throw TeaQLError.execution("readiness must not parse content")
+  }
+}
+
+private struct BlobSyntheticReadiness: RuntimeCapabilityProvider {
+  func checkReady(context: UserContext) async throws {}
+}
+
+private struct ModuleReadinessUnexpectedParticipant: BlobMutationParticipant {
+  func apply(context: UserContext, session: GraphMutationSession, mutation: Mutation,
+             previous: TeaQLRecord?, persisted: TeaQLRecord) async throws {
+    throw TeaQLError.execution("readiness must not mutate")
+  }
+}
+
+@Test(arguments: ["foreign-module", "synthetic-capability", "replaced-participant"])
+func swiftBlobModuleReadyRejectsUnrelatedInstallation(scenario: String) async throws {
+  let database = try SQLiteDataService(path: ":memory:")
+  let base = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 })
+  let root = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-swift-module-identity-\(UUID().uuidString)")
+  defer { try? FileManager.default.removeItem(at: root) }
+  let store = try FileObjectStorage(root: root.path, signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let verifier = ModuleReadinessVerifier()
+  let upload = try SQLiteBlobUploadService(authorization: UploadPermission(tenant: "tenant-a", allowed: true),
+    verifier: verifier, maximumBytes: 10_000)
+  let module = try BlobReferenceModule(upload: upload, readAuthorization: ModuleReadPermission(),
+    bindingAuthorization: UploadBindingPermission())
+  let foreign = try BlobReferenceModule(upload: upload, readAuthorization: ModuleReadPermission(),
+    bindingAuthorization: UploadBindingPermission())
+  let context = try module.install(on: base.withObjectStorage(store))
+  try await context.executeGraphSave(comment: "install readiness test catalog") { actor, session in
+    try await module.catalog.installSchema(actor, session: session)
+  }
+  try await module.ready(context: context)
+  let copy = module
+  try await copy.ready(context: context)
+  #expect(await verifier.count() == 2)
+  let candidate = scenario == "foreign-module" ? foreign : module
+  let target = scenario == "synthetic-capability"
+    ? context.withRuntimeCapability("blob.v1", provider: BlobSyntheticReadiness())
+    : scenario == "replaced-participant"
+      ? context.withBlobMutationParticipant(ModuleReadinessUnexpectedParticipant()) : context
+  do {
+    try await candidate.ready(context: target)
+    Issue.record("unrelated Blob module installation was accepted")
+  } catch { #expect((error as? ViewPreparationError)?.code == "BLOB_CAPABILITY_MISSING") }
+  #expect(await verifier.count() == 2)
+}
+
 @Test
 func swiftBlobModuleRequiresInstalledProviderAndCatalogSchema() async throws {
   let database = try SQLiteDataService(path: ":memory:")

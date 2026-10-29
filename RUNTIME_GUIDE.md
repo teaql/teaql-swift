@@ -7,6 +7,18 @@ Current published versions and acceptance status are tracked in
 [TeaQL Conformance](https://github.com/teaql/teaql-conformance). Individual
 verification notes below describe their own scope, not all-provider parity.
 
+## Optional module readiness
+
+`BlobReferenceModule.ready(context:)` and
+`SecureDocumentReferenceModule.ready(context:)` validate the installation made
+by that module value. Copies of the installed value retain its identity; a
+separately constructed module cannot borrow its readiness, even with identical
+configuration. A synthetic capability does not validate either native module.
+Blob readiness also requires its exact installed mutation participant, along
+with the existing provider, schema and verifier checks. The participant delegates
+to the existing native SQLite graph path. Installation stays passive; these
+checks do not migrate schema, upload content or start maintenance.
+
 ## Sensitive log data
 
 Runtime diagnostic logs show expanded SQL, with masked parameters substituted

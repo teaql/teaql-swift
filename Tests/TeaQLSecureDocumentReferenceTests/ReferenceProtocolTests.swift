@@ -123,6 +123,32 @@ private struct SnapshotAssembly: SecureDocumentAssembly {
     PreparedBoundDocument(document: document, lifetimeSeconds: 300)
   }
 }
+
+private struct SecureSyntheticReadiness: RuntimeCapabilityProvider {
+  func checkReady(context: UserContext) async throws {}
+}
+
+@Test(arguments: ["foreign-module", "synthetic-capability"])
+func swiftSecureModuleReadyRejectsUnrelatedInstallation(scenario: String) async throws {
+  let (runtime, principal, snapshot) = try documentFixture()
+  let database = try SQLiteDataService(path: ":memory:")
+  let base = UserContext(queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 })
+  let module = SecureDocumentReferenceModule(runtime: runtime)
+  let foreign = SecureDocumentReferenceModule(runtime: runtime)
+  let context = try module.install(on: base, assembly: SnapshotAssembly(actor: principal,
+    document: BoundDocumentSnapshot(snapshot: snapshot, bindings: [])))
+  try await module.ready(context: context)
+  let copy = module
+  try await copy.ready(context: context)
+  let candidate = scenario == "foreign-module" ? foreign : module
+  let target = scenario == "synthetic-capability"
+    ? context.withRuntimeCapability("secure_document.v1", provider: SecureSyntheticReadiness()) : context
+  do {
+    try await candidate.ready(context: target)
+    Issue.record("unrelated Secure module installation was accepted")
+  } catch { #expect((error as? ViewPreparationError)?.code == "DOCUMENT_CONFIGURATION") }
+}
 private struct GraphAuthorizer: ResponseGraphAuthorizer {
   let slot: AuthorizedBlobSlot
   func authorize(context: UserContext, result: any Sendable, options: ViewOptions)

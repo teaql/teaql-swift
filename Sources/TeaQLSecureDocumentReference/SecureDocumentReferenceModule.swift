@@ -1,6 +1,8 @@
 import Foundation
 import TeaQLCore
 
+private final class SecureModuleIdentity: Sendable {}
+
 public struct PreparedBoundDocument: Sendable {
   public let document: BoundDocumentSnapshot
   public let lifetimeSeconds: Int64
@@ -16,6 +18,7 @@ public protocol SecureDocumentAssembly: Sendable {
 }
 
 private struct SecureCapability: RuntimeCapabilityProvider {
+  let identity: SecureModuleIdentity
   let contributor: SecureContributor
   func checkReady(context: UserContext) async throws {
     guard context.hasSecureDocumentContributor(contributor) else {
@@ -73,6 +76,7 @@ private final class SecureContributor: SecureDocumentContributor {
 
 /// Optional protocol and governed-view assembly. Host startup invokes readiness separately.
 public struct SecureDocumentReferenceModule: Sendable {
+  private let identity = SecureModuleIdentity()
   public let runtime: ContextBoundReferenceRuntime
   public init(runtime: ContextBoundReferenceRuntime) { self.runtime = runtime }
 
@@ -82,11 +86,16 @@ public struct SecureDocumentReferenceModule: Sendable {
       throw ViewPreparationError("DOCUMENT_CONFIGURATION")
     }
     let contributor = SecureContributor(runtime: runtime, assembly: assembly)
-    return context.withRuntimeCapability("secure_document.v1", provider: SecureCapability(contributor: contributor))
+    return context.withRuntimeCapability("secure_document.v1", provider: SecureCapability(
+      identity: identity, contributor: contributor))
       .withSecureDocumentContributor(contributor)
   }
 
   public func ready(context: UserContext) async throws {
+    guard let installed = context.runtimeCapabilityProvider(named: "secure_document.v1") as? SecureCapability,
+          installed.identity === identity else {
+      throw ViewPreparationError("DOCUMENT_CONFIGURATION")
+    }
     do { try await context.requireRuntimeCapabilities(["secure_document.v1"]) }
     catch { throw ViewPreparationError("DOCUMENT_CONFIGURATION") }
   }

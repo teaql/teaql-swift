@@ -12,6 +12,12 @@ private enum CapabilityReadiness {
 public extension UserContext {
   package var hasBlobMutationParticipant: Bool { blobMutationParticipant != nil }
 
+  package func hasBlobMutationParticipant<Participant>(_ candidate: Participant) -> Bool
+    where Participant: BlobMutationParticipant, Participant: AnyObject {
+    guard let installed = blobMutationParticipant else { return false }
+    return ObjectIdentifier(installed as AnyObject) == ObjectIdentifier(candidate)
+  }
+
   package func withBlobMutationParticipant(_ participant: any BlobMutationParticipant) -> UserContext {
     var copy = self
     copy.blobMutationParticipant = participant
@@ -19,6 +25,11 @@ public extension UserContext {
   }
 
   func hasRuntimeCapability(_ name: String) -> Bool { runtimeCapabilities[name] != nil }
+
+  /// Optional modules inspect their own concrete installation without exposing it to payloads.
+  package func runtimeCapabilityProvider(named name: String) -> (any RuntimeCapabilityProvider)? {
+    runtimeCapabilities[name]
+  }
 
   func hasSecureDocumentContributor(_ candidate: any SecureDocumentContributor) -> Bool {
     guard let installed = secureDocumentContributor else { return false }
