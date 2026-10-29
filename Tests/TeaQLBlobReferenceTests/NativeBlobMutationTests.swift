@@ -134,6 +134,7 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
   let asset = EntityDescriptor(name: "Asset", table: "native_blob_asset", properties: [
     PropertyDescriptor(name: "id", type: .int, isID: true),
     PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "caption", type: .string, nullable: true),
     PropertyDescriptor(name: "document", type: .blobRef, nullable: true, blobSpec: spec),
   ])
   let control = EntityDescriptor(name: "Control", table: "native_blob_control", properties: [
@@ -331,6 +332,44 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
       #expect(business.first?["document"] == .string(ledgerRef.key))
       #expect(bindings.first?["key"] == .string(ledgerRef.key))
       #expect(catalog.first?["status"] == .string("available"))
+    }
+  }
+
+  let bindingBefore = try await context.executeGraphSave(comment: "snapshot omitted Blob binding") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      try await sql.query("SELECT * FROM teaql_blob_binding WHERE entity_id=?",
+        parameters: [.string(String(committedID))])
+    }
+  }
+  let catalogBefore = try await context.executeGraphSave(comment: "snapshot omitted Blob catalog") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      try await sql.query("SELECT * FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(ledgerRef.key)])
+    }
+  }
+  let partial = EntityRoot()
+  let partialKey = EntityKey(entity: "Asset", id: .int(committedID))
+  partial.set(partialKey, field: "caption", value: .string("after"))
+  #expect(partial.change(partialKey)["document"] == nil)
+  try await context.executeGraphSave(comment: "update caption with unloaded Blob") { actor, session in
+    _ = try await actor.execute(Mutation(kind: .update, entity: asset, id: .int(committedID),
+      values: partial.change(partialKey), expectedVersion: 1, auditReason: session.intent.comment),
+      ledgerRoot: partial, ledgerKey: partialKey)
+  }
+  try await context.executeGraphSave(comment: "verify omitted Blob unchanged") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let business = try await sql.query(
+        "SELECT document,caption,version FROM native_blob_asset WHERE id=?",
+        parameters: [.int(committedID)])
+      #expect(business.first?["document"] == .string(ledgerRef.key))
+      #expect(business.first?["caption"] == .string("after"))
+      #expect(business.first?["version"] == .int(2))
+      let bindings = try await sql.query("SELECT * FROM teaql_blob_binding WHERE entity_id=?",
+        parameters: [.string(String(committedID))])
+      let catalog = try await sql.query("SELECT * FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(ledgerRef.key)])
+      #expect(bindings == bindingBefore)
+      #expect(catalog == catalogBefore)
     }
   }
 
