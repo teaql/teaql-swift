@@ -213,3 +213,113 @@ func secureModuleRejectsWrongEncryptedBindingBeforeURLProjection() async throws 
     #expect((error as? ViewPreparationError)?.businessState == "committed")
   }
 }
+
+
+private func surfaceDocument(_ original: DocumentSnapshot, scenario: String = "valid") throws -> BoundDocumentSnapshot {
+  let first = original.entities[0]
+  var loaded = ["attachment", "product_code", "quantity"], writable = ["attachment", "quantity"]
+  var rowKeys = ["item:0"], complete = "COMPLETE", relationWritable = true
+  var relationMutations = ["CREATE_CHILD", "REMOVE_CHILD"], bindingWritable = true, bindingEntity = "OrderItem"
+  switch scenario {
+  case "writable-unloaded": writable = ["hidden"]
+  case "orphan-relation": rowKeys = ["absent"]
+  case "duplicate-relation-row": rowKeys = ["item:0", "item:0"]
+  case "readonly-relation-mutation": relationWritable = false
+  case "binding-unloaded": loaded = ["quantity"]; writable = ["quantity"]; bindingWritable = false
+  case "binding-readonly": writable = ["quantity"]
+  case "binding-foreign-entity": bindingEntity = "OtherItem"
+  case "readonly-existing": writable = ["quantity"]; bindingWritable = false
+  case "partial-child": complete = "PARTIAL"
+  case "readonly-child": relationWritable = false; relationMutations = []
+  case "no-create-child": relationMutations = ["REMOVE_CHILD"]
+  default: break
+  }
+  let row = DocumentEntitySnapshot(rowKey: first.rowKey, identity: first.identity,
+    loadedFields: loaded, writableFields: writable, allowedMutations: first.allowedMutations)
+  let snapshot = DocumentSnapshot(modelFingerprint: original.modelFingerprint, businessID: original.businessID,
+    scope: original.scope, aggregate: original.aggregate,
+    entities: scenario == "duplicate-row" ? [row, row] : [row],
+    relations: [DocumentRelationSnapshot(name: "items", rowKeys: rowKeys, completeness: complete,
+      writable: relationWritable, allowedMutations: relationMutations)])
+  let binding = DocumentBlobBindingSnapshot(rowKey: "item:0", canonicalField: "attachment", entityType: bindingEntity,
+    reference: try BlobRef("blob_A"), bindingVersion: 4, nullable: true, writable: bindingWritable)
+  return BoundDocumentSnapshot(snapshot: snapshot, bindings: scenario == "duplicate-binding" ? [binding, binding] : [binding])
+}
+
+@Test(arguments: ["writable-unloaded", "duplicate-row", "orphan-relation", "duplicate-relation-row",
+  "readonly-relation-mutation", "binding-unloaded", "binding-readonly", "binding-foreign-entity", "duplicate-binding"])
+func swiftIssuedProjectionRejectsInconsistentSnapshot(scenario: String) throws {
+  let (runtime, actor, original) = try documentFixture()
+  let d = try surfaceDocument(original, scenario: scenario)
+  do {
+    _ = try runtime.issueBoundDocumentSnapshot(actor, document: d, lifetimeSeconds: 60)
+    Issue.record("inconsistent issued snapshot accepted")
+  } catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_PROJECTION_VIOLATION") }
+}
+
+@Test(arguments: ["readonly-existing", "hidden-existing", "partial-child", "readonly-child", "no-create-child"])
+func swiftSelectionCannotExpandIssuedSurface(scenario: String) throws {
+  let (runtime, actor, original) = try documentFixture()
+  let d = try surfaceDocument(original, scenario: scenario)
+  let token = try runtime.issueBoundDocumentSnapshot(actor, document: d, lifetimeSeconds: 60)
+  #expect(try runtime.consumeBoundDocumentSnapshot(actor, token: token, aggregateType: "Order", purpose: "edit-order").document == d)
+  let child = scenario.hasSuffix("child")
+  let target = BlobSelectionTarget(scope: d.snapshot.scope, targetEntity: "OrderItem",
+    canonicalField: scenario == "hidden-existing" ? "hidden_attachment" : "attachment",
+    kind: child ? "NEW_CLIENT_KEY" : "EXISTING_ROW", targetKey: child ? "client-hidden" : "item:0", commandID: "command-1")
+  do {
+    _ = try runtime.issueBlobSelection(actor, documentToken: token,
+      claim: BlobSelectionClaim(target: target, reference: try BlobRef("blob_B")), lifetimeSeconds: 30)
+    Issue.record("selection expanded issued surface")
+  } catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_PROJECTION_VIOLATION") }
+}
+
+private struct SurfaceAssembly: SecureDocumentAssembly {
+  let actor: TrustedReferencePrincipal
+  let document: BoundDocumentSnapshot
+  func principal(context: UserContext) throws -> TrustedReferencePrincipal { actor }
+  func snapshot(context: UserContext, graph: AuthorizedResponseGraph) async throws -> PreparedBoundDocument {
+    PreparedBoundDocument(document: document, lifetimeSeconds: 60)
+  }
+}
+private struct SurfaceSigner: BlobResponseContributor {
+  let deadline: Date
+  let late: Bool
+  func projectBatch(context: UserContext, graph: AuthorizedResponseGraph, expiresAt: Date?) async throws -> [ProjectedBlobURL] {
+    #expect(expiresAt == deadline)
+    #expect(graph.blobSlots.map { $0.reference.key } == ["blob_A"])
+    #expect(graph.presentation == .object(["attachment": .blob(try BlobRef("blob_A"))]))
+    return [ProjectedBlobURL(url: "https://files.example.invalid/asset",
+      expiresAt: deadline.addingTimeInterval(late ? 0.001 : -5))]
+  }
+}
+@Test
+func swiftGovernedViewHidesBlobAndBoundsURLByDocumentDeadline() async throws {
+  let (_, actor, original) = try documentFixture()
+  let now = Date(timeIntervalSince1970: Date().timeIntervalSince1970.rounded(.down)), deadline = now.addingTimeInterval(60)
+  let keys = try StaticReferenceKeyProvider(current: "k1", keys: [ReferenceKey(keyID: "k1", masterKey: Array(repeating: 0x42, count: 32))])
+  let runtime = try ContextBoundReferenceRuntime(service: "order-service", environment: "test", keys: keys,
+    authorize: { _, _, _ in true }, now: { now }, nonce: { Array(repeating: 0x33, count: 12) })
+  let module = SecureDocumentReferenceModule(runtime: runtime)
+  let database = try SQLiteDataService(path: ":memory:")
+  let base = UserContext(queryExecutor: database, mutationExecutor: database, requestPolicy: RequestPolicy { $0 })
+  let installed = try module.install(on: base, assembly: SurfaceAssembly(actor: actor, document: try surfaceDocument(original)))
+  let visible = try BlobRef("blob_A"), hidden = try BlobRef("blob_hidden")
+  let source = ViewValue.object(["attachment": .blob(visible), "hidden_attachment": .blob(hidden)])
+  let slot = AuthorizedBlobSlot(path: [.field("attachment")], entity: "OrderItem", entityID: "20", field: "attachment",
+    scope: "tenant-a", bindingVersion: 4, reference: visible)
+  let authorized = installed.withResponseGraphAuthorizer(GraphAuthorizer(slot: slot))
+  let options = ViewOptions(mode: .governed, businessOutcome: .committed, expiresAt: now.addingTimeInterval(120))
+  let view = try await ViewPreparationService().prepare(context: authorized.withBlobResponseContributor(SurfaceSigner(deadline: deadline, late: false)), result: source, options: options)
+  #expect(view.presentation == .object(["attachment": .string("https://files.example.invalid/asset")]))
+  #expect(view.expiresAt == deadline.addingTimeInterval(-5))
+  #expect(source == .object(["attachment": .blob(visible), "hidden_attachment": .blob(hidden)]))
+  do {
+    _ = try await ViewPreparationService().prepare(context: authorized.withBlobResponseContributor(SurfaceSigner(deadline: deadline, late: true)), result: source, options: options)
+    Issue.record("URL beyond actual document deadline accepted")
+  } catch {
+    #expect((error as? ViewPreparationError)?.code == "BLOB_SIGN_FAILED")
+    #expect((error as? ViewPreparationError)?.businessState == "committed")
+    #expect((error as? ViewPreparationError)?.retry == "read")
+  }
+}

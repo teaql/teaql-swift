@@ -554,6 +554,11 @@ func swiftSQLiteSecureDocumentOpenAcceptAndReplay() async throws {
   await host.restoreActor()
   #expect(try await serviceState(context) == (3, 3, 2))
   await host.setActorDrift(false)
+  try await context.executeGraphSave(comment: "install omitted hidden field") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("ALTER TABLE document_order ADD COLUMN hidden_note TEXT NOT NULL DEFAULT 'server-only'", parameters: [])
+    }
+  }
   let beforeUnknown = await host.mutations()
   let unknownOpen = try await service.open(open)
   let unknownCommand = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: unknownOpen.documentToken,
@@ -597,6 +602,12 @@ func swiftSQLiteSecureDocumentOpenAcceptAndReplay() async throws {
   let receiptUnchanged = try await durableReceipt() == originalReceipt
   #expect(receiptUnchanged)
   #expect(try await serviceState(context) == (4, 3, 3))
+  let hidden = try await context.executeGraphSave(comment: "verify omitted hidden field preservation") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      try await sql.query("SELECT hidden_note FROM document_order WHERE id=10", parameters: [])
+    }
+  }
+  #expect(hidden.first?["hidden_note"] == .string("server-only"))
 }
 
 @Test
