@@ -33,6 +33,12 @@ struct SQLiteBlobMutationParticipant: BlobMutationParticipant {
       } ?? nil
       let after = mutation.kind == .delete ? nil :
         try Self.reference(persisted[property.name], nullable: property.nullable)
+      if mutation.kind == .update && mutation.values[property.name] == nil {
+        // Omitted fields keep both their binding and authorization surface.
+        // A trigger still cannot change the value behind the submitted patch.
+        guard before == after else { throw TeaQLError.execution("BLOB_BIND_DENIED") }
+        continue
+      }
       let target = BlobBindingTarget(entity: mutation.entity.name,
         entityID: identifier, field: property.modelName ?? property.name)
       let binding = try await context.withPhysicalSQL(session) { sql in

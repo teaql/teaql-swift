@@ -783,3 +783,128 @@ func swiftFirstMutationOfMigratedNullColumnUsesNativeOwner(scenario: String) asy
     }
   }
 }
+
+private actor OmittedBlobPermission: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
+  private var allowed = true
+  private var calls = 0
+  nonisolated func scope(for actor: UserContext) throws -> String { "tenant-a" }
+  func denyAndReset() { allowed = false; calls = 0 }
+  func authorizationCalls() -> Int { calls }
+  func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
+    next: BlobRef?, action: String) async throws -> Bool {
+    calls += 1
+    return allowed
+  }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
+  }
+}
+
+@Test(arguments: ["legacy-null", "bound", "explicit-same-key", "trigger-change"])
+func swiftOmittedBlobDoesNotRequireBindingPermission(scenario: String) async throws {
+  let root = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-omitted-permission-\(UUID())", isDirectory: true)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: root) }
+  let store = try FileObjectStorage(root: root.appendingPathComponent("objects").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let spec = try BlobFieldSpec(entity: "Asset", field: "document", extensions: ["pdf"],
+    nullable: true, policyProfile: "default")
+  let entity = EntityDescriptor(name: "Asset", table: "omitted_permission_asset", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "caption", type: .string, nullable: true),
+    PropertyDescriptor(name: "document", type: .blobRef, nullable: true, blobSpec: spec),
+  ])
+  let database = try SQLiteDataService(path: ":memory:")
+  let permission = OmittedBlobPermission(), audit = LegacyNullAudit()
+  let base = UserContext(actor: "alice", queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }, auditSink: audit).withObjectStorage(store)
+  let upload = try SQLiteBlobUploadService(authorization: NativeUploadAuthorization(),
+    verifier: NativeVerifier(), maximumBytes: 1024)
+  let module = try BlobReferenceModule(upload: upload, readAuthorization: NativeReadAuthorization(),
+    bindingAuthorization: permission)
+  let context = try module.install(on: base)
+  try await context.ensureSchema(RuntimeModule(name: "omitted-permission", entities: [entity]))
+  let reference = try BlobRef("blob_swift_omitted_first")
+  try await context.executeGraphSave(comment: "seed trusted omitted-field catalog") { actor, session in
+    try await module.catalog.installSchema(actor, session: session)
+    try await actor.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("""
+        INSERT INTO teaql_blob_catalog
+          (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,
+           completed_at_ms,policy_profile,upload_mode,unbound_retention_seconds,effective_unref_seconds)
+        VALUES (?,'tenant-a',?,'v1','report.pdf','application/pdf',7,'uploaded_unbound',
+          CAST(strftime('%s','now') AS INTEGER)*1000,'default','server_stream',86400,604800)
+        """, parameters: [.string(reference.key), .string("objects/\(reference.key)")])
+      if scenario == "legacy-null" {
+        _ = try await sql.execute("INSERT INTO omitted_permission_asset(id,version,caption,document) VALUES (7,1,'before',NULL)", parameters: [])
+      }
+    }
+  }
+  try await module.ready(context: context)
+  if scenario != "legacy-null" {
+    try await context.executeGraphSave(comment: "create initial bound field") { actor, session in
+      _ = try await actor.execute(Mutation(kind: .create, entity: entity,
+        values: ["id": .int(7), "caption": .string("before"), "document": .blobRef(reference)],
+        auditReason: session.intent.comment))
+    }
+  }
+  if scenario == "trigger-change" {
+    try await context.executeGraphSave(comment: "install omitted-field trigger negative control") { actor, session in
+      try await actor.withPhysicalSQL(session) { sql in
+        _ = try await sql.execute("""
+          CREATE TRIGGER change_omitted_document AFTER UPDATE OF caption ON omitted_permission_asset
+          BEGIN UPDATE omitted_permission_asset SET document='blob_swift_omitted_changed' WHERE id=NEW.id; END
+          """, parameters: [])
+      }
+    }
+  }
+  func snapshot() async throws -> [String: [TeaQLRecord]] {
+    try await context.executeGraphSave(comment: "inspect native omitted-field state") { actor, session in
+      try await actor.withPhysicalSQL(session) { sql in
+        var result: [String: [TeaQLRecord]] = [:]
+        for table in ["omitted_permission_asset", "teaql_blob_catalog", "teaql_blob_binding", "teaql_blob_upload"] {
+          result[table] = try await sql.query("SELECT * FROM \(table)", parameters: [])
+        }
+        return result
+      }
+    }
+  }
+  let before = try await snapshot(), auditBefore = await audit.count()
+  await permission.denyAndReset()
+  let rejected = scenario == "explicit-same-key" || scenario == "trigger-change"
+  let values: TeaQLRecord = scenario == "explicit-same-key"
+    ? ["document": .blobRef(reference)] : ["caption": .string("after")]
+  #expect(values["document"] == nil || scenario == "explicit-same-key")
+  func update() async throws {
+    try await context.executeGraphSave(comment: "update only the submitted fields") { actor, session in
+      _ = try await actor.execute(Mutation(kind: .update, entity: entity, id: .int(7),
+        values: values, expectedVersion: 1, auditReason: session.intent.comment))
+      #expect(await audit.count() == auditBefore)
+    }
+  }
+  if rejected {
+    do { try await update(); Issue.record("explicit revoked or trigger mutation accepted") }
+    catch { #expect(error as? TeaQLError == .execution("BLOB_BIND_DENIED")) }
+  } else { try await update() }
+  let after = try await snapshot()
+  for table in ["teaql_blob_catalog", "teaql_blob_binding", "teaql_blob_upload"] {
+    #expect(after[table] == before[table])
+  }
+  #expect(await audit.count() == auditBefore + (rejected ? 0 : 1))
+  if rejected {
+    #expect(after["omitted_permission_asset"] == before["omitted_permission_asset"])
+    if scenario == "explicit-same-key" { #expect(await permission.authorizationCalls() == 1) }
+  } else {
+    #expect(await permission.authorizationCalls() == 0)
+    let row = try #require(after["omitted_permission_asset"]?.first)
+    #expect(row["version"] == .int(2) && row["caption"] == .string("after"))
+    #expect(row["document"] == (scenario == "legacy-null" ? .null : .string(reference.key)))
+    if scenario == "legacy-null" { #expect(after["teaql_blob_binding"]?.isEmpty == true) }
+  }
+}
