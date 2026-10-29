@@ -1,3 +1,4 @@
+import Crypto
 import Foundation
 import TeaQLBlobReference
 import TeaQLCore
@@ -7,12 +8,14 @@ import Testing
 private struct NativeBindingAuthorization: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
   let scope: String
   let allowed: Bool
+  var policy: BlobRetentionPolicy? = nil
   func scope(for actor: UserContext) throws -> String { scope }
   func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
                  next: BlobRef?, action: String) async throws -> Bool { allowed }
   func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
     target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
-    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+    if let policy { return policy }
+    return try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
       unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
       minimumRetentionSeconds: 3600)
   }
@@ -54,7 +57,8 @@ private struct NativeReadAuthorization: BlobReadAuthorization {
   func authorize(actor: UserContext, slot: AuthorizedBlobSlot) async throws -> Bool { true }
 }
 
-private struct NativeUploadAuthorization: BlobUploadAuthorization {
+private struct NativeUploadAuthorization: BlobUploadAuthorization, BlobUploadPolicyAuthorization {
+  var policy: BlobRetentionPolicy? = nil
   func scope(for actor: UserContext) throws -> String { "tenant-a" }
   func field(for actor: UserContext, target: BlobUploadTarget) throws -> BlobFieldSpec {
     try BlobFieldSpec(entity: "Asset", field: "document", extensions: ["pdf"],
@@ -68,6 +72,45 @@ private struct NativeUploadAuthorization: BlobUploadAuthorization {
     BlobUploadAuthorizationSnapshot(scope: try scope(for: actor),
       field: try field(for: actor, target: target), allowed: true)
   }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobUploadTarget) async throws -> BlobRetentionPolicy {
+    if let policy { return policy }
+    return try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
+  }
+}
+
+private struct NativeFixturePDFVerifier: BlobContentVerifier {
+  func verify(reader: any ObjectByteReader, extension ext: String,
+              maximumBytes: Int64) async throws -> BlobVerifiedContent {
+    var data = Data()
+    while true {
+      let chunk = try await reader.read(upToCount: 4096)
+      if chunk.isEmpty { break }
+      data.append(chunk)
+      guard Int64(data.count) <= maximumBytes else { throw TeaQLError.execution("invalid fixture") }
+    }
+    guard ext == "pdf", data.starts(with: Data("%PDF-".utf8)),
+      String(data: data, encoding: .utf8)?.contains("%%EOF") == true else {
+      throw TeaQLError.execution("invalid fixture")
+    }
+    return BlobVerifiedContent(sizeBytes: Int64(data.count),
+      sha256: SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
+      contentType: "application/pdf")
+  }
+}
+
+private struct NativeMaintenancePermission: BlobMaintenanceAuthorization {
+  func scope(for actor: UserContext) throws -> String { "tenant-a" }
+  func canMaintain(actor: UserContext, scope: String) async throws -> Bool { true }
+}
+
+private final class NativeSharedClock: @unchecked Sendable {
+  private let lock = NSLock()
+  private var date = Date(timeIntervalSince1970: 1_700_000_000)
+  func now() -> Date { lock.withLock { date } }
+  func advance(_ interval: TimeInterval) { lock.withLock { date = date.addingTimeInterval(interval) } }
 }
 
 private struct NativeVerifier: BlobContentVerifier {
@@ -299,6 +342,150 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
     requestPolicy: RequestPolicy { $0 }).withObjectStorage(store)
   let generatedContext = try module.install(on: generatedBase)
   try await module.ready(context: generatedContext)
+}
+
+@Test
+func swiftNativeSharedBlobFinalUnbindRetainsRealFileUntilDeadline() async throws {
+  let parent = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-shared-blob-\(UUID().uuidString)", isDirectory: true)
+  try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: parent) }
+  let file = try FileObjectStorage(root: parent.appendingPathComponent("private").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? file.close() }
+  let spec = try BlobFieldSpec(entity: "Asset", field: "document", extensions: ["pdf"],
+    nullable: true, policyProfile: "default")
+  let asset = EntityDescriptor(name: "Asset", table: "shared_blob_asset", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "document", type: .blobRef, nullable: true, blobSpec: spec),
+  ])
+  let database = try SQLiteDataService(path: ":memory:")
+  let base = UserContext(actor: "alice", queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }).withObjectStorage(file)
+  let clock = NativeSharedClock()
+  let policy = try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+    unboundRetentionSeconds: 10, unreferencedRetentionSeconds: 20,
+    minimumRetentionSeconds: 0)
+  let catalog = SQLiteBlobCatalog(now: { clock.now() })
+  let upload = try SQLiteBlobUploadService(authorization: NativeUploadAuthorization(policy: policy),
+    verifier: NativeFixturePDFVerifier(), maximumBytes: 1024, now: { clock.now() })
+  let maintenance = try SQLiteBlobMaintenanceService(catalog: catalog,
+    authorization: NativeMaintenancePermission(), now: { clock.now() })
+  let module = try BlobReferenceModule(catalog: catalog, upload: upload,
+    readAuthorization: NativeReadAuthorization(),
+    bindingAuthorization: NativeBindingAuthorization(scope: "tenant-a", allowed: true,
+      policy: policy), maintenance: maintenance)
+  let context = try module.install(on: base)
+  try await context.ensureSchema(RuntimeModule(name: "shared-blob-test", entities: [asset]))
+  try await context.executeGraphSave(comment: "install shared Blob catalog") { actor, session in
+    try await catalog.installSchema(actor, session: session)
+  }
+  try await module.ready(context: context)
+
+  let bytes = Data("%PDF-1.7\nshared native graph\n%%EOF".utf8)
+  let uploadSession = try await upload.begin(context,
+    target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "document"),
+    input: BlobUploadInput(fileName: "shared.pdf", declaredSize: Int64(bytes.count),
+      declaredContentType: "application/pdf"), replayKey: "shared-native")
+  #expect(try await upload.write(context, uploadID: uploadSession.uploadID,
+    source: ObjectDataReader(bytes)) == Int64(bytes.count))
+  let reference = try await upload.complete(context, uploadID: uploadSession.uploadID)
+  #expect(reference == uploadSession.reference)
+  let objectKey = try await context.executeGraphSave(comment: "inspect shared object key") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let rows = try await sql.query("SELECT object_key FROM teaql_blob_catalog WHERE key=?",
+        parameters: [.string(reference.key)])
+      return try ObjectKey(#require(rows.first?["object_key"]?.stringValue))
+    }
+  }
+  let storage = try context.objectStorage("shared native graph")
+  #expect(try await storage.head(objectKey) != nil)
+
+  let ledger = EntityRoot()
+  let provisional = [EntityKey(entity: "Asset", id: .int(-1)),
+    EntityKey(entity: "Asset", id: .int(-2))]
+  for key in provisional {
+    ledger.markAsNew(key)
+    ledger.set(key, field: "document", value: .blobRef(reference))
+  }
+  let ids = try await context.executeGraphSave(comment: "bind shared native Blob") { actor, session in
+    var allocated: [Int64] = []
+    for key in provisional {
+      let result = try await actor.execute(Mutation(kind: .create, entity: asset,
+        values: ledger.change(key), auditReason: session.intent.comment),
+        ledgerRoot: ledger, ledgerKey: key)
+      guard case .int(let id) = result.generatedValues["id"], id > 0 else {
+        throw TeaQLError.execution("allocated Blob ID missing")
+      }
+      try ledger.rekey(key, to: EntityKey(entity: "Asset", id: .int(id)))
+      allocated.append(id)
+    }
+    return allocated
+  }
+  #expect(ids.count == 2 && ids[0] != ids[1])
+
+  func snapshot() async throws -> (String, Int64?, Int64) {
+    try await context.executeGraphSave(comment: "inspect shared native Blob") { actor, session in
+      try await actor.withPhysicalSQL(session) { sql in
+        let catalogRows = try await sql.query(
+          "SELECT status,last_unbound_at_ms FROM teaql_blob_catalog WHERE key=?",
+          parameters: [.string(reference.key)])
+        let bindingRows = try await sql.query(
+          "SELECT COUNT(*) AS n FROM teaql_blob_binding WHERE key=?",
+          parameters: [.string(reference.key)])
+        return (try #require(catalogRows.first?["status"]?.stringValue),
+          catalogRows.first?["last_unbound_at_ms"]?.int64Value,
+          try #require(bindingRows.first?["n"]?.int64Value))
+      }
+    }
+  }
+  let bound = try await snapshot()
+  #expect(bound.0 == "available" && bound.1 == nil && bound.2 == 2)
+
+  func unbind(_ id: Int64, rejectOuter: Bool = false) async throws {
+    try await context.executeGraphSave(comment: "unbind shared native Blob") { actor, session in
+      _ = try await actor.execute(Mutation(kind: .update, entity: asset, id: .int(id),
+        values: ["document": .null], expectedVersion: 1,
+        auditReason: session.intent.comment))
+      if rejectOuter { throw TeaQLError.execution("outer owner rejected final unbind") }
+    }
+  }
+  try await unbind(ids[0])
+  let firstUnbound = try await snapshot()
+  #expect(firstUnbound.0 == "available" && firstUnbound.1 == nil && firstUnbound.2 == 1)
+  clock.advance(40)
+  #expect(try await maintenance.runBatch(context).outcomes.isEmpty)
+  #expect(try await storage.head(objectKey) != nil)
+
+  do {
+    try await unbind(ids[1], rejectOuter: true)
+    Issue.record("outer owner committed final unbind")
+  } catch { #expect(error as? TeaQLError == .execution("outer owner rejected final unbind")) }
+  let rolledBack = try await snapshot()
+  #expect(rolledBack.0 == "available" && rolledBack.1 == nil && rolledBack.2 == 1)
+  try await context.executeGraphSave(comment: "inspect rejected final unbind") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let rows = try await sql.query("SELECT document FROM shared_blob_asset WHERE id=?",
+        parameters: [.int(ids[1])])
+      #expect(rows.first?["document"] == .string(reference.key))
+    }
+  }
+  #expect(try await maintenance.runBatch(context).outcomes.isEmpty)
+  #expect(try await storage.head(objectKey) != nil)
+
+  try await unbind(ids[1])
+  let final = try await snapshot()
+  #expect(final.0 == "available" && final.1 == Int64(clock.now().timeIntervalSince1970 * 1000)
+    && final.2 == 0)
+  clock.advance(19.999)
+  #expect(try await maintenance.runBatch(context).outcomes.isEmpty)
+  #expect(try await storage.head(objectKey) != nil)
+  clock.advance(0.001)
+  let deletion = try await maintenance.runBatch(context)
+  #expect(deletion.outcomes.map(\.status) == ["deleted"])
+  #expect(try await snapshot().0 == "deleted")
+  #expect(try await storage.head(objectKey) == nil)
 }
 
 @Test
