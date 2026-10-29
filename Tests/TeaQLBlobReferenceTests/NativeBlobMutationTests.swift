@@ -234,10 +234,10 @@ func swiftModeledBlobMutationAutomaticallyBindsInOwnerTransaction() async throws
     Issue.record("raw Key accepted")
   } catch { #expect(error as? TeaQLError == .execution("BLOB_REFERENCE_INVALID")) }
 
-  try await context.executeGraphSave(comment: "seed legacy row without binding") { actor, session in
+  try await context.executeGraphSave(comment: "seed non-null orphan without binding") { actor, session in
     try await actor.withPhysicalSQL(session) { sql in
-      _ = try await sql.execute("INSERT INTO native_blob_asset(id,version,document) VALUES (7,1,NULL)",
-        parameters: [])
+      _ = try await sql.execute("INSERT INTO native_blob_asset(id,version,document) VALUES (7,1,?)",
+        parameters: [.string(first.key)])
     }
   }
   do {
@@ -671,6 +671,115 @@ func swiftMultiEntityBlobGraphRollsBackLateDenialAndOuterRejection() async throw
         #expect(catalog[index]["key"] == .string(reference.key))
         #expect(catalog[index]["status"] == .string("available"))
       }
+    }
+  }
+}
+
+private actor LegacyNullBindingPermission: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
+  private var allowed = true
+  nonisolated func scope(for actor: UserContext) throws -> String { "tenant-a" }
+  func setAllowed(_ value: Bool) { allowed = value }
+  func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
+    next: BlobRef?, action: String) async throws -> Bool { allowed }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy {
+    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+      unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
+      minimumRetentionSeconds: 3600)
+  }
+}
+
+private actor LegacyNullAudit: AuditSink {
+  private var events: [AuditEvent] = []
+  func record(_ event: AuditEvent) { events.append(event) }
+  func count() -> Int { events.count }
+}
+
+@Test(arguments: ["attach", "outer-reject", "clear-null", "delete-null", "non-null-orphan"])
+func swiftFirstMutationOfMigratedNullColumnUsesNativeOwner(scenario: String) async throws {
+  let root = FileManager.default.temporaryDirectory
+    .appendingPathComponent("teaql-swift-legacy-null-\(UUID())", isDirectory: true)
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: root) }
+  let store = try FileObjectStorage(root: root.appendingPathComponent("objects").path,
+    signingKey: Data(repeating: 0x42, count: 32))
+  defer { try? store.close() }
+  let spec = try BlobFieldSpec(entity: "Asset", field: "document", extensions: ["pdf"],
+    nullable: true, policyProfile: "default")
+  let entity = EntityDescriptor(name: "Asset", table: "migrated_null_asset", properties: [
+    PropertyDescriptor(name: "id", type: .int, isID: true),
+    PropertyDescriptor(name: "version", type: .int, isVersion: true),
+    PropertyDescriptor(name: "document", type: .blobRef, nullable: true, blobSpec: spec),
+  ])
+  let database = try SQLiteDataService(path: ":memory:")
+  let audit = LegacyNullAudit(), permission = LegacyNullBindingPermission()
+  let base = UserContext(actor: "alice", queryExecutor: database, mutationExecutor: database,
+    requestPolicy: RequestPolicy { $0 }, auditSink: audit).withObjectStorage(store)
+  let upload = try SQLiteBlobUploadService(authorization: NativeUploadAuthorization(),
+    verifier: NativeVerifier(), maximumBytes: 1024)
+  let module = try BlobReferenceModule(upload: upload, readAuthorization: NativeReadAuthorization(),
+    bindingAuthorization: permission)
+  let context = try module.install(on: base)
+  try await context.ensureSchema(RuntimeModule(name: "legacy-null-test", entities: [entity]))
+  let reference = try BlobRef("blob_legacy_null_first")
+  try await context.executeGraphSave(comment: "seed migrated old SQL row") { actor, session in
+    try await module.catalog.installSchema(actor, session: session)
+    try await actor.withPhysicalSQL(session) { sql in
+      // No binding backfill: the actual old row has SQL NULL in its added column.
+      _ = try await sql.execute("INSERT INTO migrated_null_asset(id,version,document) VALUES (7,1,?)",
+        parameters: [scenario == "non-null-orphan" ? .string(reference.key) : .null])
+      _ = try await sql.execute("""
+        INSERT INTO teaql_blob_catalog
+          (key,scope,object_key,content_version,file_name,content_type,size_bytes,status,
+           completed_at_ms,policy_profile,upload_mode,unbound_retention_seconds,effective_unref_seconds)
+        VALUES (?,'tenant-a',?,'v1','report.pdf','application/pdf',7,'uploaded_unbound',
+          CAST(strftime('%s','now') AS INTEGER)*1000,'default','server_stream',86400,604800)
+        """, parameters: [.string(reference.key), .string("objects/\(reference.key)")])
+    }
+  }
+  try await module.ready(context: context)
+  func save(reject: Bool = false) async throws {
+    try await context.executeGraphSave(comment: "first migrated Blob mutation") { actor, session in
+      _ = try await actor.execute(Mutation(kind: scenario == "delete-null" ? .delete : .update,
+        entity: entity, id: .int(7),
+        values: scenario == "delete-null" ? [:] : ["document":
+          scenario == "clear-null" || scenario == "non-null-orphan" ? .null : .blobRef(reference)],
+        expectedVersion: 1, auditReason: session.intent.comment))
+      #expect(await audit.count() == 0)
+      if reject { throw TeaQLError.execution("outer owner rejected first legacy bind") }
+    }
+  }
+  if scenario == "attach" {
+    await permission.setAllowed(false)
+    do { try await save(); Issue.record("revoked first legacy bind accepted") }
+    catch { #expect(error as? TeaQLError == .execution("BLOB_BIND_DENIED")) }
+    #expect(await audit.count() == 0)
+    await permission.setAllowed(true)
+  }
+  let rollback = scenario == "outer-reject" || scenario == "non-null-orphan"
+  if scenario == "outer-reject" {
+    do { try await save(reject: true); Issue.record("outer rejection committed first bind") }
+    catch { #expect(error as? TeaQLError == .execution("outer owner rejected first legacy bind")) }
+  } else if scenario == "non-null-orphan" {
+    do { try await save(); Issue.record("non-null orphan accepted") }
+    catch { #expect(error as? TeaQLError == .execution("BLOB_BIND_DENIED")) }
+  } else { try await save() }
+  #expect(await audit.count() == (rollback ? 0 : 1))
+  try await context.executeGraphSave(comment: "inspect migrated Blob result") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      let rows = try await sql.query("SELECT version,document FROM migrated_null_asset WHERE id=7", parameters: [])
+      #expect(rows.count == 1)
+      #expect(rows.first?["version"] == .int(rollback ? 1 : scenario == "delete-null" ? -2 : 2))
+      #expect(rows.first?["document"] ==
+        (scenario == "attach" || scenario == "non-null-orphan" ? .string(reference.key) : .null))
+      let bindings = try await sql.query("SELECT key,version FROM teaql_blob_binding", parameters: [])
+      #expect(bindings.count == (rollback ? 0 : 1))
+      if !rollback {
+        #expect(bindings.first?["version"] == .int(1))
+        #expect(bindings.first?["key"] == (scenario == "attach" ? .string(reference.key) : .null))
+      }
+      let catalog = try await sql.query("SELECT status FROM teaql_blob_catalog", parameters: [])
+      #expect(catalog.first?["status"] == .string(scenario == "attach" ? "available" : "uploaded_unbound"))
     }
   }
 }

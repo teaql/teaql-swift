@@ -51,18 +51,26 @@ struct SQLiteBlobMutationParticipant: BlobMutationParticipant {
           throw TeaQLError.execution("BLOB_BIND_DENIED")
         }
         expectedVersion = 0
-      } else {
-        guard mutation.kind != .create, let binding,
+      } else if let binding {
+        guard mutation.kind != .create,
               let version = binding["version"]?.int64Value, version > 0,
               try Self.catalogReference(binding["key"]) == before,
               before == nil || binding["status"]?.stringValue == "available" else {
           throw TeaQLError.execution("BLOB_BIND_DENIED")
         }
         expectedVersion = version
+      } else {
+        // A migrated nullable column can precede its first binding. Require
+        // the owner's explicit SQL NULL; never repair a non-null orphan.
+        guard mutation.kind != .create, before == nil,
+              previous?[property.name] == .null else {
+          throw TeaQLError.execution("BLOB_BIND_DENIED")
+        }
+        expectedVersion = 0
       }
       let action: String = mutation.kind == .create ? "Create" :
         mutation.kind == .delete ? "Delete" : "Update"
-      if previous != nil && before == after && mutation.kind != .delete {
+      if binding != nil && previous != nil && before == after && mutation.kind != .delete {
         let allowed: Bool
         do { allowed = try await authorization.authorize(actor: context, target: target,
           previous: before, next: after, action: action) }
