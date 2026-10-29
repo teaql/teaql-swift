@@ -3,7 +3,7 @@ set -euo pipefail
 example="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$example/../.." && pwd)"
 if [[ $# -gt 1 ]]; then echo 'usage: bash verify-checker-overlap.sh [retained-sqlite-path]' >&2; exit 2; fi
-evidence="${TEAQL_SWIFT_CHECKER_EVIDENCE:-$(mktemp -d /tmp/teaql-swift-checker-overlap.XXXXXX)}"
+evidence="${TEAQL_SWIFT_CHECKER_EVIDENCE:-$(mktemp -d -t teaql-swift-checker-overlap.XXXXXX)}"
 mkdir -p "$evidence"
 evidence="$(cd "$evidence" && pwd)"
 database="${1:-$evidence/checker.sqlite}"

@@ -2,7 +2,7 @@
 set -euo pipefail
 example="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$example/../.." && pwd)"
-evidence="$(mktemp -d /tmp/teaql-swift-standard-example-XXXXXX)"
+evidence="$(mktemp -d -t teaql-swift-standard-example-XXXXXX)"
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
 cd "$example"
 hash_library() {

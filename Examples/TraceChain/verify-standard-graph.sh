@@ -3,7 +3,7 @@ set -euo pipefail
 example="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$example/../.." && pwd)"
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
-evidence="$(mktemp -d /tmp/teaql-swift-standard-graph-XXXXXX)"
+evidence="$(mktemp -d -t teaql-swift-standard-graph-XXXXXX)"
 cd "$example"
 fingerprint() { (cd Generated && rg --files -g '*.swift' | LC_ALL=C sort | xargs sha256sum); }
 fingerprint > "$evidence/before.sha256"
