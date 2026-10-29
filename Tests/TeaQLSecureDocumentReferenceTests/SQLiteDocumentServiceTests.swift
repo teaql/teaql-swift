@@ -5,6 +5,29 @@ import TeaQLSecureDocumentReference
 import TeaQLSQLite
 import Testing
 
+private actor LostDocumentCommitReply: MutationExecutor, GraphTransactionExecutor, GraphPhysicalSQLExecutor {
+  let database: SQLiteDataService
+  private var loseNext = false
+  init(_ database: SQLiteDataService) { self.database = database }
+  func loseNextCommitReply() { loseNext = true }
+  func execute(_ request: MutationRequest) async throws -> MutationResult { try await database.execute(request) }
+  func beginGraphTransaction() async throws { try await database.beginGraphTransaction() }
+  func commitGraphTransaction() async throws {
+    try await database.commitGraphTransaction()
+    if loseNext {
+      loseNext = false
+      throw TeaQLError.execution("document commit acknowledgement unavailable")
+    }
+  }
+  func rollbackGraphTransaction() async throws { try await database.rollbackGraphTransaction() }
+  func withPhysicalSQL<T: Sendable>(_ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T) async throws -> T {
+    try await database.withPhysicalSQL(work)
+  }
+  func isCurrentPhysicalSQLLease(_ lease: any GraphPhysicalSQLLease) async -> Bool {
+    await database.isCurrentPhysicalSQLLease(lease)
+  }
+}
+
 private struct OrderBlobAuthorization: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
   let entity: String
   let entityID: String
@@ -405,7 +428,8 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
 @Test
 func swiftSQLiteSecureDocumentOpenAcceptAndReplay() async throws {
   let database = try SQLiteDataService(path: ":memory:")
-  let context = UserContext(queryExecutor: database, mutationExecutor: database,
+  let faults = LostDocumentCommitReply(database)
+  let context = UserContext(queryExecutor: database, mutationExecutor: faults,
     requestPolicy: RequestPolicy { $0 })
   try await context.executeGraphSave(comment: "install protected order") { graph, session in
     try await graph.withPhysicalSQL(session) { sql in
@@ -529,6 +553,50 @@ func swiftSQLiteSecureDocumentOpenAcceptAndReplay() async throws {
   } catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_AUTHORIZATION_REQUIRED") }
   await host.restoreActor()
   #expect(try await serviceState(context) == (3, 3, 2))
+  await host.setActorDrift(false)
+  let beforeUnknown = await host.mutations()
+  let unknownOpen = try await service.open(open)
+  let unknownCommand = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: unknownOpen.documentToken,
+    commandID: "command-commit-unknown", body: .object(["quantity": .int(3)]))
+  let unknownRequest = DocumentAcceptRequest(aggregateType: "Order", purpose: "edit-order", submitted: unknownCommand)
+  await faults.loseNextCommitReply()
+  do { _ = try await service.accept(unknownRequest); Issue.record("lost commit acknowledgement returned success") }
+  catch { #expect(error as? TeaQLError == .execution("document commit acknowledgement unavailable")) }
+  #expect(try await serviceState(context) == (4, 3, 3))
+  #expect(await host.mutations() == beforeUnknown + 1)
+  func durableReceipt() async throws -> TeaQLRecord {
+    try await context.executeGraphSave(comment: "inspect durable command receipt") { actor, session in
+      try await actor.withPhysicalSQL(session) { sql in
+        let rows = try await sql.query("SELECT * FROM teaql_document_command_receipt WHERE command_id='command-commit-unknown'", parameters: [])
+        return try #require(rows.first)
+      }
+    }
+  }
+  let originalReceipt = try await durableReceipt()
+  try await context.executeGraphSave(comment: "revoke commit-unknown replay") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE document_permission SET can_edit=0 WHERE subject='alice'", parameters: [])
+    }
+  }
+  do { _ = try await service.accept(unknownRequest); Issue.record("revoked commit-unknown replay accepted") }
+  catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_AUTHORIZATION_REQUIRED") }
+  try await context.executeGraphSave(comment: "restore commit-unknown replay") { actor, session in
+    try await actor.withPhysicalSQL(session) { sql in
+      _ = try await sql.execute("UPDATE document_permission SET can_edit=1 WHERE subject='alice'", parameters: [])
+    }
+  }
+  do {
+    let changed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: unknownOpen.documentToken,
+      commandID: "command-commit-unknown", body: .object(["quantity": .int(4)]))
+    _ = try await service.accept(DocumentAcceptRequest(aggregateType: "Order", purpose: "edit-order", submitted: changed))
+    Issue.record("changed commit-unknown command accepted")
+  } catch { #expect((error as? ReferenceError)?.code == "DOCUMENT_REPLAY_CONFLICT") }
+  let recoveredUnknown = try await service.accept(unknownRequest)
+  #expect(recoveredUnknown.replayed && recoveredUnknown.newRevision == 4)
+  #expect(await host.mutations() == beforeUnknown + 1)
+  let receiptUnchanged = try await durableReceipt() == originalReceipt
+  #expect(receiptUnchanged)
+  #expect(try await serviceState(context) == (4, 3, 3))
 }
 
 @Test
