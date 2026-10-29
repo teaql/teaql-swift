@@ -10,6 +10,7 @@ import TeaQLSQLite
 private struct S3UploadPermission: BlobUploadAuthorization, BlobUploadPolicyAuthorization {
   let allowed: Bool
   let fileExtension: String
+  var policy: BlobRetentionPolicy? = nil
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
   func field(for actor: UserContext, target: BlobUploadTarget) throws -> BlobFieldSpec {
     try BlobFieldSpec(entity: "Asset", field: "file", extensions: [fileExtension],
@@ -29,7 +30,8 @@ private struct S3UploadPermission: BlobUploadAuthorization, BlobUploadPolicyAuth
   }
   func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
     target: BlobUploadTarget) async throws -> BlobRetentionPolicy {
-    try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+    if let policy { return policy }
+    return try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
       unboundRetentionSeconds: 86400, unreferencedRetentionSeconds: 604800,
       minimumRetentionSeconds: 3600)
   }
@@ -88,6 +90,28 @@ private struct S3BindingPermission: BlobBindingAuthorization, BlobBindingPolicyA
   }
 }
 
+private struct S3SharedBindingPermission: BlobBindingAuthorization, BlobBindingPolicyAuthorization {
+  let reference: BlobRef
+  let policy: BlobRetentionPolicy
+  func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
+  func authorize(actor: UserContext, target: BlobBindingTarget, previous: BlobRef?,
+                 next: BlobRef?, action: String) async throws -> Bool {
+    target.entity == "Asset" && target.field == "file" && Int64(target.entityID).map { $0 > 0 } == true
+      && ((previous == nil && next == reference && action == "Create")
+        || (previous == reference && next == nil && action == "Update"))
+  }
+  func currentPolicyOnLease(actor: UserContext, lease: any GraphPhysicalSQLLease,
+    target: BlobBindingTarget) async throws -> BlobRetentionPolicy { policy }
+}
+
+private final class S3SharedClock: @unchecked Sendable {
+  private let lock = NSLock()
+  private var millis: Int64 = 1_700_000_000_000
+  func now() -> Date { lock.withLock { Date(timeIntervalSince1970: Double(millis) / 1000) } }
+  func set(_ value: Int64) { lock.withLock { millis = value } }
+  func current() -> Int64 { lock.withLock { millis } }
+}
+
 private struct S3UploadMaintenancePermission: BlobMaintenanceAuthorization {
   func scope(for actor: UserContext) throws -> String { "f4-s3-upload" }
   func canMaintain(actor: UserContext, scope: String) async throws -> Bool {
@@ -103,11 +127,15 @@ private struct S3ReadPermission: BlobReadAuthorization {
 private struct S3ViewAuthorizer: ResponseGraphAuthorizer {
   let reference: BlobRef
   let version: Int64
+  let entityID: String
+  init(reference: BlobRef, version: Int64, entityID: String = "1") {
+    self.reference = reference; self.version = version; self.entityID = entityID
+  }
   func authorize(context: UserContext, result: any Sendable, options: ViewOptions)
     async throws -> AuthorizedResponseGraph {
     AuthorizedResponseGraph(presentation: .object(["document": .blob(reference)]),
       blobSlots: [AuthorizedBlobSlot(path: [.field("document")], entity: "Asset",
-        entityID: "1", field: "file", scope: "f4-s3-upload",
+        entityID: entityID, field: "file", scope: "f4-s3-upload",
         bindingVersion: version, reference: reference)])
   }
 }
@@ -140,6 +168,206 @@ private func s3UploadRetentionValues(_ context: UserContext,
 
 @MainActor
 final class BlobUploadS3Tests: XCTestCase {
+  func testRealSQLiteSharedBlobS3FinalUnbindRetainsUntilDeadline() async throws {
+    let env = ProcessInfo.processInfo.environment
+    guard env["TEAQL_S3_TEST_SHARED_BLOB"] == "1" else {
+      throw XCTSkip("explicit shared-reference S3 gate required")
+    }
+    guard let endpoint = env["TEAQL_S3_TEST_ENDPOINT"], let bucket = env["TEAQL_S3_TEST_BUCKET"],
+      let access = env["TEAQL_S3_TEST_ACCESS_KEY"], let secret = env["TEAQL_S3_TEST_SECRET_KEY"] else {
+      XCTFail("explicit S3 test configuration required")
+      return
+    }
+    let client = AWSClient(credentialProvider: .static(accessKeyId: access, secretAccessKey: secret),
+      retryPolicy: .noRetry)
+    let service = S3(client: client, region: .useast1, endpoint: endpoint,
+      options: [.s3Disable100Continue])
+    let provider = try S3ObjectStorage(service: service, bucket: bucket)
+    let database = try SQLiteDataService(path: ":memory:")
+    let spec = try BlobFieldSpec(entity: "Asset", field: "file", extensions: ["pdf"],
+      nullable: true, policyProfile: "default")
+    let asset = EntityDescriptor(name: "Asset", table: "shared_s3_asset", properties: [
+      PropertyDescriptor(name: "id", type: .int, isID: true),
+      PropertyDescriptor(name: "version", type: .int, isVersion: true),
+      PropertyDescriptor(name: "file", type: .blobRef, nullable: true, blobSpec: spec),
+    ])
+    let base = UserContext(queryExecutor: database, mutationExecutor: database,
+      requestPolicy: RequestPolicy { $0 }).withObjectStorage(provider)
+      .withObjectStorageObserver { _ in }
+    let storage = try base.objectStorage("shared native S3 graph")
+    var objectKey: ObjectKey?
+    do {
+      try await base.ensureSchema(RuntimeModule(name: "shared-s3-blob-test", entities: [asset]))
+      let clock = S3SharedClock()
+      let policy = try BlobRetentionPolicy(profile: "default", uploadMode: "server_stream",
+        unboundRetentionSeconds: 10, unreferencedRetentionSeconds: 20,
+        minimumRetentionSeconds: 0)
+      let catalog = SQLiteBlobCatalog(now: { clock.now() })
+      try await base.executeGraphSave(comment: "install shared S3 Blob schema") { actor, session in
+        try await catalog.installSchema(actor, session: session)
+      }
+      let upload = try SQLiteBlobUploadService(
+        authorization: S3UploadPermission(allowed: true, fileExtension: "pdf", policy: policy),
+        verifier: S3FixturePDFVerifier(calls: S3VerifierCalls()), maximumBytes: 1024,
+        now: { clock.now() })
+      let data = Data("%PDF-1.7\nreal S3 Blob upload\n%%EOF".utf8)
+      let session = try await upload.begin(base,
+        target: BlobUploadTarget(entity: "Asset", entityID: "1", field: "file"),
+        input: BlobUploadInput(fileName: "shared.pdf", declaredSize: Int64(data.count),
+          declaredContentType: "application/pdf"), replayKey: UUID().uuidString)
+      let rawKey = try await s3UploadCatalogValue(base,
+        sql: "SELECT object_key FROM teaql_blob_catalog WHERE key = ?", key: session.reference.key)
+      objectKey = try ObjectKey(try XCTUnwrap(rawKey))
+      let written = try await upload.write(base, uploadID: session.uploadID,
+        source: ObjectDataReader(data))
+      XCTAssertEqual(written, Int64(data.count))
+      let reference = try await upload.complete(base, uploadID: session.uploadID)
+      XCTAssertEqual(reference, session.reference)
+      let key = try XCTUnwrap(objectKey)
+      let stored = try await storage.getBytes(key, maximumBytes: 1024)
+      XCTAssertEqual(stored, data)
+      let initialHead = try await storage.head(key)
+      let version = try XCTUnwrap(initialHead?.etag)
+      let module = try BlobReferenceModule(catalog: catalog, upload: upload,
+        readAuthorization: S3ReadPermission(allowed: true),
+        bindingAuthorization: S3SharedBindingPermission(reference: reference, policy: policy),
+        maximumURLSeconds: 3)
+      let modeled = try module.install(on: base)
+      try await module.ready(context: modeled)
+
+      let ledger = EntityRoot()
+      let provisional = [EntityKey(entity: "Asset", id: .int(-1)),
+        EntityKey(entity: "Asset", id: .int(-2))]
+      for item in provisional {
+        ledger.markAsNew(item)
+        ledger.set(item, field: "file", value: .blobRef(reference))
+      }
+      let ids = try await modeled.executeGraphSave(comment: "bind shared S3 Blob") { actor, session in
+        var allocated: [Int64] = []
+        for item in provisional {
+          let result = try await actor.execute(Mutation(kind: .create, entity: asset,
+            values: ledger.change(item), auditReason: session.intent.comment),
+            ledgerRoot: ledger, ledgerKey: item)
+          guard case .int(let id) = result.generatedValues["id"], id > 0 else {
+            throw TeaQLError.execution("allocated shared S3 ID missing")
+          }
+          try ledger.rekey(item, to: EntityKey(entity: "Asset", id: .int(id)))
+          allocated.append(id)
+        }
+        return allocated
+      }
+      XCTAssertEqual(ids.count, 2)
+      XCTAssertNotEqual(ids[0], ids[1])
+      func bindingCount() async throws -> String? {
+        try await s3UploadCatalogValue(base,
+          sql: "SELECT CAST(COUNT(*) AS TEXT) FROM teaql_blob_binding WHERE key = ?",
+          key: reference.key)
+      }
+      func lastUnbound() async throws -> Int64? {
+        let value = try await s3UploadCatalogValue(base,
+          sql: "SELECT CAST(last_unbound_at_ms AS TEXT) FROM teaql_blob_catalog WHERE key = ?",
+          key: reference.key)
+        return value.flatMap(Int64.init)
+      }
+      func unbind(_ id: Int64, rejectOuter: Bool = false) async throws {
+        try await modeled.executeGraphSave(comment: "unbind shared S3 Blob") { actor, session in
+          _ = try await actor.execute(Mutation(kind: .update, entity: asset, id: .int(id),
+            values: ["file": .null], expectedVersion: 1,
+            auditReason: session.intent.comment))
+          if rejectOuter { throw TeaQLError.execution("outer owner rejected final S3 unbind") }
+        }
+      }
+      let initiallyBound = try await bindingCount()
+      XCTAssertEqual(initiallyBound, "2")
+      try await unbind(ids[0])
+      let afterFirstBinding = try await bindingCount()
+      let afterFirstTime = try await lastUnbound()
+      let afterFirstHead = try await storage.head(key)
+      XCTAssertEqual(afterFirstBinding, "1")
+      XCTAssertNil(afterFirstTime)
+      XCTAssertEqual(afterFirstHead?.etag, version)
+
+      let permitted = modeled.withResponseGraphAuthorizer(
+        S3ViewAuthorizer(reference: reference, version: 1, entityID: String(ids[1])))
+      let options = ViewOptions(mode: .ordinary, businessOutcome: .readOnly,
+        expiresAt: Date().addingTimeInterval(60))
+      let prepared = try await ViewPreparationService().prepare(context: permitted,
+        result: "unused", options: options)
+      guard case let .object(fields) = prepared.presentation,
+        let document = fields["document"], case let .string(urlText) = document,
+        let url = URL(string: urlText) else {
+        throw TeaQLError.execution("shared S3 Blob signed view missing")
+      }
+      var request = URLRequest(url: url)
+      request.setValue("bytes=0-7", forHTTPHeaderField: "Range")
+      let (partial, response) = try await URLSession.shared.data(for: request)
+      XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 206)
+      XCTAssertEqual(partial, data.prefix(8))
+      let revokedRead = permitted.withBlobResponseContributor(
+        try SQLiteBlobResponseContributor(catalog: catalog,
+          authorization: S3ReadPermission(allowed: false), maximumURLSeconds: 3))
+      do {
+        _ = try await ViewPreparationService().prepare(context: revokedRead,
+          result: "unused", options: options)
+        XCTFail("revoked shared S3 view signed")
+      } catch let error as ViewPreparationError { XCTAssertEqual(error.code, "BLOB_READ_DENIED") }
+
+      clock.set(clock.current() + 40_000)
+      let maintenance = try SQLiteBlobMaintenanceService(catalog: catalog,
+        authorization: S3UploadMaintenancePermission(), now: { clock.now() })
+      let stillBoundBatch = try await maintenance.runBatch(modeled)
+      XCTAssertTrue(stillBoundBatch.outcomes.isEmpty)
+      do {
+        try await unbind(ids[1], rejectOuter: true)
+        XCTFail("outer owner committed shared S3 final unbind")
+      } catch let error as TeaQLError {
+        XCTAssertEqual(error, .execution("outer owner rejected final S3 unbind"))
+      }
+      let rolledBackFile = try await s3UploadCatalogValue(base,
+        sql: "SELECT file FROM shared_s3_asset WHERE CAST(id AS TEXT) = ?", key: String(ids[1]))
+      XCTAssertEqual(rolledBackFile, reference.key)
+      let afterRollbackBinding = try await bindingCount()
+      let afterRollbackTime = try await lastUnbound()
+      let afterRollbackBatch = try await maintenance.runBatch(modeled)
+      let afterRollbackHead = try await storage.head(key)
+      XCTAssertEqual(afterRollbackBinding, "1")
+      XCTAssertNil(afterRollbackTime)
+      XCTAssertTrue(afterRollbackBatch.outcomes.isEmpty)
+      XCTAssertEqual(afterRollbackHead?.etag, version)
+
+      try await unbind(ids[1])
+      let afterFinalBinding = try await bindingCount()
+      XCTAssertEqual(afterFinalBinding, "0")
+      let finalTime = try await lastUnbound()
+      let last = try XCTUnwrap(finalTime)
+      XCTAssertEqual(last, clock.current())
+      do {
+        _ = try await ViewPreparationService().prepare(context: permitted,
+          result: "unused", options: options)
+        XCTFail("unbound shared S3 view signed")
+      } catch let error as ViewPreparationError { XCTAssertEqual(error.code, "BLOB_READ_DENIED") }
+      let deadline = try BlobRetentionPolicy.unreferencedEligibleAt(last, seconds: 20,
+        floorUntilMs: nil)
+      clock.set(deadline - 1)
+      let beforeDeadline = try await maintenance.runBatch(modeled)
+      let retainedHead = try await storage.head(key)
+      XCTAssertTrue(beforeDeadline.outcomes.isEmpty)
+      XCTAssertEqual(retainedHead?.etag, version)
+      clock.set(deadline)
+      let deletion = try await maintenance.runBatch(modeled)
+      XCTAssertEqual(deletion.outcomes.map(\.status), ["deleted"])
+      let deletedHead = try await storage.head(key)
+      XCTAssertNil(deletedHead)
+      print("PASS Swift shared S3 native graph/final unbind/authorized Range/retention GC")
+    } catch {
+      if let objectKey { try? await storage.delete(objectKey) }
+      try? await client.shutdown()
+      throw error
+    }
+    if let objectKey { try await storage.delete(objectKey) }
+    try await client.shutdown()
+  }
+
   func testRealSQLiteBlobUploadThroughS3() async throws {
     try await runBlobUpload(format: "pdf")
   }
