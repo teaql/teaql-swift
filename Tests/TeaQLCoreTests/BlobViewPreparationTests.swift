@@ -80,7 +80,40 @@ private struct TwoBlobSigner: BlobResponseContributor {
   }
 }
 
+private struct InvalidBlobViewSigner: BlobResponseContributor {
+  let url: String
+  func projectBatch(context: UserContext, graph: AuthorizedResponseGraph, expiresAt: Date?)
+    async throws -> [ProjectedBlobURL] {
+    [ProjectedBlobURL(url: url, expiresAt: Date().addingTimeInterval(30))]
+  }
+}
+
 final class BlobViewPreparationTests: XCTestCase {
+  func testProviderURLWithRawWhitespaceOrControlFailsAfterCommit() async throws {
+    let reference = try BlobRef("blob_asset_1")
+    let source: ViewValue = .object(["document": .blob(reference)])
+    let stages = ViewStages()
+    for invalid in [" https://files.example.invalid/read",
+                    "https://files.example.invalid/read file",
+                    "https://files.example.invalid/read\n",
+                    "https://files.example.invalid/\tread",
+                    "https://files.example.invalid/read\u{2028}next",
+                    "https://files.example.invalid/read\u{2029}next"] {
+      let context = storageViewContext()
+        .withResponseGraphAuthorizer(BlobViewAuthorizer(source: source,
+          reference: reference, listed: true, stages: stages))
+        .withBlobResponseContributor(InvalidBlobViewSigner(url: invalid))
+      do {
+        _ = try await ViewPreparationService().prepare(context: context, result: source,
+          options: ViewOptions(mode: .ordinary, businessOutcome: .committed))
+        XCTFail("invalid provider URL must not be projected")
+      } catch let error as ViewPreparationError {
+        XCTAssertEqual(error.code, "BLOB_SIGN_FAILED")
+        XCTAssertEqual(error.businessState, "committed")
+      }
+    }
+  }
+
   func testIndependentURLLifetimesUseOriginalCeilingAndReturnMinimum() async throws {
     let first = try BlobRef("blob_asset_1")
     let second = try BlobRef("blob_asset_2")

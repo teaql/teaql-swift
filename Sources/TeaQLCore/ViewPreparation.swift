@@ -170,7 +170,9 @@ public struct ViewPreparationService: Sendable {
         let urls = try await blob.projectBatch(context: context, graph: graph, expiresAt: ceiling)
         guard urls.count == graph.blobSlots.count else { throw ViewPreparationError("BLOB_SIGN_FAILED") }
         for (slot, issued) in zip(graph.blobSlots, urls) {
-          guard let parsed = URLComponents(string: issued.url),
+          // URLComponents percent-encodes raw whitespace; never return the original value.
+          guard issued.url.rangeOfCharacter(from: CharacterSet.controlCharacters.union(.whitespacesAndNewlines)) == nil,
+                let parsed = URLComponents(string: issued.url),
                 parsed.scheme == "http" || parsed.scheme == "https",
                 let host = parsed.host, !host.isEmpty,
                 issued.expiresAt > Date(), ceiling == nil || issued.expiresAt <= ceiling! else {
