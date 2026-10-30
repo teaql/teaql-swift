@@ -209,5 +209,10 @@ package final class GraphTransactionGate: @unchecked Sendable {
     }
     waiter?.resume()
   }
+  // A synchronous standalone preflight does not acquire provider coordination.
+  // Retaining its completed receipt must not release another call's gate.
+  package func retainFixEvidence(_ evidence: [FixEvidence]) {
+    lock.withLock { retainedFixEvidence = evidence }
+  }
   package var lastFixEvidence: [FixEvidence] { lock.withLock { retainedFixEvidence } }
 }

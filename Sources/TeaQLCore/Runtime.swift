@@ -687,6 +687,7 @@ public struct UserContext: Sendable {
   private let idSetStore: any IdSetStore
   private let graphTransactionGate: GraphTransactionGate
   private var graphSession: GraphMutationSession?
+  private var standaloneFixInvocation: StandaloneFixInvocation?
   private var mutationPolicyCoordinator: MutationPolicyCoordinator
   public let businessClock: any BusinessClock
   public var businessTime: Date { businessClock.now() }
@@ -749,6 +750,7 @@ public struct UserContext: Sendable {
     self.idSetObservationState = IdSetObservationState()
     self.graphTransactionGate = GraphTransactionGate()
     self.graphSession = nil
+    self.standaloneFixInvocation = nil
     self.mutationPolicyCoordinator = MutationPolicyCoordinator(
       registry: mutationPolicyRegistry,
       approvalProvider: mutationPolicyApprovalProvider,
@@ -787,7 +789,8 @@ public struct UserContext: Sendable {
     preparation: (@Sendable (UserContext, GraphMutationSession) async throws -> Void)?,
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
-    guard graphSession == nil, !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
+    guard graphSession == nil, standaloneFixInvocation == nil,
+      !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
       throw TeaQLError.execution("Independent graph save cannot implicitly join an active graph; pass its explicit session for composed children")
     }
     guard let transaction = mutationExecutor as? any GraphTransactionExecutor else {
@@ -886,15 +889,19 @@ public struct UserContext: Sendable {
     return result
   }
 
-  public var fixTime: Date { graphSession?.fixTime ?? businessTime }
+  public var fixTime: Date { graphSession?.fixTime ?? standaloneFixInvocation?.time ?? businessTime }
 
   private func requireProviderAccess() throws {
     guard !GraphTransactionGate.Preparation.active.contains(graphTransactionGate.id) else {
       throw TeaQLError.execution("GRAPH_PREPARATION_CANNOT_ACCESS_PROVIDER")
     }
     try graphSession?.requireProviderAccess()
+    try standaloneFixInvocation?.ensureActive()
   }
-  public func recordFixEvidence(_ evidence: FixEvidence) { graphSession?.recordFixEvidence(evidence) }
+  public func recordFixEvidence(_ evidence: FixEvidence) {
+    if let graphSession { graphSession.recordFixEvidence(evidence) }
+    else { standaloneFixInvocation?.record(evidence) }
+  }
   public var lastFixEvidence: [FixEvidence] { graphTransactionGate.lastFixEvidence }
 
   package func requireGraphSession(_ session: GraphMutationSession) throws {
@@ -1697,6 +1704,16 @@ public struct UserContext: Sendable {
   ) async throws -> MutationResult {
     try Task.checkCancellation()
     try graphSession?.ensureActive()
+    try standaloneFixInvocation?.ensureActive()
+    if graphSession == nil && standaloneFixInvocation == nil {
+      // Request admission has already happened before taking the Clock SPI.
+      // Keep the same time through Fix, provider work and committed audit.
+      let scope = StandaloneFixInvocation(time: businessTime)
+      var invocation = self
+      invocation.standaloneFixInvocation = scope
+      defer { graphTransactionGate.retainFixEvidence(scope.finish()) }
+      return try await invocation.executeMutation(mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    }
     let validated: Mutation
     if let session = graphSession, let prepared = try session.preparedMutations.consume(
       mutation, ledger: ledgerRoot, ledgerKey: ledgerKey, rootComment: session.intent.comment) {
@@ -1818,7 +1835,24 @@ public struct UserContext: Sendable {
   private func checkAndFixMutation(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) throws -> Mutation {
+    // A retained Context capability cannot run another customer callback after
+    // its invocation finished, even if a later plan check would reject it.
+    try graphSession?.ensureActive()
+    try standaloneFixInvocation?.ensureActive()
     let request = try MutationRequest(mutation: mutation)
+    if graphSession == nil && standaloneFixInvocation == nil {
+      let scope = StandaloneFixInvocation(time: businessTime)
+      var invocation = self
+      invocation.standaloneFixInvocation = scope
+      defer { graphTransactionGate.retainFixEvidence(scope.finish()) }
+      return try invocation.checkAndFixInInvocation(request, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    }
+    return try checkAndFixInInvocation(request, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+  }
+
+  private func checkAndFixInInvocation(
+    _ request: MutationRequest, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
+  ) throws -> Mutation {
     var validated = request.mutation
     validated.actor = actor
     validated.auditCategory = auditCategory
