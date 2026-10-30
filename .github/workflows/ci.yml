@@ -16,6 +16,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
+      - name: Test signed SwiftPM tag gate
+        run: python3 scripts/test_verify_signed_reference_tag.py
+      - name: Require exact signed tag on version-tag pushes
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/verify-signed-reference-tag.py
       - name: Install SQLite headers
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
