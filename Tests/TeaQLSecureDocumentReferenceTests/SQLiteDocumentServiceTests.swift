@@ -46,6 +46,14 @@ private struct OrderBlobAuthorization: BlobBindingAuthorization, BlobBindingPoli
   }
 }
 
+private func interopSubmittedBody(_ quantity: Int64) -> TeaQLValue {
+  var fields: [String: TeaQLValue] = ["quantity": .int(quantity)]
+  if let note = ProcessInfo.processInfo.environment["TEAQL_DOCUMENT_SERVICE_NOTE"] {
+    fields["note"] = .string(note)
+  }
+  return .object(fields)
+}
+
 private actor SQLiteOrderHost: SQLiteContextBoundDocumentHost, SQLiteDocumentBlobSelectionHost,
   SQLiteDocumentNewBlobSelectionHost {
   private let blobEnabled: Bool
@@ -217,7 +225,7 @@ private actor SQLiteOrderHost: SQLiteContextBoundDocumentHost, SQLiteDocumentBlo
   func apply(context: UserContext, issued: BoundDocumentSnapshot,
              submitted: SubmittedDocumentCommand, sql: any GraphPhysicalSQLLease) async throws {
     mutationCount += 1
-    guard submitted.body == .object(["quantity": .int(3)]) else {
+    guard submitted.body == interopSubmittedBody(3) else {
       throw ReferenceError("invalid quantity")
     }
     let changed = try await sql.execute("""
@@ -362,7 +370,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       commandID: child
         ? mode == "reject" ? "command-wrong" : "command-child-1"
         : mode == "reject" ? "command-missing" : "command-1",
-      body: .object(["quantity": .int(3)]),
+      body: interopSubmittedBody(3),
       blobSelections: selections)
     func accept(_ input: SubmittedDocumentCommand) async throws -> AcceptedDocument {
       try await service.accept(DocumentAcceptRequest(aggregateType: "Order",
@@ -396,7 +404,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
       do {
         let changed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
           commandID: child ? "command-child-1" : "command-1",
-          body: .object(["quantity": .int(4)]),
+          body: interopSubmittedBody(4),
           blobSelections: selections)
         _ = try await accept(changed)
         throw ReferenceError("changed replay accepted")
@@ -405,7 +413,7 @@ func swiftSQLiteDocumentServiceCrossLanguagePeer() async throws {
         do {
           let removed = SubmittedDocumentCommand(businessID: "ORD-10", documentToken: token,
             commandID: child ? "command-child-1" : "command-1",
-            body: .object(["quantity": .int(3)]))
+            body: interopSubmittedBody(3))
           _ = try await accept(removed)
           throw ReferenceError("removed selection replay accepted")
         } catch let error as ReferenceError where error.code == "DOCUMENT_REPLAY_CONFLICT" { }
