@@ -276,6 +276,7 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
         }
+        try dynamicProperties.encode(to: encoder)
     }
 
     public init() {

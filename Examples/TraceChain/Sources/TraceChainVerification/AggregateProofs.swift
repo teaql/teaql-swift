@@ -42,6 +42,7 @@ private struct AggregateStatement: Encodable {
 private struct AggregateObservation: Encodable {
     let logging: Bool, nested: Bool, filtered: Bool
     let rootID: Int64, itemIDs: [Int64], eligible: Int64, empty: Int64
+    let encodedEligible: Int64, encodedEmpty: Int64, encodedMissingAliasAbsent: Bool
     let physical: [AggregateStatement], safe: [AggregateStatement]
 }
 
@@ -125,10 +126,17 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
                 && loaded.dynamicProperties.value("orderItemList") == nil,
                 "absent dynamic property must be nil; modeled fields must not leak into aliases")
             try require(loaded.toMutationRecord()["eligibleItems"] == nil
-                && loaded.toRecord()["eligibleItems"] == nil && !loaded.teaqlEntityRoot.hasPending(loaded.teaqlEntityKey),
+                && loaded.toMutationRecord()["emptyItems"] == nil
+                && loaded.toRecord()["eligibleItems"] == nil && loaded.toRecord()["emptyItems"] == nil
+                && !loaded.teaqlEntityRoot.hasPending(loaded.teaqlEntityKey),
                 "query projections leaked into persistence or mutation ownership")
-            let encoded = String(decoding: try JSONEncoder().encode(loaded), as: UTF8.self)
-            try require(!encoded.contains("eligibleItems") && !encoded.contains("emptyItems"), "aliases leaked into modeled JSON")
+            let encoded = try JSONDecoder().decode(TeaQLRecord.self, from: JSONEncoder().encode(loaded))
+            guard let encodedEligible = encoded["eligibleItems"]?.int64Value,
+                  let encodedEmpty = encoded["emptyItems"]?.int64Value
+            else { throw TeaQLError.execution("selected aggregate properties missing from entity JSON") }
+            try require(encodedEligible == eligible && encodedEmpty == empty
+                && encoded["id"]?.int64Value == rootID && encoded["missingAlias"] == nil,
+                "entity JSON lost aggregate values or invented an unselected property")
             let raw = physical.snapshot(), safe = await sql.snapshot()
             let observedRoutes = raw.map { $0.tracePath.filter { $0.kind == "relation" }.map(\.name) }
             try require(raw.count == (nested ? 8 : 6) && safe.count == raw.count,
@@ -163,6 +171,8 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
             try require(readCommands.isEmpty && readAudit.isEmpty, "read-only aggregate mutated data")
             let observation = AggregateObservation(logging: logging, nested: nested, filtered: filtered,
                 rootID: rootID, itemIDs: loaded.orderItemList.map(\.id), eligible: eligible, empty: empty,
+                encodedEligible: encodedEligible, encodedEmpty: encodedEmpty,
+                encodedMissingAliasAbsent: encoded["missingAlias"] == nil,
                 physical: raw.map(AggregateStatement.init), safe: safe.map(AggregateStatement.init))
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             print("AGGREGATE_OBSERVED " + String(decoding: try encoder.encode(observation), as: UTF8.self))

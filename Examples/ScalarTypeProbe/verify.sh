@@ -24,4 +24,10 @@ for round in 1 2; do
   rg -Fq "PASS Swift generated scalar Decimal fresh=$fresh rows=3 version=$version" "$evidence/round-$round.log"
   sha256sum -c generated.sha256
 done
+for round in 1 2; do
+  TEAQL_QUERY_PROPERTY_DB="$evidence/query-properties.sqlite" swift run --scratch-path "$scratch" \
+    --skip-build QueryPropertyVerification | tee "$evidence/query-properties-round-$round.log"
+  node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_QUERY_PROPERTY_JSON=")).map(v=>JSON.parse(v.slice("SWIFT_QUERY_PROPERTY_JSON=".length)));assert.equal(rows.length,1);assert.equal(rows[0].passed,true);assert.equal(rows[0].count,0);assert.equal(rows[0].encodedCount,0);' "$evidence/query-properties-round-$round.log"
+  sha256sum -c generated.sha256
+done
 echo "PASS Swift scalar example twice without cleanup; evidence: $evidence"
