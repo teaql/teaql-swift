@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 import hashlib
 import json
 import os
+import re
 import signal
 import stat
 import subprocess
@@ -148,6 +149,39 @@ def check_origin(work, candidate, s3_revision, root_revision, files):
     return hashlib.sha256(lock.read_bytes()).hexdigest()
 
 
+def checked_test_summary(output):
+    if "Test Suite 'All tests' passed" not in output:
+        raise RuntimeError("standalone S3 package did not report a passing test suite")
+    summaries = [line for line in output.splitlines()
+                 if "Executed " in line and " tests" in line and "failures" in line]
+    if not summaries:
+        raise RuntimeError("standalone S3 package reported no XCTest summary")
+    summary = summaries[-1]
+    count = re.search(r"Executed (\d+) tests", summary)
+    skipped = re.search(r"with (\d+) tests skipped", summary)
+    if not count:
+        raise RuntimeError("standalone S3 package reported an invalid test count")
+    total = int(count.group(1))
+    skips = int(skipped.group(1)) if skipped else 0
+    if total <= skips:
+        raise RuntimeError("standalone S3 package ran no active tests")
+    return total, skips
+
+
+def test_exact_candidate(candidate, work, root_revision):
+    run([SWIFT, "package", "--package-path", str(candidate), "config", "set-mirror",
+         "--original", RUNTIME_URL, "--mirror", ROOT.as_uri()], cwd=candidate)
+    output = run([SWIFT, "test", "--package-path", str(candidate),
+                  "--scratch-path", str(work / "scratch"), "--jobs", "2"], cwd=candidate)
+    total, skips = checked_test_summary(output)
+    lock = candidate / "Package.resolved"
+    pins = json.loads(lock.read_text())["pins"]
+    runtime = [pin for pin in pins if pin.get("identity") == "teaql-swift"]
+    if len(runtime) != 1 or runtime[0].get("state", {}).get("revision") != root_revision:
+        raise RuntimeError("standalone S3 package test did not lock exact runtime revision")
+    return total, skips, hashlib.sha256(lock.read_bytes()).hexdigest()
+
+
 def main():
     check_clean()
     root_revision = run(["git", "rev-parse", "HEAD"]).strip()
@@ -163,9 +197,12 @@ def main():
         if "PASS Swift exact archive S3 consumer" not in output:
             raise RuntimeError("exact S3 source archive consumer did not run")
         lock_sha = check_origin(work, candidate, s3_revision, root_revision, files)
+        total, skips, package_lock_sha = test_exact_candidate(candidate, work, root_revision)
         print("PASS Swift exact archive S3 consumer root_revision=" + root_revision
               + " s3_revision=" + s3_revision + " archive_sha256=" + digest
-              + " files=" + str(len(files)) + " lock_sha256=" + lock_sha,
+              + " files=" + str(len(files)) + " lock_sha256=" + lock_sha
+              + " package_tests=" + str(total) + " package_skips=" + str(skips)
+              + " package_lock_sha256=" + package_lock_sha,
               flush=True)
 
 

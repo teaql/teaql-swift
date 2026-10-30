@@ -27,6 +27,15 @@ def manifest(revision=REVISION):
 
 
 class ExactArchiveConsumerTests(unittest.TestCase):
+    def test_candidate_test_summary_requires_real_executed_tests(self):
+        output = ("Test Suite 'All tests' passed\n"
+                  "Executed 17 tests, with 16 tests skipped and 0 failures (0 unexpected)\n")
+        self.assertEqual(MODULE.checked_test_summary(output), (17, 16))
+        with self.assertRaisesRegex(RuntimeError, "no active tests"):
+            MODULE.checked_test_summary(output.replace("16 tests skipped", "17 tests skipped"))
+        with self.assertRaisesRegex(RuntimeError, "passing test suite"):
+            MODULE.checked_test_summary(output.replace("' passed", "' failed"))
+
     def test_timeout_stops_child_before_disposable_cleanup(self):
         with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
             marker = Path(temporary) / "orphan-marker"
