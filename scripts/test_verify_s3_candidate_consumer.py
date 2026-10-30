@@ -3,7 +3,10 @@
 
 import importlib.util
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 import warnings
 import zipfile
@@ -24,6 +27,19 @@ def manifest(revision=REVISION):
 
 
 class ExactArchiveConsumerTests(unittest.TestCase):
+    def test_timeout_stops_child_before_disposable_cleanup(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
+            marker = Path(temporary) / "orphan-marker"
+            child = ("import pathlib,time; time.sleep(0.5); "
+                     "pathlib.Path(" + repr(str(marker)) + ").write_text('orphan')")
+            parent = ("import subprocess,time,sys; "
+                      "subprocess.Popen([sys.executable,'-c'," + repr(child) + "]); "
+                      "time.sleep(30)")
+            with self.assertRaises(subprocess.TimeoutExpired):
+                MODULE.run([sys.executable, "-c", parent], timeout=0.1)
+            time.sleep(0.6)
+            self.assertFalse(marker.exists())
+
     def archive(self, work, entries):
         path = work / "candidate.zip"
         with zipfile.ZipFile(path, "w") as writer:

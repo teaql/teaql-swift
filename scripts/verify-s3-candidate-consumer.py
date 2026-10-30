@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 import hashlib
 import json
 import os
+import signal
 import stat
 import subprocess
 import sys
@@ -24,12 +25,29 @@ S3_IDENTITY = "teaql-objectstorage-s3"
 
 
 def run(args, *, cwd=ROOT, timeout=1200, env=None):
-    result = subprocess.run(args, cwd=cwd, text=True, capture_output=True,
-                            timeout=timeout, env=env)
-    if result.returncode:
+    process = subprocess.Popen(args, cwd=cwd, text=True, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, env=env,
+                               start_new_session=True)
+    try:
+        output, _ = process.communicate(timeout=timeout)
+    except (subprocess.TimeoutExpired, KeyboardInterrupt):
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.communicate()
+        raise
+    if process.returncode:
         raise RuntimeError(" ".join(map(str, args)) + " failed:\n"
-                           + (result.stdout + result.stderr)[-6000:])
-    return result.stdout + result.stderr
+                           + output[-6000:])
+    return output
 
 
 def check_clean():

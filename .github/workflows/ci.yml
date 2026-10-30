@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   test:
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
     strategy:
       fail-fast: false
       matrix:
