@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test signed matching release tag gate
+        run: python3 scripts/test_verify_signed_release.py
+      - name: Require signed S3 and root tags on version pushes
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/verify-signed-release.py
+      - name: Install SQLite headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - name: Show Swift version
+        run: swift --version
+      - name: Build
+        run: swift build --jobs 2
+      - name: Test
+        run: swift test --jobs 2
+      - name: Build Release product
+        run: swift build -c release --jobs 2

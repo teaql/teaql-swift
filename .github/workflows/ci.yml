@@ -42,6 +42,7 @@ jobs:
         run: |
           python3 scripts/test_build_s3_source_archive.py
           python3 scripts/test_verify_s3_candidate_consumer.py
+          python3 ObjectStorageS3/scripts/test_verify_signed_release.py
       - name: Verify reference products from pinned Git candidate
         run: python3 scripts/verify-reference-candidate-consumers.py
       - name: Verify exact S3 archive in a clean Git consumer
