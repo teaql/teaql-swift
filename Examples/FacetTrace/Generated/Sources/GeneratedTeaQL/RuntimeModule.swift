@@ -22,15 +22,15 @@ private struct PlatformChecker: EntityChecker {
         }
 
 
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Platform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform")) }
 
-        if (mutation.kind == .create && mutation.values["base_url"] == nil) || mutation.values["base_url"] == .null { results.append(CheckResult(ruleID: "required", location: .property("base_url"))) }
-        if let value = mutation.values["base_url"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("base_url"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["base_url"] == nil) || mutation.values["base_url"] == .null { results.append(CheckResult(ruleID: "required", location: .property("base_url"), entityType: "Platform")) }
+        if let value = mutation.values["base_url"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("base_url"), systemValue: "100", entityType: "Platform")) }
 
-        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"))) }
+        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "Platform")) }
 
-        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"))) }
+        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"), entityType: "Platform")) }
 
 
         return results
@@ -42,16 +42,16 @@ private struct SchoolTypeChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"))) }
+        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"), entityType: "SchoolType")) }
 
 
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "SchoolType")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "SchoolType")) }
 
-        if (mutation.kind == .create && mutation.values["code"] == nil) || mutation.values["code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("code"))) }
-        if let value = mutation.values["code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("code"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["code"] == nil) || mutation.values["code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("code"), entityType: "SchoolType")) }
+        if let value = mutation.values["code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("code"), systemValue: "100", entityType: "SchoolType")) }
 
-        if (mutation.kind == .create && mutation.values["display_order"] == nil) || mutation.values["display_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("display_order"))) }
+        if (mutation.kind == .create && mutation.values["display_order"] == nil) || mutation.values["display_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("display_order"), entityType: "SchoolType")) }
 
 
         return results
@@ -78,25 +78,25 @@ private struct SchoolChecker: EntityChecker {
         }
 
 
-        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"))) }
+        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"), entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["school_type"] == nil) || mutation.values["school_type"] == .null { results.append(CheckResult(ruleID: "required", location: .property("school_type"))) }
+        if (mutation.kind == .create && mutation.values["school_type"] == nil) || mutation.values["school_type"] == .null { results.append(CheckResult(ruleID: "required", location: .property("school_type"), entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "School")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["address"] == nil) || mutation.values["address"] == .null { results.append(CheckResult(ruleID: "required", location: .property("address"))) }
-        if let value = mutation.values["address"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("address"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["address"] == nil) || mutation.values["address"] == .null { results.append(CheckResult(ruleID: "required", location: .property("address"), entityType: "School")) }
+        if let value = mutation.values["address"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("address"), systemValue: "100", entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["established_date"] == nil) || mutation.values["established_date"] == .null { results.append(CheckResult(ruleID: "required", location: .property("established_date"))) }
+        if (mutation.kind == .create && mutation.values["established_date"] == nil) || mutation.values["established_date"] == .null { results.append(CheckResult(ruleID: "required", location: .property("established_date"), entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["student_capacity"] == nil) || mutation.values["student_capacity"] == .null { results.append(CheckResult(ruleID: "required", location: .property("student_capacity"))) }
+        if (mutation.kind == .create && mutation.values["student_capacity"] == nil) || mutation.values["student_capacity"] == .null { results.append(CheckResult(ruleID: "required", location: .property("student_capacity"), entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["active"] == nil) || mutation.values["active"] == .null { results.append(CheckResult(ruleID: "required", location: .property("active"))) }
+        if (mutation.kind == .create && mutation.values["active"] == nil) || mutation.values["active"] == .null { results.append(CheckResult(ruleID: "required", location: .property("active"), entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"))) }
+        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "School")) }
 
-        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"))) }
+        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"), entityType: "School")) }
 
 
         return results

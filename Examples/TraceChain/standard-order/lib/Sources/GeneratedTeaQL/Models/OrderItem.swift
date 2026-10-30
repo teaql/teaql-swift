@@ -371,22 +371,22 @@ public struct OrderItemAudited: Sendable {
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("customerOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("productName") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("product_name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("product_name"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("quantity") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("quantity"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("quantity"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("unitPrice") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("unit_price"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("unit_price"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
         }
         return pending
@@ -396,22 +396,22 @@ public struct OrderItemAudited: Sendable {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("customerOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("productName") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("product_name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("product_name"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("quantity") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("quantity"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("quantity"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("unitPrice") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("unit_price"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("unit_price"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

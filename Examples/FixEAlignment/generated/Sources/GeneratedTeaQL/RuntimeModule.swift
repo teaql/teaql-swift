@@ -7,9 +7,9 @@ private struct TenantChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("name"), inputValue: value, systemValue: "1")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "80")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Tenant")) }
+        if let value = mutation.values["name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("name"), systemValue: "1", entityType: "Tenant")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "80", entityType: "Tenant")) }
 
 
         return results
@@ -24,14 +24,14 @@ private struct PurchaseOrderChecker: EntityChecker {
         if mutation.kind == .create {
             let root = try context.requireActiveRoot("Tenant")
             if let supplied = mutation.values["tenant"], supplied != .null, supplied != .int(0) {
-                if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), inputValue: String(describing: supplied), systemValue: String(describing: root.id))) }
+                if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), message: "Context-bound root does not match trusted context", entityType: "PurchaseOrder")) }
             } else {
                 mutation.values["tenant"] = root.id
                 context.recordFixEvidence(FixEvidence(entityType: "PurchaseOrder", modelPath: "tenant", source: .context, sourceLabel: "activeRoot:Tenant"))
             }
         } else if mutation.kind == .update, let supplied = mutation.values["tenant"], supplied != .null {
             let root = try context.requireActiveRoot("Tenant")
-            if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), inputValue: String(describing: supplied), systemValue: String(describing: root.id))) }
+            if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), message: "Context-bound root does not match trusted context", entityType: "PurchaseOrder")) }
         }
 
 
@@ -51,17 +51,17 @@ private struct PurchaseOrderChecker: EntityChecker {
         }
 
 
-        if (mutation.kind == .create && mutation.values["tenant"] == nil) || mutation.values["tenant"] == .null { results.append(CheckResult(ruleID: "required", location: .property("tenant"))) }
+        if (mutation.kind == .create && mutation.values["tenant"] == nil) || mutation.values["tenant"] == .null { results.append(CheckResult(ruleID: "required", location: .property("tenant"), entityType: "PurchaseOrder")) }
 
-        if (mutation.kind == .create && mutation.values["contact_phone"] == nil) || mutation.values["contact_phone"] == .null { results.append(CheckResult(ruleID: "required", location: .property("contact_phone"))) }
-        if let value = mutation.values["contact_phone"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("contact_phone"), inputValue: value, systemValue: "1")) }
-        if let value = mutation.values["contact_phone"]?.stringValue, value.count > 32 { results.append(CheckResult(ruleID: "max_length", location: .property("contact_phone"), inputValue: value, systemValue: "32")) }
+        if (mutation.kind == .create && mutation.values["contact_phone"] == nil) || mutation.values["contact_phone"] == .null { results.append(CheckResult(ruleID: "required", location: .property("contact_phone"), entityType: "PurchaseOrder")) }
+        if let value = mutation.values["contact_phone"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("contact_phone"), systemValue: "1", entityType: "PurchaseOrder")) }
+        if let value = mutation.values["contact_phone"]?.stringValue, value.count > 32 { results.append(CheckResult(ruleID: "max_length", location: .property("contact_phone"), systemValue: "32", entityType: "PurchaseOrder")) }
 
-        if let value = mutation.values["internal_note"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("internal_note"), inputValue: value, systemValue: "100")) }
+        if let value = mutation.values["internal_note"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("internal_note"), systemValue: "100", entityType: "PurchaseOrder")) }
 
-        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"))) }
+        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "PurchaseOrder")) }
 
-        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"))) }
+        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"), entityType: "PurchaseOrder")) }
 
 
         return results
@@ -69,6 +69,12 @@ private struct PurchaseOrderChecker: EntityChecker {
 }
 
 private struct OrderItemChecker: EntityChecker {
+    private static let unitPriceMinimum = Decimal(string: "0.01", locale: Locale(identifier: "en_US_POSIX"))!
+    private static let unitPriceMaximum = Decimal(string: "1000000", locale: Locale(identifier: "en_US_POSIX"))!
+
+
+
+
     func checkAndFix(
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
@@ -76,14 +82,14 @@ private struct OrderItemChecker: EntityChecker {
         if mutation.kind == .create {
             let root = try context.requireActiveRoot("Tenant")
             if let supplied = mutation.values["tenant"], supplied != .null, supplied != .int(0) {
-                if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), inputValue: String(describing: supplied), systemValue: String(describing: root.id))) }
+                if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), message: "Context-bound root does not match trusted context", entityType: "OrderItem")) }
             } else {
                 mutation.values["tenant"] = root.id
                 context.recordFixEvidence(FixEvidence(entityType: "OrderItem", modelPath: "tenant", source: .context, sourceLabel: "activeRoot:Tenant"))
             }
         } else if mutation.kind == .update, let supplied = mutation.values["tenant"], supplied != .null {
             let root = try context.requireActiveRoot("Tenant")
-            if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), inputValue: String(describing: supplied), systemValue: String(describing: root.id))) }
+            if supplied != root.id { results.append(CheckResult(ruleID: "context_root_mismatch", location: .property("tenant"), message: "Context-bound root does not match trusted context", entityType: "OrderItem")) }
         }
 
 
@@ -103,21 +109,21 @@ private struct OrderItemChecker: EntityChecker {
         }
 
 
-        if (mutation.kind == .create && mutation.values["purchase_order"] == nil) || mutation.values["purchase_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("purchase_order"))) }
+        if (mutation.kind == .create && mutation.values["purchase_order"] == nil) || mutation.values["purchase_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("purchase_order"), entityType: "OrderItem")) }
 
-        if (mutation.kind == .create && mutation.values["tenant"] == nil) || mutation.values["tenant"] == .null { results.append(CheckResult(ruleID: "required", location: .property("tenant"))) }
+        if (mutation.kind == .create && mutation.values["tenant"] == nil) || mutation.values["tenant"] == .null { results.append(CheckResult(ruleID: "required", location: .property("tenant"), entityType: "OrderItem")) }
 
-        if (mutation.kind == .create && mutation.values["product_name"] == nil) || mutation.values["product_name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("product_name"))) }
-        if let value = mutation.values["product_name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("product_name"), inputValue: value, systemValue: "1")) }
-        if let value = mutation.values["product_name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("product_name"), inputValue: value, systemValue: "80")) }
+        if (mutation.kind == .create && mutation.values["product_name"] == nil) || mutation.values["product_name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("product_name"), entityType: "OrderItem")) }
+        if let value = mutation.values["product_name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("product_name"), systemValue: "1", entityType: "OrderItem")) }
+        if let value = mutation.values["product_name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("product_name"), systemValue: "80", entityType: "OrderItem")) }
 
-        if (mutation.kind == .create && mutation.values["unit_price"] == nil) || mutation.values["unit_price"] == .null { results.append(CheckResult(ruleID: "required", location: .property("unit_price"))) }
-        if let value = mutation.values["unit_price"]?.doubleValue, !(value >= 0.01) { results.append(CheckResult(ruleID: "min", location: .property("unit_price"), inputValue: String(value), systemValue: "0.01")) }
-        if let value = mutation.values["unit_price"]?.doubleValue, value > 1000000 { results.append(CheckResult(ruleID: "max", location: .property("unit_price"), inputValue: String(value), systemValue: "1000000")) }
+        if (mutation.kind == .create && mutation.values["unit_price"] == nil) || mutation.values["unit_price"] == .null { results.append(CheckResult(ruleID: "required", location: .property("unit_price"), entityType: "OrderItem")) }
+        if let value = mutation.values["unit_price"]?.decimalValue, !(value >= Self.unitPriceMinimum) { results.append(CheckResult(ruleID: "min", location: .property("unit_price"), systemValue: "0.01", entityType: "OrderItem")) }
+        if let value = mutation.values["unit_price"]?.decimalValue, value > Self.unitPriceMaximum { results.append(CheckResult(ruleID: "max", location: .property("unit_price"), systemValue: "1000000", entityType: "OrderItem")) }
 
-        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"))) }
+        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "OrderItem")) }
 
-        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"))) }
+        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"), entityType: "OrderItem")) }
 
 
         return results

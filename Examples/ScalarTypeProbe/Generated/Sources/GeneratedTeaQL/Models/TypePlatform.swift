@@ -247,6 +247,19 @@ public struct TypePlatformAudited: Sendable {
     public func save(_ context: UserContext) async throws -> TypePlatform {
         _ = try MutationIntent(comment: reason)
         try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try TypePlatformAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await TypePlatformAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> TypePlatform {
+        try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
         return try await context.executeGraphSave(comment: reason, rootEntityType: "TypePlatform", preparing: { context, _ in
@@ -276,9 +289,8 @@ public struct TypePlatformAudited: Sendable {
             to: EntityKey(entity: "TypePlatform", id: .int(saved.id)))
         for (index, var child) in entity.scalarTypeProbeList.enumerated() {
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            if child.typePlatform != saved.id {
-                child.updateTypePlatform(saved.id)
-            }
+            // The runtime resolves declared temporary references in its private
+            // outgoing mutation. Never change a reviewed caller ledger here.
             let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
             let childScope = try session.scope(key: child.teaqlEntityKey,
                 localReason: localReason, parent: activeScope)
@@ -288,14 +300,9 @@ public struct TypePlatformAudited: Sendable {
             }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("scalar_type_probe_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
         return saved
@@ -325,13 +332,13 @@ public struct TypePlatformAudited: Sendable {
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "TypePlatform")])
             }
             if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "TypePlatform")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "TypePlatform")])
             }
         }
         for (index, var child) in entity.scalarTypeProbeList.enumerated() {
@@ -347,10 +354,7 @@ public struct TypePlatformAudited: Sendable {
             } catch let error as CheckException {
                 let prefix = ObjectLocation.property("scalar_type_probe_list").index(index)
                 throw CheckException(error.violations.map { violation in
-                    CheckResult(ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue, systemValue: violation.systemValue,
-                        message: violation.message)
+                    violation.prefixed(by: prefix)
                 })
             }
         }
@@ -361,13 +365,13 @@ public struct TypePlatformAudited: Sendable {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "TypePlatform")])
             }
             if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "TypePlatform")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "TypePlatform")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)
@@ -377,17 +381,15 @@ public struct TypePlatformAudited: Sendable {
                 child.updateTypePlatform(entity.teaqlPreflightID)
             }
             let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            if entity.id == 0 {
+                try context.bindGraphReference(child, field: "type_platform", to: entity)
+            }
             do { try ScalarTypeProbeAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("scalar_type_probe_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
     }

@@ -7,8 +7,8 @@ private struct TypePlatformChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "TypePlatform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "TypePlatform")) }
 
 
         return results
@@ -35,44 +35,44 @@ private struct ScalarTypeProbeChecker: EntityChecker {
         }
 
 
-        if (mutation.kind == .create && mutation.values["type_platform"] == nil) || mutation.values["type_platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("type_platform"))) }
+        if (mutation.kind == .create && mutation.values["type_platform"] == nil) || mutation.values["type_platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("type_platform"), entityType: "ScalarTypeProbe")) }
 
-        if (mutation.kind == .create && mutation.values["required_string"] == nil) || mutation.values["required_string"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_string"))) }
-        if let value = mutation.values["required_string"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("required_string"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["required_string"] == nil) || mutation.values["required_string"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_string"), entityType: "ScalarTypeProbe")) }
+        if let value = mutation.values["required_string"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("required_string"), systemValue: "100", entityType: "ScalarTypeProbe")) }
 
-        if let value = mutation.values["optional_string"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("optional_string"), inputValue: value, systemValue: "100")) }
-
-
-        if (mutation.kind == .create && mutation.values["required_boolean"] == nil) || mutation.values["required_boolean"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_boolean"))) }
+        if let value = mutation.values["optional_string"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("optional_string"), systemValue: "100", entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_integer"] == nil) || mutation.values["required_integer"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_integer"))) }
+        if (mutation.kind == .create && mutation.values["required_boolean"] == nil) || mutation.values["required_boolean"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_boolean"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_long"] == nil) || mutation.values["required_long"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_long"))) }
+        if (mutation.kind == .create && mutation.values["required_integer"] == nil) || mutation.values["required_integer"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_integer"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_decimal"] == nil) || mutation.values["required_decimal"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_decimal"))) }
+        if (mutation.kind == .create && mutation.values["required_long"] == nil) || mutation.values["required_long"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_long"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_float"] == nil) || mutation.values["required_float"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_float"))) }
+        if (mutation.kind == .create && mutation.values["required_decimal"] == nil) || mutation.values["required_decimal"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_decimal"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_double"] == nil) || mutation.values["required_double"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_double"))) }
+        if (mutation.kind == .create && mutation.values["required_float"] == nil) || mutation.values["required_float"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_float"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_date"] == nil) || mutation.values["required_date"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_date"))) }
+        if (mutation.kind == .create && mutation.values["required_double"] == nil) || mutation.values["required_double"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_double"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_time"] == nil) || mutation.values["required_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_time"))) }
+        if (mutation.kind == .create && mutation.values["required_date"] == nil) || mutation.values["required_date"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_date"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["required_datetime"] == nil) || mutation.values["required_datetime"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_datetime"))) }
+        if (mutation.kind == .create && mutation.values["required_time"] == nil) || mutation.values["required_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_time"), entityType: "ScalarTypeProbe")) }
 
 
-        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"))) }
+        if (mutation.kind == .create && mutation.values["required_datetime"] == nil) || mutation.values["required_datetime"] == .null { results.append(CheckResult(ruleID: "required", location: .property("required_datetime"), entityType: "ScalarTypeProbe")) }
 
-        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"))) }
+
+        if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "ScalarTypeProbe")) }
+
+        if (mutation.kind == .create && mutation.values["update_time"] == nil) || mutation.values["update_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("update_time"), entityType: "ScalarTypeProbe")) }
 
 
         return results

@@ -94,5 +94,6 @@ private func missing<T>(
     }
     let bytes = try JSONEncoder().encode(Result(diagnostics: results.map(\.diagnostic), humanMessages: results.map(\.human)))
     print("FIX_E_EXAMPLE=" + String(decoding: bytes, as: UTF8.self))
+    try await CheckerMetadataProbe.verify(service: service, module: module)
   }
 }

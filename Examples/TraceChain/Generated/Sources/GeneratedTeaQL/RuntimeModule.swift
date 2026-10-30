@@ -7,8 +7,8 @@ private struct PlatformChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Platform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform")) }
 
 
         return results
@@ -20,13 +20,13 @@ private struct CustomerOrderChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"))) }
+        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"), entityType: "CustomerOrder")) }
 
-        if (mutation.kind == .create && mutation.values["order_number"] == nil) || mutation.values["order_number"] == .null { results.append(CheckResult(ruleID: "required", location: .property("order_number"))) }
-        if let value = mutation.values["order_number"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("order_number"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["order_number"] == nil) || mutation.values["order_number"] == .null { results.append(CheckResult(ruleID: "required", location: .property("order_number"), entityType: "CustomerOrder")) }
+        if let value = mutation.values["order_number"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("order_number"), systemValue: "100", entityType: "CustomerOrder")) }
 
-        if (mutation.kind == .create && mutation.values["description"] == nil) || mutation.values["description"] == .null { results.append(CheckResult(ruleID: "required", location: .property("description"))) }
-        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["description"] == nil) || mutation.values["description"] == .null { results.append(CheckResult(ruleID: "required", location: .property("description"), entityType: "CustomerOrder")) }
+        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), systemValue: "100", entityType: "CustomerOrder")) }
 
 
         return results
@@ -38,10 +38,10 @@ private struct OrderItemChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"))) }
+        if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"), entityType: "OrderItem")) }
 
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "OrderItem")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderItem")) }
 
 
         return results
@@ -53,10 +53,10 @@ private struct PaymentChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"))) }
+        if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"), entityType: "Payment")) }
 
-        if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"))) }
-        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"), entityType: "Payment")) }
+        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "Payment")) }
 
 
         return results
@@ -68,10 +68,10 @@ private struct PaymentAttemptChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["payment"] == nil) || mutation.values["payment"] == .null { results.append(CheckResult(ruleID: "required", location: .property("payment"))) }
+        if (mutation.kind == .create && mutation.values["payment"] == nil) || mutation.values["payment"] == .null { results.append(CheckResult(ruleID: "required", location: .property("payment"), entityType: "PaymentAttempt")) }
 
-        if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"))) }
-        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"), entityType: "PaymentAttempt")) }
+        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "PaymentAttempt")) }
 
 
         return results
@@ -83,10 +83,10 @@ private struct ShipmentChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"))) }
+        if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"), entityType: "Shipment")) }
 
-        if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"))) }
-        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"), entityType: "Shipment")) }
+        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "Shipment")) }
 
 
         return results

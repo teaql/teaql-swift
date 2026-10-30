@@ -483,14 +483,9 @@ public struct CustomerOrderAudited: Sendable {
             }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
         return saved
@@ -520,25 +515,25 @@ public struct CustomerOrderAudited: Sendable {
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("customer") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("status") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("status"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("status"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("orderNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("orderDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_date"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("totalAmount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("total_amount"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("total_amount"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
         }
         for (index, var child) in entity.orderItemList.enumerated() {
@@ -554,10 +549,7 @@ public struct CustomerOrderAudited: Sendable {
             } catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)
                 throw CheckException(error.violations.map { violation in
-                    CheckResult(ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue, systemValue: violation.systemValue,
-                        message: violation.message)
+                    violation.prefixed(by: prefix)
                 })
             }
         }
@@ -568,25 +560,25 @@ public struct CustomerOrderAudited: Sendable {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("customer") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("status") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("status"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("status"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("orderNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("orderDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_date"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("totalAmount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("total_amount"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("total_amount"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)
@@ -602,14 +594,9 @@ public struct CustomerOrderAudited: Sendable {
             do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
     }

@@ -691,15 +691,17 @@ public extension TenantRequest where State == RequestExecutable {
     func executeForList(_ context: UserContext) async throws -> SmartList<Tenant> {
         try ensureIntent()
         let snapshots = LoadedEntitySnapshots()
-        return try await context.executeTypedList(query, countRequested: countRequested) {
-            try Tenant.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try Tenant.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
         }
     }
 
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
-        let result = try await context.execute(query)
+        let result = try await context.execute(QueryRequest(query: query))
         return SmartList(result.records, facets: result.facets)
     }
+
 
 }

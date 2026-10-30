@@ -1886,8 +1886,10 @@ public struct UserContext: Sendable {
     let checker = runtime.checker(named: validated.entity.name)
     var violations: [CheckResult] = []
     if let checker {
+      let declaringEntityType = request.mutation.entity.name
       violations = translateCheckResults(
-        try checker.checkAndFix(context: self, mutation: &validated, now: fixTime))
+        try checker.checkAndFix(context: self, mutation: &validated, now: fixTime)
+          .map { $0.bindingDeclaringEntity(declaringEntityType) })
     }
     // Request-owned intent has always survived a Checker attempting to replace
     // it. Restore it here as well as at the final request/provider handoff.

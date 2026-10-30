@@ -289,7 +289,7 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "scalar_type_probe_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "typePlatform", modelName: "type_platform", column: "type_platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "typePlatform", modelName: "type_platform", column: "type_platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "TypePlatform"),
             PropertyDescriptor(name: "requiredString", modelName: "required_string", column: "required_string", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "optionalString", modelName: "optional_string", column: "optional_string", type: .string, nullable: true, isID: false, isVersion: false),
             PropertyDescriptor(name: "largeText", modelName: "large_text", column: "large_text", type: .string, nullable: true, isID: false, isVersion: false),
@@ -817,6 +817,19 @@ public struct ScalarTypeProbeAudited: Sendable {
     public func save(_ context: UserContext) async throws -> ScalarTypeProbe {
         _ = try MutationIntent(comment: reason)
         try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try ScalarTypeProbeAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await ScalarTypeProbeAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> ScalarTypeProbe {
+        try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
         return try await context.executeGraphSave(comment: reason, rootEntityType: "ScalarTypeProbe", preparing: { context, _ in
@@ -858,82 +871,82 @@ public struct ScalarTypeProbeAudited: Sendable {
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("typePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("type_platform"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("type_platform"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredString") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_string"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_string"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalString") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_string"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_string"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("largeText") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("large_text"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("large_text"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredBoolean") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_boolean"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_boolean"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalBoolean") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_boolean"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_boolean"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredInteger") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_integer"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_integer"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalInteger") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_integer"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_integer"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredLong") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_long"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_long"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalLong") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_long"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_long"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDecimal") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_decimal"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_decimal"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDecimal") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_decimal"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_decimal"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredFloat") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_float"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_float"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalFloat") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_float"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_float"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDouble") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_double"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_double"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDouble") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_double"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_double"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_date"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_date"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDatetime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_datetime"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_datetime"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDatetime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_datetime"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_datetime"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
         }
         return pending
@@ -943,82 +956,82 @@ public struct ScalarTypeProbeAudited: Sendable {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("typePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("type_platform"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("type_platform"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredString") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_string"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_string"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalString") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_string"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_string"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("largeText") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("large_text"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("large_text"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredBoolean") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_boolean"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_boolean"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalBoolean") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_boolean"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_boolean"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredInteger") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_integer"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_integer"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalInteger") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_integer"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_integer"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredLong") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_long"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_long"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalLong") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_long"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_long"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDecimal") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_decimal"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_decimal"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDecimal") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_decimal"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_decimal"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredFloat") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_float"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_float"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalFloat") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_float"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_float"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDouble") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_double"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_double"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDouble") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_double"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_double"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_date"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_date"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("requiredDatetime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_datetime"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("required_datetime"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("optionalDatetime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_datetime"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("optional_datetime"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "ScalarTypeProbe")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

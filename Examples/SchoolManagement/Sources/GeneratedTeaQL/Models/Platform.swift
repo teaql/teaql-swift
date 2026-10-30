@@ -411,14 +411,9 @@ public struct PlatformAudited: Sendable {
             }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_type_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
         for (index, var child) in entity.schoolList.enumerated() {
@@ -434,14 +429,9 @@ public struct PlatformAudited: Sendable {
             }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
         return saved
@@ -482,22 +472,22 @@ public struct PlatformAudited: Sendable {
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("baseUrl") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("base_url"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("base_url"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
         }
         for (index, var child) in entity.schoolTypeList.enumerated() {
@@ -513,10 +503,7 @@ public struct PlatformAudited: Sendable {
             } catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_type_list").index(index)
                 throw CheckException(error.violations.map { violation in
-                    CheckResult(ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue, systemValue: violation.systemValue,
-                        message: violation.message)
+                    violation.prefixed(by: prefix)
                 })
             }
         }
@@ -533,10 +520,7 @@ public struct PlatformAudited: Sendable {
             } catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_list").index(index)
                 throw CheckException(error.violations.map { violation in
-                    CheckResult(ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue, systemValue: violation.systemValue,
-                        message: violation.message)
+                    violation.prefixed(by: prefix)
                 })
             }
         }
@@ -547,22 +531,22 @@ public struct PlatformAudited: Sendable {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("baseUrl") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("base_url"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("base_url"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)
@@ -578,14 +562,9 @@ public struct PlatformAudited: Sendable {
             do { try SchoolTypeAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_type_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
         for (index, var child) in entity.schoolList.enumerated() {
@@ -600,14 +579,9 @@ public struct PlatformAudited: Sendable {
             do { try SchoolAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_list").index(index)
-                throw CheckException(error.violations.map { violation in
-                    CheckResult(
-                        ruleID: violation.ruleID,
-                        location: violation.location.prefixed(by: prefix),
-                        inputValue: violation.inputValue,
-                        systemValue: violation.systemValue,
-                        message: violation.message)
-                })
+                throw CheckException(context.translateCheckResults(error.violations.map { violation in
+                    violation.prefixed(by: prefix)
+                }))
             }
         }
     }

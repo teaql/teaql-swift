@@ -541,37 +541,37 @@ public struct SchoolAudited: Sendable {
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("schoolType") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("address") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("address"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("address"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("establishedDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("established_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("established_date"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("studentCapacity") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("student_capacity"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("student_capacity"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("active") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
         }
         return pending
@@ -581,37 +581,37 @@ public struct SchoolAudited: Sendable {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("schoolType") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("address") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("address"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("address"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("establishedDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("established_date"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("established_date"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("studentCapacity") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("student_capacity"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("student_capacity"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("active") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
             if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity")])
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

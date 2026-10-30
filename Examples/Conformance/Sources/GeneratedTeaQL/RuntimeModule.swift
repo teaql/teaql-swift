@@ -7,8 +7,8 @@ private struct PlatformChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"))) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), inputValue: value, systemValue: "100")) }
+        if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Platform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform")) }
 
 
         return results
@@ -20,13 +20,13 @@ private struct WorkItemChecker: EntityChecker {
         context: UserContext, mutation: inout Mutation, now: Date
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
-        if (mutation.kind == .create && mutation.values["title"] == nil) || mutation.values["title"] == .null { results.append(CheckResult(ruleID: "required", location: .property("title"))) }
-        if let value = mutation.values["title"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("title"), inputValue: value, systemValue: "1")) }
-        if let value = mutation.values["title"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("title"), inputValue: value, systemValue: "80")) }
+        if (mutation.kind == .create && mutation.values["title"] == nil) || mutation.values["title"] == .null { results.append(CheckResult(ruleID: "required", location: .property("title"), entityType: "WorkItem")) }
+        if let value = mutation.values["title"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("title"), systemValue: "1", entityType: "WorkItem")) }
+        if let value = mutation.values["title"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("title"), systemValue: "80", entityType: "WorkItem")) }
 
-        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), inputValue: value, systemValue: "100")) }
+        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), systemValue: "100", entityType: "WorkItem")) }
 
-        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"))) }
+        if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"), entityType: "WorkItem")) }
 
 
         return results
