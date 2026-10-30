@@ -2,7 +2,7 @@
 set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
-evidence="$(mktemp -d /tmp/teaql-swift-batch-api-XXXXXX)"
+evidence="$(mktemp -d -t teaql-swift-batch-api-XXXXXX)"
 cd "$repo"
 bin="$(swift build --scratch-path "$scratch" --show-bin-path)"
 flags=(-typecheck -module-cache-path "$scratch/ModuleCache" -I "$bin/Modules" -I "$repo/Sources/CSQLite")

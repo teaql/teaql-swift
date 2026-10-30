@@ -1,1 +1,7 @@
 test-vectors/*.tsv whitespace=-blank-at-eol
+Tests/TeaQLBlobReferenceTests/fixtures/*.pdf binary
+ObjectStorageS3/Tests/TeaQLObjectStorageS3Tests/fixtures/*.pdf binary
+Tests/TeaQLBlobReferenceTests/fixtures/*.doc binary
+Tests/TeaQLBlobReferenceTests/fixtures/*.xls binary
+ObjectStorageS3/Tests/TeaQLObjectStorageS3Tests/fixtures/*.doc binary
+ObjectStorageS3/Tests/TeaQLObjectStorageS3Tests/fixtures/*.xls binary

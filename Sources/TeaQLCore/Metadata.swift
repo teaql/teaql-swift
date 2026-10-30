@@ -1,7 +1,7 @@
 import Foundation
 
 public enum PropertyType: String, Sendable, Codable {
-  case bool, int, uint, double, decimal, string, date, localDateTime, timestamp, data, json
+  case bool, int, uint, double, decimal, string, date, localDateTime, timestamp, data, json, blobRef
 }
 
 public struct PropertyDescriptor: Sendable, Hashable, Codable {
@@ -15,9 +15,11 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
   /// Explicit generated forward relation marker. Native property names need
   /// not end in `Id`, so schema indexes must not depend on that spelling.
   public let isRelation: Bool
+  /// Trusted generated model policy, never a client request declaration.
+  public let blobSpec: BlobFieldSpec?
 
   private enum CodingKeys: String, CodingKey {
-    case name, modelName, column, type, nullable, isID, isVersion, isRelation
+    case name, modelName, column, type, nullable, isID, isVersion, isRelation, blobSpec
   }
 
   public init(
@@ -28,7 +30,8 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     nullable: Bool = false,
     isID: Bool = false,
     isVersion: Bool = false,
-    isRelation: Bool = false
+    isRelation: Bool = false,
+    blobSpec: BlobFieldSpec? = nil
   ) {
     self.name = name
     self.modelName = modelName
@@ -38,6 +41,7 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     self.isID = isID
     self.isVersion = isVersion
     self.isRelation = isRelation
+    self.blobSpec = blobSpec
   }
 
   public init(from decoder: Decoder) throws {
@@ -50,6 +54,7 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     isID = try fields.decodeIfPresent(Bool.self, forKey: .isID) ?? false
     isVersion = try fields.decodeIfPresent(Bool.self, forKey: .isVersion) ?? false
     isRelation = try fields.decodeIfPresent(Bool.self, forKey: .isRelation) ?? false
+    blobSpec = try fields.decodeIfPresent(BlobFieldSpec.self, forKey: .blobSpec)
   }
 }
 
@@ -76,6 +81,7 @@ public struct EntityDescriptor: Sendable, Hashable, Codable {
 
   public var idProperty: PropertyDescriptor? { properties.first(where: \.isID) }
   public var versionProperty: PropertyDescriptor? { properties.first(where: \.isVersion) }
+  public var hasBlobFields: Bool { properties.contains { $0.type == .blobRef || $0.blobSpec != nil } }
   public func property(named name: String) -> PropertyDescriptor? {
     properties.first { $0.name == name || $0.modelName == name || $0.column == name }
   }

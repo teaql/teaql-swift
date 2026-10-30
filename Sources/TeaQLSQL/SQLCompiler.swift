@@ -308,6 +308,7 @@ public struct SQLiteCompiler: Sendable {
     case .double: "REAL"
     case .decimal: "NUMERIC"
     case .string: "TEXT"
+    case .blobRef: "VARCHAR(128)"
     case .date, .localDateTime: "TEXT"
     case .timestamp: "INTEGER"
     case .data: "BLOB"

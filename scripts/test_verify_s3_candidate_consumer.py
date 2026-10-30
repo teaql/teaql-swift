@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Local guards for consuming only exact standalone S3 archive bytes."""
+
+import importlib.util
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+import warnings
+import zipfile
+
+
+SCRIPT = Path(__file__).with_name("verify-s3-candidate-consumer.py")
+SPEC = importlib.util.spec_from_file_location("s3_archive_consumer", SCRIPT)
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+REVISION = "a" * 40
+PREFIX = "teaql-objectstorage-s3/"
+PROVIDER = "Sources/TeaQLObjectStorageS3/S3ObjectStorage.swift"
+
+
+def manifest(revision=REVISION):
+    return ('.package(name: "TeaQLRuntime", url: "'
+            + MODULE.RUNTIME_URL + '", revision: "' + revision + '")')
+
+
+class ExactArchiveConsumerTests(unittest.TestCase):
+    def test_candidate_test_summary_requires_real_executed_tests(self):
+        output = ("Test Suite 'All tests' passed\n"
+                  "Executed 17 tests, with 16 tests skipped and 0 failures (0 unexpected)\n")
+        self.assertEqual(MODULE.checked_test_summary(output), (17, 16))
+        with self.assertRaisesRegex(RuntimeError, "no active tests"):
+            MODULE.checked_test_summary(output.replace("16 tests skipped", "17 tests skipped"))
+        with self.assertRaisesRegex(RuntimeError, "passing test suite"):
+            MODULE.checked_test_summary(output.replace("' passed", "' failed"))
+
+    def test_timeout_stops_child_before_disposable_cleanup(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
+            marker = Path(temporary) / "orphan-marker"
+            child = ("import pathlib,time; time.sleep(0.5); "
+                     "pathlib.Path(" + repr(str(marker)) + ").write_text('orphan')")
+            parent = ("import subprocess,time,sys; "
+                      "subprocess.Popen([sys.executable,'-c'," + repr(child) + "]); "
+                      "time.sleep(30)")
+            with self.assertRaises(subprocess.TimeoutExpired):
+                MODULE.run([sys.executable, "-c", parent], timeout=0.1)
+            time.sleep(0.6)
+            self.assertFalse(marker.exists())
+
+    def archive(self, work, entries):
+        path = work / "candidate.zip"
+        with zipfile.ZipFile(path, "w") as writer:
+            for name, content in entries:
+                writer.writestr(PREFIX + name, content)
+        return path
+
+    def test_extracts_exact_manifest_and_provider(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
+            work = Path(temporary)
+            archive = self.archive(work, [("Package.swift", manifest()),
+                                          (PROVIDER, "public struct S3ObjectStorage {}")])
+            target = work / "extracted"
+            target.mkdir()
+            files = MODULE.extract_exact_archive(archive, target, REVISION)
+            self.assertEqual(files, {"Package.swift", PROVIDER})
+            self.assertEqual((target / "Package.swift").read_text(), manifest())
+
+    def test_rejects_parent_escape(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
+            work = Path(temporary)
+            archive = self.archive(work, [("../outside", "bad")])
+            target = work / "extracted"
+            target.mkdir()
+            with self.assertRaisesRegex(RuntimeError, "unsafe S3 archive entry"):
+                MODULE.extract_exact_archive(archive, target, REVISION)
+            self.assertFalse((work / "outside").exists())
+
+    def test_rejects_different_root_revision(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
+            work = Path(temporary)
+            archive = self.archive(work, [("Package.swift", manifest("b" * 40)),
+                                          (PROVIDER, "source")])
+            target = work / "extracted"
+            target.mkdir()
+            with self.assertRaisesRegex(RuntimeError, "exact remote runtime revision"):
+                MODULE.extract_exact_archive(archive, target, REVISION)
+
+    def test_rejects_duplicate_entry(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-consumer-test-") as temporary:
+            work = Path(temporary)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                archive = self.archive(work, [("Package.swift", manifest()),
+                                              ("Package.swift", manifest()),
+                                              (PROVIDER, "source")])
+            target = work / "extracted"
+            target.mkdir()
+            with self.assertRaisesRegex(RuntimeError, "duplicate S3 source archive entry"):
+                MODULE.extract_exact_archive(archive, target, REVISION)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

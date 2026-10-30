@@ -278,6 +278,33 @@ public protocol GraphTransactionExecutor: MutationExecutor {
   func rollbackGraphTransaction() async throws
 }
 
+/// A temporary, graph-owned SQL capability for optional infrastructure modules.
+/// The lease deliberately has no commit or rollback operation.
+public protocol GraphPhysicalSQLLease: Sendable {
+  func execute(_ sql: String, parameters: [TeaQLValue]) async throws -> Int
+  func query(_ sql: String, parameters: [TeaQLValue]) async throws -> [TeaQLRecord]
+}
+
+public protocol GraphPhysicalSQLExecutor: Sendable {
+  func withPhysicalSQL<T: Sendable>(
+    _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
+  ) async throws -> T
+  func isCurrentPhysicalSQLLease(_ lease: any GraphPhysicalSQLLease) async -> Bool
+}
+
+/// Optional module hook. The provider captures both authoritative row images and
+/// invokes this before the graph owner may commit its physical transaction.
+public protocol BlobMutationParticipant: Sendable {
+  func apply(context: UserContext, session: GraphMutationSession, mutation: Mutation,
+             previous: TeaQLRecord?, persisted: TeaQLRecord) async throws
+}
+
+public protocol BlobMutationExecutor: MutationExecutor {
+  func executeBlobMutation(_ request: MutationRequest, context: UserContext,
+                           session: GraphMutationSession,
+                           participant: (any BlobMutationParticipant)?) async throws -> MutationResult
+}
+
 public extension MutationExecutor {
   var providerKind: String { String(describing: type(of: self)) }
   func execute(_ mutation: Mutation) async throws -> MutationResult {
@@ -609,6 +636,11 @@ private enum ListExecutionState {
 }
 
 public struct UserContext: Sendable {
+  var runtimeCapabilities: [String: any RuntimeCapabilityProvider] = [:]
+  var responseGraphAuthorizer: (any ResponseGraphAuthorizer)?
+  var secureDocumentContributor: (any SecureDocumentContributor)?
+  var blobResponseContributor: (any BlobResponseContributor)?
+  var blobMutationParticipant: (any BlobMutationParticipant)?
   var objectStorageProvider: (any ObjectStorageProvider)?
   var objectStorageObserver: ObjectStorageObserver?
   var objectStorageContextID: String { graphTransactionGate.id.uuidString }
@@ -666,11 +698,13 @@ public struct UserContext: Sendable {
     mutationPolicyApprovalProvider: (any MutationPolicyApprovalProvider)? = nil,
     mutationGovernanceSink: (any MutationGovernanceSink)? = nil,
     objectStorageProvider: (any ObjectStorageProvider)? = nil,
-    objectStorageObserver: ObjectStorageObserver? = nil
+    objectStorageObserver: ObjectStorageObserver? = nil,
+    runtimeCapabilities: [String: any RuntimeCapabilityProvider] = [:]
   ) {
     self.runtime = runtime
     self.objectStorageProvider = objectStorageProvider
     self.objectStorageObserver = objectStorageObserver
+    self.runtimeCapabilities = runtimeCapabilities
     self.actor = actor
     self.auditCategory = auditCategory
     self.trustedTenant = trustedTenant
@@ -706,10 +740,29 @@ public struct UserContext: Sendable {
     try await executeGraphSave(GraphMutationRequest(comment: comment), operation)
   }
 
+  public func withPhysicalSQL<T: Sendable>(
+    _ session: GraphMutationSession,
+    _ work: @escaping @Sendable (any GraphPhysicalSQLLease) async throws -> T
+  ) async throws -> T {
+    try requireGraphSession(session)
+    guard let owner = mutationExecutor as? any GraphPhysicalSQLExecutor else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+    return try await owner.withPhysicalSQL(work)
+  }
+
+  public func isCurrentPhysicalSQLLease(_ session: GraphMutationSession,
+    _ lease: any GraphPhysicalSQLLease) async -> Bool {
+    do { try requireGraphSession(session) } catch { return false }
+    guard let owner = mutationExecutor as? any GraphPhysicalSQLExecutor else { return false }
+    return await owner.isCurrentPhysicalSQLLease(lease)
+  }
+
   public func executeGraphSave<T: Sendable>(
     _ request: GraphMutationRequest,
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
+    try await requireRuntimeCapabilities(runtime.requiredCapabilities)
     guard graphSession == nil, !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
       throw TeaQLError.execution("Independent graph save cannot implicitly join an active graph; pass its explicit session for composed children")
     }
@@ -749,6 +802,7 @@ public struct UserContext: Sendable {
         GraphTransactionGate.Reentry.active.union([graphTransactionGate.id])) {
           try await operation(graphContext, session)
       }
+      try session.ensureCommittable()
       try policy.ensureGraphComplete()
       try await transaction.commitGraphTransaction()
       committed = true
@@ -785,6 +839,14 @@ public struct UserContext: Sendable {
   public func recordFixEvidence(_ evidence: FixEvidence) { graphSession?.recordFixEvidence(evidence) }
   public var lastFixEvidence: [FixEvidence] { graphTransactionGate.lastFixEvidence }
 
+  /// Maintenance must start its own physical SQL owner, never nest in a graph save.
+  public func requireNoActiveGraphSQL() throws {
+    guard graphSession == nil,
+      !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
+      throw TeaQLError.execution("BLOB_TRANSACTION_REQUIRED")
+    }
+  }
+
   package func requireGraphSession(_ session: GraphMutationSession) throws {
     guard graphSession === session else {
       throw TeaQLError.execution("Graph mutation requires its explicit invocation context and session")
@@ -813,6 +875,7 @@ public struct UserContext: Sendable {
 
   /// Explicitly reconciles a passive RuntimeModule through this context's provider.
   public func ensureSchema(_ module: RuntimeModule) async throws {
+    try await requireRuntimeCapabilities(Array(Set(runtime.requiredCapabilities + module.requiredCapabilities)).sorted())
     guard let provider = queryExecutor as? any SchemaExecutor else {
       throw TeaQLError.execution(
         "Ensure Schema requires a schema-aware provider; configured provider is \(queryExecutor.providerKind)")
@@ -828,7 +891,7 @@ public struct UserContext: Sendable {
     actor: String = "teaql-generated-bootstrap",
     activeRoot: ContextEntityRef? = nil
   ) -> UserContext {
-    UserContext(
+    var bootstrap = UserContext(
       runtime: runtime,
       actor: actor,
       auditCategory: "runtime-bootstrap",
@@ -849,7 +912,13 @@ public struct UserContext: Sendable {
       entityInitializers: entityInitializers,
       entityCreationObserver: entityCreationObserver,
       objectStorageProvider: objectStorageProvider,
-      objectStorageObserver: objectStorageObserver)
+      objectStorageObserver: objectStorageObserver,
+      runtimeCapabilities: runtimeCapabilities)
+    bootstrap.responseGraphAuthorizer = responseGraphAuthorizer
+    bootstrap.secureDocumentContributor = secureDocumentContributor
+    bootstrap.blobResponseContributor = blobResponseContributor
+    bootstrap.blobMutationParticipant = blobMutationParticipant
+    return bootstrap
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
@@ -1558,7 +1627,12 @@ public struct UserContext: Sendable {
         ]
       )
     ) {
-      try await executeMutation(request.mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+      do {
+        return try await executeMutation(request.mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+      } catch {
+        if mutation.entity.hasBlobFields { graphSession?.poison() }
+        throw error
+      }
     }
   }
 
@@ -1584,6 +1658,15 @@ public struct UserContext: Sendable {
       )
     ) {
       do {
+        if validated.entity.hasBlobFields {
+          guard let graphSession, let owner = mutationExecutor as? any BlobMutationExecutor else {
+            graphSession?.poison()
+            throw TeaQLError.execution("BLOB_CAPABILITY_MISSING")
+          }
+          return try await owner.executeBlobMutation(
+            try MutationRequest(mutation: validated), context: self, session: graphSession,
+            participant: hasRuntimeCapability("blob.v1") ? blobMutationParticipant : nil)
+        }
         if let diagnosed = mutationExecutor as? any SQLDiagnosticExecutor {
           return try await diagnosed.executeDiagnosed(validated)
         }

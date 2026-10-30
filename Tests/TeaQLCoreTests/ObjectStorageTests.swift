@@ -9,6 +9,7 @@ private struct StorageUnusedExecutor: QueryExecutor, MutationExecutor {
 private func storageContext() -> UserContext { UserContext(queryExecutor: StorageUnusedExecutor(), mutationExecutor: StorageUnusedExecutor(), requestPolicy: RequestPolicy { $0 }) }
 private actor StorageStub: ObjectStorageProvider {
   var size: Int64 = 3
+  var deletes = 0
   var error: StorageErrorCode?
   var seenComment = "", seenContext = ""
   func configure(size: Int64 = 3, error: StorageErrorCode? = nil) { self.size = size; self.error = error }
@@ -18,7 +19,7 @@ private actor StorageStub: ObjectStorageProvider {
   }
   func put(_ invocation: StorageInvocation, key: ObjectKey, content: any ObjectByteReader, options: ObjectPutOptions) throws -> ObjectMetadata { try ObjectMetadata(key: key, size: options.size) }
   func get(_ invocation: StorageInvocation, key: ObjectKey) throws -> ObjectContent { ObjectContent(metadata: try ObjectMetadata(key: key, size: size), reader: ObjectDataReader(Data([1, 2, 3]))) }
-  func delete(_ invocation: StorageInvocation, key: ObjectKey) {}
+  func delete(_ invocation: StorageInvocation, key: ObjectKey) { deletes += 1 }
   func getReadUrl(_ invocation: StorageInvocation, key: ObjectKey, options: ObjectReadUrlOptions) throws -> ObjectReadUrl { throw StorageError(.unsupported) }
 }
 private actor CountedStorageReader: ObjectByteReader {
@@ -52,6 +53,15 @@ final class ObjectStorageTests: XCTestCase {
       await expect(code) { _ = try await storage.exists(key) }
     }
   }
+  func testConditionalDeleteRequiresProviderCapability() async throws {
+    let stub = StorageStub()
+    let storage = try storageContext().withObjectStorage(stub).objectStorage("conditional delete")
+    let key = try ObjectKey("f4/conditional")
+    await expect(.invalidInput) { _ = try await storage.deleteIfVersion(key, contentVersion: "*") }
+    await expect(.unsupported) { _ = try await storage.deleteIfVersion(key, contentVersion: "\"etag\"") }
+    let deletes = await stub.deletes
+    XCTAssertEqual(deletes, 0)
+  }
   func testObjectStorageStreamsAndObservationBoundaries() async throws {
     let stub = StorageStub(), events = StorageEvents()
     let storage = try storageContext().withObjectStorage(stub).withObjectStorageObserver { events.record($0) }.objectStorage("read attachment")
@@ -72,6 +82,14 @@ final class ObjectStorageTests: XCTestCase {
     XCTAssertThrowsError(try ObjectPutOptions(size: 0, mode: .createOnly, metadata: ["Bad Key": "value"]))
     for seconds in [0, -1, 604801] { XCTAssertThrowsError(try ObjectReadUrlOptions(seconds: seconds)) }
     XCTAssertThrowsError(try ObjectReadUrlOptions(disposition: "attachment", filename: "bad\nname"))
+    XCTAssertThrowsError(try ObjectReadUrlOptions(disposition: "attachment", filename: "bad/name"))
+    XCTAssertEqual(try ObjectReadUrlOptions(disposition: "inline", filename: "sample.jpg")
+      .contentDisposition, "inline; filename=\"sample.jpg\"")
+    let unicode = try ObjectReadUrlOptions(disposition: "inline",
+      filename: "报告 & 📄\u{2028}mid\u{2029}x.jpg").contentDisposition!
+    XCTAssertTrue(unicode.hasPrefix("inline; filename=\"__ & _"))
+    XCTAssertTrue(unicode.contains("filename*=UTF-8''%E6%8A%A5%E5%91%8A%20%26%20%F0%9F%93%84"))
+    XCTAssertFalse(unicode.contains("\r") || unicode.contains("\n"))
     let key = try ObjectKey("PRIVATE-KEY-CANARY")
     XCTAssertFalse(String(reflecting: key).contains("CANARY"))
     XCTAssertFalse(String(reflecting: ObjectReadUrl(url: URL(string: "https://example.invalid/PRIVATE-URL-CANARY")!, expiresAt: Date())).contains("CANARY"))

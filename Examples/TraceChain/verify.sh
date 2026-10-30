@@ -6,10 +6,10 @@ if [[ $# -gt 1 ]]; then echo 'usage: bash verify.sh [retained-sqlite-path]' >&2;
 if [[ $# -eq 1 ]]; then
   trace_database="$1"
 else
-  trace_directory="$(mktemp -d /tmp/teaql-swift-generated-trace-XXXXXX)"
+  trace_directory="$(mktemp -d -t teaql-swift-generated-trace-XXXXXX)"
   trace_database="$trace_directory/trace.sqlite"
 fi
-trace_evidence="$(mktemp -d /tmp/teaql-swift-generated-trace-evidence-XXXXXX)"
+trace_evidence="$(mktemp -d -t teaql-swift-generated-trace-evidence-XXXXXX)"
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
 cd "$example"
 hash_library() {

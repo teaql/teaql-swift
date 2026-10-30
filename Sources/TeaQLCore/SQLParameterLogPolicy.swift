@@ -5,6 +5,7 @@ public enum SQLParameterLogPolicy: String, Sendable, Equatable, Codable {
 
   public static func field(_ name: String, in entity: EntityDescriptor) -> Self {
     guard let property = entity.property(named: name) else { return .unknown }
+    if property.type == .blobRef || property.blobSpec != nil { return .credential }
     if LogPrivacy.credential(property.name) || LogPrivacy.credential(property.modelName ?? property.name)
       || LogPrivacy.credential(property.column) { return .credential }
     guard let maskFields = entity.auditMaskFields else { return .unknown }

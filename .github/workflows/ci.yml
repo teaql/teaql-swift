@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   test:
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -16,6 +18,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
+      - name: Test signed SwiftPM tag gate
+        run: python3 scripts/test_verify_signed_reference_tag.py
+      - name: Require exact signed tag on version-tag pushes
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/verify-signed-reference-tag.py
       - name: Install SQLite headers
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
@@ -25,6 +34,21 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+      - name: Test optional S3 package
+        working-directory: ObjectStorageS3
+        run: swift test --jobs 2
+      - name: Build optional S3 Release product
+        working-directory: ObjectStorageS3
+        run: swift build -c release --jobs 2
+      - name: Test standalone S3 source archive tool
+        run: |
+          python3 scripts/test_build_s3_source_archive.py
+          python3 scripts/test_verify_s3_candidate_consumer.py
+          python3 ObjectStorageS3/scripts/test_verify_signed_release.py
+      - name: Verify reference products from pinned Git candidate
+        run: python3 scripts/verify-reference-candidate-consumers.py
+      - name: Verify exact S3 archive in clean consumer and package tests
+        run: python3 scripts/verify-s3-candidate-consumer.py
       - name: Compile libraries for iOS Simulator
         if: runner.os == 'macOS'
         run: >-

@@ -66,6 +66,7 @@ enum LogPrivacy {
   }
   static func hasCredentials(_ value: TeaQLValue) -> Bool {
     switch value {
+    case .blobRef: return true
     case .object(let fields): return fields.contains { credential($0.key) || hasCredentials($0.value) }
     case .array(let values): return values.contains { hasCredentials($0) }
     default: return false
@@ -75,6 +76,7 @@ enum LogPrivacy {
     switch value {
     case .null: return []
     case .string(let text), .calendarDate(let text), .localDateTime(let text): return [text]
+    case .blobRef: return []
     case .object(let fields): return fields.values.flatMap(strings)
     case .array(let values): return values.flatMap(strings)
     case .int(let value), .timestamp(let value): return [String(value)]
@@ -96,6 +98,7 @@ enum LogPrivacy {
   private static func projectValue(_ value: TeaQLValue, policy: SQLParameterLogPolicy,
                                    allowPlaintext: Bool) -> TeaQLValue {
     if case .null = value { return value }
+    if case .blobRef = value { return .string("[REDACTED]") }
     switch policy {
     case .unknown, .credential: return .string("[REDACTED]")
     case .masked where !allowPlaintext:
