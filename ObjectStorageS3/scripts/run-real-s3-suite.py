@@ -154,7 +154,7 @@ def main():
                         "TEAQL_S3_TEST_REAL_MEDIA": "1",
                         "TEAQL_S3_TEST_REAL_OFFICE": "1",
                         "TEAQL_S3_TEST_REAL_LEGACY_OFFICE": "1"})
-            result = subprocess.run(["swift", "test", "--skip-update", "--jobs", "2",
+            result = subprocess.run(["swift", "test", "--jobs", "2",
                                      "--scratch-path", str(scratch / "build")],
                                     cwd=candidate, env=env, capture_output=True, text=True,
                                     timeout=1800)
