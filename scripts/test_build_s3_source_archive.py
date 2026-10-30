@@ -17,6 +17,26 @@ SPEC.loader.exec_module(MODULE)
 
 
 class S3SourceArchiveTests(unittest.TestCase):
+    def test_archive_inherits_exact_committed_root_license(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-archive-test-") as temporary:
+            package = Path(temporary)
+            copied = {"Package.swift": hashlib.sha256(b"manifest").hexdigest()}
+            with patch.object(MODULE, "run", return_value=b"MIT license from commit\n") as command:
+                MODULE.add_root_license(package, "a" * 40, copied)
+            command.assert_called_once_with(["git", "show", "a" * 40 + ":LICENSE"])
+            self.assertEqual((package / "LICENSE").read_bytes(), b"MIT license from commit\n")
+            self.assertEqual(copied["LICENSE"],
+                             hashlib.sha256(b"MIT license from commit\n").hexdigest())
+
+    def test_existing_nested_license_is_not_replaced(self):
+        with tempfile.TemporaryDirectory(prefix="teaql-s3-archive-test-") as temporary:
+            package = Path(temporary)
+            (package / "LICENSE").write_bytes(b"nested license")
+            copied = {"LICENSE": hashlib.sha256(b"nested license").hexdigest()}
+            with patch.object(MODULE, "run", side_effect=AssertionError("must not read root")):
+                MODULE.add_root_license(package, "a" * 40, copied)
+            self.assertEqual((package / "LICENSE").read_bytes(), b"nested license")
+
     def test_existing_output_is_never_overwritten(self):
         with tempfile.TemporaryDirectory(prefix="teaql-s3-archive-test-") as temporary:
             output = Path(temporary) / "candidate.zip"

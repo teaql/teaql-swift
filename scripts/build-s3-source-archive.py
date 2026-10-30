@@ -62,6 +62,17 @@ def export_committed_s3(destination, revision):
     return copied
 
 
+def add_root_license(destination, revision, copied):
+    """Keep an independent S3 archive licensed from the same Git revision."""
+    if "LICENSE" in copied:
+        return
+    content = run(["git", "show", revision + ":LICENSE"])
+    if not content:
+        raise RuntimeError("committed root LICENSE is empty")
+    (destination / "LICENSE").write_bytes(content)
+    copied["LICENSE"] = hashlib.sha256(content).hexdigest()
+
+
 def rewrite_manifest(destination, revision):
     manifest = destination / "Package.swift"
     source = manifest.read_text()
@@ -117,6 +128,7 @@ def build(output):
         package = Path(temporary) / "teaql-objectstorage-s3"
         package.mkdir()
         copied = export_committed_s3(package, revision)
+        add_root_license(package, revision, copied)
         manifest_sha = rewrite_manifest(package, revision)
         try:
             run([SWIFT, "package", "--package-path", str(package), "archive-source",
