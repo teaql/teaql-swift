@@ -34,3 +34,17 @@ jobs:
         run: swift test --jobs 2
       - name: Build Release product
         run: swift build -c release --jobs 2
+  real-s3:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install real parser and SQLite tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev ffmpeg libreoffice-writer libreoffice-calc bubblewrap util-linux
+      - name: Run all independent package tests against disposable RustFS
+        run: |
+          python3 -m venv "$RUNNER_TEMP/teaql-s3-python"
+          "$RUNNER_TEMP/teaql-s3-python/bin/python" -m pip install --disable-pip-version-check -r scripts/requirements-real-s3.txt
+          "$RUNNER_TEMP/teaql-s3-python/bin/python" scripts/run-real-s3-suite.py --log "$RUNNER_TEMP/teaql-s3-suite.log"
