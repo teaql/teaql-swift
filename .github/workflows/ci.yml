@@ -38,6 +38,13 @@ jobs:
       - name: Build optional S3 Release product
         working-directory: ObjectStorageS3
         run: swift build -c release --jobs 2
+      - name: Verify standalone S3 source archive
+        shell: bash
+        run: |
+          python3 scripts/test_build_s3_source_archive.py
+          archive="$RUNNER_TEMP/teaql-objectstorage-s3-source.zip"
+          trap 'rm -f "$archive"' EXIT
+          python3 scripts/build-s3-source-archive.py --output "$archive"
       - name: Verify reference products from pinned Git candidate
         run: python3 scripts/verify-reference-candidate-consumers.py
       - name: Verify separate S3 product from pinned Git candidates
