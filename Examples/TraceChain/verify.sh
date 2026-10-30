@@ -36,12 +36,14 @@ finish() {
 }
 trap finish EXIT
 hash_library > "$trace_evidence/generated-before.sha256"
+node --test "$repo/Examples/TraceChain/verify-checker-observation.test.cjs"
 for round in first second; do
   timeout --kill-after=10s 180s env -u TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS -u TEAQL_SWIFT_TRACE_SCENARIO \
     swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
     --force-resolved-versions TraceChainVerification "$trace_database" \
     2>&1 | tee "$trace_evidence/$round.log"
-  rg -Fq 'PASS: Swift generated Checker accepted/rejected overlap 4 cases; callbacks serialized' "$trace_evidence/$round.log"
+  rg -Fq 'PASS: Swift generated Checker isolation v2: accepted-first overlap; rejected-first before BEGIN; 4 cases' "$trace_evidence/$round.log"
+  node "$repo/Examples/TraceChain/verify-checker-observation.cjs" "$trace_evidence/$round.log"
   rg -Fxq 'PASS TC-MUT-12 Swift shared readonly: forced public overlap, one BEGIN while paused, command/SQL/audit isolated' "$trace_evidence/$round.log"
   rg -Fxq 'PASS Swift generated bootstrap intent: logging off/on, committed audit, repeat no writes' "$trace_evidence/$round.log"
   [[ "$(rg -c '^BOOTSTRAP INTENT ' "$trace_evidence/$round.log")" == 2 ]]

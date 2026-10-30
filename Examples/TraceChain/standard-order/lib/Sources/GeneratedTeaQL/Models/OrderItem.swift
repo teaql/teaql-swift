@@ -109,7 +109,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "order_item_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
             PropertyDescriptor(name: "productName", modelName: "product_name", column: "product_name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "quantity", modelName: "quantity", column: "quantity", type: .int, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "unitPrice", modelName: "unit_price", column: "unit_price", type: .decimal, nullable: false, isID: false, isVersion: false),
@@ -316,6 +316,19 @@ public struct OrderItemAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> OrderItem {
         _ = try MutationIntent(comment: reason)
+        try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try OrderItemAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await OrderItemAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> OrderItem {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }

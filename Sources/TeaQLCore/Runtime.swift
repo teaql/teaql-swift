@@ -414,9 +414,14 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     var values = entity.toMutationRecord()
     let originalVersion = rooted.flatMap { $0.teaqlEntityRoot.originalVersion($0.teaqlEntityKey) } ?? entity.version
     if let rooted {
+      let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
       if entity.id != 0 {
-        let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
         if !pending.isEmpty { values = pending }
+      } else {
+        // New value wrappers may still contain constructor defaults after graph
+        // normalization. Keep their complete scalar shape, but the canonical
+        // pending intentions (including symbolic references) are authoritative.
+        values.merge(pending) { _, intended in intended }
       }
     }
     var mutation: Mutation
@@ -1812,7 +1817,7 @@ public struct UserContext: Sendable {
     if let graphSession {
       try Task.checkCancellation()
       try graphSession.preparedMutations.validateLedgers()
-      try graphSession.recordPersisted(validated, result: result, sourceKey: ledgerKey)
+      try graphSession.recordPersisted(validated, result: result, sourceKey: ledgerKey, sourceLedger: ledgerRoot)
     }
     return result
   }
@@ -1826,10 +1831,32 @@ public struct UserContext: Sendable {
       mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
     try graphSession?.preparedMutations.record(original: original, fixed: validated,
       ledger: ledgerRoot, ledgerKey: ledgerKey, state: state)
-    try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey)
+    try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey,
+      references: graphSession?.preparedMutations.policyReferences(ledger: ledgerRoot, key: ledgerKey))
     graphSession?.recordProvenance(Array(validated.values.values))
     graphSession?.recordLoadedProvenance(LogPrivacy.loadedMutationSource(validated))
     return validated
+  }
+
+  /// A generated traversal declares symbolic relationships before customer
+  /// policy. Only an actual saved target in this invocation may resolve them.
+  @_spi(Generated) public func bindGraphReference<Source: TeaQLMutationRootedEntity, Target: TeaQLMutationRootedEntity>(
+    _ source: Source, field: String, to target: Target
+  ) throws {
+    guard let session = graphSession,
+      GraphTransactionGate.Preparation.active.contains(graphTransactionGate.id) else {
+      throw MutationPolicyError.preflightAfterReview
+    }
+    try session.ensureActive()
+    guard source.teaqlEntityRoot === target.teaqlEntityRoot,
+      runtime.entity(named: Source.descriptor.name) == Source.descriptor,
+      runtime.entity(named: Target.descriptor.name) == Target.descriptor,
+      let property = Source.descriptor.property(named: field), property.isRelation,
+      property.referencedEntity == Target.descriptor.name,
+      field == (property.modelName ?? property.name), target.id == 0,
+      target.version == 0 else { throw MutationPolicyError.operationOutsideReviewedPlan }
+    try session.preparedMutations.bind(source: source.teaqlEntityKey, field: field,
+      target: target.teaqlEntityKey, targetEntity: Target.descriptor, ledger: source.teaqlEntityRoot)
   }
 
   private func checkAndFixMutation(

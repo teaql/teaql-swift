@@ -25,22 +25,38 @@ public struct MutationPolicyIdentity: Sendable, Hashable, Codable {
   }
 }
 
+public struct MutationPolicyReference: Sendable, Codable, Equatable {
+  public let entity: String
+  public let id: TeaQLValue
+  public init(entity: String, id: TeaQLValue) { self.entity = entity; self.id = id }
+}
+
 public struct MutationPolicyOperation: Sendable, Codable, Equatable {
   public let kind: MutationKind
   public let entity: String
   public let entityID: TeaQLValue?
   public let originalVersion: Int64?
   public let changedValues: TeaQLRecord
+  /// A declared reference explains a temporary FK before its target is saved.
+  /// Missing for ordinary operations, preserving their existing wire shape.
+  public let references: [String: MutationPolicyReference]?
+  /// Stable within this prepared graph; unlike entityID, this may be temporary.
+  /// Policies can join a reference to the exact proposed target operation.
+  public let graphIdentity: MutationPolicyReference?
 
   public init(
     kind: MutationKind, entity: String, entityID: TeaQLValue? = nil,
-    originalVersion: Int64? = nil, changedValues: TeaQLRecord
+    originalVersion: Int64? = nil, changedValues: TeaQLRecord,
+    references: [String: MutationPolicyReference]? = nil,
+    graphIdentity: MutationPolicyReference? = nil
   ) {
     self.kind = kind
     self.entity = entity
     self.entityID = entityID
     self.originalVersion = originalVersion
     self.changedValues = changedValues
+    self.references = references
+    self.graphIdentity = graphIdentity
   }
 }
 
@@ -280,11 +296,16 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
     graphSnapshot = nil
   }
 
-  package func recordPreflight(_ mutation: Mutation, ledgerKey: EntityKey?) throws {
+  package func recordPreflight(_ mutation: Mutation, ledgerKey: EntityKey?,
+    references: [String: MutationPolicyReference]? = nil) throws {
     stateLock.lock(); defer { stateLock.unlock() }
     guard graphActive else { return }
     guard !graphReviewed else { throw MutationPolicyError.preflightAfterReview }
-    let operation = operation(from: mutation)
+    let operation = operation(from: mutation, references: references,
+      graphIdentity: ledgerKey.flatMap { key in
+        guard case .int(let id) = key.id, id < 0 else { return nil }
+        return MutationPolicyReference(entity: key.entity, id: key.id)
+      })
     rootEntity = rootEntity ?? operation.entity
     auditReason = auditReason ?? mutation.auditReason
     preflight.append((operation, matchKey(mutation: mutation, ledgerKey: ledgerKey)))
@@ -405,13 +426,15 @@ package final class MutationPolicyCoordinator: @unchecked Sendable {
       operations: operations)
   }
 
-  private func operation(from mutation: Mutation) -> MutationPolicyOperation {
+  private func operation(from mutation: Mutation,
+    references: [String: MutationPolicyReference]? = nil,
+    graphIdentity: MutationPolicyReference? = nil) -> MutationPolicyOperation {
     MutationPolicyOperation(
       kind: mutation.kind,
       entity: mutation.entity.name,
       entityID: mutation.id ?? mutation.values[mutation.entity.idProperty?.name ?? "id"],
       originalVersion: mutation.expectedVersion,
-      changedValues: mutation.values)
+      changedValues: mutation.values, references: references, graphIdentity: graphIdentity)
   }
 
   private func matchKey(mutation: Mutation, ledgerKey: EntityKey?) -> MutationMatchKey {

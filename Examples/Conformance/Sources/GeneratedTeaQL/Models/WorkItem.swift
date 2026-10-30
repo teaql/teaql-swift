@@ -102,7 +102,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
             PropertyDescriptor(name: "title", modelName: "title", column: "title", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "description", modelName: "description", column: "description", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
@@ -291,6 +291,19 @@ public struct WorkItemAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> WorkItem {
         _ = try MutationIntent(comment: reason)
+        try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try WorkItemAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await WorkItemAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> WorkItem {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }

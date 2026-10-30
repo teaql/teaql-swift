@@ -102,7 +102,7 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "payment_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
             PropertyDescriptor(name: "referenceCode", modelName: "reference_code", column: "reference_code", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
@@ -303,6 +303,19 @@ public struct PaymentAudited: Sendable {
     public func save(_ context: UserContext) async throws -> Payment {
         _ = try MutationIntent(comment: reason)
         try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try PaymentAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await PaymentAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> Payment {
+        try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
         return try await context.executeGraphSave(comment: reason, rootEntityType: "Payment", preparing: { context, _ in
@@ -332,9 +345,8 @@ public struct PaymentAudited: Sendable {
             to: EntityKey(entity: "Payment", id: .int(saved.id)))
         for (index, var child) in entity.paymentAttemptList.enumerated() {
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            if child.payment != saved.id {
-                child.updatePayment(saved.id)
-            }
+            // The runtime resolves declared temporary references in its private
+            // outgoing mutation. Never change a reviewed caller ledger here.
             let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
             let childScope = try session.scope(key: child.teaqlEntityKey,
                 localReason: localReason, parent: activeScope)
@@ -439,6 +451,9 @@ public struct PaymentAudited: Sendable {
                 child.updatePayment(entity.teaqlPreflightID)
             }
             let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            if entity.id == 0 {
+                try context.bindGraphReference(child, field: "payment", to: entity)
+            }
             do { try PaymentAttemptAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("payment_attempt_list").index(index)

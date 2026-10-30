@@ -11,14 +11,16 @@ func generatedLoadedPrivacy(_ context: UserContext, commands: CommandCapture, sq
     item.updateId(base + 9001); item.updateName("PRIVATEOLDITEM")
     root.orderItemList.append(item)
     _ = try await root.auditAs("seed privacy fixture").save(context)
-    for (old, new) in [("PRIVATEOLDITEM", "PRIVATENEWITEM"), ("PRIVATENEWITEM", "PRIVATEFINALITEM")] {
+    for (index, (old, new)) in [("PRIVATEOLDITEM", "PRIVATENEWITEM"), ("PRIVATENEWITEM", "PRIVATEFINALITEM")].enumerated() {
         guard var loaded = try await Q.customerOrders().withIdIs(root.id)
             .selectOrderItemListWith(Q.orderItems().limit(2)).limit(1)
             .comment("load privacy graph").purpose("verify old scalar capture").executeForList(context).first
         else { throw TeaQLError.execution("privacy graph missing") }
         try require(loaded.orderItemList.count == 1, "expected one private child")
         try require(E.orderItem(loaded.orderItemList[0]).name().eval() == old, "wrong persisted private value")
-        loaded.updateDescription("ordinary public description")
+        // Both nodes must really change in both rounds. Reusing the same parent
+        // value is correctly discarded as a restored/no-op ledger intention.
+        loaded.updateDescription("ordinary public description \(index + 1)")
         loaded.orderItemList[0].updateName(new)
         await sql.enableAll(); await audit.clear(); await commands.clear(commitBarrier: true)
         let reason = "page one replace \(old) with \(new)"

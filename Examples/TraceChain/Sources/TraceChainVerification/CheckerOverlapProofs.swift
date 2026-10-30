@@ -121,7 +121,9 @@ private struct CheckerCommand: Encodable {
 }
 
 private struct CheckerObservation: Encodable {
+    let formatVersion = 2
     let logging: Bool, rejectedFirst: Bool
+    let rejectedBeforeAnyBegin: Bool
     let publicOverlap: Int, serializedTransactions: Int, begins: Int, commits: Int, rollbacks: Int
     let violations: [[String: String]], commands: [CheckerCommand], rawSQL: [CheckerSQL], safeSQL: [CheckerSQL]
     let audit: [AuditEvent]
@@ -183,20 +185,44 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
         bad.orderItemList.append(missing)
         await commands.clear(); await audit.clear(); await sql.enableAll(); await diagnostics.clear(); policy.clear()
         let pause = CheckerBeginPause(), invocations = CheckerInvocations()
-        await commands.pauseNextBegin(pause)
         let validGraph = good, invalidGraph = bad, sharedContext = context
-        let first = Task { await invocations.save(rejectedFirst ? invalidGraph : validGraph,
-            reason: rejectedFirst ? "reject incomplete graph" : "accept checked graph", context: sharedContext) }
-        await pause.waitUntilEntered()
-        let second = Task { await invocations.save(rejectedFirst ? validGraph : invalidGraph,
-            reason: rejectedFirst ? "accept checked graph" : "reject incomplete graph", context: sharedContext) }
-        await invocations.waitForBoth()
-        let overlap = await invocations.snapshot(), paused = await commands.snapshot()
-        // Release before any throwing assertion so a failed test cannot strand the real transaction.
-        await pause.release()
-        let outcomes = await [first.value, second.value]
-        try require(overlap.active == 2 && overlap.maximum == 2 && paused.starts == 1 && paused.active == 1,
-            "two public saves must overlap while the actual Context gate serializes transactions")
+        let outcomes: [Result<CustomerOrder, any Error>]
+        let publicOverlap: Int, rejectedBeforeAnyBegin: Bool
+        if rejectedFirst {
+            // Preparation now rejects before BEGIN. Do not wait for a rejected
+            // request to reach a transaction barrier that it must never enter.
+            let rejected = await invocations.save(invalidGraph, reason: "reject incomplete graph", context: sharedContext)
+            let early = await commands.snapshot(), earlySQL = await sql.snapshot(), earlyAudit = await audit.snapshot()
+            guard case .failure(let error) = rejected, error is CheckException else {
+                throw TeaQLError.execution("invalid-first graph did not fail in generated Checker")
+            }
+            try require(early.starts == 0 && early.commits == 0 && early.rollbacks == 0
+                && early.requests.isEmpty && earlySQL.isEmpty && earlyAudit.isEmpty && policy.snapshot().isEmpty,
+                "invalid-first preparation reached provider, policy or transaction")
+            rejectedBeforeAnyBegin = true
+            await commands.pauseNextBegin(pause)
+            let accepted = Task { await invocations.save(validGraph, reason: "accept checked graph", context: sharedContext) }
+            await pause.waitUntilEntered()
+            let overlap = await invocations.snapshot(), paused = await commands.snapshot()
+            await pause.release()
+            outcomes = [rejected, await accepted.value]
+            try require(overlap.active == 1 && overlap.maximum == 1 && paused.starts == 1 && paused.active == 1,
+                "accepted graph after preflight rejection did not reach its own BEGIN")
+            publicOverlap = overlap.maximum
+        } else {
+            await commands.pauseNextBegin(pause)
+            let accepted = Task { await invocations.save(validGraph, reason: "accept checked graph", context: sharedContext) }
+            await pause.waitUntilEntered()
+            let rejected = Task { await invocations.save(invalidGraph, reason: "reject incomplete graph", context: sharedContext) }
+            await invocations.waitForBoth()
+            let overlap = await invocations.snapshot(), paused = await commands.snapshot()
+            // Release before any throwing assertion so a failed test cannot strand BEGIN.
+            await pause.release()
+            outcomes = await [accepted.value, rejected.value]
+            try require(overlap.active == 2 && overlap.maximum == 2 && paused.starts == 1 && paused.active == 1,
+                "two public saves must overlap while the actual Context gate serializes transactions")
+            publicOverlap = overlap.maximum; rejectedBeforeAnyBegin = false
+        }
         _ = try outcomes[rejectedFirst ? 1 : 0].get()
         let rejected: CheckException
         switch outcomes[rejectedFirst ? 0 : 1] {
@@ -213,7 +239,7 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
                 NodeExpectation(type: "OrderItem", id: firstID + 10, reason: "accepted child responsibility")]]
         try checkObservedGraph(expected, commands: captured.requests, sql: captured.physical, audit: events, rootReason: "accept checked graph")
         try checkObservedGraph(expected, commands: captured.requests, sql: safe, audit: events, rootReason: "accept checked graph")
-        try require(captured.starts == 2 && captured.commits == 1 && captured.rollbacks == 1
+        try require(captured.starts == 1 && captured.commits == 1 && captured.rollbacks == 0
             && captured.active == 0 && captured.maximum == 1, "Checker transaction outcomes differ")
         try require(logged.count == (logging ? 4 : 0), "diagnostics switch changed execution or emitted rejected SQL")
         try require(captured.physical.contains { $0.parameters.contains(.string(privateName)) }, "real raw binding lost accepted private value")
@@ -231,7 +257,8 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
         try require(bad.teaqlEntityRoot.change(bad.teaqlEntityKey)["description"] == .string("rejected-pending-\(nonce)"),
             "rejection lost caller-owned pending changes")
         try require(context.lastFixEvidence.isEmpty, "fixture with no Fix rules retained unrelated evidence")
-        let observation = CheckerObservation(logging: logging, rejectedFirst: rejectedFirst, publicOverlap: overlap.maximum,
+        let observation = CheckerObservation(logging: logging, rejectedFirst: rejectedFirst,
+            rejectedBeforeAnyBegin: rejectedBeforeAnyBegin, publicOverlap: publicOverlap,
             serializedTransactions: captured.maximum, begins: captured.starts, commits: captured.commits, rollbacks: captured.rollbacks,
             violations: rejected.violations.map { ["rule": $0.ruleID, "path": $0.location.nativePath] },
             commands: captured.requests.map(CheckerCommand.init), rawSQL: captured.physical.map(CheckerSQL.init),
@@ -263,5 +290,5 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
         try require(E.customerOrder(nextReloaded[0]).description().eval() == "next-independent-\(nonce)", "following save not persisted")
         print("PASS generated Checker overlap logging=\(logging) rejectedFirst=\(rejectedFirst): accepted-only SQL/audit and independent next save")
     } }
-    print("PASS: Swift generated Checker accepted/rejected overlap 4 cases; callbacks serialized")
+    print("PASS: Swift generated Checker isolation v2: accepted-first overlap; rejected-first before BEGIN; 4 cases")
 }

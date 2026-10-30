@@ -139,8 +139,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "customer_order_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customer", modelName: "customer", column: "customer", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
-            PropertyDescriptor(name: "status", modelName: "status", column: "status", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "customer", modelName: "customer", column: "customer", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Customer"),
+            PropertyDescriptor(name: "status", modelName: "status", column: "status", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "OrderStatus"),
             PropertyDescriptor(name: "orderNumber", modelName: "order_number", column: "order_number", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "orderDate", modelName: "order_date", column: "order_date", type: .date, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "totalAmount", modelName: "total_amount", column: "total_amount", type: .decimal, nullable: false, isID: false, isVersion: false),
@@ -430,6 +430,19 @@ public struct CustomerOrderAudited: Sendable {
     public func save(_ context: UserContext) async throws -> CustomerOrder {
         _ = try MutationIntent(comment: reason)
         try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try CustomerOrderAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await CustomerOrderAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> CustomerOrder {
+        try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
         return try await context.executeGraphSave(comment: reason, rootEntityType: "CustomerOrder", preparing: { context, _ in
@@ -459,9 +472,8 @@ public struct CustomerOrderAudited: Sendable {
             to: EntityKey(entity: "CustomerOrder", id: .int(saved.id)))
         for (index, var child) in entity.orderItemList.enumerated() {
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            if child.customerOrder != saved.id {
-                child.updateCustomerOrder(saved.id)
-            }
+            // The runtime resolves declared temporary references in its private
+            // outgoing mutation. Never change a reviewed caller ledger here.
             let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
             let childScope = try session.scope(key: child.teaqlEntityKey,
                 localReason: localReason, parent: activeScope)
@@ -584,6 +596,9 @@ public struct CustomerOrderAudited: Sendable {
                 child.updateCustomerOrder(entity.teaqlPreflightID)
             }
             let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            if entity.id == 0 {
+                try context.bindGraphReference(child, field: "customer_order", to: entity)
+            }
             do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)

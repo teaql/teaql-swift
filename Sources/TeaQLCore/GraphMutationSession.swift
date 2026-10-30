@@ -93,10 +93,11 @@ public final class GraphMutationSession: @unchecked Sendable {
 
   /// One invocation owns these authoritative readbacks; they never live on
   /// UserContext or on a generated entity and cannot authorize another write.
-  package func recordPersisted(_ mutation: Mutation, result: MutationResult, sourceKey: EntityKey?) throws {
+  package func recordPersisted(_ mutation: Mutation, result: MutationResult, sourceKey: EntityKey?, sourceLedger: EntityRoot? = nil) throws {
     try lock.withLock {
       guard active && !preparing else { throw TeaQLError.execution("GRAPH_READBACK_OUTSIDE_EXECUTION") }
       guard result.affectedRows > 0, let record = result.persistedRecord else { return }
+      try preparedMutations.recordAssignedID(mutation, result: result, ledger: sourceLedger, source: sourceKey)
       let property = mutation.entity.idProperty
       let aliases = property.map { [$0.name, $0.modelName ?? $0.name, $0.column] } ?? ["id"]
       let id = aliases.lazy.compactMap({ record[$0] }).first

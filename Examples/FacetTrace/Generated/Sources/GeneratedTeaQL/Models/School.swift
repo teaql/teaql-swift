@@ -164,8 +164,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "school_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
-            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
+            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "SchoolType"),
             PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "address", modelName: "address", column: "address", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "establishedDate", modelName: "established_date", column: "established_date", type: .date, nullable: false, isID: false, isVersion: false),
@@ -486,6 +486,19 @@ public struct SchoolAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> School {
         _ = try MutationIntent(comment: reason)
+        try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try SchoolAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await SchoolAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> School {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }

@@ -91,7 +91,7 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
         table: "payment_attempt_data",
         properties: [
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "payment", modelName: "payment", column: "payment", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true),
+            PropertyDescriptor(name: "payment", modelName: "payment", column: "payment", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Payment"),
             PropertyDescriptor(name: "referenceCode", modelName: "reference_code", column: "reference_code", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
@@ -266,6 +266,19 @@ public struct PaymentAttemptAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> PaymentAttempt {
         _ = try MutationIntent(comment: reason)
+        try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try PaymentAttemptAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await PaymentAttemptAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> PaymentAttempt {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }

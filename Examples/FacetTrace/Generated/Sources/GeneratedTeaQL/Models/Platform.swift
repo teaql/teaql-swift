@@ -358,6 +358,19 @@ public struct PlatformAudited: Sendable {
     public func save(_ context: UserContext) async throws -> Platform {
         _ = try MutationIntent(comment: reason)
         try teaqlValidateLoadedIdentities()
+        // Freeze an invocation-owned value graph before reviewing it. Attach
+        // reached pending children in the value copy, not just in loop locals,
+        // so execution cannot re-import stale source-ledger values after Fix.
+        var owned = entity
+        let ledger = owned.teaqlEntityRoot
+        try owned.teaqlAttachRoot(ledger)
+        try PlatformAudited(entity: owned, reason: reason).teaqlNormalizeGraph()
+        try owned.teaqlAttachRoot(ledger)
+        return try await PlatformAudited(entity: owned, reason: reason).teaqlSaveOwnedGraph(context)
+    }
+
+    private func teaqlSaveOwnedGraph(_ context: UserContext) async throws -> Platform {
+        try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
         return try await context.executeGraphSave(comment: reason, rootEntityType: "Platform", preparing: { context, _ in
@@ -387,9 +400,8 @@ public struct PlatformAudited: Sendable {
             to: EntityKey(entity: "Platform", id: .int(saved.id)))
         for (index, var child) in entity.schoolTypeList.enumerated() {
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            if child.platform != saved.id {
-                child.updatePlatform(saved.id)
-            }
+            // The runtime resolves declared temporary references in its private
+            // outgoing mutation. Never change a reviewed caller ledger here.
             let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
             let childScope = try session.scope(key: child.teaqlEntityKey,
                 localReason: localReason, parent: activeScope)
@@ -411,9 +423,8 @@ public struct PlatformAudited: Sendable {
         }
         for (index, var child) in entity.schoolList.enumerated() {
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
-            if child.platform != saved.id {
-                child.updatePlatform(saved.id)
-            }
+            // The runtime resolves declared temporary references in its private
+            // outgoing mutation. Never change a reviewed caller ledger here.
             let localReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey)
             let childScope = try session.scope(key: child.teaqlEntityKey,
                 localReason: localReason, parent: activeScope)
@@ -561,6 +572,9 @@ public struct PlatformAudited: Sendable {
                 child.updatePlatform(entity.teaqlPreflightID)
             }
             let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            if entity.id == 0 {
+                try context.bindGraphReference(child, field: "platform", to: entity)
+            }
             do { try SchoolTypeAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_type_list").index(index)
@@ -580,6 +594,9 @@ public struct PlatformAudited: Sendable {
                 child.updatePlatform(entity.teaqlPreflightID)
             }
             let childReason = child.teaqlEntityRoot.localAuditReason(child.teaqlEntityKey) ?? reason
+            if entity.id == 0 {
+                try context.bindGraphReference(child, field: "platform", to: entity)
+            }
             do { try SchoolAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("school_list").index(index)

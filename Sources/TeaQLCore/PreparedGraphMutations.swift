@@ -13,6 +13,12 @@ package final class PreparedGraphMutations: @unchecked Sendable {
     let ledger: EntityRoot?
     let ledgerKey: EntityKey?
     let state: EntityRoot.MutationSnapshot?
+    let references: [String: Reference]
+  }
+  private struct Reference {
+    let target: Key
+    let entity: EntityDescriptor
+    let key: EntityKey
   }
   private struct Queue {
     var entries: [Entry] = []
@@ -22,8 +28,41 @@ package final class PreparedGraphMutations: @unchecked Sendable {
   private var required = false
   private var sealed = false
   private var queues: [Key: Queue] = [:]
+  private var declaredReferences: [Key: [String: Reference]] = [:]
+  private var assignedIDs: [Key: TeaQLValue] = [:]
 
   package func requireSnapshots() { lock.withLock { required = true } }
+
+  package func bind(source: EntityKey, field: String, target: EntityKey,
+    targetEntity: EntityDescriptor, ledger: EntityRoot) throws {
+    try lock.withLock {
+      guard required && !sealed else { throw MutationPolicyError.preflightAfterReview }
+      let sourceIdentity = Key.ledger(ObjectIdentifier(ledger), source)
+      let targetIdentity = Key.ledger(ObjectIdentifier(ledger), target)
+      guard let queue = queues[targetIdentity], queue.entries.count == 1,
+        queue.entries[0].original.kind == .create,
+        queue.entries[0].original.entity == targetEntity,
+        target.entity == targetEntity.name, case .int(let id) = target.id, id < 0,
+        ledger.isNew(target) else { throw MutationPolicyError.operationOutsideReviewedPlan }
+      if let old = declaredReferences[sourceIdentity]?[field] {
+        guard old.target == targetIdentity && old.entity == targetEntity else {
+          throw MutationPolicyError.operationOutsideReviewedPlan
+        }
+        return
+      }
+      guard queues[sourceIdentity] == nil else { throw MutationPolicyError.preflightAfterReview }
+      declaredReferences[sourceIdentity, default: [:]][field] = Reference(
+        target: targetIdentity, entity: targetEntity, key: target)
+    }
+  }
+
+  package func policyReferences(ledger: EntityRoot?, key: EntityKey?) -> [String: MutationPolicyReference]? {
+    lock.withLock {
+      guard let ledger, let key,
+        let references = declaredReferences[.ledger(ObjectIdentifier(ledger), key)], !references.isEmpty else { return nil }
+      return references.mapValues { MutationPolicyReference(entity: $0.key.entity, id: $0.key.id) }
+    }
+  }
 
   package func record(original: Mutation, fixed: Mutation, ledger: EntityRoot?,
     ledgerKey: EntityKey?, state: EntityRoot.MutationSnapshot?) throws {
@@ -33,8 +72,17 @@ package final class PreparedGraphMutations: @unchecked Sendable {
         !state.matches(ledger.mutationSnapshot(ledgerKey)) {
         throw MutationPolicyError.operationOutsideReviewedPlan
       }
-      queues[key(original, ledger: ledger, ledgerKey: ledgerKey), default: Queue()].entries.append(
-        Entry(original: original, fixed: fixed, ledger: ledger, ledgerKey: ledgerKey, state: state))
+      let identity = key(original, ledger: ledger, ledgerKey: ledgerKey)
+      let references = declaredReferences[identity] ?? [:]
+      for (field, reference) in references {
+        guard let property = original.entity.property(named: field), property.isRelation,
+          property.referencedEntity == reference.entity.name,
+          original.values[field] == reference.key.id, fixed.values[field] == reference.key.id else {
+          throw MutationPolicyError.operationOutsideReviewedPlan
+        }
+      }
+      queues[identity, default: Queue()].entries.append(
+        Entry(original: original, fixed: fixed, ledger: ledger, ledgerKey: ledgerKey, state: state, references: references))
     }
   }
 
@@ -67,6 +115,14 @@ package final class PreparedGraphMutations: @unchecked Sendable {
       try validateLedgersLocked()
       queue.consumed += 1; queues[identity] = queue
       var mutation = entry.fixed
+      // Resolve only the declared, reviewed relationship. The caller's values
+      // and ledger remain untouched, and arbitrary execution-time FKs still fail.
+      for (field, reference) in entry.references {
+        guard let assigned = assignedIDs[reference.target], mutation.values[field] == reference.key.id else {
+          throw MutationPolicyError.operationOutsideReviewedPlan
+        }
+        mutation.values[field] = assigned
+      }
       // The generated traversal supplies the actual session-owned ancestry;
       // only responsibility metadata changes, never reviewed business values.
       mutation.auditReason = proposed.auditReason
@@ -75,7 +131,28 @@ package final class PreparedGraphMutations: @unchecked Sendable {
     }
   }
 
-  package func clear() { lock.withLock { queues = [:] } }
+  package func recordAssignedID(_ mutation: Mutation, result: MutationResult,
+    ledger: EntityRoot?, source: EntityKey?) throws {
+    try lock.withLock {
+      guard mutation.kind == .create, result.affectedRows > 0, let ledger, let source,
+        case .int(let temporary) = source.id, temporary < 0 else { return }
+      let identity = Key.ledger(ObjectIdentifier(ledger), source)
+      guard let queue = queues[identity], queue.consumed == 1, queue.entries.count == 1,
+        queue.entries[0].original.entity == mutation.entity else { return }
+      let property = mutation.entity.idProperty
+      let aliases = property.map { [$0.name, $0.modelName ?? $0.name, $0.column] } ?? ["id"]
+      guard let record = result.persistedRecord,
+        let value = aliases.lazy.compactMap({ record[$0] }).first,
+        case .int(let id) = value, id > 0,
+        result.generatedValues["id"].map({ $0 == value }) ?? true else {
+        throw MutationPolicyError.operationOutsideReviewedPlan
+      }
+      guard assignedIDs[identity] == nil else { throw MutationPolicyError.operationOutsideReviewedPlan }
+      assignedIDs[identity] = value
+    }
+  }
+
+  package func clear() { lock.withLock { queues = [:]; declaredReferences = [:]; assignedIDs = [:] } }
 
   private func key(_ mutation: Mutation, ledger: EntityRoot?, ledgerKey: EntityKey?) -> Key {
     if let ledgerKey { return .ledger(ledger.map(ObjectIdentifier.init), ledgerKey) }
