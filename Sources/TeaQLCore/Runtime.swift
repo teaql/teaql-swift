@@ -60,9 +60,12 @@ public protocol EntityChecker: Sendable {
   ) throws -> [CheckResult]
 }
 
-public struct CheckException: Error, Sendable {
+public struct CheckException: Error, Sendable, CustomStringConvertible, CustomDebugStringConvertible, LocalizedError {
   public let violations: [CheckResult]
-  public init(_ violations: [CheckResult]) { self.violations = violations }
+  public init(_ violations: [CheckResult]) { self.violations = violations.map { CheckerPrivacy.project($0) } }
+  public var description: String { "CheckException(violations: [" + violations.map(\.description).joined(separator: ", ") + "])" }
+  public var debugDescription: String { description }
+  public var errorDescription: String? { description }
 }
 
 public enum SQLExecutionOperation: String, Sendable, Codable {
@@ -980,7 +983,9 @@ public struct UserContext: Sendable {
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
   public mutating func setLanguageCode(_ code: String) throws { try setLocaleCode(code) }
   public mutating func installI18nCatalog(_ catalog: I18nCatalog) { i18nCatalog = catalog }
-  public func translateCheckResults(_ results: [CheckResult]) -> [CheckResult] { results.map { i18nCatalog.translate($0, locale: locale) } }
+  public func translateCheckResults(_ results: [CheckResult]) -> [CheckResult] {
+    results.map { CheckerPrivacy.project($0, runtime: runtime, catalog: i18nCatalog, locale: locale) }
+  }
 
   /// Applies trusted local defaults without exposing them as generated input.
   public func initializeEntity<Entity: TeaQLEntity>(
@@ -1887,9 +1892,25 @@ public struct UserContext: Sendable {
     var violations: [CheckResult] = []
     if let checker {
       let declaringEntityType = request.mutation.entity.name
-      violations = translateCheckResults(
-        try checker.checkAndFix(context: self, mutation: &validated, now: fixTime)
-          .map { $0.bindingDeclaringEntity(declaringEntityType) })
+      let owner = request.mutation.entity
+      var scope = CheckerPrivacy.capture(request.mutation, owner: owner, runtime: runtime)
+      var rawResults: [CheckResult] = []
+      var callbackFailure: (any Error)?
+      do { rawResults = try checker.checkAndFix(context: self, mutation: &validated, now: fixTime) }
+      catch let error as CheckException { rawResults = error.violations }
+      catch { callbackFailure = error }
+      scope.append(CheckerPrivacy.capture(validated, owner: owner, runtime: runtime))
+      if let callbackFailure {
+        let secrets = LogPrivacy.plaintextEnabled() ? scope.debug : scope.safe
+        // Preserve application error identity when this invocation has no
+        // sensitive values. Otherwise do not retain an unsafe cause/userInfo.
+        if secrets.isEmpty { throw callbackFailure }
+        throw CheckerExecutionError(description: CheckerPrivacy.scrub(String(describing: callbackFailure), secrets: secrets) ?? "Checker failed")
+      }
+      violations = rawResults.map {
+        CheckerPrivacy.project($0.bindingDeclaringEntity(declaringEntityType), runtime: runtime,
+          owner: owner, scope: scope, catalog: i18nCatalog, locale: locale)
+      }
     }
     // Request-owned intent has always survived a Checker attempting to replace
     // it. Restore it here as well as at the final request/provider handoff.

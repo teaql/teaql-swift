@@ -35,8 +35,6 @@ public func retainSubmittedPaths(_ results: [CheckResult], normalized: Normalize
     // Preserve the pointer attached by the child's own normalization boundary.
     guard result.location.segments.count == 1,
           case .property(let canonical) = result.location.segments[0] else { return result }
-    return CheckResult(ruleID: result.ruleID, location: result.location, inputValue: result.inputValue,
-      systemValue: result.systemValue, message: result.message, entityType: result.entityType,
-      sourceInstancePath: normalized.sourceInstancePaths[canonical] ?? result.sourceInstancePath)
+    return result.replacing(sourceInstancePath: normalized.sourceInstancePaths[canonical] ?? result.sourceInstancePath)
   }
 }

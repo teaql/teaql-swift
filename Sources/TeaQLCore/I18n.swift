@@ -5,22 +5,68 @@ public enum TeaQLLocale: String, CaseIterable, Sendable, Codable { case en, zhCN
   private static let aliases:[String:Self]=["en-us":.en,"en-gb":.en,"zh":.zhCN,"zh-hans":.zhCN,"zh-sg":.zhCN,"cn":.zhCN,"zh-hant":.zhTW,"zh-hk":.zhTW,"zh-mo":.zhTW,"tw":.zhTW,"ja-jp":.ja,"ko-kr":.ko,"de-de":.de,"fr-fr":.fr,"es-mx":.es,"pt-br":.pt,"pt-pt":.pt,"ar-sa":.ar,"th-th":.th,"id-id":.id,"tl":.fil,"fil-ph":.fil,"uk-ua":.uk,"vi-vn":.vi]
 }
 public struct UnsupportedLocaleError:Error,Equatable,Sendable{public let localeCode:String}
-public struct CheckResult:Sendable{public let ruleID:String;public let location:ObjectLocation;public let inputValue:String?;public let systemValue:String?;public var message:String?;public let entityType:String?;public let sourceInstancePath:String?;public init(ruleID:String,location:ObjectLocation,inputValue:String?=nil,systemValue:String?=nil,message:String?=nil,entityType:String?=nil,sourceInstancePath:String?=nil){self.ruleID=ruleID;self.location=location;self.inputValue=inputValue;self.systemValue=systemValue;self.message=message;self.entityType=entityType;self.sourceInstancePath=sourceInstancePath}
+public struct CheckResult: Sendable, CustomStringConvertible, CustomDebugStringConvertible {
+  public let ruleID: String
+  public let location: ObjectLocation
+  public let inputValue: String?
+  public let systemValue: String?
+  private var storedMessage: String?
+  public var message: String? {
+    get { storedMessage }
+    set {
+      storedMessage = newValue
+      presentation?.automaticMessage = false
+      presentation?.messageEdited = true
+    }
+  }
+  public let entityType: String?
+  public let sourceInstancePath: String?
+  // Safe alternatives and original length only; never a Context or raw-secret list.
+  var presentation: CheckerPresentation?
+
+  public init(ruleID: String, location: ObjectLocation, inputValue: String? = nil,
+              systemValue: String? = nil, message: String? = nil, entityType: String? = nil,
+              sourceInstancePath: String? = nil) {
+    self.ruleID = ruleID; self.location = location; self.inputValue = inputValue
+    self.systemValue = systemValue; self.storedMessage = message
+    self.entityType = entityType; self.sourceInstancePath = sourceInstancePath
+  }
+
+  func replacing(location: ObjectLocation? = nil, entityType: String? = nil,
+                 sourceInstancePath: String? = nil) -> Self {
+    var result = Self(ruleID: ruleID, location: location ?? self.location, inputValue: inputValue,
+      systemValue: systemValue, message: storedMessage, entityType: entityType ?? self.entityType,
+      sourceInstancePath: sourceInstancePath ?? self.sourceInstancePath)
+    result.presentation = presentation
+    return result
+  }
   /// Rebase structural identity without changing the original submitted path
   /// or the declaring child Checker. Relocalize with the caller's context when
   /// the message comes from a catalog template.
   public func prefixed(by prefix: ObjectLocation) -> Self {
-    Self(ruleID: ruleID, location: location.prefixed(by: prefix), inputValue: inputValue,
-      systemValue: systemValue, message: message, entityType: entityType,
-      sourceInstancePath: sourceInstancePath)
+    replacing(location: location.prefixed(by: prefix))
   }
   func bindingDeclaringEntity(_ declaringEntityType: String) -> Self {
     if let entityType, !entityType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return self }
-    return Self(ruleID: ruleID, location: location, inputValue: inputValue,
-      systemValue: systemValue, message: message, entityType: declaringEntityType,
-      sourceInstancePath: sourceInstancePath)
+    return replacing(entityType: declaringEntityType)
   }
-  public func wire(profile:JsonFieldNamingProfile = .camelCase)->WireCheckResult{let segments=location.segments.map{segment in switch segment{case .property(let name):WireLocationSegment(kind:"property",name:name,index:nil);case .index(let index):WireLocationSegment(kind:"index",name:nil,index:index)}};return WireCheckResult(ruleID:ruleID,entityType:entityType,location:segments,instancePath:location.instancePath(profile:profile),sourceInstancePath:sourceInstancePath,inputValue:inputValue,systemValue:systemValue,message:message)}
+  public func wire(profile: JsonFieldNamingProfile = .camelCase) -> WireCheckResult {
+    let safe = CheckerPrivacy.project(self, allowPlaintext: false)
+    let segments = location.segments.map { segment in
+      switch segment {
+      case .property(let name): WireLocationSegment(kind: "property", name: name)
+      case .index(let index): WireLocationSegment(kind: "index", index: index)
+      }
+    }
+    return WireCheckResult(ruleID: ruleID, entityType: entityType, location: segments,
+      instancePath: location.instancePath(profile: profile), sourceInstancePath: sourceInstancePath,
+      inputValue: safe.inputValue, systemValue: safe.systemValue, message: safe.message)
+  }
+  public var description: String {
+    let safe = CheckerPrivacy.project(self, allowPlaintext: false)
+    return "CheckResult(ruleID: \(ruleID), location: \(location.nativePath), inputValue: \(safe.inputValue ?? "[omitted]"), systemValue: \(safe.systemValue ?? "[omitted]"), message: \(safe.message ?? "[omitted]"))"
+  }
+  public var debugDescription: String { description }
 }
 public struct WireLocationSegment:Sendable,Codable,Equatable{public let kind:String;public let name:String?;public let index:Int?;public init(kind:String,name:String?=nil,index:Int?=nil){self.kind=kind;self.name=name;self.index=index}}
 public struct WireCheckResult:Sendable,Codable{public let ruleId:String;public let entityType:String?;public let location:[WireLocationSegment];public let instancePath:String;public let sourceInstancePath:String?;public let inputValue:String?;public let systemValue:String?;public let message:String?;public init(ruleID:String,entityType:String?,location:[WireLocationSegment],instancePath:String,sourceInstancePath:String?,inputValue:String?,systemValue:String?,message:String?){self.ruleId=ruleID;self.entityType=entityType;self.location=location;self.instancePath=instancePath;self.sourceInstancePath=sourceInstancePath;self.inputValue=inputValue;self.systemValue=systemValue;self.message=message}}
@@ -37,18 +83,6 @@ public final class I18nCatalog:@unchecked Sendable{
   public init(data:Data,fallback:I18nCatalog?=nil)throws{let value=try JSONDecoder().decode(CatalogFile.self,from:data);guard value.schema=="teaql.i18n/v1" else{throw CocoaError(.fileReadCorruptFile)};for code in value.locales.keys{_ = try TeaQLLocale.parse(code)};file=value;self.fallback=fallback?.file}
   public func message(_ locale:TeaQLLocale,_ key:String)->String{file.locales[locale.rawValue]?.messages[key] ?? fallback?.locales[locale.rawValue]?.messages[key] ?? file.locales["en"]?.messages[key] ?? fallback?.locales["en"]?.messages[key] ?? key}
   public func translate(_ source: CheckResult, locale: TeaQLLocale) -> CheckResult {
-    var result = source
-    let keys = ["required":"checker.required", "min":"checker.min", "max":"checker.max",
-      "min_str_len":"checker.minLength", "min_length":"checker.minLength",
-      "max_str_len":"checker.maxLength", "max_length":"checker.maxLength"]
-    let key = keys[result.ruleID.lowercased()] ?? "checker.\(result.ruleID.lowercased())"
-    let template = message(locale, key)
-    if template == key, let explanation = source.message,
-      !explanation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return source }
-    result.message = template.replacingOccurrences(of: "{location}", with: result.location.nativePath)
-      .replacingOccurrences(of: "{system}", with: result.systemValue ?? "[omitted]")
-      .replacingOccurrences(of: "{input}", with: result.inputValue ?? "[omitted]")
-      .replacingOccurrences(of: "{input_len}", with: result.inputValue.map { String($0.count) } ?? "[omitted]")
-    return result
+    CheckerPrivacy.project(source, catalog: self, locale: locale)
   }
 }
