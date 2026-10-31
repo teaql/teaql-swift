@@ -5,4 +5,19 @@ final class WireFieldsTests:XCTestCase{
   func testNormalizeAliasAndProvenance() throws {let meta=try WireEntityMetadata(entityType:"School",canonicalFields:["name","school_type"],aliases:["school_type":["school_type"]]);let value=try normalizeWireInput(["school_type":.int(1001)],metadata:meta,parentPointer:"/school");XCTAssertEqual(value.values["school_type"],.int(1001));let result=CheckResult(ruleID:"required",location:.property("school_type"));XCTAssertEqual(retainSubmittedPaths([result],normalized:value)[0].sourceInstancePath,"/school/school_type")}
   func testUnknownAndCollisionRejected() throws {let meta=try WireEntityMetadata(entityType:"School",canonicalFields:["school_type"],aliases:["school_type":["school_type"]]);XCTAssertThrowsError(try normalizeWireInput(["bad/name":.null],metadata:meta)){XCTAssertEqual(($0 as? WireInputError)?.instancePath,"/bad~1name")};XCTAssertThrowsError(try normalizeWireInput(["schoolType":.int(1),"school_type":.int(2)],metadata:meta)){XCTAssertEqual(($0 as? WireInputError)?.code,.fieldCollision)}}
   func testWireDTOUsesProfile() throws {let result=CheckResult(ruleID:"required",location:.property("school_type"),entityType:"School",sourceInstancePath:"/school_type");let wire=result.wire();XCTAssertEqual(wire.instancePath,"/schoolType");XCTAssertEqual(wire.sourceInstancePath,"/school_type");let encoded=try JSONEncoder().encode(wire);let json=try XCTUnwrap(JSONSerialization.jsonObject(with:encoded) as? [String:Any]);XCTAssertEqual(json["ruleId"] as? String,"required");XCTAssertNil(json["ruleID"]);XCTAssertEqual(json["instancePath"] as? String,"/schoolType");let segments=try XCTUnwrap(json["location"] as? [[String:Any]]);XCTAssertEqual(segments.first?["kind"] as? String,"property");XCTAssertEqual(segments.first?["name"] as? String,"school_type")}
+
+  func testParentAliasNeverTruncatesDescendantProvenance() throws {
+    let normalized = NormalizedWireInput(values: [:], sourceInstancePaths: [
+      "order_item_list": "/legacy~1items", "product_name": "/legacy~0name"])
+    let location = ObjectLocation.property("order_item_list").index(2).property("product_name")
+    let exact = "/legacy~1items/2/legacy~0name"
+    let original = CheckResult(ruleID: "required", location: location, sourceInstancePath: exact)
+    let result = retainSubmittedPaths([
+      original, CheckResult(ruleID: "required", location: location),
+      CheckResult(ruleID: "required", location: ObjectLocation().index(2).property("product_name")),
+      CheckResult(ruleID: "required", location: .property("order_item_list"))
+    ], normalized: normalized)
+    XCTAssertEqual(result.map(\.sourceInstancePath), [exact, nil, nil, "/legacy~1items"])
+    XCTAssertEqual(original.sourceInstancePath, exact)
+  }
 }

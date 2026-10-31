@@ -22,4 +22,14 @@ public func normalizeWireInput(_ input:[String:TeaQLValue],metadata:WireEntityMe
   for (name,value) in input { let pointer="\(parentPointer)/\(name.replacingOccurrences(of:"~",with:"~0").replacingOccurrences(of:"/",with:"~1"))";guard let field=lookup[name] else{throw WireInputError(code:.unknownField,instancePath:pointer,message:"Unknown \(metadata.entityType) field '\(name)'")};if let previous=submitted[field.canonicalName]{throw WireInputError(code:.fieldCollision,instancePath:pointer,message:"Fields '\(previous)' and '\(name)' both map to canonical field '\(field.canonicalName)'")};submitted[field.canonicalName]=name;values[field.canonicalName]=value;if name != field.wireName{paths[field.canonicalName]=pointer} }
   return NormalizedWireInput(values:values,sourceInstancePaths:paths)
 }
-public func retainSubmittedPaths(_ results:[CheckResult],normalized:NormalizedWireInput)->[CheckResult]{results.map{result in let canonical=result.location.segments.compactMap{if case .property(let name)=$0{return name};return nil}.first;return CheckResult(ruleID:result.ruleID,location:result.location,inputValue:result.inputValue,systemValue:result.systemValue,message:result.message,entityType:result.entityType,sourceInstancePath:canonical.flatMap{normalized.sourceInstancePaths[$0]} ?? result.sourceInstancePath)}}
+public func retainSubmittedPaths(_ results: [CheckResult], normalized: NormalizedWireInput) -> [CheckResult] {
+  results.map { result in
+    // A one-object map cannot resolve a descendant's complete source path.
+    // Preserve the pointer attached by the child's own normalization boundary.
+    guard result.location.segments.count == 1,
+          case .property(let canonical) = result.location.segments[0] else { return result }
+    return CheckResult(ruleID: result.ruleID, location: result.location, inputValue: result.inputValue,
+      systemValue: result.systemValue, message: result.message, entityType: result.entityType,
+      sourceInstancePath: normalized.sourceInstancePaths[canonical] ?? result.sourceInstancePath)
+  }
+}
