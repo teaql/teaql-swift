@@ -95,5 +95,9 @@ private func missing<T>(
     let bytes = try JSONEncoder().encode(Result(diagnostics: results.map(\.diagnostic), humanMessages: results.map(\.human)))
     print("FIX_E_EXAMPLE=" + String(decoding: bytes, as: UTF8.self))
     try await CheckerMetadataProbe.verify(service: service, module: module)
+    guard let database = ProcessInfo.processInfo.environment["TEAQL_FIX_E_DB"] else {
+      throw TeaQLError.execution("A retained SQLite path is required for the partial-ancestor example")
+    }
+    try await PartialAncestorProbe.verify(path: database + ".partial-ancestors.sqlite")
   }
 }

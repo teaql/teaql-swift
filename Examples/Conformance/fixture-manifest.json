@@ -6,10 +6,10 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "d766e1b41d213045002da2ae2d43c4f398327e2c",
-    "diff": "f87258debcee48ab2a00a7fcf854e89bc5116f13aa1c80f28ed5499cbef59b60",
-    "status": "82a8efa3376d930ba2b05b20b7b59ecaaa23d426e7aa80a440fd02c50f7ff02e",
-    "sourceContentsSha256": "601531be7c3e27b78922a1466f9cf2d9e3f49b8ffbe6d44dc523bf60417f2cf8",
+    "commit": "83ac20035eda968b5c2dbe57eef3028dc78742a7",
+    "diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sourceContentsSha256": "b0cd7637a0b0b96a0df5b9dc8e32396161144f9d6c68d2c4bd7295ff787fdcc4",
     "retainedModels": [
       {
         "id": "conformance",
@@ -54,10 +54,10 @@
     ],
     "exporterProbeSha256": "a91a2d427e7ab59515b71fb745777324a7d824df1a5fe30a4c5041f8e1e7dfd5"
   },
-  "producerReceiptSha256": "2e63bfe5a8bff2a888ba856fa6bb14d971cfbf7d0ba52a4606129b9856a50b78",
-  "generatedManifestSha256": "0d739213ddf434cfc1df438b1cd10b70cd56be6ed9c29ef6488b0ab4f29fe949",
+  "producerReceiptSha256": "a17ea86b43130a131458bae31e959590b3e85fbdc21ea1dfc7fae6ecacef0df7",
+  "generatedManifestSha256": "bc2007d34ed036aaecb0ed250e16988dfb1b5121c1324329b799bcf1b02229a0",
   "files": {
-    "Sources/GeneratedTeaQL/Models/Platform.swift": "86a939dc1a986b122f441fece9e02daf64feaa730a6d6222fc282907cb2320a8",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "02f9331c2d09f638cf156c7048fa9a8831b2544c3d6e70962664c8578a4fde3e",
     "Sources/GeneratedTeaQL/Models/WorkItem.swift": "165d5de3da7ded4ea335e6fc7a4e77beac58b074849c7cfbd65c8871c8008062",
     "Sources/GeneratedTeaQL/E.swift": "a075256249a5e283a3bcde4c5a73c30d0efe86fbbf0a811918feef291809bd16",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
@@ -67,6 +67,6 @@
     "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "9f88e206cb7a00e6650e1cc905c667b35e5269a252927855b2a261b3ed2e711e",
     "Sources/GeneratedTeaQL/Requests/WorkItemRequest.swift": "02aafa087cbbf3930c8c59a7ecbe4252019d239273a87592f2165c8ac0b6dad8"
   },
-  "previousFixtureManifestSha256": "942d585a134ef1900ff34205684cdad3c4804aa16a089ec7114a6e4024aa712f",
+  "previousFixtureManifestSha256": "1659e9270ad9d166ffb832a1e34b19a61721d9f9727e77a1711154ca2c145b3b",
   "applicationManifestsPreserved": true
 }

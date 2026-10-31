@@ -43,6 +43,8 @@ public struct Tenant: TeaQLEntity, TeaQLMutationRootedEntity {
         case id
         case name
         case version
+        case purchaseOrderList
+        case orderItemList
     }
 
     public init(from decoder: Decoder) throws {
@@ -81,6 +83,12 @@ public struct Tenant: TeaQLEntity, TeaQLMutationRootedEntity {
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
         }
+        if isLoaded("purchaseOrderList"), _purchaseOrderListResult.isLoaded {
+            try container.encode(_purchaseOrderListResult.data, forKey: .purchaseOrderList)
+        }
+        if isLoaded("orderItemList"), _orderItemListResult.isLoaded {
+            try container.encode(_orderItemListResult.data, forKey: .orderItemList)
+        }
         try dynamicProperties.encode(to: encoder)
     }
 
@@ -108,6 +116,7 @@ public struct Tenant: TeaQLEntity, TeaQLMutationRootedEntity {
     public static func from(record: TeaQLRecord, root: EntityRoot,
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
+        let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root

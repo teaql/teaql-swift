@@ -32,6 +32,7 @@ public struct TypePlatform: TeaQLEntity, TeaQLMutationRootedEntity {
         case id
         case name
         case version
+        case scalarTypeProbeList
     }
 
     public init(from decoder: Decoder) throws {
@@ -69,6 +70,9 @@ public struct TypePlatform: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
+        }
+        if isLoaded("scalarTypeProbeList"), _scalarTypeProbeListResult.isLoaded {
+            try container.encode(_scalarTypeProbeListResult.data, forKey: .scalarTypeProbeList)
         }
         try dynamicProperties.encode(to: encoder)
     }

@@ -32,6 +32,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         case id
         case name
         case version
+        case workItemList
     }
 
     public init(from decoder: Decoder) throws {
@@ -69,6 +70,9 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
+        }
+        if isLoaded("workItemList"), _workItemListResult.isLoaded {
+            try container.encode(_workItemListResult.data, forKey: .workItemList)
         }
         try dynamicProperties.encode(to: encoder)
     }

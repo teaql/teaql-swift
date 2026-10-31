@@ -48,6 +48,7 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         case code
         case displayOrder
         case version
+        case schoolList
     }
 
     public init(from decoder: Decoder) throws {
@@ -106,6 +107,9 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
+        }
+        if isLoaded("schoolList"), _schoolListResult.isLoaded {
+            try container.encode(_schoolListResult.data, forKey: .schoolList)
         }
         try dynamicProperties.encode(to: encoder)
     }

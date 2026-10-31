@@ -27,6 +27,7 @@ async function main() {
 try {
   const disk = fs.statfsSync(scratch); assert(disk.bavail * disk.bsize > 8 * 1024 ** 3);
   const m = fingerprint(); report.modelSha256 = m.modelSha256;
+  report.partialAncestorApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialAncestorProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
   for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
@@ -57,13 +58,15 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
   const executable = path.join(bin, 'FixEAlignment'); report.binarySha256 = sha(fs.readFileSync(executable));
   for (const round of [1, 2]) {
     const log = await run([executable], 'round-' + round + '.log');
-    for (const marker of ['FIX_E_EXAMPLE=', 'CORE_LOAD_EXAMPLE=', 'CORE_MUTATION_OWNERSHIP=', 'CORE_MUTATION_PAGING=', 'SWIFT_CHECKER_METADATA=']) {
+    for (const marker of ['FIX_E_EXAMPLE=', 'CORE_LOAD_EXAMPLE=', 'CORE_MUTATION_OWNERSHIP=', 'CORE_MUTATION_PAGING=', 'SWIFT_CHECKER_METADATA=', 'CORE_SWIFT_PARTIAL_ANCESTORS_RESULT=']) {
       const values = log.split(/\r?\n/).filter(line => line.startsWith(marker)).map(line => JSON.parse(line.slice(marker.length)));
       assert.equal(values.length, 1, marker); assert.equal(values[0].passed, true, marker);
     }
     assert.deepEqual(fingerprint(), m);
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
+  report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
+    sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.partial-ancestors.sqlite')))};
   console.log('PASS Swift retained Fix/E/loading/ownership example twice on one database');
 } catch (error) { console.error(error.stack); process.exitCode ||= 1; }
 finally {

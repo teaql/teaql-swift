@@ -44,6 +44,7 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         case customerOrder
         case referenceCode
         case version
+        case paymentAttemptList
     }
 
     public init(from decoder: Decoder) throws {
@@ -88,6 +89,9 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
+        }
+        if isLoaded("paymentAttemptList"), _paymentAttemptListResult.isLoaded {
+            try container.encode(_paymentAttemptListResult.data, forKey: .paymentAttemptList)
         }
         try dynamicProperties.encode(to: encoder)
     }

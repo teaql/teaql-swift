@@ -60,6 +60,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         case orderDate
         case totalAmount
         case version
+        case orderItemList
     }
 
     public init(from decoder: Decoder) throws {
@@ -125,6 +126,9 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
+        }
+        if isLoaded("orderItemList"), _orderItemListResult.isLoaded {
+            try container.encode(_orderItemListResult.data, forKey: .orderItemList)
         }
         try dynamicProperties.encode(to: encoder)
     }

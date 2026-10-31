@@ -43,6 +43,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         case id
         case name
         case version
+        case orderStatusList
+        case customerList
     }
 
     public init(from decoder: Decoder) throws {
@@ -80,6 +82,12 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if _loadedFields.contains("version") {
             try container.encode(version, forKey: .version)
+        }
+        if isLoaded("orderStatusList"), _orderStatusListResult.isLoaded {
+            try container.encode(_orderStatusListResult.data, forKey: .orderStatusList)
+        }
+        if isLoaded("customerList"), _customerListResult.isLoaded {
+            try container.encode(_customerListResult.data, forKey: .customerList)
         }
         try dynamicProperties.encode(to: encoder)
     }
