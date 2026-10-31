@@ -99,6 +99,8 @@ enum PartialAncestorProbe {
       .limit(1).comment("Distinguish selected empty from unselected reverse relations")
       .purpose("Native JSON preserves availability without implicit queries").executeForList(initial)
     guard let empty = emptyRows.first else { throw TeaQLError.execution("Missing empty-list owner") }
+    let queryCalibration = await provider.snapshot().queries
+    try require(queryCalibration > 0, "Real generated Q must calibrate the query observer")
     await provider.clear(); policies.clear()
     func missing<T>(_ read: () throws -> T, at pointer: String) throws {
       do { _ = try read() }
@@ -158,13 +160,14 @@ enum PartialAncestorProbe {
       let orderId: Int64, leafId: Int64
       let ancestorVersions = [1, 1], leafVersion = 2
       let calibration: PartialEffects, calibrationPolicies: Int, guardEffects: PartialEffects, guardPolicies: Int
+      let queryCalibration: Int
       let saveEffects: PartialEffects, savePolicies: Int
       let rejections: [[WireCheckResult]], rejectionEffects: [PartialEffects], rejectionPolicies: [Int]
       let intentRetained = true, selectedEmptySerialized = true, unselectedListOmitted = true
       let idSpaceUnchanged = true, generatedImplementationsModified = false
     }
     print("CORE_SWIFT_PARTIAL_ANCESTORS_RESULT=" + String(decoding: try encoder.encode(Result(orderId: parentID, leafId: childID,
-      calibration: calibration, calibrationPolicies: calibrationPolicies, guardEffects: guardEffects, guardPolicies: guardPolicies,
+      calibration: calibration, calibrationPolicies: calibrationPolicies, guardEffects: guardEffects, guardPolicies: guardPolicies, queryCalibration: queryCalibration,
       saveEffects: saveEffects, savePolicies: savePolicies, rejections: rejections, rejectionEffects: rejectionEffects,
       rejectionPolicies: rejectionPolicies)), as: UTF8.self))
   }

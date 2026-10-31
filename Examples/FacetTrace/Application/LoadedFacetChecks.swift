@@ -24,8 +24,13 @@ func verifyLoaded(_ service: SQLiteDataService, runtime: TeaQLRuntime) async thr
                 try require(try E.schoolType(parent).schoolList().size().eval() == count, "E lost loaded child list")
                 try require(parent.schoolList.map(\.id) == children.map(\.id), "array convenience diverged")
                 try verifyFacets(children, includeAll: includeAll, count: parent.id == 1001 ? 2 : 0)
-                let encoded = String(decoding: try JSONEncoder().encode(parent), as: UTF8.self)
-                try require(!encoded.contains("schoolList") && !encoded.contains("facets"), "query carrier leaked into model JSON")
+                let encoded = try JSONEncoder().encode(parent)
+                guard let document = try JSONSerialization.jsonObject(with: encoded) as? [String: Any],
+                    let selectedRows = document["schoolList"] as? [[String: Any]] else {
+                    throw TeaQLError.execution("selected business rows disappeared from model JSON")
+                }
+                try require(selectedRows.count == count, "JSON lost loaded empty/nonempty rows")
+                try require(!String(decoding: encoded, as: UTF8.self).contains("facets"), "query carrier metadata leaked into model JSON")
                 try require(parent.teaqlEntityRoot.snapshot().isEmpty, "hydration dirtied mutation ledger")
                 try require(parent.teaqlLoadedSnapshot?.record["facets"] == nil
                     && parent.teaqlLoadedSnapshot?.record["loadedRelations"] == nil, "sidecar entered mutation snapshot")
