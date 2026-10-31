@@ -30,4 +30,13 @@ for round in 1 2; do
   node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_QUERY_PROPERTY_JSON=")).map(v=>JSON.parse(v.slice("SWIFT_QUERY_PROPERTY_JSON=".length)));assert.equal(rows.length,1);assert.equal(rows[0].passed,true);assert.equal(rows[0].count,0);assert.equal(rows[0].encodedCount,0);' "$evidence/query-properties-round-$round.log"
   sha256sum -c generated.sha256
 done
+for round in 1 2; do
+  TEAQL_EMPTY_DB="$evidence/empty-aggregates.sqlite" TEAQL_EMPTY_ROUND="$round" \
+    TEAQL_EMPTY_VECTORS="$example/empty-aggregates.json" \
+    swift run --scratch-path "$scratch" --skip-build EmptyAggregateVerification \
+    | tee "$evidence/empty-aggregates-round-$round.log"
+  node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_EMPTY_AGGREGATES=")).map(v=>JSON.parse(v.slice("SWIFT_EMPTY_AGGREGATES=".length)));assert.equal(rows.length,1);const r=rows[0];assert.equal(r.passed,true);assert.equal(r.round,+process.argv[2]);assert.equal(r.scalars.length,4);assert.equal(r.buckets.length,2);assert.equal(r.requests.length,13);assert.equal(r.groupedRows,0);assert.equal(r.fallbackRaw,null);assert.equal(r.exactSum,"123456789012.345679");assert.equal(r.failureSQL.length,2);assert.equal(r.failureSQL[1].outcome,"failure");' \
+    "$evidence/empty-aggregates-round-$round.log" "$round"
+  sha256sum -c generated.sha256
+done
 echo "PASS Swift scalar example twice without cleanup; evidence: $evidence"

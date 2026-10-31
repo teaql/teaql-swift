@@ -35,3 +35,15 @@ executable. `TEAQL_SWIFT_SCRATCH_PATH` selects the script's shared build directo
 `TEAQL_SWIFT_RUNTIME_PATH` is an explicit override for a separately unpacked
 local-source-archive consumer; normal examples keep using the repository. No
 new version, registry upload or tag push is part of this example.
+
+The same script runs `EmptyAggregateVerification` twice on a separate retained
+SQLite file. Its eight approved empty-aggregate vectors cover COUNT(*) versus
+COUNT(value), nullable SUM, a genuine zero, all related/facet buckets, an explicit
+caller-only fallback, empty grouped results, and selected null in generated
+entity JSON. COUNT(value) uses the public query carrier; the other filters,
+aggregates, relations, facets, E reads and audited writes use generated APIs.
+An exact Decimal control never converts the sum to floating point. Every
+request is compared before/after execution. Reversible table-rename fault DDL
+proves a real nested SQLite failure and recovery through the same query/context,
+without treating business TraceChain as the physical SQL Trace Path. Business
+data is never inserted or queried with hand-written SQL.
