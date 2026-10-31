@@ -6,10 +6,10 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "962146eacfb75b26dfdfe9866e9dbc03a429c0d9",
-    "diff": "6d6b60e821884e89571ca41350cc4df56a0f4fec6d33d425849388962cf6c065",
-    "status": "05e3df56a27aef59b1113f77dc521f80ebf4f6bc67a57b329fbcc0787f1b2e44",
-    "sourceContentsSha256": "6bd2f0f3631f155795309ce4056f9fe756b703632662b15a0d43e0fb43f5b1a1",
+    "commit": "d766e1b41d213045002da2ae2d43c4f398327e2c",
+    "diff": "f87258debcee48ab2a00a7fcf854e89bc5116f13aa1c80f28ed5499cbef59b60",
+    "status": "82a8efa3376d930ba2b05b20b7b59ecaaa23d426e7aa80a440fd02c50f7ff02e",
+    "sourceContentsSha256": "601531be7c3e27b78922a1466f9cf2d9e3f49b8ffbe6d44dc523bf60417f2cf8",
     "retainedModels": [
       {
         "id": "conformance",
@@ -54,12 +54,12 @@
     ],
     "exporterProbeSha256": "a91a2d427e7ab59515b71fb745777324a7d824df1a5fe30a4c5041f8e1e7dfd5"
   },
-  "producerReceiptSha256": "c1d0556528f68364d9669aea64bb58809883c4330cd98838474f98ec9d011dc7",
-  "generatedManifestSha256": "e2beb613d34b7832748e08864ca8ace23a716ea03e44e60821e95904500383f4",
+  "producerReceiptSha256": "2e63bfe5a8bff2a888ba856fa6bb14d971cfbf7d0ba52a4606129b9856a50b78",
+  "generatedManifestSha256": "0d739213ddf434cfc1df438b1cd10b70cd56be6ed9c29ef6488b0ab4f29fe949",
   "files": {
-    "Sources/GeneratedTeaQL/Models/Platform.swift": "571d7650592f4eacb4222e0ec43926148419f695c22c109cd0cf7994dc72175b",
-    "Sources/GeneratedTeaQL/Models/WorkItem.swift": "2973c012019908c763f6fa30f2b7200fcd684840caf99c49fb5c0f915e01b802",
-    "Sources/GeneratedTeaQL/E.swift": "c6aae6794a28829b9903ea2f5a640600627318b8431c5fe2a2ae762d89da266d",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "86a939dc1a986b122f441fece9e02daf64feaa730a6d6222fc282907cb2320a8",
+    "Sources/GeneratedTeaQL/Models/WorkItem.swift": "165d5de3da7ded4ea335e6fc7a4e77beac58b074849c7cfbd65c8871c8008062",
+    "Sources/GeneratedTeaQL/E.swift": "a075256249a5e283a3bcde4c5a73c30d0efe86fbbf0a811918feef291809bd16",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
     "Sources/GeneratedTeaQL/RuntimeModule.swift": "79d7c0e2dee13e8dc7b4601543cb18de416ab0a73e4edb869f38ff5e3b781897",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "84e2670def86ba44ae87b262c97279dbbfff137967417345f463309432ed6dc9",
@@ -67,6 +67,6 @@
     "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "9f88e206cb7a00e6650e1cc905c667b35e5269a252927855b2a261b3ed2e711e",
     "Sources/GeneratedTeaQL/Requests/WorkItemRequest.swift": "02aafa087cbbf3930c8c59a7ecbe4252019d239273a87592f2165c8ac0b6dad8"
   },
-  "previousFixtureManifestSha256": "b5bcd1a8ffbc312d6572d08752e20b28359d28176d822e53a31e8df4b112cf62",
+  "previousFixtureManifestSha256": "942d585a134ef1900ff34205684cdad3c4804aa16a089ec7114a6e4024aa712f",
   "applicationManifestsPreserved": true
 }

@@ -17,9 +17,12 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
   public let isRelation: Bool
   /// Trusted generated metadata for type-qualified graph references.
   public let referencedEntity: String?
+  /// KSML Integer uses a signed 32-bit domain even when its native carrier is
+  /// Int64. Long, identity, version and relation fields must not set this flag.
+  public let isInt32: Bool
 
   private enum CodingKeys: String, CodingKey {
-    case name, modelName, column, type, nullable, isID, isVersion, isRelation, referencedEntity
+    case name, modelName, column, type, nullable, isID, isVersion, isRelation, referencedEntity, isInt32
   }
 
   public init(
@@ -31,7 +34,8 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     isID: Bool = false,
     isVersion: Bool = false,
     isRelation: Bool = false,
-    referencedEntity: String? = nil
+    referencedEntity: String? = nil,
+    isInt32: Bool = false
   ) {
     self.name = name
     self.modelName = modelName
@@ -42,6 +46,7 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     self.isVersion = isVersion
     self.isRelation = isRelation
     self.referencedEntity = referencedEntity
+    self.isInt32 = isInt32
   }
 
   public init(from decoder: Decoder) throws {
@@ -55,6 +60,22 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     isVersion = try fields.decodeIfPresent(Bool.self, forKey: .isVersion) ?? false
     isRelation = try fields.decodeIfPresent(Bool.self, forKey: .isRelation) ?? false
     referencedEntity = try fields.decodeIfPresent(String.self, forKey: .referencedEntity)
+    isInt32 = try fields.decodeIfPresent(Bool.self, forKey: .isInt32) ?? false
+    if isInt32 && (type != .int || isID || isVersion || isRelation || referencedEntity != nil) {
+      throw DecodingError.dataCorruptedError(forKey: .isInt32, in: fields,
+        debugDescription: "The Integer marker requires a non-identity signed integral scalar")
+    }
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var fields = encoder.container(keyedBy: CodingKeys.self)
+    try fields.encode(name, forKey: .name); try fields.encodeIfPresent(modelName, forKey: .modelName)
+    try fields.encode(column, forKey: .column); try fields.encode(type, forKey: .type)
+    try fields.encode(nullable, forKey: .nullable); try fields.encode(isID, forKey: .isID)
+    try fields.encode(isVersion, forKey: .isVersion); try fields.encode(isRelation, forKey: .isRelation)
+    try fields.encodeIfPresent(referencedEntity, forKey: .referencedEntity)
+    // Older 64-bit descriptors keep their exact metadata shape.
+    if isInt32 { try fields.encode(true, forKey: .isInt32) }
   }
 }
 

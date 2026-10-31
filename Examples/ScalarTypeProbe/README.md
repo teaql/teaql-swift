@@ -17,8 +17,9 @@ unselected Decimal from a loaded value. An optional Decimal alternates between
 The script runs twice on one unique SQLite file without deleting it. It checks
 the canonical model and nine generated Swift source hashes before and after
 each run, retaining build logs and the database in its printed evidence directory.
-Generation used fixed local generator `6fbd9be2db64a3c315c247d24122dd8164db64e9`,
-scope `swift-lib-core`, and canonical `scalar_type_probe.xml`. The generator is
+Generation uses the evaluated local generator source recorded in
+`fixture-manifest.json`, scope `swift-lib-core`, and canonical
+`scalar_type_probe.xml`. The generator is
 not needed to run the example. Change the model and regenerate if the frozen
 library needs to change; `Package.swift`, the executable and this script are
 application-owned.
@@ -47,3 +48,15 @@ request is compared before/after execution. Reversible table-rename fault DDL
 proves a real nested SQLite failure and recovery through the same query/context,
 without treating business TraceChain as the physical SQL Trace Path. Business
 data is never inserted or queried with hand-written SQL.
+
+`Integer32Verification` adds 83 named checks per round on its own retained
+SQLite file. Modeled Integer has a signed 32-bit domain while its native carrier,
+Long, ID and version stay `Int64`. Generated saves reject out-of-range values
+after custom Fix and before provider/transaction work; a single Fix may repair
+an input. Generated hydration, JSON and E terminals reject invalid loaded values,
+but omitted fields remain NotLoaded and optional null remains valid. A derived
+SUM of `4294967294` is deliberately allowed rather than narrowed to Integer.
+Eight valid rows per round are then corrupted through an explicitly test-only
+external SQLite writer. Their real Q read fails precisely, an ID-only projection
+still works, and the corrupt data/version remain available for a read-only
+oracle. All ordinary rows and updates use generated audited Mutation APIs.

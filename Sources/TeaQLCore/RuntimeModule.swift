@@ -34,6 +34,7 @@ public struct TeaQLRuntime: Sendable {
   public init() {}
 
   public mutating func install(_ module: RuntimeModule) throws {
+    for descriptor in module.entities { try ModeledInteger32.validateMetadata(descriptor) }
     for descriptor in module.entities {
       if let existing = descriptorsByName[descriptor.name], existing != descriptor {
         throw TeaQLError.execution(

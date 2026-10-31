@@ -39,4 +39,12 @@ for round in 1 2; do
     "$evidence/empty-aggregates-round-$round.log" "$round"
   sha256sum -c generated.sha256
 done
+for round in 1 2; do
+  TEAQL_INTEGER32_DB="$evidence/integer32.sqlite" TEAQL_INTEGER32_ROUND="$round" \
+    swift run --scratch-path "$scratch" --skip-build Integer32Verification \
+    | tee "$evidence/integer32-round-$round.log"
+  node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_INTEGER32=")).map(v=>JSON.parse(v.slice("SWIFT_INTEGER32=".length)));assert.equal(rows.length,1);const r=rows[0];assert.equal(r.passed,true);assert.equal(r.round,+process.argv[2]);assert.equal(r.metadataCorrect,true);assert.deepEqual(r.markerNames,["optional_integer","required_integer"]);assert.equal(r.cases.length,83);assert(r.cases.every(c=>c.passed));assert.equal(r.controls.length,2);assert.equal(r.legacy.length,8);' \
+    "$evidence/integer32-round-$round.log" "$round"
+  sha256sum -c generated.sha256
+done
 echo "PASS Swift scalar example twice without cleanup; evidence: $evidence"

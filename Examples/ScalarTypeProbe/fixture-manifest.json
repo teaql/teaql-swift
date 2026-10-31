@@ -1,28 +1,28 @@
 {
   "schema": "teaql.generated-scalar-fixture/v1",
   "modelSha256": "8d3017392ffd00abbc06be2555ced27ac6360e2d05fabc4299e27a5ef8f1c762",
-  "generatedManifestSha256": "680405e108691a4e2c20f42aad629e0eee46e7abf343d1f2462eda37ba7095d5",
-  "producerReceiptSha256": "ef5c15ddefbc0285ea3c4f726ffb0a61c1ffb39ba345b1d84b27c714cddbf49b",
+  "generatedManifestSha256": "7e7d91f4ec1b93dc12e074f006c42ba03c6b60de4b8258a00655e979f2d516df",
+  "producerReceiptSha256": "e58920eef2d70aca8599d5baab2b105eb6afc9ddac7582b9c57cacd882665fbc",
   "producerSource": {
-    "commit": "962146eacfb75b26dfdfe9866e9dbc03a429c0d9",
-    "diff": "6d6b60e821884e89571ca41350cc4df56a0f4fec6d33d425849388962cf6c065",
-    "status": "05e3df56a27aef59b1113f77dc521f80ebf4f6bc67a57b329fbcc0787f1b2e44",
-    "sourceContentsSha256": "6bd2f0f3631f155795309ce4056f9fe756b703632662b15a0d43e0fb43f5b1a1",
+    "commit": "d766e1b41d213045002da2ae2d43c4f398327e2c",
+    "diff": "f87258debcee48ab2a00a7fcf854e89bc5116f13aa1c80f28ed5499cbef59b60",
+    "status": "82a8efa3376d930ba2b05b20b7b59ecaaa23d426e7aa80a440fd02c50f7ff02e",
+    "sourceContentsSha256": "601531be7c3e27b78922a1466f9cf2d9e3f49b8ffbe6d44dc523bf60417f2cf8",
     "assistExporterSha256": "2583414a9d656e89b43b85f1d4e993dcc774b74e2bed0f9b7120d7cb7ea47efd"
   },
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
-  "previousManifestSha256": "7a10b9f8661cd8e21156f7648572a4e02be2faffc5263ae50d7e7a6507b7e5f2",
+  "previousManifestSha256": "720dbeb90fec379e834b955ec2b9bb8732b397f8c34ab07e334d4fe74bd18e5b",
   "files": {
-    "Generated/Sources/GeneratedTeaQL/Models/TypePlatform.swift": "ba9e6b6443b8624fbb35c345da8bbaa1cf259646a09c03ef0740c6166145c1a5",
-    "Generated/Sources/GeneratedTeaQL/Models/ScalarTypeProbe.swift": "5e4f72b16cb0dc8bd89300ccfed93689dfcb6508dc5afced687bc3deac20f128",
+    "Generated/Sources/GeneratedTeaQL/Models/TypePlatform.swift": "ee94bd5098e8193c61c0c338ab10581ac7d393d9d2b3a3e5528de54a1acb2e4a",
+    "Generated/Sources/GeneratedTeaQL/Models/ScalarTypeProbe.swift": "3b3f999204715bcf41837b158de17e5b17988fe8265860cfbf09873bbe92ee0b",
     "Generated/Sources/GeneratedTeaQL/RuntimeModule.swift": "df6027e22661647b9b64bbf9874ae3cf21fb0885ceded65624217306e934b44d",
     "Generated/Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "70c25f232c16f61e632a2ba75e7b23259bb8e09dca49911a4c1252c23b45fbcb",
     "Generated/Sources/GeneratedTeaQL/Q.swift": "b8c8b2433f6f260ec48a7e4cadd3088cd2da3b0b5d2d61124a13893a7dd6bab3",
     "Generated/Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "88ca11bd8e819cd1f1cd41f0a4f82382341a39be1de3f0409ae6e98060b9c66a",
     "Generated/Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "d4c613a21d66ddee8e804526a9fa90cb045df9d6896b3eb84968d98d13ec89ca",
     "Generated/Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
-    "Generated/Sources/GeneratedTeaQL/E.swift": "5c3816175144fa377077fdb0ebdd8b37463ce9d1092b7f95056105c375853fe2",
+    "Generated/Sources/GeneratedTeaQL/E.swift": "662e9e66024597c0af7a151b896007a1ca33418590857e3052761a7c286e1d76",
     "model.xml": "8d3017392ffd00abbc06be2555ced27ac6360e2d05fabc4299e27a5ef8f1c762"
   }
 }

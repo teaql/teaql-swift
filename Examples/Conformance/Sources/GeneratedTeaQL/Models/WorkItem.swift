@@ -116,6 +116,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public static func from(record: TeaQLRecord, root: EntityRoot,
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
+        let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root

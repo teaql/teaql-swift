@@ -57,6 +57,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if container.contains(.quantity) {
             self.quantity = try container.decode(Int64?.self, forKey: .quantity)
+            if let error = ModeledInteger32.error(quantity.map { .int($0) } ?? .null, entity: Self.descriptor, field: "quantity") { throw error }
             _loadedFields.insert("quantity")
         }
         if container.contains(.unitPrice) {
@@ -88,6 +89,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(productName, forKey: .productName)
         }
         if _loadedFields.contains("quantity") {
+            if let error = ModeledInteger32.error(quantity.map { .int($0) } ?? .null, entity: Self.descriptor, field: "quantity") { throw error }
             try container.encode(quantity, forKey: .quantity)
         }
         if _loadedFields.contains("unitPrice") {
@@ -112,7 +114,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
             PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
             PropertyDescriptor(name: "productName", modelName: "product_name", column: "product_name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "quantity", modelName: "quantity", column: "quantity", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "quantity", modelName: "quantity", column: "quantity", type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
             PropertyDescriptor(name: "unitPrice", modelName: "unit_price", column: "unit_price", type: .decimal, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
@@ -126,6 +128,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     public static func from(record: TeaQLRecord, root: EntityRoot,
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
+        let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root

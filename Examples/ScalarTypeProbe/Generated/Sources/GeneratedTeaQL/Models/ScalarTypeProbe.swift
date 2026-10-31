@@ -113,10 +113,12 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if container.contains(.requiredInteger) {
             self.requiredInteger = try container.decode(Int64?.self, forKey: .requiredInteger)
+            if let error = ModeledInteger32.error(requiredInteger.map { .int($0) } ?? .null, entity: Self.descriptor, field: "required_integer") { throw error }
             _loadedFields.insert("requiredInteger")
         }
         if container.contains(.optionalInteger) {
             self.optionalInteger = try container.decode(Int64?.self, forKey: .optionalInteger)
+            if let error = ModeledInteger32.error(optionalInteger.map { .int($0) } ?? .null, entity: Self.descriptor, field: "optional_integer") { throw error }
             _loadedFields.insert("optionalInteger")
         }
         if container.contains(.requiredLong) {
@@ -220,9 +222,11 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(optionalBoolean, forKey: .optionalBoolean)
         }
         if _loadedFields.contains("requiredInteger") {
+            if let error = ModeledInteger32.error(requiredInteger.map { .int($0) } ?? .null, entity: Self.descriptor, field: "required_integer") { throw error }
             try container.encode(requiredInteger, forKey: .requiredInteger)
         }
         if _loadedFields.contains("optionalInteger") {
+            if let error = ModeledInteger32.error(optionalInteger.map { .int($0) } ?? .null, entity: Self.descriptor, field: "optional_integer") { throw error }
             try container.encode(optionalInteger, forKey: .optionalInteger)
         }
         if _loadedFields.contains("requiredLong") {
@@ -296,8 +300,8 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "largeText", modelName: "large_text", column: "large_text", type: .string, nullable: true, isID: false, isVersion: false),
             PropertyDescriptor(name: "requiredBoolean", modelName: "required_boolean", column: "required_boolean", type: .bool, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "optionalBoolean", modelName: "optional_boolean", column: "optional_boolean", type: .bool, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "requiredInteger", modelName: "required_integer", column: "required_integer", type: .int, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "optionalInteger", modelName: "optional_integer", column: "optional_integer", type: .int, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: "requiredInteger", modelName: "required_integer", column: "required_integer", type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
+            PropertyDescriptor(name: "optionalInteger", modelName: "optional_integer", column: "optional_integer", type: .int, nullable: true, isID: false, isVersion: false, isInt32: true),
             PropertyDescriptor(name: "requiredLong", modelName: "required_long", column: "required_long", type: .int, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "optionalLong", modelName: "optional_long", column: "optional_long", type: .int, nullable: true, isID: false, isVersion: false),
             PropertyDescriptor(name: "requiredDecimal", modelName: "required_decimal", column: "required_decimal", type: .decimal, nullable: false, isID: false, isVersion: false),
@@ -326,6 +330,7 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
     public static func from(record: TeaQLRecord, root: EntityRoot,
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
+        let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root

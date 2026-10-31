@@ -1952,6 +1952,7 @@ public struct UserContext: Sendable {
           message: "Expected a finite Float/Double value", entityType: originalEntity.name)
       })
     }
+    try ModeledInteger32.normalizeMutation(&validated.values, entity: originalEntity, violations: &violations)
     if !violations.isEmpty { throw CheckException(violations) }
     _ = try validated.validatedForExecution()
     if checker != nil && graphSession == nil {

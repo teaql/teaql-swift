@@ -89,6 +89,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if container.contains(.studentCapacity) {
             self.studentCapacity = try container.decode(Int64?.self, forKey: .studentCapacity)
+            if let error = ModeledInteger32.error(studentCapacity.map { .int($0) } ?? .null, entity: Self.descriptor, field: "student_capacity") { throw error }
             _loadedFields.insert("studentCapacity")
         }
         if container.contains(.active) {
@@ -137,6 +138,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(establishedDate, forKey: .establishedDate)
         }
         if _loadedFields.contains("studentCapacity") {
+            if let error = ModeledInteger32.error(studentCapacity.map { .int($0) } ?? .null, entity: Self.descriptor, field: "student_capacity") { throw error }
             try container.encode(studentCapacity, forKey: .studentCapacity)
         }
         if _loadedFields.contains("active") {
@@ -170,7 +172,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "address", modelName: "address", column: "address", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "establishedDate", modelName: "established_date", column: "established_date", type: .date, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "studentCapacity", modelName: "student_capacity", column: "student_capacity", type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "studentCapacity", modelName: "student_capacity", column: "student_capacity", type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
             PropertyDescriptor(name: "active", modelName: "active", column: "active", type: .bool, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
@@ -186,6 +188,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     public static func from(record: TeaQLRecord, root: EntityRoot,
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
+        let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self()
         // Discard the constructor's new-entity ledger during hydration.
         entity.teaqlEntityRoot = root
