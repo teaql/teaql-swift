@@ -19,7 +19,14 @@ public struct WireInputError: Error, Sendable { public enum Code:String,Sendable
 public func normalizeWireInput(_ input:[String:TeaQLValue],metadata:WireEntityMetadata,parentPointer:String="") throws -> NormalizedWireInput {
   var lookup:[String:WireFieldMetadata]=[:];for field in metadata.fields.values { lookup[field.wireName]=field;for alias in field.aliases{lookup[alias]=field} }
   var values:[String:TeaQLValue]=[:],paths:[String:String]=[:],submitted:[String:String]=[:]
-  for (name,value) in input { let pointer="\(parentPointer)/\(name.replacingOccurrences(of:"~",with:"~0").replacingOccurrences(of:"/",with:"~1"))";guard let field=lookup[name] else{throw WireInputError(code:.unknownField,instancePath:pointer,message:"Unknown \(metadata.entityType) field '\(name)'")};if let previous=submitted[field.canonicalName]{throw WireInputError(code:.fieldCollision,instancePath:pointer,message:"Fields '\(previous)' and '\(name)' both map to canonical field '\(field.canonicalName)'")};submitted[field.canonicalName]=name;values[field.canonicalName]=value;if name != field.wireName{paths[field.canonicalName]=pointer} }
+  for (name,value) in input {
+    let pointer="\(parentPointer)/\(name.replacingOccurrences(of:"~",with:"~0").replacingOccurrences(of:"/",with:"~1"))"
+    guard let field=lookup[name] else{throw WireInputError(code:.unknownField,instancePath:pointer,message:"Unknown \(metadata.entityType) field '\(name)'")}
+    if let previous=submitted[field.canonicalName]{throw WireInputError(code:.fieldCollision,instancePath:pointer,message:"Fields '\(previous)' and '\(name)' both map to canonical field '\(field.canonicalName)'")}
+    submitted[field.canonicalName]=name;values[field.canonicalName]=value
+    // The supplied ancestor boundary is already escaped; standard leaves must retain it too.
+    if name != field.wireName || !parentPointer.isEmpty { paths[field.canonicalName]=pointer }
+  }
   return NormalizedWireInput(values:values,sourceInstancePaths:paths)
 }
 public func retainSubmittedPaths(_ results: [CheckResult], normalized: NormalizedWireInput) -> [CheckResult] {

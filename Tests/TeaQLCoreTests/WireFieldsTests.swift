@@ -20,4 +20,31 @@ final class WireFieldsTests:XCTestCase{
     XCTAssertEqual(result.map(\.sourceInstancePath), [exact, nil, nil, "/legacy~1items"])
     XCTAssertEqual(original.sourceInstancePath, exact)
   }
+
+  func testStandardChildRetainsAncestorProvenance() throws {
+    let parent = try WireEntityMetadata(entityType: "Order", canonicalFields: ["order_item_list"],
+      aliases: ["order_item_list": ["legacy/items~"]])
+    for profile in [JsonFieldNamingProfile.camelCase, .snakeCase, .pascalCase] {
+      let child = try WireEntityMetadata(entityType: "OrderItem", canonicalFields: ["product_name", "unit_count"], profile: profile)
+      let name = try XCTUnwrap(child.fields["product_name"]).wireName
+      for value in [TeaQLValue.null, .string("submitted item")] {
+        let childObject = [name: value]
+        let parentInput = try normalizeWireInput(["legacy/items~": .array([.null, .null, .object(childObject)])], metadata: parent)
+        let boundary = try XCTUnwrap(parentInput.sourceInstancePaths["order_item_list"]) + "/2"
+        let normalized = try normalizeWireInput(childObject, metadata: child, parentPointer: boundary)
+        XCTAssertEqual(normalized.values, ["product_name": value])
+        XCTAssertEqual(normalized.sourceInstancePaths, ["product_name": boundary + "/" + name])
+        let original = CheckResult(ruleID: "required", location: .property("product_name"), entityType: "OrderItem")
+        let leaf = retainSubmittedPaths([original], normalized: normalized)[0]
+        let location = ObjectLocation.property("order_item_list").index(2).property("product_name")
+        let prefixed = CheckResult(ruleID: leaf.ruleID, location: location, entityType: leaf.entityType,
+          sourceInstancePath: leaf.sourceInstancePath)
+        let actual = retainSubmittedPaths([prefixed], normalized: parentInput)[0]
+        XCTAssertEqual(actual.sourceInstancePath, "/legacy~1items~0/2/" + name)
+        XCTAssertEqual(actual.location, location)
+        XCTAssertNil(original.sourceInstancePath)
+      }
+      XCTAssertTrue(try normalizeWireInput([name: .null], metadata: child).sourceInstancePaths.isEmpty)
+    }
+  }
 }
