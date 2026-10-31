@@ -99,5 +99,6 @@ private func missing<T>(
       throw TeaQLError.execution("A retained SQLite path is required for the partial-ancestor example")
     }
     try await PartialAncestorProbe.verify(path: database + ".partial-ancestors.sqlite")
+    try await RestorationProbe.verify(path: database + ".restoration.sqlite")
   }
 }
