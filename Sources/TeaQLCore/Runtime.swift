@@ -1888,6 +1888,9 @@ public struct UserContext: Sendable {
     var validated = request.mutation
     validated.actor = actor
     validated.auditCategory = auditCategory
+    let roots = ContextRootAdmission(context: self, mutation: request.mutation)
+    try roots.validate(validated)
+    try roots.applyCreateDefaults(&validated)
     let checker = runtime.checker(named: validated.entity.name)
     var violations: [CheckResult] = []
     if let checker {
@@ -1953,6 +1956,7 @@ public struct UserContext: Sendable {
       })
     }
     try ModeledInteger32.normalizeMutation(&validated.values, entity: originalEntity, violations: &violations)
+    try roots.validate(validated, final: true)
     if !violations.isEmpty { throw CheckException(violations) }
     _ = try validated.validatedForExecution()
     if checker != nil && graphSession == nil {

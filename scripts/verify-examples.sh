@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-expected=(Conformance FacetTrace FixEAlignment ObjectStorage OrderManagement ScalarTypeProbe SchoolManagement TraceChain)
+expected=(Conformance ExpressionProfiles FacetTrace FixEAlignment ObjectStorage OrderManagement ScalarTypeProbe SchoolManagement TraceChain)
 mapfile -t actual < <(find "$repo/Examples" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   echo "example inventory changed; update scripts/verify-examples.sh: ${actual[*]}" >&2
@@ -13,6 +13,9 @@ node "$repo/Examples/FixEAlignment/verify-local.cjs"
 inventory_evidence="${TEAQL_EXAMPLES_EVIDENCE_DIR:-$(mktemp -d -t teaql-swift-examples-evidence.XXXXXXXX)}"
 mkdir -p "$inventory_evidence"
 export TEAQL_SWIFT_SCALAR_EVIDENCE_DIR="$inventory_evidence/scalar"
+export TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT="${TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT:-${TEAQL_FIX_E_SOURCE_ROOT:+$TEAQL_FIX_E_SOURCE_ROOT/swift}}"
+if [[ -z "$TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT" ]]; then export TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT="$repo"; fi
+TEAQL_GENERATED_E_PROFILE_EVIDENCE_DIR="$inventory_evidence/expression-profiles" node "$repo/Examples/ExpressionProfiles/verify-local.cjs"
 
 # Local runtime dependencies may gain source files without changing Package.swift.
 # Refresh the build plan so old manifests cannot omit newly added runtime code.

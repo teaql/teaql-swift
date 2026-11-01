@@ -150,8 +150,11 @@ public enum GeneratedRuntimeModule {
             "Tenant": try! WireEntityMetadata(entityType: "Tenant", canonicalFields: ["id", "name", "version"], aliases: ["id": ["id"], "name": ["name"], "version": ["version"]]),
             "PurchaseOrder": try! WireEntityMetadata(entityType: "PurchaseOrder", canonicalFields: ["id", "tenant", "contact_phone", "internal_note", "create_time", "update_time", "version"], aliases: ["id": ["id"], "tenant": ["tenant"], "contact_phone": ["contact_phone"], "internal_note": ["internal_note"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]]),
             "OrderItem": try! WireEntityMetadata(entityType: "OrderItem", canonicalFields: ["id", "purchase_order", "tenant", "product_name", "unit_price", "create_time", "update_time", "version"], aliases: ["id": ["id"], "purchase_order": ["purchase_order"], "tenant": ["tenant"], "product_name": ["product_name"], "unit_price": ["unit_price"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]])
-        ]
-    )
+        ],
+        contextRootFields: [
+            "PurchaseOrder": ["tenant": "Tenant"],
+            "OrderItem": ["tenant": "Tenant"]
+        ])
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?
