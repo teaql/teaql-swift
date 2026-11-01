@@ -62,7 +62,17 @@ public struct PurchaseOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("id")
         }
         if container.contains(.tenant) {
-            self.tenant = try container.decode(Int64?.self, forKey: .tenant)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .tenant)) != nil {
+                let related = try container.decode(Tenant.self, forKey: .tenant)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .tenant, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.tenant = related.id
+                self.tenantEntity = related
+            } else {
+                self.tenant = try container.decode(Int64?.self, forKey: .tenant)
+            }
             _loadedFields.insert("tenant")
         }
         if container.contains(.contactPhone) {
@@ -85,6 +95,9 @@ public struct PurchaseOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
+        if container.contains(.orderItemList) {
+            self.orderItemList = try container.decode([OrderItem].self, forKey: .orderItemList)
+        }
         // JSON hydration owns a read ledger, not the constructor's new ledger.
         self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
@@ -100,7 +113,12 @@ public struct PurchaseOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(id, forKey: .id)
         }
         if _loadedFields.contains("tenant") {
-            try container.encode(tenant, forKey: .tenant)
+            if isLoaded("tenantEntity"), let related = tenantEntity,
+                related.isLoaded("id"), related.id == tenant {
+                try container.encode(related, forKey: .tenant)
+            } else {
+                try container.encode(tenant, forKey: .tenant)
+            }
         }
         if _loadedFields.contains("contactPhone") {
             try container.encode(contactPhone, forKey: .contactPhone)

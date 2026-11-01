@@ -68,6 +68,8 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     assert.deepEqual(fingerprint(), m);
     const projections=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_PROJECTION_VIEW_CASE=')).map(line=>JSON.parse(line.slice('SWIFT_PROJECTION_VIEW_CASE='.length)));
     assert.equal(projections.length,3);assert(projections.every(value=>value.round===round&&value.passed));
+    const jsonViews=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_PROJECTION_JSON_ROUNDTRIP=')).map(line=>JSON.parse(line.slice('SWIFT_PROJECTION_JSON_ROUNDTRIP='.length)));
+    assert.equal(jsonViews.length,1);assert.equal(jsonViews[0].round,round);assert.equal(jsonViews[0].implicitProviderCalls,0);
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',

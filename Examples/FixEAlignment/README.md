@@ -24,6 +24,13 @@ the second finds three. Business writes use generated audited saves only.
 Provider, transaction, policy and audit observers are positively calibrated by
 actual successful operations. Reading E/JSON must not perform provider work.
 
+The generated native JSON also roundtrips the selected reverse/forward graph,
+including sparse versus loaded-null and selected-empty versus NotLoaded.
+Scalar FK input remains accepted when target detail is absent. Missing nested
+identity, malformed nested scalars and malformed reverse rows reject with JSON
+paths. Encoding cannot expose a loaded target whose ID does not match its FK.
+No query metadata or pending mutation state is added by these JSON operations.
+
 Set `TEAQL_FIX_E_EVIDENCE_DIR` to a new absolute directory to retain compact
 receipts, logs and synthetic stores. Task-owned build/dependency scratch is
 removed on exit after child processes finish; shared caches are not deleted.

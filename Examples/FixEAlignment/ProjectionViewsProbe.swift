@@ -194,7 +194,64 @@ enum ProjectionViewsProbe {
     let nested = orders?.first?["tenant"] as? [String: Any]
     emit("SWIFT_REPEATED_VIEW_JSON=" + (try json(root)))
     try require(rootJSON["name"] == nil && nested?["name"] as? String == "Tenant Name", "JSON merged two distinct projection boundaries")
+
+    // Native JSON roundtrips preserve the selected graph, not merely its FK.
+    let decoded = try JSONDecoder().decode(Tenant.self, from: Data(json(root).utf8))
+    try missing { try E.tenant(decoded).name().eval() }
+    try require(try E.tenant(decoded).purchaseOrderList().first().tenant().name().eval() == "Tenant Name"
+      && E.tenant(decoded).purchaseOrderList().first().tenantId().eval() == 1,
+      "JSON roundtrip dropped selected reverse rows or forward detail")
+    try require(try json(decoded) == json(root) && decoded.teaqlEntityRoot.snapshot().isEmpty,
+      "JSON roundtrip widened the selected graph or fabricated pending intent")
+    func decodeOrder(_ tenant: Any) throws -> PurchaseOrder {
+      let payload: [String: Any] = ["id": three.id, "version": 1, "tenant": tenant]
+      return try JSONDecoder().decode(PurchaseOrder.self, from: JSONSerialization.data(withJSONObject: payload))
+    }
+    let identityOnly = try decodeOrder(1)
+    try require(try E.purchaseOrder(identityOnly).tenantId().eval() == 1, "Scalar FK JSON lost its identity")
+    try missing { try E.purchaseOrder(identityOnly).tenant().name().eval() }
+    let nullReference = try decodeOrder(NSNull())
+    try require(try E.purchaseOrder(nullReference).tenantId().eval() == nil
+      && object(nullReference)["tenant"] is NSNull, "Explicit FK null became NotLoaded")
+    func rejectObject(_ payload: [String: Any], at field: String) throws {
+      do {
+        _ = try JSONDecoder().decode(PurchaseOrder.self, from: JSONSerialization.data(withJSONObject: payload))
+      } catch let error as DecodingError {
+        let context: DecodingError.Context
+        switch error {
+        case .dataCorrupted(let value): context = value
+        case .typeMismatch(_, let value): context = value
+        case .valueNotFound(_, let value): context = value
+        case .keyNotFound(_, let value): context = value
+        @unknown default: throw error
+        }
+        try require(context.codingPath.first?.stringValue == field, "Malformed relation lost its JSON path")
+        return
+      }
+      throw TeaQLError.execution("Malformed relation JSON was silently accepted")
+    }
+    try rejectObject(["id": three.id, "version": 1, "tenant": ["name": "Missing identity"]], at: "tenant")
+    try rejectObject(["id": three.id, "version": 1, "tenant": ["id": "not-a-number"]], at: "tenant")
+    try rejectObject(["id": three.id, "version": 1, "orderItemList": [true]], at: "orderItemList")
+    let empty = try JSONDecoder().decode(Tenant.self, from: Data("{\"id\":1,\"version\":1,\"purchaseOrderList\":[]}".utf8))
+    try require(try E.tenant(empty).purchaseOrderList().size().eval() == 0
+      && (object(empty)["purchaseOrderList"] as? [Any])?.isEmpty == true, "Selected empty list disappeared on JSON roundtrip")
+    let absent = try JSONDecoder().decode(Tenant.self, from: Data("{\"id\":1,\"version\":1}".utf8))
+    try missing { try E.tenant(absent).purchaseOrderList().size().eval() }
+    var mismatched = root.purchaseOrderList[0]
+    mismatched.tenantEntity = try JSONDecoder().decode(Tenant.self,
+      from: Data("{\"id\":2,\"version\":1,\"name\":\"OTHER-TENANT-PRIVATE\"}".utf8))
+    try require(try object(mismatched)["tenant"] as? Int == 1
+      && !json(mismatched).contains("OTHER-TENANT-PRIVATE"), "A mismatched forward alias leaked another object's detail")
     try require(await counts() == beforeNested, "Nested E/JSON caused hidden provider work")
+    struct JSONResult: Encodable {
+      let round: Int
+      let graphRoundtrip = true, scalarForeignKey = true, explicitForeignKeyNull = true
+      let missingNestedIdentityRejected = true, malformedNestedScalarRejected = true, malformedReverseChildRejected = true
+      let selectedEmptyPreserved = true, unselectedListNotLoaded = true, mismatchedAliasNotExposed = true
+      let pendingMutations = 0, implicitProviderCalls = 0
+    }
+    emit("SWIFT_PROJECTION_JSON_ROUNDTRIP=" + (try json(JSONResult(round: round))))
     try report("intra-query-repeated-identity-projection-boundary", three, ["sameIdentity": true,
       "sparseRootNameNotLoaded": true, "nestedTargetNameLoaded": true, "jsonRespectsBothViews": true, "implicitProviderCalls": 0])
   }

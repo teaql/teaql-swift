@@ -62,11 +62,31 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("id")
         }
         if container.contains(.purchaseOrder) {
-            self.purchaseOrder = try container.decode(Int64?.self, forKey: .purchaseOrder)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .purchaseOrder)) != nil {
+                let related = try container.decode(PurchaseOrder.self, forKey: .purchaseOrder)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .purchaseOrder, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.purchaseOrder = related.id
+                self.purchaseOrderEntity = related
+            } else {
+                self.purchaseOrder = try container.decode(Int64?.self, forKey: .purchaseOrder)
+            }
             _loadedFields.insert("purchaseOrder")
         }
         if container.contains(.tenant) {
-            self.tenant = try container.decode(Int64?.self, forKey: .tenant)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .tenant)) != nil {
+                let related = try container.decode(Tenant.self, forKey: .tenant)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .tenant, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.tenant = related.id
+                self.tenantEntity = related
+            } else {
+                self.tenant = try container.decode(Int64?.self, forKey: .tenant)
+            }
             _loadedFields.insert("tenant")
         }
         if container.contains(.productName) {
@@ -104,10 +124,20 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(id, forKey: .id)
         }
         if _loadedFields.contains("purchaseOrder") {
-            try container.encode(purchaseOrder, forKey: .purchaseOrder)
+            if isLoaded("purchaseOrderEntity"), let related = purchaseOrderEntity,
+                related.isLoaded("id"), related.id == purchaseOrder {
+                try container.encode(related, forKey: .purchaseOrder)
+            } else {
+                try container.encode(purchaseOrder, forKey: .purchaseOrder)
+            }
         }
         if _loadedFields.contains("tenant") {
-            try container.encode(tenant, forKey: .tenant)
+            if isLoaded("tenantEntity"), let related = tenantEntity,
+                related.isLoaded("id"), related.id == tenant {
+                try container.encode(related, forKey: .tenant)
+            } else {
+                try container.encode(tenant, forKey: .tenant)
+            }
         }
         if _loadedFields.contains("productName") {
             try container.encode(productName, forKey: .productName)

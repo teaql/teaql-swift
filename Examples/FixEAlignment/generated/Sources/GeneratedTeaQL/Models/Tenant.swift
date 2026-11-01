@@ -63,6 +63,12 @@ public struct Tenant: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
+        if container.contains(.purchaseOrderList) {
+            self.purchaseOrderList = try container.decode([PurchaseOrder].self, forKey: .purchaseOrderList)
+        }
+        if container.contains(.orderItemList) {
+            self.orderItemList = try container.decode([OrderItem].self, forKey: .orderItemList)
+        }
         // JSON hydration owns a read ledger, not the constructor's new ledger.
         self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
