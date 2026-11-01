@@ -150,13 +150,19 @@ enum ProjectionViewsProbe {
     try require(try E.purchaseOrder(other).version().eval() == 1 && ledger.originalVersion(key) == 1
       && ledger.change(key)["internal_note"] == .string("pending-other-view"), "Save changed another view's pending edit or version")
     let beforeReject = await counts()
-    var errorType: String?, message: String?
+    var errorType: String?, message: String?, optimisticConflict = false
     do { _ = try await other.auditAs("Reject a stale independent view without losing pending intent").save(context) }
-    catch { errorType = String(reflecting: type(of: error)); message = String(describing: error) }
+    catch {
+      errorType = String(reflecting: type(of: error)); message = String(describing: error)
+      if let error = error as? TeaQLError,
+        case .optimisticLock(let entity, let id, let expectedVersion) = error {
+        optimisticConflict = entity == "PurchaseOrder" && id == .int(two.id) && expectedVersion == 1
+      }
+    }
     let effects = await counts() - beforeReject
     struct Rejection: Encodable { let round: Int, orderId: String, errorType: String?, message: String?, effects: ProjectionEffects }
     emit("SWIFT_STALE_VIEW_OBSERVATION=" + (try json(Rejection(round: round, orderId: String(two.id), errorType: errorType, message: message, effects: effects))))
-    try require(errorType != nil, "A stale independent view was accepted")
+    try require(optimisticConflict, "A stale independent view did not produce its exact optimistic-lock rejection")
     try require(effects.begins == 1 && effects.mutations == 1 && effects.rollbacks == 1
       && effects.commits == 0 && effects.audits == 0 && effects.queries == 0, "Stale save committed, audited or performed unrelated work")
     let pending = ledger.change(key)
@@ -186,6 +192,7 @@ enum ProjectionViewsProbe {
     try require(try e.purchaseOrderList().first().tenant().name().eval() == "Tenant Name", "Full nested alias lost its name")
     let rootJSON = try object(root), orders = rootJSON["purchaseOrderList"] as? [[String: Any]]
     let nested = orders?.first?["tenant"] as? [String: Any]
+    emit("SWIFT_REPEATED_VIEW_JSON=" + (try json(root)))
     try require(rootJSON["name"] == nil && nested?["name"] as? String == "Tenant Name", "JSON merged two distinct projection boundaries")
     try require(await counts() == beforeNested, "Nested E/JSON caused hidden provider work")
     try report("intra-query-repeated-identity-projection-boundary", three, ["sameIdentity": true,
