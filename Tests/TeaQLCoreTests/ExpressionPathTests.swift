@@ -2,6 +2,41 @@ import XCTest
 import TeaQLCore
 
 final class ExpressionPathTests: XCTestCase {
+  func testLiteralPunctuationAndIndicesPreserveCanonicalIdentityInAllWireProfiles() throws {
+    for (profile, pointer): (JsonFieldNamingProfile, String) in [
+      (.camelCase, "/schoolType/2/a~0~1b.c"),
+      (.snakeCase, "/school_type/2/a~0~1b.c"),
+      (.pascalCase, "/SchoolType/2/A~0~1b.c")
+    ] {
+      let path = ExpressionPath("E.node(<root>)", profile: profile).member("school_type", method: "schoolType")
+        .index(2).member("a~/b.c", method: "safeField").markMissing()
+      let wire = TeaQLNotLoadedError(path: path, breakPoint: "a~/b.c").terminal("eval()").toWire()
+      XCTAssertEqual(wire.instancePath, pointer)
+      XCTAssertEqual(wire.attemptedInstancePath, pointer)
+      XCTAssertEqual(wire.location.count, 3)
+      XCTAssertEqual(wire.location[0].name, "school_type")
+      XCTAssertEqual(wire.location[1].kind, "index")
+      XCTAssertEqual(wire.location[1].index, 2)
+      XCTAssertEqual(wire.location[2].name, "a~/b.c")
+      XCTAssertEqual(wire.attemptedLocation, wire.location)
+      XCTAssertEqual(wire.suggestedFix.location, wire.location)
+      XCTAssertEqual(wire.breakPointIndex, 2)
+      XCTAssertEqual(wire.breakPoint, "a~/b.c")
+      XCTAssertEqual(wire.expressionWithBrokenPoint, "E.node(<root>).schoolType().get(2).safeField()<broken>.eval()")
+      let encoded = try JSONEncoder().encode(wire)
+      let value = try JSONSerialization.jsonObject(with: encoded)
+      let record = try JSONSerialization.data(withJSONObject: ["language":"swift", "profile":profile.rawValue, "wire":value])
+      print("E_POINTER_PROFILE_CASE=" + String(decoding: record, as: UTF8.self))
+      if let output = ProcessInfo.processInfo.environment["TEAQL_POINTER_PROFILE_EVIDENCE"] {
+        if !FileManager.default.fileExists(atPath: output) { XCTAssertTrue(FileManager.default.createFile(atPath: output, contents: nil)) }
+        let file = try FileHandle(forWritingTo: URL(fileURLWithPath: output))
+        defer { try? file.close() }
+        try file.seekToEnd()
+        try file.write(contentsOf: record + Data("\n".utf8))
+      }
+    }
+  }
+
   func testEarlyRepeatedRelationPreservesTheSuffixAndOnlyOneMarker() {
     let parent = ExpressionPath("E.node(<root>)").member("parent", method: "parent").markMissing()
     let leaf = parent.member("parent", method: "parent").member("user_url", method: "userUrl")
