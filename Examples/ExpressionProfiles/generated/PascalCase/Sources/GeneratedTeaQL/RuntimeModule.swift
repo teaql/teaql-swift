@@ -96,8 +96,7 @@ public enum GeneratedRuntimeModule {
         wireMetadata: [
             "TypePlatform": try! WireEntityMetadata(entityType: "TypePlatform", canonicalFields: ["id", "name", "version"], aliases: ["id": ["id"], "name": ["name"], "version": ["version"]]),
             "ScalarTypeProbe": try! WireEntityMetadata(entityType: "ScalarTypeProbe", canonicalFields: ["id", "type_platform", "required_string", "optional_string", "large_text", "required_boolean", "optional_boolean", "required_integer", "optional_integer", "required_long", "optional_long", "required_decimal", "optional_decimal", "required_float", "optional_float", "required_double", "optional_double", "required_date", "optional_date", "required_time", "optional_time", "required_datetime", "optional_datetime", "create_time", "update_time", "version"], aliases: ["id": ["id"], "type_platform": ["type_platform"], "required_string": ["required_string"], "optional_string": ["optional_string"], "large_text": ["large_text"], "required_boolean": ["required_boolean"], "optional_boolean": ["optional_boolean"], "required_integer": ["required_integer"], "optional_integer": ["optional_integer"], "required_long": ["required_long"], "optional_long": ["optional_long"], "required_decimal": ["required_decimal"], "optional_decimal": ["optional_decimal"], "required_float": ["required_float"], "optional_float": ["optional_float"], "required_double": ["required_double"], "optional_double": ["optional_double"], "required_date": ["required_date"], "optional_date": ["optional_date"], "required_time": ["required_time"], "optional_time": ["optional_time"], "required_datetime": ["required_datetime"], "optional_datetime": ["optional_datetime"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]])
-        ]
-    )
+        ])
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?
