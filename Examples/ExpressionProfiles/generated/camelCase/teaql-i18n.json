@@ -1,0 +1,127 @@
+{
+    "schema": "teaql.i18n/v1",
+    "defaultLocale": "en",
+    "locales": {
+        "de": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ko": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "pt": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "zh-TW": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "fil": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "en": {
+            "vocabulary": {
+                "property.scalarTypeProbe.largeText": "Large Text",
+                "property.scalarTypeProbe.requiredString": "Required String",
+                "property.scalarTypeProbe.id": "Id",
+                "property.scalarTypeProbe.optionalDecimal": "Optional Decimal",
+                "property.scalarTypeProbe.requiredDate": "Required Date",
+                "property.scalarTypeProbe.optionalString": "Optional String",
+                "property.scalarTypeProbe.requiredLong": "Required Long",
+                "property.typePlatform.version": "Version",
+                "entity.scalarTypeProbe": "Scalar Type Probe",
+                "property.scalarTypeProbe.optionalTime": "Optional Time",
+                "property.scalarTypeProbe.typePlatform": "Type Platform",
+                "property.scalarTypeProbe.optionalLong": "Optional Long",
+                "property.scalarTypeProbe.requiredDatetime": "Required Datetime",
+                "property.scalarTypeProbe.requiredTime": "Required Time",
+                "property.scalarTypeProbe.optionalBoolean": "Optional Boolean",
+                "property.scalarTypeProbe.optionalInteger": "Optional Integer",
+                "property.scalarTypeProbe.requiredDouble": "Required Double",
+                "entity.typePlatform": "Type Platform",
+                "property.scalarTypeProbe.requiredInteger": "Required Integer",
+                "property.scalarTypeProbe.optionalDouble": "Optional Double",
+                "property.scalarTypeProbe.optionalDatetime": "Optional Datetime",
+                "property.scalarTypeProbe.createTime": "Create Time",
+                "property.scalarTypeProbe.requiredFloat": "Required Float",
+                "property.typePlatform.id": "Id",
+                "property.scalarTypeProbe.requiredDecimal": "Required Decimal",
+                "property.scalarTypeProbe.optionalFloat": "Optional Float",
+                "property.scalarTypeProbe.version": "Version",
+                "property.scalarTypeProbe.requiredBoolean": "Required Boolean",
+                "property.scalarTypeProbe.updateTime": "Update Time",
+                "property.typePlatform.name": "Name",
+                "property.scalarTypeProbe.optionalDate": "Optional Date"
+            },
+            "messages": {
+            }
+        },
+        "fr": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "zh-CN": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "es": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ar": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "vi": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "th": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "uk": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ja": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "id": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        }
+    }
+}

@@ -1,0 +1,9 @@
+{
+  "producerReportSha256": "d84836eea08d0b678918a78a20c304da317177891af6628d765d6db4a33f65e9",
+  "manifestSha256": "3a3798bebe5e047ae1172b5ba6b62180590b4e3d8a9592a5aa764106fcf3faf8",
+  "producer": {
+    "commit": "38fe3d082484c751d00a854d937216193e42e1f3",
+    "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sourceContentsSha256": "c7da4991ccfaa48c8dccd45a964babaf1e65ba2fc9fb79b4bfe4f0061530a0b6"
+  }
+}
