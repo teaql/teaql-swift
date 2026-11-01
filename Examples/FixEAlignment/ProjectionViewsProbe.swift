@@ -50,6 +50,10 @@ enum ProjectionViewsProbe {
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
     return String(decoding: try encoder.encode(value), as: UTF8.self)
   }
+  // Swift's top-level thrown-error trap must not discard buffered diagnostics.
+  private static func emit(_ line: String) {
+    FileHandle.standardOutput.write(Data((line + "\n").utf8))
+  }
   private static func object<T: Encodable>(_ value: T) throws -> [String: Any] {
     guard let result = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? [String: Any]
     else { throw TeaQLError.execution("Expected a generated object JSON view") }
@@ -102,7 +106,7 @@ enum ProjectionViewsProbe {
     }
     func report(_ name: String, _ row: PurchaseOrder, _ facts: [String: Any]) throws {
       let payload: [String: Any] = ["round": round, "case": name, "orderId": String(row.id), "passed": true, "facts": facts]
-      print("SWIFT_PROJECTION_VIEW_CASE=" + String(decoding: try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]), as: UTF8.self))
+      emit("SWIFT_PROJECTION_VIEW_CASE=" + String(decoding: try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]), as: UTF8.self))
     }
 
     let one = try await seed()
@@ -151,13 +155,13 @@ enum ProjectionViewsProbe {
     catch { errorType = String(reflecting: type(of: error)); message = String(describing: error) }
     let effects = await counts() - beforeReject
     struct Rejection: Encodable { let round: Int, orderId: String, errorType: String?, message: String?, effects: ProjectionEffects }
-    print("SWIFT_STALE_VIEW_OBSERVATION=" + (try json(Rejection(round: round, orderId: String(two.id), errorType: errorType, message: message, effects: effects))))
+    emit("SWIFT_STALE_VIEW_OBSERVATION=" + (try json(Rejection(round: round, orderId: String(two.id), errorType: errorType, message: message, effects: effects))))
     try require(errorType != nil, "A stale independent view was accepted")
     try require(effects.begins == 1 && effects.mutations == 1 && effects.rollbacks == 1
       && effects.commits == 0 && effects.audits == 0 && effects.queries == 0, "Stale save committed, audited or performed unrelated work")
     let pending = ledger.change(key)
     struct Pending: Encodable { let round: Int, keys: [String], values: TeaQLRecord }
-    print("SWIFT_PENDING_VIEW_OBSERVATION=" + (try json(Pending(round: round, keys: pending.keys.sorted(), values: pending))))
+    emit("SWIFT_PENDING_VIEW_OBSERVATION=" + (try json(Pending(round: round, keys: pending.keys.sorted(), values: pending))))
     try require(try E.purchaseOrder(other).version().eval() == 1 && ledger.originalVersion(key) == 1
       && pending["internal_note"] == .string("pending-other-view"), "Rejection lost intent or changed its original version")
     let derived = pending.keys.filter { $0 != "internal_note" }.sorted()
