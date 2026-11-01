@@ -28,6 +28,7 @@ try {
   const disk = fs.statfsSync(scratch); assert(disk.bavail * disk.bsize > 8 * 1024 ** 3);
   const m = fingerprint(); report.modelSha256 = m.modelSha256;
   report.partialAncestorApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialAncestorProbe.swift')));
+  report.partialRootApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialRootProbe.swift')));
   report.restorationApplicationSha256 = sha(fs.readFileSync(path.join(example, 'RestorationProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
@@ -59,7 +60,7 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
   const executable = path.join(bin, 'FixEAlignment'); report.binarySha256 = sha(fs.readFileSync(executable));
   for (const round of [1, 2]) {
     const log = await run([executable], 'round-' + round + '.log');
-    for (const marker of ['FIX_E_EXAMPLE=', 'CORE_LOAD_EXAMPLE=', 'CORE_MUTATION_OWNERSHIP=', 'CORE_MUTATION_PAGING=', 'SWIFT_CHECKER_METADATA=', 'CORE_SWIFT_PARTIAL_ANCESTORS_RESULT=', 'CORE_SWIFT_RESTORATION_RESULT=']) {
+    for (const marker of ['FIX_E_EXAMPLE=', 'CORE_LOAD_EXAMPLE=', 'CORE_MUTATION_OWNERSHIP=', 'CORE_MUTATION_PAGING=', 'SWIFT_CHECKER_METADATA=', 'CORE_SWIFT_PARTIAL_ANCESTORS_RESULT=', 'CORE_SWIFT_PARTIAL_ROOT_RESULT=', 'CORE_SWIFT_RESTORATION_RESULT=']) {
       const values = log.split(/\r?\n/).filter(line => line.startsWith(marker)).map(line => JSON.parse(line.slice(marker.length)));
       assert.equal(values.length, 1, marker); assert.equal(values[0].passed, true, marker);
     }
@@ -68,6 +69,8 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.partial-ancestors.sqlite')))};
+  report.partialRootDatabase = {file: 'fixture.sqlite.partial-root.sqlite',
+    sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.partial-root.sqlite')))};
   report.restorationDatabase = {file: 'fixture.sqlite.restoration.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.restoration.sqlite')))};
   console.log('PASS Swift retained Fix/E/loading/ownership example twice on one database');
