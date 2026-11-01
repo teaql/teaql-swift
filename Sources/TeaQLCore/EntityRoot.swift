@@ -81,6 +81,19 @@ public final class EntityRoot: @unchecked Sendable {
     lock.withLock { mutationSnapshotLocked(key) }
   }
 
+  /// Publish runtime-validated Fix differences without overwriting a later
+  /// caller edit or changing identity, version, trace or commit state.
+  package func publishValidatedFix(_ values: TeaQLRecord, key: EntityKey,
+    expected: MutationSnapshot) throws -> MutationSnapshot {
+    try lock.withLock {
+      guard expected.matches(mutationSnapshotLocked(key)) else {
+        throw MutationPolicyError.operationOutsideReviewedPlan
+      }
+      for (field, value) in values { changes[key, default: [:]][field] = value }
+      return mutationSnapshotLocked(key)
+    }
+  }
+
   private func mutationSnapshotLocked(_ key: EntityKey) -> MutationSnapshot {
     MutationSnapshot(values: changes[key] ?? [:], version: originalVersions[key],
       isNew: newKeys.contains(key), isDeleted: deletedKeys.contains(key),

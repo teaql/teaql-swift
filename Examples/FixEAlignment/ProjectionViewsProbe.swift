@@ -52,7 +52,7 @@ enum ProjectionViewsProbe {
   }
   // Swift's top-level thrown-error trap must not discard buffered diagnostics.
   private static func emit(_ line: String) {
-    FileHandle.standardOutput.write(Data((line + "\n").utf8))
+    FileHandle.standardOutput.write(Data(("\n" + line + "\n").utf8))
   }
   private static func object<T: Encodable>(_ value: T) throws -> [String: Any] {
     guard let result = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as? [String: Any]

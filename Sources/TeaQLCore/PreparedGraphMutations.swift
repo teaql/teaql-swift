@@ -12,7 +12,7 @@ package final class PreparedGraphMutations: @unchecked Sendable {
     let fixed: Mutation
     let ledger: EntityRoot?
     let ledgerKey: EntityKey?
-    let state: EntityRoot.MutationSnapshot?
+    var state: EntityRoot.MutationSnapshot?
     let references: [String: Reference]
   }
   private struct Reference {
@@ -27,6 +27,7 @@ package final class PreparedGraphMutations: @unchecked Sendable {
   private let lock = NSLock()
   private var required = false
   private var sealed = false
+  private var fixesPublished = false
   private var queues: [Key: Queue] = [:]
   private var declaredReferences: [Key: [String: Reference]] = [:]
   private var assignedIDs: [Key: TeaQLValue] = [:]
@@ -92,6 +93,37 @@ package final class PreparedGraphMutations: @unchecked Sendable {
 
   package func validateLedgers() throws { try lock.withLock { try validateLedgersLocked() } }
 
+  /// Policy first sees the immutable post-Fix plan while the caller's ledger
+  /// still contains its original intent. Only an approved plan may publish
+  /// successful Fix values, before provider access. Advance the guarded
+  /// snapshot at the same boundary so these runtime-owned changes do not
+  /// weaken detection of customer edits during review or execution.
+  package func publishFixesAfterReview() throws {
+    try lock.withLock {
+      guard !fixesPublished else { return }
+      try validateLedgersLocked()
+      for identity in Array(queues.keys) {
+        guard var queue = queues[identity], let first = queue.entries.first,
+          let ledger = first.ledger, let key = first.ledgerKey, let state = first.state else { continue }
+        var differences: TeaQLRecord = [:]
+        for entry in queue.entries {
+          guard key.entity == entry.original.entity.name,
+            entry.original.kind == .create || entry.original.id == key.id else { continue }
+          for (field, value) in entry.fixed.values {
+            guard let property = entry.original.entity.property(named: field),
+              field == (property.modelName ?? property.name), !property.isID, !property.isVersion,
+              !sameMutationRecord([field: value], entry.original.values[field].map { [field: $0] } ?? [:]) else { continue }
+            differences[field] = value
+          }
+        }
+        let published = try ledger.publishValidatedFix(differences, key: key, expected: state)
+        for i in queue.entries.indices { queue.entries[i].state = published }
+        queues[identity] = queue
+      }
+      fixesPublished = true
+    }
+  }
+
   package func consume(_ proposed: Mutation, ledger: EntityRoot?, ledgerKey: EntityKey?,
     rootComment: String) throws -> Mutation? {
     try lock.withLock {
@@ -152,7 +184,7 @@ package final class PreparedGraphMutations: @unchecked Sendable {
     }
   }
 
-  package func clear() { lock.withLock { queues = [:]; declaredReferences = [:]; assignedIDs = [:] } }
+  package func clear() { lock.withLock { queues = [:]; declaredReferences = [:]; assignedIDs = [:]; fixesPublished = false } }
 
   private func key(_ mutation: Mutation, ledger: EntityRoot?, ledgerKey: EntityKey?) -> Key {
     if let ledgerKey { return .ledger(ledger.map(ObjectIdentifier.init), ledgerKey) }

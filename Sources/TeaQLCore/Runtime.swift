@@ -855,6 +855,7 @@ public struct UserContext: Sendable {
         try session.preparedMutations.sealAndValidate()
         try policy.reviewPreparedGraph(context: preparingContext)
         try session.endPreparation()
+        try session.preparedMutations.publishFixesAfterReview()
       }
       try Task.checkCancellation()
       try await transaction.beginGraphTransaction()
@@ -1735,6 +1736,7 @@ public struct UserContext: Sendable {
     let invocationProvenance = LogPrivacy.inheritIntent(oldProvenance, inherited: graphSession?.intentProvenance)
     let mutationGovernance = try mutationPolicyCoordinator.enter(
       context: self, mutation: validated, ledgerKey: ledgerKey)
+    try graphSession?.preparedMutations.publishFixesAfterReview()
     try graphSession?.preparedMutations.validateLedgers()
     let submittedID = validated.id
       ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
