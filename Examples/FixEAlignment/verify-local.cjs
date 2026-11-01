@@ -30,6 +30,7 @@ try {
   report.partialAncestorApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialAncestorProbe.swift')));
   report.partialRootApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialRootProbe.swift')));
   report.restorationApplicationSha256 = sha(fs.readFileSync(path.join(example, 'RestorationProbe.swift')));
+  report.projectionApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ProjectionViewsProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
   for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
@@ -65,6 +66,8 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
       assert.equal(values.length, 1, marker); assert.equal(values[0].passed, true, marker);
     }
     assert.deepEqual(fingerprint(), m);
+    const projections=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_PROJECTION_VIEW_CASE=')).map(line=>JSON.parse(line.slice('SWIFT_PROJECTION_VIEW_CASE='.length)));
+    assert.equal(projections.length,3);assert(projections.every(value=>value.round===round&&value.passed));
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
@@ -73,6 +76,8 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.partial-root.sqlite')))};
   report.restorationDatabase = {file: 'fixture.sqlite.restoration.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.restoration.sqlite')))};
+  report.projectionDatabase = {file: 'fixture.sqlite.projection-views.sqlite',
+    sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.projection-views.sqlite')))};
   console.log('PASS Swift retained Fix/E/loading/ownership example twice on one database');
 } catch (error) { console.error(error.stack); process.exitCode ||= 1; }
 finally {
