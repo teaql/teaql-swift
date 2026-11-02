@@ -55,3 +55,23 @@ receipts, logs and synthetic stores. Task-owned build/dependency scratch is
 removed on exit after child processes finish; shared caches are not deleted.
 These are regression expectations, not a claim that an unexecuted candidate
 passes. Conformance source/private-artifact acceptance is recorded separately.
+
+`CheckerBoundaryProbe.swift` adds omitted required relations, four independently
+omitted business fields with ownership loaded, unchanged partial targets, and
+real customer Fix rejection/repair. A separate store installs module Checkers
+without schema creation. The public object-local JSON adapter plus explicit
+generated setters tests declared aliases, escaped pointers, unknown fields and
+equal/unequal collisions under three naming profiles. Swift dictionaries do not
+promise submitted-key order: a collision must identify an actual submitted leaf.
+The default verifier retains 33 observations per unreset round and three stores;
+generated implementations stay hash-bound. This is not recursive HTTP/TFP or
+installed-package acceptance.
+
+The observed module also verifies bootstrap uses the injected Business Clock.
+`UserContext._generatedBootstrapContext` preserves the configured policy registry,
+approval provider and governance sink through a fresh coordinator; it must not
+reset to an allowing default or import an already-reviewed caller plan. Native
+positive/negative controls cover time, approval, denial, sink delivery and state
+isolation. The generated bootstrap source is unchanged.
+The third store exercises the actual generated `ensureSchema` program with a
+rejecting customer policy: DDL is allowed, but no root data or audit is committed.

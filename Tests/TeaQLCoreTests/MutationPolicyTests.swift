@@ -179,6 +179,82 @@ struct MutationPolicyTests {
     #expect(await provider.persistedMutations == 2)
   }
 
+  @Test func bootstrapContextKeepsInjectedBusinessClockAndExplicitTrustedContext() throws {
+    let fixed = Date(timeIntervalSince1970: 1_961_662_530)
+    let caller = UserContext(actor: "application", trustedTenant: "private-boundary",
+      activeRoot: ContextEntityRef(entity: "Order", id: .int(1)),
+      queryExecutor: EmptyPolicyQueryExecutor(), mutationExecutor: PolicyMutationRecorder(),
+      requestPolicy: RequestPolicy { $0 }, businessClock: FixedBusinessClock(fixed))
+    let bootstrap = caller._generatedBootstrapContext(actor: "controlled-bootstrap",
+      activeRoot: ContextEntityRef(entity: "Order", id: .int(2)))
+    #expect(bootstrap.businessTime == fixed)
+    #expect(bootstrap.fixTime == fixed)
+    #expect(bootstrap.actor == "controlled-bootstrap")
+    #expect(bootstrap.trustedTenant == "private-boundary")
+    #expect(try bootstrap.requireActiveRoot("Order").id == .int(2))
+    #expect(try caller.requireActiveRoot("Order").id == .int(1))
+    #expect(caller.actor == "application")
+  }
+
+  @Test func bootstrapContextKeepsApprovedPolicyWithoutSharingReviewState() throws {
+    let observed = LockedPolicyPlans()
+    let policy = ClosureMutationPolicy(identity: identity) { plan in
+      observed.append(plan); return MutationPolicyDecision(verdict: .allow)
+    }
+    let caller = approvedContext(provider: PolicyMutationRecorder(), policy: policy)
+    let operation = MutationPolicyOperation(kind: .create, entity: "Order",
+      changedValues: ["name": .string("modeled bootstrap")])
+    let first = MutationPlan(executionID: "caller-plan", requestKey: "Order.saveGraph", rootEntityType: "Order",
+      auditReason: "review caller work", operations: [operation])
+    #expect(try caller.reviewMutationPlan(first).approvalStatus == .approved)
+    let bootstrap = caller._generatedBootstrapContext()
+    #expect(bootstrap.lastMutationGovernance == nil)
+    let second = MutationPlan(executionID: "bootstrap-plan", requestKey: "Order.saveGraph", rootEntityType: "Order",
+      auditReason: "review bootstrap work", operations: [operation])
+    let reviewed = try bootstrap.reviewMutationPlan(second)
+    #expect(reviewed.approvalStatus == .approved)
+    #expect(reviewed.policy?.policyID == identity.policyID)
+    #expect(reviewed.warningCodes.isEmpty)
+    #expect(observed.values.map(\.executionID) == ["caller-plan", "bootstrap-plan"])
+    #expect(caller.lastMutationGovernance?.executionID == "caller-plan")
+    #expect(bootstrap.lastMutationGovernance?.executionID == "bootstrap-plan")
+    #expect(caller._generatedBootstrapContext().lastMutationGovernance == nil)
+  }
+
+  @Test func bootstrapContextCannotBypassDenyingCustomerPolicy() throws {
+    let denying = ClosureMutationPolicy(identity: identity) { _ in
+      MutationPolicyDecision(verdict: .deny, code: "BOOTSTRAP_DENIED", message: "customer decision")
+    }
+    let caller = approvedContext(provider: PolicyMutationRecorder(), policy: denying)
+    let bootstrap = caller._generatedBootstrapContext()
+    let plan = MutationPlan(executionID: "denied-bootstrap", requestKey: "Order.saveGraph", rootEntityType: "Order",
+      auditReason: "require customer policy during bootstrap", operations: [
+        MutationPolicyOperation(kind: .create, entity: "Order", changedValues: ["name": .string("rejected")])])
+    #expect(throws: MutationPolicyError.denied(code: "BOOTSTRAP_DENIED", message: "customer decision")) {
+      try bootstrap.reviewMutationPlan(plan)
+    }
+    #expect(caller.lastMutationGovernance == nil)
+  }
+
+  @Test func bootstrapContextKeepsCustomerWarningSinkAndSharedWarningDeduplication() throws {
+    let warnings = LockedPolicyWarnings()
+    let caller = UserContext(queryExecutor: EmptyPolicyQueryExecutor(), mutationExecutor: PolicyMutationRecorder(),
+      requestPolicy: RequestPolicy { $0 }, mutationGovernanceSink: DelegatingMutationGovernanceSink { _, warning in
+        try warnings.accept(warning)
+      })
+    let bootstrap = caller._generatedBootstrapContext()
+    let operation = MutationPolicyOperation(kind: .create, entity: "Order", changedValues: ["name": .string("fixture")])
+    let child = MutationPlan(executionID: "bootstrap-warning", requestKey: "Order.saveGraph", rootEntityType: "Order",
+      auditReason: "observe configured bootstrap governance", operations: [operation])
+    #expect(try bootstrap.reviewMutationPlan(child).warningCodes == [MutationPolicyWarningCode.missingPolicy])
+    #expect(warnings.values.map(\.firstOccurrence) == [true])
+    let parent = MutationPlan(executionID: "caller-warning", requestKey: child.requestKey, rootEntityType: "Order",
+      auditReason: "observe configured caller governance", operations: [operation])
+    _ = try caller.reviewMutationPlan(parent)
+    #expect(warnings.values.map(\.firstOccurrence) == [true, false])
+    #expect(bootstrap.lastMutationGovernance?.executionID == "bootstrap-warning")
+  }
+
   private var identity: MutationPolicyIdentity {
     MutationPolicyIdentity(
       policyID: "orders", version: "1", fingerprint: "sha256:orders-v1")

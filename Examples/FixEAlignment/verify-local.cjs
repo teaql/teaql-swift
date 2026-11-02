@@ -32,6 +32,7 @@ try {
   report.restorationApplicationSha256 = sha(fs.readFileSync(path.join(example, 'RestorationProbe.swift')));
   report.projectionApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ProjectionViewsProbe.swift')));
   report.unchangedViewsApplicationSha256 = sha(fs.readFileSync(path.join(example, 'UnchangedViewsProbe.swift')));
+  report.checkerBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'CheckerBoundaryProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
   for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
@@ -61,6 +62,7 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
   assert(bin.startsWith(build + path.sep), 'execute only the actual owned Swift build');
   const executable = path.join(bin, 'FixEAlignment'); report.binarySha256 = sha(fs.readFileSync(executable));
   for (const round of [1, 2]) {
+    env.TEAQL_FIX_E_ROUND = String(round);
     const log = await run([executable], 'round-' + round + '.log');
     for (const marker of ['FIX_E_EXAMPLE=', 'CORE_LOAD_EXAMPLE=', 'CORE_MUTATION_OWNERSHIP=', 'CORE_MUTATION_PAGING=', 'SWIFT_CHECKER_METADATA=', 'CORE_SWIFT_PARTIAL_ANCESTORS_RESULT=', 'CORE_SWIFT_PARTIAL_ROOT_RESULT=', 'CORE_SWIFT_RESTORATION_RESULT=']) {
       const values = log.split(/\r?\n/).filter(line => line.startsWith(marker)).map(line => JSON.parse(line.slice(marker.length)));
@@ -76,6 +78,13 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     assert.deepEqual(unchanged.map(value=>value.scenario).sort(),[
       'sparse-null-forward','complete-independent-other','empty-reverse','rollback-after-write','rollback-before-commit',
     ].sort());assert(unchanged.every(value=>value.round===round&&value.passed));
+    const checkerCases=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_CHECKER_BOUNDARY_CASE='))
+      .map(line=>JSON.parse(line.slice('SWIFT_CHECKER_BOUNDARY_CASE='.length)));
+    assert.equal(checkerCases.length,33);assert(checkerCases.every(value=>value.round===round&&value.passed));
+    const checkerSummary=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_CHECKER_BOUNDARY_RESULT='))
+      .map(line=>JSON.parse(line.slice('SWIFT_CHECKER_BOUNDARY_RESULT='.length)));
+    assert.equal(checkerSummary.length,1);assert.equal(checkerSummary[0].passed,true);
+    assert.equal(checkerSummary[0].round,round);assert.equal(checkerSummary[0].observations,33);
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
@@ -91,6 +100,9 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     const file='fixture.sqlite.unchanged-views.'+name+'.sqlite';report.unchangedViewDatabases[file]=sha(fs.readFileSync(path.join(evidence,file)));
   }
   console.log('PASS Swift retained Fix/E/loading/ownership example twice on one database');
+  report.checkerBoundaryDatabases=['fixture.sqlite.checker-boundaries.sqlite','fixture.sqlite.checker-boundaries.sqlite.no-schema.sqlite',
+    'fixture.sqlite.checker-boundaries.sqlite.bootstrap-denied.sqlite']
+    .map(file=>({file,sha256:sha(fs.readFileSync(path.join(evidence,file)))}));
 } catch (error) { console.error(error.stack); process.exitCode ||= 1; }
 finally {
   report.disposedOwnedBytes = runner.safeToClean ? ownedBytes(scratch) : 0;

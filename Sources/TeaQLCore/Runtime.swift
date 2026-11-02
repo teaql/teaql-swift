@@ -957,7 +957,7 @@ public struct UserContext: Sendable {
     actor: String = "teaql-generated-bootstrap",
     activeRoot: ContextEntityRef? = nil
   ) -> UserContext {
-    UserContext(
+    var bootstrap = UserContext(
       runtime: runtime,
       actor: actor,
       auditCategory: "runtime-bootstrap",
@@ -978,7 +978,12 @@ public struct UserContext: Sendable {
       entityInitializers: entityInitializers,
       entityCreationObserver: entityCreationObserver,
       objectStorageProvider: objectStorageProvider,
-      objectStorageObserver: objectStorageObserver)
+      objectStorageObserver: objectStorageObserver,
+      businessClock: businessClock)
+    // Retain customer governance configuration, not an active caller plan or
+    // invocation. The new context still owns fresh graph/Fix execution state.
+    bootstrap.mutationPolicyCoordinator = mutationPolicyCoordinator.fork()
+    return bootstrap
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
