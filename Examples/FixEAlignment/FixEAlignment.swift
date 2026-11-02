@@ -107,5 +107,6 @@ private func missing<T>(
       throw TeaQLError.execution("An explicit unreset round is required for Checker boundary verification")
     }
     try await CheckerBoundaryProbe.verify(path: database + ".checker-boundaries.sqlite", round: round)
+    try await ExpressionBoundaryProbe.verify(path: database + ".expression-boundaries.sqlite", round: round)
   }
 }

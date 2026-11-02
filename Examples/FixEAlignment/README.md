@@ -56,6 +56,16 @@ removed on exit after child processes finish; shared caches are not deleted.
 These are regression expectations, not a claim that an unexecuted candidate
 passes. Conformance source/private-artifact acceptance is recorded separately.
 
+`ExpressionBoundaryProbe.swift` runs twelve actual generated E cases in this
+default two-round gate. Bounded Q and audited Save prepare complete, sparse,
+FK-only and loaded-empty views. Late/indexed/first missing leaves, size operations,
+null/absence, all three generated value/presence/fallback terminals, same-root
+sibling isolation and repeated relation names retain the complete redacted error
+chain. Ten provider/transaction/Fix/policy/audit boundaries are first positively
+calibrated, then stay unchanged during E. JSON geometry, pending intent and ledger
+identities are checked without exporting the graph. Generated code is unchanged;
+the probe's ledger reads are test instrumentation, not application API guidance.
+
 `CheckerBoundaryProbe.swift` adds omitted required relations, four independently
 omitted business fields with ownership loaded, unchanged partial targets, and
 real customer Fix rejection/repair. A separate store installs module Checkers

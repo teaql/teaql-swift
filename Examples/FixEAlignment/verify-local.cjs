@@ -33,6 +33,7 @@ try {
   report.projectionApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ProjectionViewsProbe.swift')));
   report.unchangedViewsApplicationSha256 = sha(fs.readFileSync(path.join(example, 'UnchangedViewsProbe.swift')));
   report.checkerBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'CheckerBoundaryProbe.swift')));
+  report.expressionBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ExpressionBoundaryProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
   for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
@@ -85,8 +86,20 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
       .map(line=>JSON.parse(line.slice('SWIFT_CHECKER_BOUNDARY_RESULT='.length)));
     assert.equal(checkerSummary.length,1);assert.equal(checkerSummary[0].passed,true);
     assert.equal(checkerSummary[0].round,round);assert.equal(checkerSummary[0].observations,33);
+    const expressionCases=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_E_BOUNDARY_CASE='))
+      .map(line=>JSON.parse(line.slice('SWIFT_E_BOUNDARY_CASE='.length)));
+    const expressionNames=['late-leaf','indexed-leaf','first-indexed-leaf','loaded-null','loaded-empty','out-of-range',
+      'missing-list-size','terminals','sibling-paths','fk-only-not-loaded','repeated-relation','no-side-effects'];
+    assert.deepEqual(expressionCases.map(v=>v.name),expressionNames);
+    assert(expressionCases.every(v=>v.passed&&v.round===round));
+    const expressionResults=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_E_BOUNDARY_RESULT='))
+      .map(line=>JSON.parse(line.slice('SWIFT_E_BOUNDARY_RESULT='.length)));
+    assert.equal(expressionResults.length,1);assert(expressionResults[0].passed&&expressionResults[0].round===round);
+    assert.deepEqual(expressionResults[0].cases,expressionNames);assert.equal(expressionResults[0].terminalObservations,3);
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
+  report.expressionBoundaryDatabase = {file: 'fixture.sqlite.expression-boundaries.sqlite',
+    sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.expression-boundaries.sqlite')))};
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.partial-ancestors.sqlite')))};
   report.partialRootDatabase = {file: 'fixture.sqlite.partial-root.sqlite',
