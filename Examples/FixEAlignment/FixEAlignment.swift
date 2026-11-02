@@ -102,5 +102,6 @@ private func missing<T>(
     try await PartialRootProbe.verify(path: database + ".partial-root.sqlite")
     try await RestorationProbe.verify(path: database + ".restoration.sqlite")
     try await ProjectionViewsProbe.verify(path: database + ".projection-views.sqlite")
+    try await UnchangedViewsProbe.verify(path: database + ".unchanged-views")
   }
 }

@@ -31,6 +31,7 @@ try {
   report.partialRootApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialRootProbe.swift')));
   report.restorationApplicationSha256 = sha(fs.readFileSync(path.join(example, 'RestorationProbe.swift')));
   report.projectionApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ProjectionViewsProbe.swift')));
+  report.unchangedViewsApplicationSha256 = sha(fs.readFileSync(path.join(example, 'UnchangedViewsProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
   for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
@@ -70,6 +71,11 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     assert.equal(projections.length,3);assert(projections.every(value=>value.round===round&&value.passed));
     const jsonViews=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_PROJECTION_JSON_ROUNDTRIP=')).map(line=>JSON.parse(line.slice('SWIFT_PROJECTION_JSON_ROUNDTRIP='.length)));
     assert.equal(jsonViews.length,1);assert.equal(jsonViews[0].round,round);assert.equal(jsonViews[0].implicitProviderCalls,0);
+    const unchanged=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_UNCHANGED_VIEW_CASE='))
+      .map(line=>JSON.parse(line.slice('SWIFT_UNCHANGED_VIEW_CASE='.length)));
+    assert.deepEqual(unchanged.map(value=>value.scenario).sort(),[
+      'sparse-null-forward','complete-independent-other','empty-reverse','rollback-after-write','rollback-before-commit',
+    ].sort());assert(unchanged.every(value=>value.round===round&&value.passed));
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
@@ -80,6 +86,10 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.restoration.sqlite')))};
   report.projectionDatabase = {file: 'fixture.sqlite.projection-views.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.projection-views.sqlite')))};
+  report.unchangedViewDatabases = {};
+  for(const name of ['sparse-null-forward','complete-independent-other','empty-reverse','rollback-after-write','rollback-before-commit']){
+    const file='fixture.sqlite.unchanged-views.'+name+'.sqlite';report.unchangedViewDatabases[file]=sha(fs.readFileSync(path.join(evidence,file)));
+  }
   console.log('PASS Swift retained Fix/E/loading/ownership example twice on one database');
 } catch (error) { console.error(error.stack); process.exitCode ||= 1; }
 finally {
