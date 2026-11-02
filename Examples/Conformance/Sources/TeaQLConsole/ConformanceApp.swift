@@ -31,6 +31,7 @@ actor ConformanceAuditSink: AuditSink {
 @main
 enum ConformanceApp {
     static func main() async throws {
+        try await verifyOperationalClock()
         try await verifyFieldAwareSQLMasking()
         let directory = FileManager.default.currentDirectoryPath + "/.local"
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)

@@ -1,5 +1,15 @@
 # runtime-example-conformance-service Swift Core
 
+`OperationalClockVerification.swift` first calibrates the Context Business Clock,
+then moves business time forwards/backwards while a real one-second cache entry
+expires. Operational work makes zero additional Business Clock reads; zero/omitted
+TTL and zero/false/empty/typed-null values remain unchanged. The structured
+`SWIFT_OPERATIONAL_CLOCK_EXAMPLE` line is collected alongside the existing SQLite
+conformance flow. Native tests separately cover existing local-lock leases/owner
+release/finite waits, wide/empty ID Set store expiry and telemetry queue deadlines.
+These are existing capabilities, not new backend requirements. Swift's clock
+protocol is nonthrowing; no unavailable/throwing-clock support is implied.
+
 The runtime-owned `MaskingVerification.swift` fixture also executes SQLite CRUD
 and checks expanded SQL, canonical-to-column field masking, visible ordinary
 fields, protected credentials, original persisted values, and the query log switch.
