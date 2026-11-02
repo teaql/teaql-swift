@@ -140,7 +140,8 @@ enum UnchangedViewsProbe {
     try await provider.beginGraphTransaction(); try await provider.rollbackGraphTransaction()
     let calibration = await counts(); try require(calibration.positive, "Every side-effect observer must be calibrated")
     let sparse = name == "sparse-null-forward"
-    var request = sparse ? Q.purchaseOrdersWithMinimalFields().selectContactPhone().selectInternalNote() : Q.purchaseOrders()
+    var request = sparse ? Q.purchaseOrdersWithMinimalFields().selectContactPhone().selectInternalNote() : Q.purchaseOrders().selectSelfFields()
+    request = request.countOrderItemsAs("emptyChildren")
     if name == "empty-reverse" {
       request = request.selectOrderItemListWith(Q.orderItemsWithMinimalFields().limit(1).comment("Load the explicitly empty reverse list"))
     } else {
@@ -152,6 +153,10 @@ enum UnchangedViewsProbe {
     let ledger = row.teaqlEntityRoot, key = row.teaqlEntityKey
     func geometry(_ value: PurchaseOrder) throws -> String {
       let object = try object(value)
+      try require(value.dynamicProperties.contains("emptyChildren") && value.dynamicProperties.value("emptyChildren")?.int64Value == 0,
+        "The selected readonly zero-count property lost its presence or value")
+      try require(!value.dynamicProperties.contains("notSelected") && value.dynamicProperties.value("notSelected") == nil,
+        "An absent readonly property must stay absent without throwing")
       try require(try E.purchaseOrder(value).internalNote().eval() == nil && object["internalNote"] is NSNull, "Selected null lost its loaded presence")
       if sparse { try missing { try E.purchaseOrder(value).createTime().eval() }; try require(object["createTime"] == nil, "Sparse JSON widened") }
       if name == "empty-reverse" {
@@ -207,7 +212,13 @@ enum UnchangedViewsProbe {
       let result = try await row.auditAs("Retry the same Swift value and ledger without requerying").save(context)
       let success = await counts()
       try require(success == ViewEffects(queries: 0, mutations: 1, begins: 1, commits: 1, rollbacks: 0, audits: 1, fixes: 1, policies: 1, reviews: 1, clockReads: 1), "Retry performed extra work or missed normal commit governance")
-      try require(result.version == 2 && result.teaqlEntityRoot === ledger && ledger.originalVersion(key) == 2 && !ledger.hasPending(key), "Retry did not accept only the committed version")
+      // Swift saves return an authoritative rebuilt value/graph. The failed
+      // value keeps its ledger through retry; the successful result need not
+      // reuse that ledger allocation, but both committed baselines must be 2.
+      try require(result.version == 2 && ledger.originalVersion(key) == 2 && !ledger.hasPending(key)
+        && result.teaqlEntityRoot.originalVersion(result.teaqlEntityKey) == 2 && !result.teaqlEntityRoot.hasPending(result.teaqlEntityKey),
+        "Retry did not accept the authoritative committed version")
+      try require(!result.dynamicProperties.contains("emptyChildren"), "A genuine commit retained an old derived query snapshot")
       try require(try E.purchaseOrder(result).contactPhone().eval() == "5550801" && E.purchaseOrder(result).createTime().eval() == first && E.purchaseOrder(result).updateTime().eval() == second, "Retry did not return authoritative Business Clock state")
       accepted = success
     }
@@ -216,12 +227,13 @@ enum UnchangedViewsProbe {
       let calibration: ViewEffects, denied: ViewEffects?, accepted: ViewEffects?
       let injections: Int, observedWrite: TeaQLRecord?, retainedIntent: TeaQLRecord?
       let geometryRetained = true, selectedNullRetained = true, independentIntentRetained = true
-      let sameLedger = true, sameValueRetried: Bool, originalVersionRetained = true
+      let sameLedgerBeforeCommit = true, sameValueRetried: Bool, originalVersionRetained = true
+      let readonlyCountRetainedBeforeCommit = true, readonlyCountClearedAfterRealCommit: Bool
       let physical: String
     }
     try emit("SWIFT_UNCHANGED_VIEW_CASE", Observation(scenario: name, round: round, id: saved.id, rollback: rollback,
       calibration: calibration, denied: denied, accepted: accepted, injections: injections, observedWrite: observedWrite,
-      retainedIntent: retainedIntent, sameValueRetried: rollback, physical: try physical(path)))
+      retainedIntent: retainedIntent, sameValueRetried: rollback, readonlyCountClearedAfterRealCommit: rollback, physical: try physical(path)))
   }
   private static func physical(_ path: String) throws -> String {
     var database: OpaquePointer?
