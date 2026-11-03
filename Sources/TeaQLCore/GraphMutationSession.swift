@@ -45,6 +45,10 @@ public final class TraceScopeToken: Sendable {
 
 /// One explicit graph invocation. Generated traversal passes both this session
 /// and immutable parent tokens; independent roots never implicitly join it.
+@_spi(Generated) public enum GraphMutationTraversal: Hashable, Sendable {
+  case preflight, write
+}
+
 public final class GraphMutationSession: @unchecked Sendable {
   private let id = UUID()
   public let intent: MutationIntent
@@ -61,6 +65,18 @@ public final class GraphMutationSession: @unchecked Sendable {
   private var loadedProvenance: SQLExecutionMetadata?
   private var fixEvidence: [FixEvidence] = []
   private var persistedRecords: [EntityKey: TeaQLRecord] = [:]
+  private struct VisitKey: Hashable {
+    let ledger: ObjectIdentifier
+    let entity: EntityKey
+  }
+  private struct Visit {
+    // Retain the ledger for this invocation so an ObjectIdentifier cannot be reused.
+    let ledger: EntityRoot
+    let descriptor: EntityDescriptor
+    let version: Int64
+    let values: TeaQLRecord
+  }
+  private var visits: [GraphMutationTraversal: [VisitKey: Visit]] = [:]
 
   package init(intent: MutationIntent, policy: MutationPolicyCoordinator, fixTime: Date) {
     self.intent = intent; self.policy = policy; self.fixTime = fixTime
@@ -88,6 +104,32 @@ public final class GraphMutationSession: @unchecked Sendable {
     try ensureActive()
     try lock.withLock {
       guard !preparing else { throw TeaQLError.execution("GRAPH_PREPARATION_CANNOT_ACCESS_PROVIDER") }
+    }
+  }
+
+  /// Value copies of one generated entity share a ledger and temporary identity.
+  /// Reaching that entity twice is not a second operation. Keep the phases and
+  /// invocations separate; never silently merge conflicting versions or values.
+  @_spi(Generated) public func visitEntity<E: TeaQLMutationRootedEntity>(
+    _ entity: E, phase: GraphMutationTraversal
+  ) throws -> Bool {
+    try lock.withLock {
+      guard active, preparing == (phase == .preflight) else {
+        throw TeaQLError.execution("GRAPH_TRAVERSAL_OUTSIDE_PHASE")
+      }
+      let ledger = entity.teaqlEntityRoot, key = entity.teaqlEntityKey
+      let identity = VisitKey(ledger: ObjectIdentifier(ledger), entity: key)
+      let values = entity.toMutationRecord()
+      if let prior = visits[phase]?[identity] {
+        guard prior.descriptor == E.descriptor, prior.version == entity.version,
+          sameMutationRecord(prior.values, values) else {
+          throw MutationPolicyError.operationOutsideReviewedPlan
+        }
+        return false
+      }
+      visits[phase, default: [:]][identity] = Visit(ledger: ledger,
+        descriptor: E.descriptor, version: entity.version, values: values)
+      return true
     }
   }
 
@@ -177,6 +219,7 @@ public final class GraphMutationSession: @unchecked Sendable {
       let actions = committed ? commitActions : rollbackActions.reversed()
       commitActions = []; rollbackActions = []; auditEvents = []; privacyValues = []; loadedProvenance = nil
       persistedRecords = [:]
+      visits = [:]
       return (Array(actions), events, fixEvidence)
     }
   }
