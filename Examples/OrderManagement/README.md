@@ -10,7 +10,17 @@ From the repository root:
 swift run teaql-order-management
 ```
 
-On the first run TeaQL reports that `order-management.sqlite` was missing, creates it, ensures the schema, inserts a deterministic sample order, and searches it. Run it again to see that seeding is idempotent.
+The first run creates `order-management.sqlite`, ensures the generated module's
+schema, seeds its root and constants, then creates a customer and order through
+generated audited saves. Run it again to verify that those rows are reused.
+Pass an explicit database path after the executable name to keep test data outside
+the checkout.
+
+`model.xml` is the maintained seven-entity shared Order Management model. The
+generated runtime module installs its actual Checkers and bootstrap program;
+creation uses allocated IDs and the generated Pending status helper, not invented
+foreign keys. Create/update timestamps are supplied by Checker/Fix and order date
+uses the context's Business Clock.
 
 ## Read the code
 
@@ -18,6 +28,7 @@ On the first run TeaQL reports that `order-management.sqlite` was missing, creat
 - `Generated/Sources/GeneratedTeaQL/Models` contains entities generated from the polyglot Order Management model.
 - `Generated/Sources/GeneratedTeaQL/Requests` contains the typed request API.
 - `Generated/Sources/GeneratedTeaQL/Q.swift` is the generated query entry point.
+- `Generated/Sources/GeneratedTeaQL/E.swift` provides loaded, typed expression access.
 
 Do not edit `Generated`. Change the model or generator and regenerate it. The checked-in generated source makes the first experience inspectable and allows terminal builds without running the Java generator.
 

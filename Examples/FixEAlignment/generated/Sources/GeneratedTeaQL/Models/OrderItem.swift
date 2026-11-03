@@ -445,11 +445,11 @@ public struct OrderItemAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderItem", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderItem", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -466,6 +466,9 @@ public struct OrderItemAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> OrderItem {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -511,7 +514,8 @@ public struct OrderItemAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {

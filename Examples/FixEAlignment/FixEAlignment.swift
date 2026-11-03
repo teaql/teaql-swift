@@ -108,5 +108,6 @@ private func missing<T>(
     }
     try await CheckerBoundaryProbe.verify(path: database + ".checker-boundaries.sqlite", round: round)
     try await ExpressionBoundaryProbe.verify(path: database + ".expression-boundaries.sqlite", round: round)
+    try await GraphFixLifecycleProbe.verify(path: database + ".graph-lifecycle.sqlite", round: round)
   }
 }

@@ -314,11 +314,11 @@ public struct TenantAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "Tenant", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "Tenant", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -335,6 +335,9 @@ public struct TenantAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> Tenant {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
@@ -459,7 +462,8 @@ public struct TenantAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -482,7 +486,7 @@ public struct TenantAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "tenant", to: entity)
             }
-            do { try PurchaseOrderAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
+            do { try PurchaseOrderAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("purchase_order_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in
@@ -499,7 +503,7 @@ public struct TenantAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "tenant", to: entity)
             }
-            do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
+            do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

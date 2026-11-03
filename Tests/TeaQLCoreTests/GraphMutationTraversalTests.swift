@@ -68,6 +68,38 @@ struct GraphMutationTraversalTests {
     #expect(try !graph.visitEntity(entity, phase: .preflight))
     _ = graph.finish(committed: false)
   }
+
+  @Test func repeatedValueCopiesUseTheSharedCanonicalPendingIntention() throws {
+    for new in [false, true] {
+      let graph = try session()
+      var first = TraversalProbe(); if new { first.id = 0; first.version = 0 }
+      var second = first
+      first.value = .string("updated copy")
+      first.teaqlEntityRoot.set(first.teaqlEntityKey, field: "value", value: .string("canonical latest intent"))
+      second.value = .string("older copy")
+      try graph.beginPreparation()
+      #expect(try graph.visitEntity(first, phase: .preflight))
+      #expect(try !graph.visitEntity(second, phase: .preflight))
+      try graph.endPreparation()
+      #expect(try graph.visitEntity(first, phase: .write))
+      #expect(try !graph.visitEntity(second, phase: .write))
+      _ = graph.finish(committed: false)
+    }
+  }
+
+  @Test func aLaterLedgerEditOrVersionConflictIsStillRejected() throws {
+    for versionChanged in [false, true] {
+      let graph = try session(), first = TraversalProbe()
+      first.teaqlEntityRoot.set(first.teaqlEntityKey, field: "value", value: .string("checked intent"))
+      var second = first
+      try graph.beginPreparation()
+      #expect(try graph.visitEntity(first, phase: .preflight))
+      if versionChanged { second.version = 2 }
+      else { second.teaqlEntityRoot.set(second.teaqlEntityKey, field: "value", value: .string("later intent")) }
+      #expect(throws: MutationPolicyError.self) { try graph.visitEntity(second, phase: .preflight) }
+      _ = graph.finish(committed: false)
+    }
+  }
 }
 
 private struct TraversalProbe: TeaQLMutationRootedEntity {

@@ -122,8 +122,7 @@ public enum GeneratedRuntimeModule {
             "Payment": try! WireEntityMetadata(entityType: "Payment", canonicalFields: ["id", "customer_order", "reference_code", "version"], aliases: ["id": ["id"], "customer_order": ["customer_order"], "reference_code": ["reference_code"], "version": ["version"]]),
             "PaymentAttempt": try! WireEntityMetadata(entityType: "PaymentAttempt", canonicalFields: ["id", "payment", "reference_code", "version"], aliases: ["id": ["id"], "payment": ["payment"], "reference_code": ["reference_code"], "version": ["version"]]),
             "Shipment": try! WireEntityMetadata(entityType: "Shipment", canonicalFields: ["id", "customer_order", "reference_code", "version"], aliases: ["id": ["id"], "customer_order": ["customer_order"], "reference_code": ["reference_code"], "version": ["version"]])
-        ]
-    )
+        ])
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?

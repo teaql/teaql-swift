@@ -88,7 +88,17 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("id")
         }
         if container.contains(.typePlatform) {
-            self.typePlatform = try container.decode(Int64?.self, forKey: .typePlatform)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .typePlatform)) != nil {
+                let related = try container.decode(TypePlatform.self, forKey: .typePlatform)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .typePlatform, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.typePlatform = related.id
+                self.typePlatformEntity = related
+            } else {
+                self.typePlatform = try container.decode(Int64?.self, forKey: .typePlatform)
+            }
             _loadedFields.insert("typePlatform")
         }
         if container.contains(.requiredString) {
@@ -204,7 +214,12 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(id, forKey: .id)
         }
         if _loadedFields.contains("typePlatform") {
-            try container.encode(typePlatform, forKey: .typePlatform)
+            if isLoaded("typePlatformEntity"), let related = typePlatformEntity,
+                related.isLoaded("id"), related.id == typePlatform {
+                try container.encode(related, forKey: .typePlatform)
+            } else {
+                try container.encode(typePlatform, forKey: .typePlatform)
+            }
         }
         if _loadedFields.contains("requiredString") {
             try container.encode(requiredString, forKey: .requiredString)
@@ -838,11 +853,11 @@ public struct ScalarTypeProbeAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "ScalarTypeProbe", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "ScalarTypeProbe", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -859,6 +874,9 @@ public struct ScalarTypeProbeAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> ScalarTypeProbe {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -958,7 +976,8 @@ public struct ScalarTypeProbeAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {

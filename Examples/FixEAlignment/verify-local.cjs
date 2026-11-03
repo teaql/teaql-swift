@@ -34,6 +34,7 @@ try {
   report.unchangedViewsApplicationSha256 = sha(fs.readFileSync(path.join(example, 'UnchangedViewsProbe.swift')));
   report.checkerBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'CheckerBoundaryProbe.swift')));
   report.expressionBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ExpressionBoundaryProbe.swift')));
+  report.graphLifecycleApplicationSha256 = sha(fs.readFileSync(path.join(example, 'GraphFixLifecycleProbe.swift')));
   fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
   fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
   for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
@@ -96,10 +97,18 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
       .map(line=>JSON.parse(line.slice('SWIFT_E_BOUNDARY_RESULT='.length)));
     assert.equal(expressionResults.length,1);assert(expressionResults[0].passed&&expressionResults[0].round===round);
     assert.deepEqual(expressionResults[0].cases,expressionNames);assert.equal(expressionResults[0].terminalObservations,3);
+    const graphCases=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_GRAPH_LIFECYCLE_CASE='))
+      .map(line=>JSON.parse(line.slice('SWIFT_GRAPH_LIFECYCLE_CASE='.length)));
+    assert.equal(graphCases.length,13);assert(graphCases.every(v=>v.passed&&v.round===round));
+    const graphResult=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_GRAPH_LIFECYCLE_RESULT='))
+      .map(line=>JSON.parse(line.slice('SWIFT_GRAPH_LIFECYCLE_RESULT='.length)));
+    assert.deepEqual(graphResult,[{round,cases:13,passed:true}]);
   }
   report.databaseSha256 = sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite'))); report.passed = true;
   report.expressionBoundaryDatabase = {file: 'fixture.sqlite.expression-boundaries.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.expression-boundaries.sqlite')))};
+  report.graphLifecycleDatabase = {file: 'fixture.sqlite.graph-lifecycle.sqlite',
+    sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.graph-lifecycle.sqlite')))};
   report.partialAncestorDatabase = {file: 'fixture.sqlite.partial-ancestors.sqlite',
     sha256: sha(fs.readFileSync(path.join(evidence, 'fixture.sqlite.partial-ancestors.sqlite')))};
   report.partialRootDatabase = {file: 'fixture.sqlite.partial-root.sqlite',

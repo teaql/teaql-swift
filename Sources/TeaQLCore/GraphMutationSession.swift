@@ -119,7 +119,7 @@ public final class GraphMutationSession: @unchecked Sendable {
       }
       let ledger = entity.teaqlEntityRoot, key = entity.teaqlEntityKey
       let identity = VisitKey(ledger: ObjectIdentifier(ledger), entity: key)
-      let values = entity.toMutationRecord()
+      let values = pendingMutationRecord(entity, rooted: entity)
       if let prior = visits[phase]?[identity] {
         guard prior.descriptor == E.descriptor, prior.version == entity.version,
           sameMutationRecord(prior.values, values) else {

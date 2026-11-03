@@ -131,3 +131,23 @@ public extension TeaQLEntity {
   /// Compatibility default for entities that do not track loaded fields.
   func toMutationRecord() -> TeaQLRecord { toRecord() }
 }
+
+/// Generated value copies can have different scalar storage while sharing the
+/// same pending intention. Traversal and actual mutation construction must use
+/// exactly the same canonical values, not compare the stale value copies.
+package func pendingMutationRecord<E: TeaQLEntity>(
+  _ entity: E, rooted: (any TeaQLMutationRootedEntity)?
+) -> TeaQLRecord {
+  var values = entity.toMutationRecord()
+  if let rooted {
+    let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
+    if entity.id != 0 {
+      if !pending.isEmpty { values = pending }
+    } else {
+      // New entities retain their complete scalar shape, with pending canonical
+      // fields (including symbolic references) taking precedence over defaults.
+      values.merge(pending) { _, intended in intended }
+    }
+  }
+  return values
+}

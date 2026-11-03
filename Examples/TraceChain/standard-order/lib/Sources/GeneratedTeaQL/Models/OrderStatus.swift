@@ -58,7 +58,17 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.platform) {
-            self.platform = try container.decode(Int64?.self, forKey: .platform)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .platform)) != nil {
+                let related = try container.decode(Platform.self, forKey: .platform)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .platform, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.platform = related.id
+                self.platformEntity = related
+            } else {
+                self.platform = try container.decode(Int64?.self, forKey: .platform)
+            }
             _loadedFields.insert("platform")
         }
         if container.contains(.id) {
@@ -85,6 +95,9 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
+        if container.contains(.customerOrderList) {
+            self.customerOrderList = try container.decode([CustomerOrder].self, forKey: .customerOrderList)
+        }
         // JSON hydration owns a read ledger, not the constructor's new ledger.
         self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
@@ -97,7 +110,12 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         if _loadedFields.contains("platform") {
-            try container.encode(platform, forKey: .platform)
+            if isLoaded("platformEntity"), let related = platformEntity,
+                related.isLoaded("id"), related.id == platform {
+                try container.encode(related, forKey: .platform)
+            } else {
+                try container.encode(platform, forKey: .platform)
+            }
         }
         if _loadedFields.contains("id") {
             try container.encode(id, forKey: .id)
@@ -399,11 +417,11 @@ public struct OrderStatusAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderStatus", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderStatus", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -420,6 +438,9 @@ public struct OrderStatusAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> OrderStatus {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
@@ -510,7 +531,8 @@ public struct OrderStatusAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("platform") {
@@ -545,7 +567,7 @@ public struct OrderStatusAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "status", to: entity)
             }
-            do { try CustomerOrderAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
+            do { try CustomerOrderAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("customer_order_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

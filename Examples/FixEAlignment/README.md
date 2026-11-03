@@ -85,3 +85,17 @@ positive/negative controls cover time, approval, denial, sink delivery and state
 isolation. The generated bootstrap source is unchanged.
 The third store exercises the actual generated `ensureSchema` program with a
 rejecting customer policy: DDL is allowed, but no root data or audit is committed.
+
+`GraphFixLifecycleProbe.swift` adds thirteen generated Q/E/audited-save cases per
+round on a separate retained SQLite store. Creation and updates may contain two
+value copies of the same child; the canonical pending ledger defines one checked
+operation and one physical write. A child-only edit leaves the owner version
+unchanged. A non-idempotent customer Fix adds one cent, making duplicate Fix
+execution observable rather than relying only on a callback counter.
+
+The provider injects failure or cancels the actual task only after SQLite has
+written a child. The graph must roll back, deliver no audit, and let the same
+objects retry with fresh traversal and clock state. Missing child input rejects
+before I/O and can be repaired on that same graph. Policy-time edits reject before
+transaction entry; provider-time edits roll back before commit and preserve the
+newer caller intention. All cases run twice without resetting the database.

@@ -72,11 +72,31 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("id")
         }
         if container.contains(.customer) {
-            self.customer = try container.decode(Int64?.self, forKey: .customer)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .customer)) != nil {
+                let related = try container.decode(Customer.self, forKey: .customer)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .customer, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.customer = related.id
+                self.customerEntity = related
+            } else {
+                self.customer = try container.decode(Int64?.self, forKey: .customer)
+            }
             _loadedFields.insert("customer")
         }
         if container.contains(.status) {
-            self.status = try container.decode(Int64?.self, forKey: .status)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .status)) != nil {
+                let related = try container.decode(OrderStatus.self, forKey: .status)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .status, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.status = related.id
+                self.statusEntity = related
+            } else {
+                self.status = try container.decode(Int64?.self, forKey: .status)
+            }
             _loadedFields.insert("status")
         }
         if container.contains(.orderNumber) {
@@ -95,6 +115,9 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
+        if container.contains(.orderItemList) {
+            self.orderItemList = try container.decode([OrderItem].self, forKey: .orderItemList)
+        }
         // JSON hydration owns a read ledger, not the constructor's new ledger.
         self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
@@ -110,10 +133,20 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(id, forKey: .id)
         }
         if _loadedFields.contains("customer") {
-            try container.encode(customer, forKey: .customer)
+            if isLoaded("customerEntity"), let related = customerEntity,
+                related.isLoaded("id"), related.id == customer {
+                try container.encode(related, forKey: .customer)
+            } else {
+                try container.encode(customer, forKey: .customer)
+            }
         }
         if _loadedFields.contains("status") {
-            try container.encode(status, forKey: .status)
+            if isLoaded("statusEntity"), let related = statusEntity,
+                related.isLoaded("id"), related.id == status {
+                try container.encode(related, forKey: .status)
+            } else {
+                try container.encode(status, forKey: .status)
+            }
         }
         if _loadedFields.contains("orderNumber") {
             try container.encode(orderNumber, forKey: .orderNumber)
@@ -451,11 +484,11 @@ public struct CustomerOrderAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "CustomerOrder", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "CustomerOrder", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -472,6 +505,9 @@ public struct CustomerOrderAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> CustomerOrder {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
@@ -562,7 +598,8 @@ public struct CustomerOrderAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -597,7 +634,7 @@ public struct CustomerOrderAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "customer_order", to: entity)
             }
-            do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
+            do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

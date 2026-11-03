@@ -414,19 +414,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         throw TeaQLError.execution("ENTITY_VERSION_CONFLICT: \(Entity.descriptor.name) must retain its loaded identity and version")
       }
     }
-    var values = entity.toMutationRecord()
+    var values = pendingMutationRecord(entity, rooted: rooted)
     let originalVersion = rooted.flatMap { $0.teaqlEntityRoot.originalVersion($0.teaqlEntityKey) } ?? entity.version
-    if let rooted {
-      let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
-      if entity.id != 0 {
-        if !pending.isEmpty { values = pending }
-      } else {
-        // New value wrappers may still contain constructor defaults after graph
-        // normalization. Keep their complete scalar shape, but the canonical
-        // pending intentions (including symbolic references) are authoritative.
-        values.merge(pending) { _, intended in intended }
-      }
-    }
     var mutation: Mutation
     if let rooted, rooted.teaqlEntityRoot.isDeleted(rooted.teaqlEntityKey) {
       guard entity.id != 0, entity.version != 0 else {

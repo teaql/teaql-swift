@@ -3,24 +3,87 @@ import TeaQLCore
 
 public enum Q {
     public static func commercePlatforms() -> CommercePlatformRequest<RequestDraft> {
-        CommercePlatformRequest(query: SelectQuery(entity: CommercePlatform.descriptor))
+        var query = SelectQuery(entity: CommercePlatform.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return CommercePlatformRequest(query: query)
+    }
+
+    public static func commercePlatformsWithMinimalFields() -> CommercePlatformRequest<RequestDraft> {
+        var query = SelectQuery(entity: CommercePlatform.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return CommercePlatformRequest(query: query)
     }
     public static func customers() -> CustomerRequest<RequestDraft> {
-        CustomerRequest(query: SelectQuery(entity: Customer.descriptor))
+        var query = SelectQuery(entity: Customer.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return CustomerRequest(query: query)
+    }
+
+    public static func customersWithMinimalFields() -> CustomerRequest<RequestDraft> {
+        var query = SelectQuery(entity: Customer.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return CustomerRequest(query: query)
     }
     public static func orderStatuses() -> OrderStatusRequest<RequestDraft> {
-        OrderStatusRequest(query: SelectQuery(entity: OrderStatus.descriptor))
+        var query = SelectQuery(entity: OrderStatus.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return OrderStatusRequest(query: query)
+    }
+
+    public static func orderStatusesWithMinimalFields() -> OrderStatusRequest<RequestDraft> {
+        var query = SelectQuery(entity: OrderStatus.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return OrderStatusRequest(query: query)
     }
     public static func customerOrders() -> CustomerOrderRequest<RequestDraft> {
-        CustomerOrderRequest(query: SelectQuery(entity: CustomerOrder.descriptor))
+        var query = SelectQuery(entity: CustomerOrder.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return CustomerOrderRequest(query: query)
+    }
+
+    public static func customerOrdersWithMinimalFields() -> CustomerOrderRequest<RequestDraft> {
+        var query = SelectQuery(entity: CustomerOrder.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return CustomerOrderRequest(query: query)
     }
     public static func products() -> ProductRequest<RequestDraft> {
-        ProductRequest(query: SelectQuery(entity: Product.descriptor))
+        var query = SelectQuery(entity: Product.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return ProductRequest(query: query)
+    }
+
+    public static func productsWithMinimalFields() -> ProductRequest<RequestDraft> {
+        var query = SelectQuery(entity: Product.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return ProductRequest(query: query)
     }
     public static func orderLines() -> OrderLineRequest<RequestDraft> {
-        OrderLineRequest(query: SelectQuery(entity: OrderLine.descriptor))
+        var query = SelectQuery(entity: OrderLine.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return OrderLineRequest(query: query)
+    }
+
+    public static func orderLinesWithMinimalFields() -> OrderLineRequest<RequestDraft> {
+        var query = SelectQuery(entity: OrderLine.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return OrderLineRequest(query: query)
     }
     public static func orderSearchPresets() -> OrderSearchPresetRequest<RequestDraft> {
-        OrderSearchPresetRequest(query: SelectQuery(entity: OrderSearchPreset.descriptor))
+        var query = SelectQuery(entity: OrderSearchPreset.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        return OrderSearchPresetRequest(query: query)
+    }
+
+    public static func orderSearchPresetsWithMinimalFields() -> OrderSearchPresetRequest<RequestDraft> {
+        var query = SelectQuery(entity: OrderSearchPreset.descriptor)
+        query.filter = .greaterThanOrEqual("version", .int(1))
+        query.projection = ["id", "version"]
+        return OrderSearchPresetRequest(query: query)
     }
 }
