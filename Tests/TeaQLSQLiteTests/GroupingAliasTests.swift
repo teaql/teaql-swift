@@ -36,7 +36,7 @@ final class GroupingAliasTests: XCTestCase {
     let exact = try XCTUnwrap(Decimal(string: "12345678901234567890.123456789", locale: Locale(identifier: "en_US_POSIX")))
     for id: Int64 in 1...4 {
       _ = try await context.execute(Mutation(kind: .create, entity: entity, values: [
-        "id": .int(id), "active": .bool(id != 1), "requiredInteger": .int(id),
+        "id": .int(id), "active": .bool(id != 1), "required_integer": .int(id),
         "requiredLong": .int(9_007_199_254_740_993), "requiredDecimal": .decimal(exact),
         "occurredAt": .timestamp(1_787_995_800_000), "owner": id == 4 ? .null : .int(id < 3 ? 1 : 2),
       ], auditReason: "seed exact grouping contributions"))
