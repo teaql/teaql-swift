@@ -14,41 +14,53 @@ actor ConsoleAuditSink: AuditSink {
 @main
 enum OrderManagementApp {
   static func main() async throws {
-    let path = FileManager.default.currentDirectoryPath + "/order-management.sqlite"
+    let path = CommandLine.arguments.dropFirst().first
+      ?? FileManager.default.currentDirectoryPath + "/order-management.sqlite"
     let database = try SQLiteDataService(path: path)
-    let descriptors = [
-      CommercePlatform.descriptor, Customer.descriptor, OrderStatus.descriptor,
-      CustomerOrder.descriptor, Product.descriptor, OrderLine.descriptor,
-      OrderSearchPreset.descriptor,
-    ]
+    let module = GeneratedRuntimeModule.module
+    var runtime = TeaQLRuntime()
+    try runtime.install(module)
     let context = UserContext(
+      runtime: runtime,
       actor: "swift-quick-start",
+      activeRoot: ContextEntityRef(entity: "CommercePlatform", id: .int(1)),
       queryExecutor: database,
       mutationExecutor: database,
       requestPolicy: RequestPolicy { $0 },
       auditSink: ConsoleAuditSink()
     )
-    try await context.ensureSchema(RuntimeModule(name: "OrderManagement", entities: descriptors))
+    try await context.ensureSchema(module)
     print("TeaQL SQLite: schema is ready")
 
     let existing = try await Q.customerOrders()
       .withOrderNumberIs("SWIFT-ORDER-001")
+      .limit(1)
       .comment("Check whether the quick-start fixture already exists")
       .purpose("Make quick-start seeding idempotent")
       .executeForList(context)
 
     if existing.isEmpty {
-      var order = CustomerOrder()
-      order.updateId(2001)
+      let customers = try await Q.customers().withNameIs("Swift quick-start customer").limit(1)
+        .comment("Reuse the quick-start customer")
+        .purpose("Create a valid foreign key without invented IDs").executeForList(context)
+      let customer: Customer
+      if let found = customers.first { customer = found }
+      else {
+        var draft = try Q.customers().comment("Prepare the demo customer")
+          .purpose("Seed the example through generated audited mutation").newEntity(context)
+        draft.updateName("Swift quick-start customer")
+        draft.updateEmail("swift-demo@example.com")
+        draft.updateCommercePlatform(1)
+        customer = try await draft.auditAs("Create the quick-start customer").save(context)
+      }
+      var order = try Q.customerOrders().comment("Prepare the quick-start order")
+        .purpose("Demonstrate generated audited save with automatic Checker/Fix").newEntity(context)
       order.updateOrderNumber("SWIFT-ORDER-001")
-      order.updateOrderDate(Date())
+      order.updateOrderDate(context.businessTime)
       order.updateTotalAmount(Decimal(string: "129.95")!)
-      order.updateStatus(1)
-      order.updateCustomer(1)
+      order.updateStatusToPending()
+      order.updateCustomer(customer.id)
       order.updateCommercePlatform(1)
-      order.updateCreateTime(Date())
-      order.updateUpdateTime(Date())
-      order.updateVersion(0)
       _ = try await order.auditAs("Create the Swift quick-start order").save(context)
       print("TeaQL seed: created SWIFT-ORDER-001")
     }
@@ -62,7 +74,7 @@ enum OrderManagementApp {
 
     for order in orders {
       print(
-        "ORDER \(order.id): \(order.orderNumber), total=\(order.totalAmount), version=\(order.version)"
+        "ORDER \(order.id): \(try E.customerOrder(order).orderNumber().eval() ?? ""), total=\(order.totalAmount), version=\(order.version)"
       )
     }
     print("TeaQL query: returned \(orders.count) order(s); hard limit remains 10,000")

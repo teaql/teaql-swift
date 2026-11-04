@@ -103,5 +103,11 @@ private func missing<T>(
     try await RestorationProbe.verify(path: database + ".restoration.sqlite")
     try await ProjectionViewsProbe.verify(path: database + ".projection-views.sqlite")
     try await UnchangedViewsProbe.verify(path: database + ".unchanged-views")
+    guard let round = Int(ProcessInfo.processInfo.environment["TEAQL_FIX_E_ROUND"] ?? "") else {
+      throw TeaQLError.execution("An explicit unreset round is required for Checker boundary verification")
+    }
+    try await CheckerBoundaryProbe.verify(path: database + ".checker-boundaries.sqlite", round: round)
+    try await ExpressionBoundaryProbe.verify(path: database + ".expression-boundaries.sqlite", round: round)
+    try await GraphFixLifecycleProbe.verify(path: database + ".graph-lifecycle.sqlite", round: round)
   }
 }

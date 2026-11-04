@@ -3,7 +3,7 @@
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto'), assert = require('node:assert/strict');
 const repo = path.resolve(__dirname, '..'), sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const roots = ['Examples/Conformance', 'Examples/SchoolManagement', 'Examples/FacetTrace/Generated',
-  'Examples/TraceChain/Generated', 'Examples/TraceChain/standard-order/lib'];
+  'Examples/TraceChain/Generated', 'Examples/TraceChain/standard-order/lib', 'Examples/OrderManagement/Generated'];
 let files = 0;
 for (const relative of roots) {
   const root = path.join(repo, relative), manifest = JSON.parse(fs.readFileSync(path.join(root, 'fixture-manifest.json')));

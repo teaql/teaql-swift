@@ -6,67 +6,22 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "83ac20035eda968b5c2dbe57eef3028dc78742a7",
-    "diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "status": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "sourceContentsSha256": "b0cd7637a0b0b96a0df5b9dc8e32396161144f9d6c68d2c4bd7295ff787fdcc4",
-    "retainedModels": [
-      {
-        "id": "conformance",
-        "model": "Examples/Conformance/model.xml",
-        "target": "Examples/Conformance",
-        "language": "swift",
-        "scope": "swift-lib-core",
-        "modelSha256": "0a59f66db2487fdd0430087dd5985ae780225c088ad800679cb57c593c6bcee7"
-      },
-      {
-        "id": "school-management",
-        "model": "Examples/SchoolManagement/models/school-model.xml",
-        "target": "Examples/SchoolManagement",
-        "language": "swift",
-        "scope": "swift-lib-core",
-        "modelSha256": "b5cd06ae44464fc29ed24de82654b47c80f546110496756aa15923cee1c511b4"
-      },
-      {
-        "id": "facet-trace",
-        "model": "Examples/FacetTrace/model.xml",
-        "target": "Examples/FacetTrace/Generated",
-        "language": "swift",
-        "scope": "swift-lib-core",
-        "modelSha256": "0e385417536df9dcacddf8cc778d2156005b766437e2644e4fa673d5783cc9cc"
-      },
-      {
-        "id": "trace-chain",
-        "model": "Examples/TraceChain/model.xml",
-        "target": "Examples/TraceChain/Generated",
-        "language": "swift",
-        "scope": "swift-lib-core",
-        "modelSha256": "e7290d70b3c977fe339828330b5553bde512d61ee3a195285d6aafd1a7c32477"
-      },
-      {
-        "id": "standard-order",
-        "model": "Examples/TraceChain/standard-order/model.xml",
-        "target": "Examples/TraceChain/standard-order/lib",
-        "language": "swift",
-        "scope": "swift-lib-core",
-        "modelSha256": "f207e9603ffa6bdc98007e61093eaa7bed51fc15f26e033fc75709dcb9cde287"
-      }
-    ],
-    "exporterProbeSha256": "a91a2d427e7ab59515b71fb745777324a7d824df1a5fe30a4c5041f8e1e7dfd5"
+    "commit": "303099f8c0fef931186d51662d5d8747f455f01d",
+    "sourceContentsSha256": "2d93a9db919a3e30ceffc8a8d0fdae80281eab43c06418737009f5f802b1c496"
   },
-  "producerReceiptSha256": "a17ea86b43130a131458bae31e959590b3e85fbdc21ea1dfc7fae6ecacef0df7",
-  "generatedManifestSha256": "bc2007d34ed036aaecb0ed250e16988dfb1b5121c1324329b799bcf1b02229a0",
+  "producerReceiptSha256": "99f4dfaf16155c111786af009c330b9b2024363966fbaacbaeef9bc50570ad90",
+  "generatedManifestSha256": "d17581957ae9ad55302d0d1a8faa80bedd2dce0a922a8d6e31c1e72b2f13de1e",
   "files": {
-    "Sources/GeneratedTeaQL/Models/Platform.swift": "02f9331c2d09f638cf156c7048fa9a8831b2544c3d6e70962664c8578a4fde3e",
-    "Sources/GeneratedTeaQL/Models/WorkItem.swift": "165d5de3da7ded4ea335e6fc7a4e77beac58b074849c7cfbd65c8871c8008062",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "5c801baa7b85e9cf148cbea2e205cff542a36d0624ebb7799b0d9354c88bf925",
+    "Sources/GeneratedTeaQL/Models/WorkItem.swift": "b7a8ad5adb9818b2ad9334354c9ba26123ec8967f8f7ac7e4d995927339e1f08",
     "Sources/GeneratedTeaQL/E.swift": "a075256249a5e283a3bcde4c5a73c30d0efe86fbbf0a811918feef291809bd16",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
-    "Sources/GeneratedTeaQL/RuntimeModule.swift": "79d7c0e2dee13e8dc7b4601543cb18de416ab0a73e4edb869f38ff5e3b781897",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "a6855e9ecbb5d8b4a254f6f82687a3566f90beb3f8289acd59d37f0bd9a4eb77",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "84e2670def86ba44ae87b262c97279dbbfff137967417345f463309432ed6dc9",
     "Sources/GeneratedTeaQL/Q.swift": "a7d1232c4aff470d4bd3a9182e5e0b45854513472e4f5086932080629a20a570",
     "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "9f88e206cb7a00e6650e1cc905c667b35e5269a252927855b2a261b3ed2e711e",
     "Sources/GeneratedTeaQL/Requests/WorkItemRequest.swift": "02aafa087cbbf3930c8c59a7ecbe4252019d239273a87592f2165c8ac0b6dad8"
   },
-  "previousFixtureManifestSha256": "1659e9270ad9d166ffb832a1e34b19a61721d9f9727e77a1711154ca2c145b3b",
+  "previousFixtureManifestSha256": "b2f895944d76e88e05d59f555f0545deff721203345ca8914b6ca397cde10a2f",
   "applicationManifestsPreserved": true
 }

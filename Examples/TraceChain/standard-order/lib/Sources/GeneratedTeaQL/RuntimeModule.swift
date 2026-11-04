@@ -120,8 +120,7 @@ public enum GeneratedRuntimeModule {
             "Customer": try! WireEntityMetadata(entityType: "Customer", canonicalFields: ["id", "platform", "name", "version"], aliases: ["id": ["id"], "platform": ["platform"], "name": ["name"], "version": ["version"]]),
             "CustomerOrder": try! WireEntityMetadata(entityType: "CustomerOrder", canonicalFields: ["id", "customer", "status", "order_number", "order_date", "total_amount", "version"], aliases: ["id": ["id"], "customer": ["customer"], "status": ["status"], "order_number": ["order_number"], "order_date": ["order_date"], "total_amount": ["total_amount"], "version": ["version"]]),
             "OrderItem": try! WireEntityMetadata(entityType: "OrderItem", canonicalFields: ["id", "customer_order", "product_name", "quantity", "unit_price", "version"], aliases: ["id": ["id"], "customer_order": ["customer_order"], "product_name": ["product_name"], "quantity": ["quantity"], "unit_price": ["unit_price"], "version": ["version"]])
-        ]
-    )
+        ])
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?

@@ -68,11 +68,31 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("id")
         }
         if container.contains(.platform) {
-            self.platform = try container.decode(Int64?.self, forKey: .platform)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .platform)) != nil {
+                let related = try container.decode(Platform.self, forKey: .platform)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .platform, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.platform = related.id
+                self.platformEntity = related
+            } else {
+                self.platform = try container.decode(Int64?.self, forKey: .platform)
+            }
             _loadedFields.insert("platform")
         }
         if container.contains(.schoolType) {
-            self.schoolType = try container.decode(Int64?.self, forKey: .schoolType)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .schoolType)) != nil {
+                let related = try container.decode(SchoolType.self, forKey: .schoolType)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .schoolType, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.schoolType = related.id
+                self.schoolTypeEntity = related
+            } else {
+                self.schoolType = try container.decode(Int64?.self, forKey: .schoolType)
+            }
             _loadedFields.insert("schoolType")
         }
         if container.contains(.name) {
@@ -123,10 +143,20 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(id, forKey: .id)
         }
         if _loadedFields.contains("platform") {
-            try container.encode(platform, forKey: .platform)
+            if isLoaded("platformEntity"), let related = platformEntity,
+                related.isLoaded("id"), related.id == platform {
+                try container.encode(related, forKey: .platform)
+            } else {
+                try container.encode(platform, forKey: .platform)
+            }
         }
         if _loadedFields.contains("schoolType") {
-            try container.encode(schoolType, forKey: .schoolType)
+            if isLoaded("schoolTypeEntity"), let related = schoolTypeEntity,
+                related.isLoaded("id"), related.id == schoolType {
+                try container.encode(related, forKey: .schoolType)
+            } else {
+                try container.encode(schoolType, forKey: .schoolType)
+            }
         }
         if _loadedFields.contains("name") {
             try container.encode(name, forKey: .name)
@@ -506,11 +536,11 @@ public struct SchoolAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "School", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "School", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -527,6 +557,9 @@ public struct SchoolAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> School {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -581,7 +614,8 @@ public struct SchoolAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {

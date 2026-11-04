@@ -4,8 +4,24 @@ import TeaQLCore
 
 public struct OrderLineRequest<State: Sendable>: Sendable {
     private var query: SelectQuery
+    private var searchWarnings: [DynamicSearchWarning] = []
+    private var countRequested = false
 
-    init(query: SelectQuery) { self.query = query }
+    init(query: SelectQuery, searchWarnings: [DynamicSearchWarning] = [], countRequested: Bool = false) {
+        self.query = query
+        self.searchWarnings = searchWarnings
+        self.countRequested = countRequested
+    }
+
+    public var dynamicSearchWarnings: [DynamicSearchWarning] { searchWarnings }
+
+    public func filterByJson(_ source: String, warn: ((DynamicSearchWarning) -> Void)? = nil) throws -> Self {
+        let result = try DynamicSearch.mergeGeneratedScalar(query, source: source, models: GeneratedSearchModels.models, warn: warn)
+        var copy = self
+        copy.query = result.query
+        copy.searchWarnings.append(contentsOf: result.warnings)
+        return copy
+    }
 
     @discardableResult
     public func comment(_ value: String) -> Self {
@@ -14,7 +30,7 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
 
     public func purpose(_ value: String) -> OrderLineRequest<RequestExecutable> {
         var copy = query; copy.purpose = value
-        return OrderLineRequest<RequestExecutable>(query: copy)
+        return OrderLineRequest<RequestExecutable>(query: copy, searchWarnings: searchWarnings, countRequested: countRequested)
     }
 
     @discardableResult
@@ -22,8 +38,11 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
         var copy = self; copy.query.limit = value; return copy
     }
 
-    /// Sets a local safety ceiling. It is validated by the runtime and is not
-    /// transported over the TeaQL Federal Protocol.
+    @discardableResult
+    public func topNProbeParentThreshold(_ value: Int) -> Self {
+        var copy = self; copy.query.topNProbeParentThreshold(value); return copy
+    }
+
     @discardableResult
     public func hardLimit(_ value: Int) -> Self {
         var copy = self; copy.query.hardLimit = value; return copy
@@ -35,6 +54,285 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func optimizeForContinuousPageFetch() -> Self {
+        optimizeForContinuousPageFetch(namespace: "default", ttlSeconds: 600)
+    }
+
+    @discardableResult
+    public func optimizeForContinuousPageFetch(namespace: String, ttlSeconds: Int) -> Self {
+        var copy = self
+        copy.query.continuousPage = ContinuousPageFetchOptions(
+            namespace: namespace, ttlSeconds: ttlSeconds)
+        return copy
+    }
+
+    @discardableResult
+    public func optimizePaginationWithIdSet() -> Self {
+        optimizePaginationWithIdSet(namespace: "default", ttlSeconds: 600, maxIds: 3_000_000)
+    }
+
+    @discardableResult
+    public func optimizePaginationWithIdSet(
+        namespace: String, ttlSeconds: Int, maxIds: Int
+    ) -> Self {
+        var copy = self
+        copy.query.idSetPagination = IdSetPaginationOptions(
+            namespace: namespace, ttlSeconds: ttlSeconds, maxIds: maxIds)
+        return copy
+    }
+
+    public func toQuery() -> SelectQuery { query }
+
+    /// Includes both active and soft-deleted rows. Callers must still provide
+    /// Comment and Purpose before execution.
+    @discardableResult
+    public func withDeletedRows() -> Self {
+        var copy = self
+        copy.query.filter = removingActiveVersionFilter(copy.query.filter)
+        return copy
+    }
+
+    /// Returns only soft-deleted rows, represented by a negative version.
+    @discardableResult
+    public func deletedRowsOnly() -> Self {
+        withDeletedRows().adding(.lessThanOrEqual("version", .int(-1)))
+    }
+
+    @discardableResult
+    public func selectSelfFields() -> Self {
+        var copy = self
+        copy.query.projection = ["id", "customerOrder", "product", "productName", "sku", "quantity", "commercePlatform", "createTime", "version"]
+        return copy
+    }
+
+    @discardableResult
+    public func selectId() -> Self {
+        var copy = self
+        if !copy.query.projection.contains("id") {
+            copy.query.projection.append("id")
+        }
+        return copy
+    }
+
+
+
+
+
+
+    @discardableResult
+    public func selectProductName() -> Self {
+        var copy = self
+        if !copy.query.projection.contains("productName") {
+            copy.query.projection.append("productName")
+        }
+        return copy
+    }
+
+
+    @discardableResult
+    public func selectSku() -> Self {
+        var copy = self
+        if !copy.query.projection.contains("sku") {
+            copy.query.projection.append("sku")
+        }
+        return copy
+    }
+
+
+    @discardableResult
+    public func selectQuantity() -> Self {
+        var copy = self
+        if !copy.query.projection.contains("quantity") {
+            copy.query.projection.append("quantity")
+        }
+        return copy
+    }
+
+
+
+
+    @discardableResult
+    public func selectCreateTime() -> Self {
+        var copy = self
+        if !copy.query.projection.contains("createTime") {
+            copy.query.projection.append("createTime")
+        }
+        return copy
+    }
+
+
+    @discardableResult
+    public func selectVersion() -> Self {
+        var copy = self
+        if !copy.query.projection.contains("version") {
+            copy.query.projection.append("version")
+        }
+        return copy
+    }
+
+
+    @discardableResult
+    public func selectCustomerOrder() -> Self {
+        selectCustomerOrderWith(Q.customerOrdersWithMinimalFields())
+    }
+
+    @discardableResult
+    public func selectCustomerOrderWith<ChildState: Sendable>(
+        _ child: CustomerOrderRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customerOrder") {
+            copy.query.projection.append("customerOrder")
+        }
+        copy.query.relationQuery(
+            "customerOrderEntity",
+            localKey: "customerOrder",
+            foreignKey: "id",
+            many: false,
+            query: child.toQuery(), traceName: "customerOrder",
+            operation: QueryOperation("relation", method: "selectCustomerOrderWith", relation: "customerOrder"))
+        return copy
+    }
+
+    @discardableResult
+    public func selectProduct() -> Self {
+        selectProductWith(Q.productsWithMinimalFields())
+    }
+
+    @discardableResult
+    public func selectProductWith<ChildState: Sendable>(
+        _ child: ProductRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("product") {
+            copy.query.projection.append("product")
+        }
+        copy.query.relationQuery(
+            "productEntity",
+            localKey: "product",
+            foreignKey: "id",
+            many: false,
+            query: child.toQuery(), traceName: "product",
+            operation: QueryOperation("relation", method: "selectProductWith", relation: "product"))
+        return copy
+    }
+
+    @discardableResult
+    public func selectCommercePlatform() -> Self {
+        selectCommercePlatformWith(Q.commercePlatformsWithMinimalFields())
+    }
+
+    @discardableResult
+    public func selectCommercePlatformWith<ChildState: Sendable>(
+        _ child: CommercePlatformRequest<ChildState>
+    ) -> Self {
+        var copy = self
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains("commercePlatform") {
+            copy.query.projection.append("commercePlatform")
+        }
+        copy.query.relationQuery(
+            "commercePlatformEntity",
+            localKey: "commercePlatform",
+            foreignKey: "id",
+            many: false,
+            query: child.toQuery(), traceName: "commercePlatform",
+            operation: QueryOperation("relation", method: "selectCommercePlatformWith", relation: "commercePlatform"))
+        return copy
+    }
+
+    @discardableResult
+    public func orderByIdAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByIdDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByCustomerOrderAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("customerOrder", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByCustomerOrderDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("customerOrder", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByProductAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("product", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByProductDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("product", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByProductNameAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("productName", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByProductNameDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("productName", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderBySkuAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("sku", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderBySkuDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("sku", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByQuantityAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("quantity", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByQuantityDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("quantity", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByCommercePlatformAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("commercePlatform", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByCommercePlatformDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("commercePlatform", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByCreateTimeAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("createTime", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByCreateTimeDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("createTime", .descending)); return copy
+    }
+
+    @discardableResult
+    public func orderByVersionAscending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+    }
+
+    @discardableResult
+    public func orderByVersionDescending() -> Self {
+        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+    }
+
+
+
+    @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
         adding(.equal("id", .int(value)))
     }
@@ -42,6 +340,51 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
         adding(.inList("id", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withIdIsNot(_ value: Int64) -> Self {
+        adding(.notEqual("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdNotIn(_ values: [Int64]) -> Self {
+        adding(.notInList("id", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withIdGreaterThan(_ value: Int64) -> Self {
+        adding(.greaterThan("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.greaterThanOrEqual("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdLessThan(_ value: Int64) -> Self {
+        adding(.lessThan("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.lessThanOrEqual("id", .int(value)))
+    }
+
+    @discardableResult
+    public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
+        adding(.between("id", .int(lower), .int(upper)))
+    }
+
+    @discardableResult
+    public func withIdIsKnown() -> Self {
+        adding(.isNotNull("id"))
+    }
+
+    @discardableResult
+    public func withIdIsUnknown() -> Self {
+        adding(.isNull("id"))
     }
 
 
@@ -55,6 +398,16 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
         adding(.inList("customerOrder", values.map(TeaQLValue.int)))
     }
 
+    @discardableResult
+    public func withCustomerOrderIsKnown() -> Self {
+        adding(.isNotNull("customerOrder"))
+    }
+
+    @discardableResult
+    public func withCustomerOrderIsUnknown() -> Self {
+        adding(.isNull("customerOrder"))
+    }
+
 
     @discardableResult
     public func filterByProduct(_ value: Int64) -> Self {
@@ -64,6 +417,16 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     @discardableResult
     public func filterByProductIn(_ values: [Int64]) -> Self {
         adding(.inList("product", values.map(TeaQLValue.int)))
+    }
+
+    @discardableResult
+    public func withProductIsKnown() -> Self {
+        adding(.isNotNull("product"))
+    }
+
+    @discardableResult
+    public func withProductIsUnknown() -> Self {
+        adding(.isNull("product"))
     }
 
 
@@ -76,9 +439,84 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     public func withProductNameIn(_ values: [String]) -> Self {
         adding(.inList("productName", values.map { .string($0) }))
     }
+
+    @discardableResult
+    public func withProductNameIsNot(_ value: String) -> Self {
+        adding(.notEqual("productName", .string(value)))
+    }
+
+    @discardableResult
+    public func withProductNameNotIn(_ values: [String]) -> Self {
+        adding(.notInList("productName", values.map { .string($0) }))
+    }
+
+    @discardableResult
+    public func withProductNameGreaterThan(_ value: String) -> Self {
+        adding(.greaterThan("productName", .string(value)))
+    }
+
+    @discardableResult
+    public func withProductNameGreaterThanOrEqualTo(_ value: String) -> Self {
+        adding(.greaterThanOrEqual("productName", .string(value)))
+    }
+
+    @discardableResult
+    public func withProductNameLessThan(_ value: String) -> Self {
+        adding(.lessThan("productName", .string(value)))
+    }
+
+    @discardableResult
+    public func withProductNameLessThanOrEqualTo(_ value: String) -> Self {
+        adding(.lessThanOrEqual("productName", .string(value)))
+    }
+
+    @discardableResult
+    public func withProductNameBetween(_ lower: String, _ upper: String) -> Self {
+        adding(.between("productName", .string(lower), .string(upper)))
+    }
+
+    @discardableResult
+    public func withProductNameIsKnown() -> Self {
+        adding(.isNotNull("productName"))
+    }
+
+    @discardableResult
+    public func withProductNameIsUnknown() -> Self {
+        adding(.isNull("productName"))
+    }
     @discardableResult
     public func withProductNameContaining(_ value: String) -> Self {
         adding(.contains("productName", value))
+    }
+
+    @discardableResult
+    public func withProductNameNotContaining(_ value: String) -> Self {
+        adding(.notContains("productName", value))
+    }
+
+    @discardableResult
+    public func withProductNameStartingWith(_ value: String) -> Self {
+        adding(.startsWith("productName", value))
+    }
+
+    @discardableResult
+    public func withProductNameNotStartingWith(_ value: String) -> Self {
+        adding(.notStartsWith("productName", value))
+    }
+
+    @discardableResult
+    public func withProductNameEndingWith(_ value: String) -> Self {
+        adding(.endsWith("productName", value))
+    }
+
+    @discardableResult
+    public func withProductNameNotEndingWith(_ value: String) -> Self {
+        adding(.notEndsWith("productName", value))
+    }
+
+    @discardableResult
+    public func withProductNameSoundingLike(_ value: String) -> Self {
+        adding(.soundingLike("productName", value))
     }
 
 
@@ -91,44 +529,140 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     public func withSkuIn(_ values: [String]) -> Self {
         adding(.inList("sku", values.map { .string($0) }))
     }
+
+    @discardableResult
+    public func withSkuIsNot(_ value: String) -> Self {
+        adding(.notEqual("sku", .string(value)))
+    }
+
+    @discardableResult
+    public func withSkuNotIn(_ values: [String]) -> Self {
+        adding(.notInList("sku", values.map { .string($0) }))
+    }
+
+    @discardableResult
+    public func withSkuGreaterThan(_ value: String) -> Self {
+        adding(.greaterThan("sku", .string(value)))
+    }
+
+    @discardableResult
+    public func withSkuGreaterThanOrEqualTo(_ value: String) -> Self {
+        adding(.greaterThanOrEqual("sku", .string(value)))
+    }
+
+    @discardableResult
+    public func withSkuLessThan(_ value: String) -> Self {
+        adding(.lessThan("sku", .string(value)))
+    }
+
+    @discardableResult
+    public func withSkuLessThanOrEqualTo(_ value: String) -> Self {
+        adding(.lessThanOrEqual("sku", .string(value)))
+    }
+
+    @discardableResult
+    public func withSkuBetween(_ lower: String, _ upper: String) -> Self {
+        adding(.between("sku", .string(lower), .string(upper)))
+    }
+
+    @discardableResult
+    public func withSkuIsKnown() -> Self {
+        adding(.isNotNull("sku"))
+    }
+
+    @discardableResult
+    public func withSkuIsUnknown() -> Self {
+        adding(.isNull("sku"))
+    }
     @discardableResult
     public func withSkuContaining(_ value: String) -> Self {
         adding(.contains("sku", value))
     }
 
-
     @discardableResult
-    public func withImageUrlIs(_ value: String) -> Self {
-        adding(.equal("imageUrl", .string(value)))
+    public func withSkuNotContaining(_ value: String) -> Self {
+        adding(.notContains("sku", value))
     }
 
     @discardableResult
-    public func withImageUrlIn(_ values: [String]) -> Self {
-        adding(.inList("imageUrl", values.map { .string($0) }))
+    public func withSkuStartingWith(_ value: String) -> Self {
+        adding(.startsWith("sku", value))
     }
+
     @discardableResult
-    public func withImageUrlContaining(_ value: String) -> Self {
-        adding(.contains("imageUrl", value))
+    public func withSkuNotStartingWith(_ value: String) -> Self {
+        adding(.notStartsWith("sku", value))
+    }
+
+    @discardableResult
+    public func withSkuEndingWith(_ value: String) -> Self {
+        adding(.endsWith("sku", value))
+    }
+
+    @discardableResult
+    public func withSkuNotEndingWith(_ value: String) -> Self {
+        adding(.notEndsWith("sku", value))
+    }
+
+    @discardableResult
+    public func withSkuSoundingLike(_ value: String) -> Self {
+        adding(.soundingLike("sku", value))
     }
 
 
     @discardableResult
-    public func withQuantityIs(_ value: String) -> Self {
-        adding(.equal("quantity", .string(value)))
+    public func withQuantityIs(_ value: Int64) -> Self {
+        adding(.equal("quantity", .int(value)))
     }
 
     @discardableResult
-    public func withQuantityIn(_ values: [String]) -> Self {
-        adding(.inList("quantity", values.map { .string($0) }))
-    }
-    @discardableResult
-    public func withQuantityGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("quantity", .string(value)))
+    public func withQuantityIn(_ values: [Int64]) -> Self {
+        adding(.inList("quantity", values.map { .int($0) }))
     }
 
     @discardableResult
-    public func withQuantityLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("quantity", .string(value)))
+    public func withQuantityIsNot(_ value: Int64) -> Self {
+        adding(.notEqual("quantity", .int(value)))
+    }
+
+    @discardableResult
+    public func withQuantityNotIn(_ values: [Int64]) -> Self {
+        adding(.notInList("quantity", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withQuantityGreaterThan(_ value: Int64) -> Self {
+        adding(.greaterThan("quantity", .int(value)))
+    }
+
+    @discardableResult
+    public func withQuantityGreaterThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.greaterThanOrEqual("quantity", .int(value)))
+    }
+
+    @discardableResult
+    public func withQuantityLessThan(_ value: Int64) -> Self {
+        adding(.lessThan("quantity", .int(value)))
+    }
+
+    @discardableResult
+    public func withQuantityLessThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.lessThanOrEqual("quantity", .int(value)))
+    }
+
+    @discardableResult
+    public func withQuantityBetween(_ lower: Int64, _ upper: Int64) -> Self {
+        adding(.between("quantity", .int(lower), .int(upper)))
+    }
+
+    @discardableResult
+    public func withQuantityIsKnown() -> Self {
+        adding(.isNotNull("quantity"))
+    }
+
+    @discardableResult
+    public func withQuantityIsUnknown() -> Self {
+        adding(.isNull("quantity"))
     }
 
 
@@ -142,15 +676,70 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
         adding(.inList("commercePlatform", values.map(TeaQLValue.int)))
     }
 
+    @discardableResult
+    public func withCommercePlatformIsKnown() -> Self {
+        adding(.isNotNull("commercePlatform"))
+    }
+
+    @discardableResult
+    public func withCommercePlatformIsUnknown() -> Self {
+        adding(.isNull("commercePlatform"))
+    }
+
 
     @discardableResult
     public func withCreateTimeIs(_ value: Date) -> Self {
-        adding(.equal("createTime", .date(value)))
+        adding(.equal("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCreateTimeIn(_ values: [Date]) -> Self {
-        adding(.inList("createTime", values.map { .date($0) }))
+        adding(.inList("createTime", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+    }
+
+    @discardableResult
+    public func withCreateTimeIsNot(_ value: Date) -> Self {
+        adding(.notEqual("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+    }
+
+    @discardableResult
+    public func withCreateTimeNotIn(_ values: [Date]) -> Self {
+        adding(.notInList("createTime", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+    }
+
+    @discardableResult
+    public func withCreateTimeGreaterThan(_ value: Date) -> Self {
+        adding(.greaterThan("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+    }
+
+    @discardableResult
+    public func withCreateTimeGreaterThanOrEqualTo(_ value: Date) -> Self {
+        adding(.greaterThanOrEqual("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+    }
+
+    @discardableResult
+    public func withCreateTimeLessThan(_ value: Date) -> Self {
+        adding(.lessThan("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+    }
+
+    @discardableResult
+    public func withCreateTimeLessThanOrEqualTo(_ value: Date) -> Self {
+        adding(.lessThanOrEqual("createTime", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+    }
+
+    @discardableResult
+    public func withCreateTimeBetween(_ lower: Date, _ upper: Date) -> Self {
+        adding(.between("createTime", .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
+    }
+
+    @discardableResult
+    public func withCreateTimeIsKnown() -> Self {
+        adding(.isNotNull("createTime"))
+    }
+
+    @discardableResult
+    public func withCreateTimeIsUnknown() -> Self {
+        adding(.isNull("createTime"))
     }
 
 
@@ -164,16 +753,325 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
         adding(.inList("version", values.map { .int($0) }))
     }
 
+    @discardableResult
+    public func withVersionIsNot(_ value: Int64) -> Self {
+        adding(.notEqual("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionNotIn(_ values: [Int64]) -> Self {
+        adding(.notInList("version", values.map { .int($0) }))
+    }
+
+    @discardableResult
+    public func withVersionGreaterThan(_ value: Int64) -> Self {
+        adding(.greaterThan("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.greaterThanOrEqual("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionLessThan(_ value: Int64) -> Self {
+        adding(.lessThan("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
+        adding(.lessThanOrEqual("version", .int(value)))
+    }
+
+    @discardableResult
+    public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
+        adding(.between("version", .int(lower), .int(upper)))
+    }
+
+    @discardableResult
+    public func withVersionIsKnown() -> Self {
+        adding(.isNotNull("version"))
+    }
+
+    @discardableResult
+    public func withVersionIsUnknown() -> Self {
+        adding(.isNull("version"))
+    }
+
+
+    @discardableResult
+    public func withCustomerOrderMatching<ChildState: Sendable>(
+        _ child: CustomerOrderRequest<ChildState>
+    ) -> Self {
+        adding(.inSubquery("customerOrder", RelationQueryPlan(child.toQuery()), "id"))
+    }
+
+    @discardableResult
+    public func withoutCustomerOrderMatching<ChildState: Sendable>(
+        _ child: CustomerOrderRequest<ChildState>
+    ) -> Self {
+        adding(.notInSubquery("customerOrder", RelationQueryPlan(child.toQuery()), "id"))
+    }
+
+    @discardableResult
+    public func withProductMatching<ChildState: Sendable>(
+        _ child: ProductRequest<ChildState>
+    ) -> Self {
+        adding(.inSubquery("product", RelationQueryPlan(child.toQuery()), "id"))
+    }
+
+    @discardableResult
+    public func withoutProductMatching<ChildState: Sendable>(
+        _ child: ProductRequest<ChildState>
+    ) -> Self {
+        adding(.notInSubquery("product", RelationQueryPlan(child.toQuery()), "id"))
+    }
+
+    @discardableResult
+    public func withCommercePlatformMatching<ChildState: Sendable>(
+        _ child: CommercePlatformRequest<ChildState>
+    ) -> Self {
+        adding(.inSubquery("commercePlatform", RelationQueryPlan(child.toQuery()), "id"))
+    }
+
+    @discardableResult
+    public func withoutCommercePlatformMatching<ChildState: Sendable>(
+        _ child: CommercePlatformRequest<ChildState>
+    ) -> Self {
+        adding(.notInSubquery("commercePlatform", RelationQueryPlan(child.toQuery()), "id"))
+    }
+
+
+    @discardableResult
+    public func facetByCustomerOrderAs<NestedState: Sendable>(
+        _ name: String,
+        _ request: CustomerOrderRequest<NestedState>,
+        includeAllFacets: Bool = true
+    ) -> Self {
+        var copy = self
+        copy.query.facets.append(FacetRequest(
+            name: name,
+            relationName: "customerOrder",
+            query: request.toQuery(),
+            includeAllFacets: includeAllFacets,
+            operation: QueryOperation("facet", method: "facetByCustomerOrderAs", alias: name, relation: "customerOrder")))
+        return copy
+    }
+
+
+    @discardableResult
+    public func facetByProductAs<NestedState: Sendable>(
+        _ name: String,
+        _ request: ProductRequest<NestedState>,
+        includeAllFacets: Bool = true
+    ) -> Self {
+        var copy = self
+        copy.query.facets.append(FacetRequest(
+            name: name,
+            relationName: "product",
+            query: request.toQuery(),
+            includeAllFacets: includeAllFacets,
+            operation: QueryOperation("facet", method: "facetByProductAs", alias: name, relation: "product")))
+        return copy
+    }
+
+
+    @discardableResult
+    public func facetByCommercePlatformAs<NestedState: Sendable>(
+        _ name: String,
+        _ request: CommercePlatformRequest<NestedState>,
+        includeAllFacets: Bool = true
+    ) -> Self {
+        var copy = self
+        copy.query.facets.append(FacetRequest(
+            name: name,
+            relationName: "commercePlatform",
+            query: request.toQuery(),
+            includeAllFacets: includeAllFacets,
+            operation: QueryOperation("facet", method: "facetByCommercePlatformAs", alias: name, relation: "commercePlatform")))
+        return copy
+    }
+
+
+    @discardableResult
+    public func count() -> Self { countAs("count") }
+
+    @discardableResult
+    public func countAs(_ alias: String) -> Self {
+        var copy = self
+        copy.countRequested = true
+        copy.query.aggregates.append(QueryAggregate(.count, field: "*", alias: alias))
+        copy.query.pageCountOperation = QueryOperation("count", method: "countAs", alias: alias)
+        return copy
+    }
+
+    @discardableResult
+    public func minQuantity() -> Self {
+        minQuantityAs("minOfQuantity")
+    }
+
+    @discardableResult
+    public func minQuantityAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.aggregates.append(QueryAggregate(.min, field: "quantity", alias: alias))
+        return copy
+    }
+
+
+    @discardableResult
+    public func maxQuantity() -> Self {
+        maxQuantityAs("maxOfQuantity")
+    }
+
+    @discardableResult
+    public func maxQuantityAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.aggregates.append(QueryAggregate(.max, field: "quantity", alias: alias))
+        return copy
+    }
+
+
+    @discardableResult
+    public func sumQuantity() -> Self {
+        sumQuantityAs("sumOfQuantity")
+    }
+
+    @discardableResult
+    public func sumQuantityAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.aggregates.append(QueryAggregate(.sum, field: "quantity", alias: alias))
+        return copy
+    }
+
+
+    @discardableResult
+    public func avgQuantity() -> Self {
+        avgQuantityAs("avgOfQuantity")
+    }
+
+    @discardableResult
+    public func avgQuantityAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.aggregates.append(QueryAggregate(.avg, field: "quantity", alias: alias))
+        return copy
+    }
+
+
+
+
+
+
+
+
+
+
+    @discardableResult
+    public func groupById() -> Self {
+        var copy = self
+        copy.query.groupBy.append("id")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCustomerOrder() -> Self {
+        var copy = self
+        copy.query.groupBy.append("customerOrder")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByProduct() -> Self {
+        var copy = self
+        copy.query.groupBy.append("product")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByProductName() -> Self {
+        var copy = self
+        copy.query.groupBy.append("productName")
+        return copy
+    }
+
+    @discardableResult
+    public func groupBySku() -> Self {
+        var copy = self
+        copy.query.groupBy.append("sku")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByQuantity() -> Self {
+        var copy = self
+        copy.query.groupBy.append("quantity")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCommercePlatform() -> Self {
+        var copy = self
+        copy.query.groupBy.append("commercePlatform")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCreateTime() -> Self {
+        var copy = self
+        copy.query.groupBy.append("createTime")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersion() -> Self {
+        var copy = self
+        copy.query.groupBy.append("version")
+        return copy
+    }
 
     private func adding(_ expression: TeaQLExpression) -> Self {
         var copy = self
         copy.query.filter = copy.query.filter.map { .and([$0, expression]) } ?? expression
         return copy
     }
+
+    private func removingActiveVersionFilter(
+        _ expression: TeaQLExpression?
+    ) -> TeaQLExpression? {
+        guard let expression else { return nil }
+        let active = TeaQLExpression.greaterThanOrEqual("version", .int(1))
+        if expression == active { return nil }
+        guard case .and(let items) = expression else { return expression }
+        let retained = items.compactMap { removingActiveVersionFilter($0) }
+        if retained.isEmpty { return nil }
+        if retained.count == 1 { return retained[0] }
+        return .and(retained)
+    }
 }
 
 public extension OrderLineRequest where State == RequestExecutable {
-    func executeForList(_ context: UserContext) async throws -> [OrderLine] {
-        try await context.execute(query).records.map(OrderLine.from(record:))
+    private func ensureIntent() throws {
+        _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
+
+    func newEntity(_ context: UserContext) throws -> OrderLine {
+        try ensureIntent()
+        return context.initializeEntity("OrderLine", OrderLine())
+    }
+
+    func executeForList(_ context: UserContext) async throws -> SmartList<OrderLine> {
+        try ensureIntent()
+        let snapshots = LoadedEntitySnapshots()
+        return try await context.executeTypedList(query, countRequested: countRequested) { record, relations in
+            try OrderLine.from(record: record, root: EntityRoot(), snapshots: snapshots,
+                relations: relations)
+        }
+    }
+
+    func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
+        try ensureIntent()
+        let result = try await context.execute(QueryRequest(query: query))
+        return SmartList(result.records, facets: result.facets)
+    }
+
+
 }

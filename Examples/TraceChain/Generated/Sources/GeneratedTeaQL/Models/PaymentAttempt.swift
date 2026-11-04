@@ -44,7 +44,17 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("id")
         }
         if container.contains(.payment) {
-            self.payment = try container.decode(Int64?.self, forKey: .payment)
+            if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .payment)) != nil {
+                let related = try container.decode(Payment.self, forKey: .payment)
+                guard related.isLoaded("id") else {
+                    throw DecodingError.dataCorruptedError(forKey: .payment, in: container,
+                        debugDescription: "Loaded relation must include its identity")
+                }
+                self.payment = related.id
+                self.paymentEntity = related
+            } else {
+                self.payment = try container.decode(Int64?.self, forKey: .payment)
+            }
             _loadedFields.insert("payment")
         }
         if container.contains(.referenceCode) {
@@ -70,7 +80,12 @@ public struct PaymentAttempt: TeaQLEntity, TeaQLMutationRootedEntity {
             try container.encode(id, forKey: .id)
         }
         if _loadedFields.contains("payment") {
-            try container.encode(payment, forKey: .payment)
+            if isLoaded("paymentEntity"), let related = paymentEntity,
+                related.isLoaded("id"), related.id == payment {
+                try container.encode(related, forKey: .payment)
+            } else {
+                try container.encode(payment, forKey: .payment)
+            }
         }
         if _loadedFields.contains("referenceCode") {
             try container.encode(referenceCode, forKey: .referenceCode)
@@ -284,11 +299,11 @@ public struct PaymentAttemptAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "PaymentAttempt", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "PaymentAttempt", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -305,6 +320,9 @@ public struct PaymentAttemptAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> PaymentAttempt {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -338,7 +356,8 @@ public struct PaymentAttemptAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {

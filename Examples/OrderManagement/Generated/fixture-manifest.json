@@ -1,0 +1,36 @@
+{
+  "schema": "teaql.retained-example-fixture/v1",
+  "modelSource": "Examples/OrderManagement/model.xml",
+  "modelSha256": "a50951aa0df35cac1f4ed64ef0646860941916aed1ec0919b5b299ef4ad6a303",
+  "evaluatedScope": "swift-lib-core",
+  "files": {
+    "Sources/GeneratedTeaQL/Models/CommercePlatform.swift": "e6d2aa995fc6cf5653213c6b952a1797a338f4ce7fbf23533d166ba02bf042f6",
+    "Sources/GeneratedTeaQL/Models/Customer.swift": "2a00f8adac07914bf0455efed9d1855d27bb670c8429afb9c7b6dc694f1af52a",
+    "Sources/GeneratedTeaQL/Models/OrderStatus.swift": "162d6373bb53fbbcc574dfd0a487824c89181fd7d757a92b03edaf3e70440846",
+    "Sources/GeneratedTeaQL/Models/CustomerOrder.swift": "5778d63f861535dfcedec590b51ee2e21757011b2a205eba97363f865f49d522",
+    "Sources/GeneratedTeaQL/Models/Product.swift": "0e6eb536fa902e7c7310a7ba33fd3726ba9b959137827be7f5d28e06e1772fbf",
+    "Sources/GeneratedTeaQL/Models/OrderLine.swift": "d57b6ea4b2f8b9a9a30ec6e95efde210d3aebe06d200fe53f51112d3b110de09",
+    "Sources/GeneratedTeaQL/Models/OrderSearchPreset.swift": "47cbdb6946d593299e80814b50d58e6bdd57cd2f0478383db257a90fae040ff6",
+    "Sources/GeneratedTeaQL/E.swift": "4cc58e1f60dabd6c9ff8046b7004457097eb83ffe7a942daed87e48f53ae2609",
+    "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "df95388e7e325e5247c64f48dd72e63b4058f16afb12f88ebdb34753ee85a25a",
+    "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "286649252b1a2b29fdc3575d315c11a30313d12565f7e0c63a8c30cc67247603",
+    "Sources/GeneratedTeaQL/Q.swift": "d895908190893135fcb2e09e7dae994253785f252d07c58a142623c50b42acd2",
+    "Sources/GeneratedTeaQL/Requests/CommercePlatformRequest.swift": "ffdb301d9b502542754c1c884cb3a53ce39c1d63cf28c729135636b0fbbc2e37",
+    "Sources/GeneratedTeaQL/Requests/CustomerRequest.swift": "b83771f8492ee1bf1a1e1796623ceca7df1e48da477c225fe8f655ad7b440db1",
+    "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": "e48fcb97be2054376d2578988204e5a1fd0a1e085f069ac510c9c8f52f6d2058",
+    "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": "6874c048ca1dc94976e42c88d2949a0ef07ebb277b8bd3069b63e153a73cb915",
+    "Sources/GeneratedTeaQL/Requests/ProductRequest.swift": "ba4aa9b45f6de75a689f5d626be0b211803a8d10aec2e2f84c0df723d8b85135",
+    "Sources/GeneratedTeaQL/Requests/OrderLineRequest.swift": "9ee72fec2e9eff3cab815c725efa8847342772e540bff88f29c0486c25912237",
+    "Sources/GeneratedTeaQL/Requests/OrderSearchPresetRequest.swift": "bae7972c1f3b3d7cad28b10e3020760e4e0026398d2d4901d5eef7bdfc3272a1"
+  },
+  "applicationManifestsPreserved": true,
+  "producerSource": {
+    "commit": "303099f8c0fef931186d51662d5d8747f455f01d",
+    "sourceContentsSha256": "2d93a9db919a3e30ceffc8a8d0fdae80281eab43c06418737009f5f802b1c496"
+  },
+  "generatedManifestSha256": "d17581957ae9ad55302d0d1a8faa80bedd2dce0a922a8d6e31c1e72b2f13de1e",
+  "producerReceiptSha256": "99f4dfaf16155c111786af009c330b9b2024363966fbaacbaeef9bc50570ad90",
+  "evaluationErrors": 0,
+  "evaluationWarnings": 7
+}

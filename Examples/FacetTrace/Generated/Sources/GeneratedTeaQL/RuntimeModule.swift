@@ -123,8 +123,7 @@ public enum GeneratedRuntimeModule {
             "Platform": try! WireEntityMetadata(entityType: "Platform", canonicalFields: ["id", "name", "base_url", "create_time", "update_time", "version"], aliases: ["id": ["id"], "name": ["name"], "base_url": ["base_url"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]]),
             "SchoolType": try! WireEntityMetadata(entityType: "SchoolType", canonicalFields: ["platform", "id", "name", "code", "display_order", "version"], aliases: ["platform": ["platform"], "id": ["id"], "name": ["name"], "code": ["code"], "display_order": ["display_order"], "version": ["version"]]),
             "School": try! WireEntityMetadata(entityType: "School", canonicalFields: ["id", "platform", "school_type", "name", "address", "established_date", "student_capacity", "active", "create_time", "update_time", "version"], aliases: ["id": ["id"], "platform": ["platform"], "school_type": ["school_type"], "name": ["name"], "address": ["address"], "established_date": ["established_date"], "student_capacity": ["student_capacity"], "active": ["active"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]])
-        ]
-    )
+        ])
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?

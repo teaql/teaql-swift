@@ -50,8 +50,7 @@ public enum GeneratedRuntimeModule {
         wireMetadata: [
             "Platform": try! WireEntityMetadata(entityType: "Platform", canonicalFields: ["id", "name", "version"], aliases: ["id": ["id"], "name": ["name"], "version": ["version"]]),
             "WorkItem": try! WireEntityMetadata(entityType: "WorkItem", canonicalFields: ["id", "title", "description", "platform", "version"], aliases: ["id": ["id"], "title": ["title"], "description": ["description"], "platform": ["platform"], "version": ["version"]])
-        ]
-    )
+        ])
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?

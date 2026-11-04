@@ -51,6 +51,9 @@ public struct TypePlatform: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
+        if container.contains(.scalarTypeProbeList) {
+            self.scalarTypeProbeList = try container.decode([ScalarTypeProbe].self, forKey: .scalarTypeProbeList)
+        }
         // JSON hydration owns a read ledger, not the constructor's new ledger.
         self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
@@ -268,11 +271,11 @@ public struct TypePlatformAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "TypePlatform", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "TypePlatform", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -289,6 +292,9 @@ public struct TypePlatformAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> TypePlatform {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
@@ -367,7 +373,8 @@ public struct TypePlatformAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -390,7 +397,7 @@ public struct TypePlatformAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "type_platform", to: entity)
             }
-            do { try ScalarTypeProbeAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
+            do { try ScalarTypeProbeAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("scalar_type_probe_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

@@ -414,19 +414,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
         throw TeaQLError.execution("ENTITY_VERSION_CONFLICT: \(Entity.descriptor.name) must retain its loaded identity and version")
       }
     }
-    var values = entity.toMutationRecord()
+    var values = pendingMutationRecord(entity, rooted: rooted)
     let originalVersion = rooted.flatMap { $0.teaqlEntityRoot.originalVersion($0.teaqlEntityKey) } ?? entity.version
-    if let rooted {
-      let pending = rooted.teaqlEntityRoot.change(rooted.teaqlEntityKey)
-      if entity.id != 0 {
-        if !pending.isEmpty { values = pending }
-      } else {
-        // New value wrappers may still contain constructor defaults after graph
-        // normalization. Keep their complete scalar shape, but the canonical
-        // pending intentions (including symbolic references) are authoritative.
-        values.merge(pending) { _, intended in intended }
-      }
-    }
     var mutation: Mutation
     if let rooted, rooted.teaqlEntityRoot.isDeleted(rooted.teaqlEntityKey) {
       guard entity.id != 0, entity.version != 0 else {
@@ -957,7 +946,7 @@ public struct UserContext: Sendable {
     actor: String = "teaql-generated-bootstrap",
     activeRoot: ContextEntityRef? = nil
   ) -> UserContext {
-    UserContext(
+    var bootstrap = UserContext(
       runtime: runtime,
       actor: actor,
       auditCategory: "runtime-bootstrap",
@@ -978,7 +967,12 @@ public struct UserContext: Sendable {
       entityInitializers: entityInitializers,
       entityCreationObserver: entityCreationObserver,
       objectStorageProvider: objectStorageProvider,
-      objectStorageObserver: objectStorageObserver)
+      objectStorageObserver: objectStorageObserver,
+      businessClock: businessClock)
+    // Retain customer governance configuration, not an active caller plan or
+    // invocation. The new context still owns fresh graph/Fix execution state.
+    bootstrap.mutationPolicyCoordinator = mutationPolicyCoordinator.fork()
+    return bootstrap
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }

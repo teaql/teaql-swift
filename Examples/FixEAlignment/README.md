@@ -55,3 +55,47 @@ receipts, logs and synthetic stores. Task-owned build/dependency scratch is
 removed on exit after child processes finish; shared caches are not deleted.
 These are regression expectations, not a claim that an unexecuted candidate
 passes. Conformance source/private-artifact acceptance is recorded separately.
+
+`ExpressionBoundaryProbe.swift` runs twelve actual generated E cases in this
+default two-round gate. Bounded Q and audited Save prepare complete, sparse,
+FK-only and loaded-empty views. Late/indexed/first missing leaves, size operations,
+null/absence, all three generated value/presence/fallback terminals, same-root
+sibling isolation and repeated relation names retain the complete redacted error
+chain. Ten provider/transaction/Fix/policy/audit boundaries are first positively
+calibrated, then stay unchanged during E. JSON geometry, pending intent and ledger
+identities are checked without exporting the graph. Generated code is unchanged;
+the probe's ledger reads are test instrumentation, not application API guidance.
+
+`CheckerBoundaryProbe.swift` adds omitted required relations, four independently
+omitted business fields with ownership loaded, unchanged partial targets, and
+real customer Fix rejection/repair. A separate store installs module Checkers
+without schema creation. The public object-local JSON adapter plus explicit
+generated setters tests declared aliases, escaped pointers, unknown fields and
+equal/unequal collisions under three naming profiles. Swift dictionaries do not
+promise submitted-key order: a collision must identify an actual submitted leaf.
+The default verifier retains 33 observations per unreset round and three stores;
+generated implementations stay hash-bound. This is not recursive HTTP/TFP or
+installed-package acceptance.
+
+The observed module also verifies bootstrap uses the injected Business Clock.
+`UserContext._generatedBootstrapContext` preserves the configured policy registry,
+approval provider and governance sink through a fresh coordinator; it must not
+reset to an allowing default or import an already-reviewed caller plan. Native
+positive/negative controls cover time, approval, denial, sink delivery and state
+isolation. The generated bootstrap source is unchanged.
+The third store exercises the actual generated `ensureSchema` program with a
+rejecting customer policy: DDL is allowed, but no root data or audit is committed.
+
+`GraphFixLifecycleProbe.swift` adds thirteen generated Q/E/audited-save cases per
+round on a separate retained SQLite store. Creation and updates may contain two
+value copies of the same child; the canonical pending ledger defines one checked
+operation and one physical write. A child-only edit leaves the owner version
+unchanged. A non-idempotent customer Fix adds one cent, making duplicate Fix
+execution observable rather than relying only on a callback counter.
+
+The provider injects failure or cancels the actual task only after SQLite has
+written a child. The graph must roll back, deliver no audit, and let the same
+objects retry with fresh traversal and clock state. Missing child input rejects
+before I/O and can be repaired on that same graph. Policy-time edits reject before
+transaction entry; provider-time edits roll back before commit and preserve the
+newer caller intention. All cases run twice without resetting the database.
