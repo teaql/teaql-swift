@@ -135,15 +135,22 @@ public struct SQLiteCompiler: Sendable {
   }
 
   private func projection(_ query: SelectQuery) throws -> String {
+    guard (query.groupByAliases ?? [:]).keys.allSatisfy(query.groupBy.contains) else {
+      throw TeaQLError.execution("A group result alias must refer to a selected group field")
+    }
     if !query.aggregates.isEmpty || !query.groupBy.isEmpty {
+      var aliases = Set<String>()
+      func checkedAlias(_ alias: String) throws -> String {
+        guard isSafeAlias(alias) else { throw TeaQLError.execution("Invalid aggregate alias: \(alias)") }
+        guard aliases.insert(alias).inserted else { throw TeaQLError.execution("Duplicate aggregate result alias: \(alias)") }
+        return quote(alias)
+      }
       var items = try query.groupBy.map { field in
         let property = try requireProperty(field, in: query.entity)
-        return "\(quote(property.column)) AS \(quote(property.name))"
+        return "\(quote(property.column)) AS \(try checkedAlias(query.groupByAliases?[field] ?? property.name))"
       }
       for aggregate in query.aggregates {
-        guard isSafeAlias(aggregate.alias) else {
-          throw TeaQLError.execution("Invalid aggregate alias: \(aggregate.alias)")
-        }
+        let alias = try checkedAlias(aggregate.alias)
         let expression: String
         if aggregate.function == .count && aggregate.field == "*" {
           expression = "COUNT(*)"
@@ -157,7 +164,7 @@ public struct SQLiteCompiler: Sendable {
             ? "teaql_decimal_sum" : aggregate.function.rawValue.uppercased()
           expression = "\(function)(\(quote(property.column)))"
         }
-        items.append("\(expression) AS \(quote(aggregate.alias))")
+        items.append("\(expression) AS \(alias)")
       }
       guard !items.isEmpty else { throw TeaQLError.execution("Aggregate query has no result columns") }
       return items.joined(separator: ", ")
@@ -168,11 +175,12 @@ public struct SQLiteCompiler: Sendable {
   }
 
   private func isSafeAlias(_ value: String) -> Bool {
-    guard let first = value.unicodeScalars.first,
-      CharacterSet.letters.union(CharacterSet(charactersIn: "_")).contains(first)
-    else { return false }
-    return value.unicodeScalars.dropFirst().allSatisfy {
-      CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_")).contains($0)
+    // quote(_:) escapes arbitrary identifier data. Reject empty/NUL and aliases
+    // already wrapped in identifier quotes rather than treating them as SQL.
+    guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+      !value.contains("\0") else { return false }
+    return ![("\"", "\""), ("`", "`"), ("[", "]")].contains {
+      value.hasPrefix($0.0) && value.hasSuffix($0.1)
     }
   }
 

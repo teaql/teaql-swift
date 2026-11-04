@@ -769,10 +769,19 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     }
     defer { sqlite3_finalize(statement) }
     try bind(compiled.parameters, to: statement)
-    var aggregateTypes: [String: PropertyType] = [:]
-    for aggregate in query?.aggregates ?? [] where aggregate.function != .count {
-      if let property = entity.property(named: aggregate.field) {
-        aggregateTypes[aggregate.alias] = property.type
+    let grouped = query.map { !$0.aggregates.isEmpty || !$0.groupBy.isEmpty } ?? false
+    var resultTypes: [String: PropertyType] = [:]
+    if let query {
+      for field in query.groupBy {
+        if let property = entity.property(named: field) {
+          resultTypes[query.groupByAliases?[field] ?? property.name] = property.type
+        }
+      }
+      for aggregate in query.aggregates {
+        if aggregate.function == .count { resultTypes[aggregate.alias] = .int }
+        else if let property = entity.property(named: aggregate.field) {
+          resultTypes[aggregate.alias] = property.type
+        }
       }
     }
     var records: [TeaQLRecord] = []
@@ -782,11 +791,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
         var record: TeaQLRecord = [:]
         for index in 0..<sqlite3_column_count(statement) {
           let column = String(cString: sqlite3_column_name(statement, index))
-          let property = entity.properties.first {
+          let property = grouped ? nil : entity.properties.first {
             $0.column.caseInsensitiveCompare(column) == .orderedSame
           }
           record[property?.name ?? column] = try decode(statement, index: index,
-            type: property?.type ?? aggregateTypes[column])
+            type: grouped ? resultTypes[column] : property?.type)
         }
         records.append(record)
       case SQLITE_DONE: return records

@@ -1166,6 +1166,7 @@ public struct UserContext: Sendable {
       }
       let valueAlias = child.aggregates.first?.alias ?? aggregate.alias
       child.groupBy = [foreignKey.name]
+      child.groupByAliases = nil
       child.projection = []
       child.orderBy = []
       child.offset = 0
@@ -1324,6 +1325,7 @@ public struct UserContext: Sendable {
       membership.facets = []; membership.relations = []; membership.relationAggregates = []
       membership.aggregates = aliases.map { QueryAggregate(.count, field: "*", alias: $0) }
       membership.groupBy = [facet.relationName]; membership.orderBy = []
+      membership.groupByAliases = nil
       membership.partitionBy = nil; membership.offset = 0; membership.limit = nil
       membership.projection = []
       let rows = try await execute(request.derive(membership, scope: helper), inheritedIntent: inheritedIntent).records
@@ -1338,6 +1340,7 @@ public struct UserContext: Sendable {
       var source = query
       source.relations = []; source.relationAggregates = []; source.facets = []
       source.aggregates = []; source.groupBy = []; source.orderBy = []
+      source.groupByAliases = nil
       source.offset = 0; source.limit = nil; source.partitionBy = nil
       source.continuousPage = nil; source.idSetPagination = nil; source.projection = ["id"]
       child.relationAggregates = child.relationAggregates.map { aggregate in
@@ -1618,6 +1621,7 @@ public struct UserContext: Sendable {
     validated.facets = []
     validated.aggregates = []
     validated.groupBy = []
+    validated.groupByAliases = nil
     return try await runtimeTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).count",

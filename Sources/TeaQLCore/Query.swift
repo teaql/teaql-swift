@@ -110,7 +110,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   package var requestScope: QueryRequestScope? = nil
   package var pageCountOperation: QueryOperation? = nil
   private enum CodingKeys: String, CodingKey {
-    case entity, filter, orderBy, offset, limit, hardLimit, projection, groupBy, aggregates,
+    case entity, filter, orderBy, offset, limit, hardLimit, projection, groupBy, groupByAliases, aggregates,
       partitionBy, topNProbeParentThreshold, relations, relationAggregates, facets, comment, purpose
   }
   public let entity: EntityDescriptor
@@ -121,6 +121,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
   public let hardLimit: Int
   public let projection: [String]
   public let groupBy: [String]
+  public let groupByAliases: [String: String]?
   public let aggregates: [QueryAggregate]
   public let partitionBy: String?
   public let topNProbeParentThreshold: Int?
@@ -139,6 +140,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     hardLimit = query.hardLimit
     projection = query.projection
     groupBy = query.groupBy
+    groupByAliases = query.groupByAliases
     aggregates = query.aggregates
     partitionBy = query.partitionBy
     topNProbeParentThreshold = query.topNProbeParentThreshold
@@ -156,6 +158,7 @@ public struct RelationQueryPlan: Sendable, Hashable, Codable {
     query.hardLimit = hardLimit
     query.projection = projection
     query.groupBy = groupBy
+    query.groupByAliases = groupByAliases
     query.aggregates = aggregates
     query.partitionBy = partitionBy
     query.topNProbeParentThreshold = topNProbeParentThreshold
@@ -192,7 +195,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public static func == (left: Self, right: Self) -> Bool {
     left.entity == right.entity && left.filter == right.filter && left.orderBy == right.orderBy
       && left.offset == right.offset && left.limit == right.limit && left.hardLimit == right.hardLimit
-      && left.projection == right.projection && left.groupBy == right.groupBy && left.aggregates == right.aggregates
+      && left.projection == right.projection && left.groupBy == right.groupBy && left.groupByAliases == right.groupByAliases && left.aggregates == right.aggregates
       && left.partitionBy == right.partitionBy && left.relations == right.relations
       && left.relationAggregates == right.relationAggregates && left.facets == right.facets
       && left.comment == right.comment && left.purpose == right.purpose && left.tracePath == right.tracePath
@@ -203,7 +206,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public func hash(into hasher: inout Hasher) {
     hasher.combine(entity); hasher.combine(filter); hasher.combine(orderBy); hasher.combine(offset)
     hasher.combine(limit); hasher.combine(hardLimit); hasher.combine(projection); hasher.combine(groupBy)
-    hasher.combine(aggregates); hasher.combine(partitionBy); hasher.combine(relations); hasher.combine(relationAggregates)
+    hasher.combine(groupByAliases); hasher.combine(aggregates); hasher.combine(partitionBy); hasher.combine(relations); hasher.combine(relationAggregates)
     hasher.combine(facets); hasher.combine(comment); hasher.combine(purpose); hasher.combine(tracePath)
     hasher.combine(continuousPage); hasher.combine(idSetPagination); hasher.combine(topNProbeParentThreshold)
     hasher.combine(pageCountOperation)
@@ -212,7 +215,7 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var pageCountOperation: QueryOperation? = nil
   public var traceChain: [TraceNode] { requestScope?.recover() ?? [] }
   private enum CodingKeys: String, CodingKey {
-    case entity, filter, orderBy, offset, limit, hardLimit, projection, groupBy, aggregates,
+    case entity, filter, orderBy, offset, limit, hardLimit, projection, groupBy, groupByAliases, aggregates,
       partitionBy, relations, relationAggregates, facets, comment, purpose, tracePath,
       continuousPage, idSetPagination, topNProbeParentThreshold
   }
@@ -226,6 +229,9 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var hardLimit: Int = Self.defaultHardLimit
   public var projection: [String] = []
   public var groupBy: [String] = []
+  /// Optional for decoding older query snapshots. Keys are grouped model/native
+  /// property names; values are literal result aliases, never SQL expressions.
+  public var groupByAliases: [String: String]?
   public var aggregates: [QueryAggregate] = []
   /// Internal relation-loading scope. When paired with a limit, the slice is
   /// applied independently to every distinct value of this field.
@@ -241,6 +247,15 @@ public struct SelectQuery: Sendable, Hashable, Codable {
   public var topNProbeParentThreshold: Int?
 
   public init(entity: EntityDescriptor) { self.entity = entity }
+
+  @discardableResult
+  public mutating func groupBy(_ field: String, as alias: String) -> Self {
+    if !groupBy.contains(field) { groupBy.append(field) }
+    var aliases = groupByAliases ?? [:]
+    aliases[field] = alias
+    groupByAliases = aliases
+    return self
+  }
 
   @discardableResult
   public mutating func topNProbeParentThreshold(_ threshold: Int) -> Self {
