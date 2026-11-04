@@ -1,0 +1,129 @@
+{
+    "schema": "teaql.i18n/v1",
+    "defaultLocale": "en",
+    "locales": {
+        "de": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ko": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "pt": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "zh-TW": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "fil": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "en": {
+            "vocabulary": {
+                "property.queryRecord.optionalDecimal": "Optional Decimal",
+                "property.queryRecord.requiredFloat": "Required Float",
+                "property.queryRecord.active": "Active",
+                "property.queryRecord.requiredDecimal": "Required Decimal",
+                "property.queryRecord.version": "Version",
+                "property.queryRecord.id": "Id",
+                "property.queryRecord.requiredText": "Required Text",
+                "property.queryGroup.groupName": "Group Name",
+                "property.queryRecord.optionalLong": "Optional Long",
+                "property.queryRecord.queryGroup": "Query Group",
+                "property.queryRecord.optionalText": "Optional Text",
+                "property.queryRecord.reviewed": "Reviewed",
+                "property.queryRecord.requiredDate": "Required Date",
+                "property.queryRecord.optionalTimestamp": "Optional Timestamp",
+                "property.queryRecord.requiredDouble": "Required Double",
+                "property.queryRecord.requiredInteger": "Required Integer",
+                "property.queryRecord.requiredLong": "Required Long",
+                "property.queryRecord.optionalDate": "Optional Date",
+                "property.queryRecord.optionalDouble": "Optional Double",
+                "property.queryGroup.queryPlatform": "Query Platform",
+                "property.queryRecord.optionalFloat": "Optional Float",
+                "entity.queryGroup": "Query Group",
+                "entity.queryRecord": "Query Record",
+                "property.queryPlatform.version": "Version",
+                "entity.queryPlatform": "Query Platform",
+                "property.queryPlatform.id": "Id",
+                "property.queryRecord.requiredTime": "Required Time",
+                "property.queryPlatform.name": "Name",
+                "property.queryGroup.version": "Version",
+                "property.queryRecord.requiredTimestamp": "Required Timestamp",
+                "property.queryRecord.optionalTime": "Optional Time",
+                "property.queryRecord.optionalInteger": "Optional Integer",
+                "property.queryGroup.id": "Id"
+            },
+            "messages": {
+            }
+        },
+        "fr": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "zh-CN": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "es": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ar": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "vi": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "th": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "uk": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ja": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "id": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        }
+    }
+}

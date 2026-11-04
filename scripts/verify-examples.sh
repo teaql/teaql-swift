@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-expected=(Conformance ExpressionProfiles FacetTrace FixEAlignment ObjectStorage OrderManagement ScalarTypeProbe SchoolManagement TraceChain)
+expected=(Conformance ExpressionProfiles FacetTrace FixEAlignment ObjectStorage OrderManagement QueryGrouping ScalarTypeProbe SchoolManagement TraceChain)
 mapfile -t actual < <(find "$repo/Examples" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   echo "example inventory changed; update scripts/verify-examples.sh: ${actual[*]}" >&2
@@ -31,6 +31,8 @@ TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ScalarTypeProbe/verify.
 for round in 1 2; do
   (cd "$repo/Examples/OrderManagement" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions teaql-order-management "$inventory_evidence/order-management.sqlite")
 done
+TEAQL_SWIFT_GROUPING_EVIDENCE_DIR="$inventory_evidence/query-grouping" \
+  TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/QueryGrouping/verify.sh"
 trace_args=()
 if [[ -n "${TEAQL_SWIFT_TRACE_DATABASE:-}" ]]; then trace_args+=("$TEAQL_SWIFT_TRACE_DATABASE"); fi
 TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/TraceChain/verify.sh" "${trace_args[@]}"

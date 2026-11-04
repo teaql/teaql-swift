@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root name="complete-query-fixture-service"
+      cfg_mask_china_mobile="false"
+      data_service="sqlite"
+      org="example"
+      _module_key="root">
+  <query_platform _name="Query Platform"
+                  _module="Query Fixture"
+                  _module_key="query_fixture"
+                  name="Query Conformance Platform"/>
+
+  <query_group _name="Query Group"
+               _module="Query Fixture"
+               _module_key="query_fixture"
+               query_platform="query_platform()"
+               group_name="Primary Group"/>
+
+  <query_record _name="Query Record"
+                _module="Query Fixture"
+                _module_key="query_fixture"
+                query_group="query_group()?"
+                required_text="string()"
+                optional_text="string()?"
+                required_integer="integer()"
+                optional_integer="integer()?"
+                required_long="long()"
+                optional_long="long()?"
+                required_decimal="number()"
+                optional_decimal="number()?"
+                required_float="float()"
+                optional_float="float()?"
+                required_double="double()"
+                optional_double="double()?"
+                required_date="date()"
+                optional_date="date()?"
+                required_time="time()"
+                optional_time="time()?"
+                required_timestamp="dateTime()"
+                optional_timestamp="dateTime()?"
+                active="bool()"
+                reviewed="bool()?"/>
+</root>

@@ -1,0 +1,27 @@
+{
+  "schema": "teaql.retained-example-fixture/v1",
+  "modelSource": "Examples/QueryGrouping/model.xml",
+  "modelSha256": "61aabdcd49fdaba722debf5c200738e1878fdf26776ba30268c3481737eb73e2",
+  "evaluatedScope": "swift-lib-core",
+  "files": {
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "5785cec480f7937e9d0d1888be161af83dade6abfca9b0d63b3f3401af42c792",
+    "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "d53cc568c3e387c9a9e2b1448d255a823594aff2e969f226ec5a2159294b29f8",
+    "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+    "Sources/GeneratedTeaQL/Models/QueryPlatform.swift": "5de976fcbd2b1e0b96098ea5eb97f872713c19084bfbf4912c208e30cbdbdbf5",
+    "Sources/GeneratedTeaQL/Models/QueryGroup.swift": "8dbacce26a388557c9a082260dee2df878a2c6e1ba60ad1a9c8d715f95b52213",
+    "Sources/GeneratedTeaQL/Models/QueryRecord.swift": "4c20ffb40d95b575821c8690788d8e66b70621221647d9862c21cb8163474b60",
+    "Sources/GeneratedTeaQL/E.swift": "e80e146d1287d118ffc88f381df587ec74198a1ad6f8cbf83823c5e8acd16fb5",
+    "Sources/GeneratedTeaQL/Requests/QueryPlatformRequest.swift": "70530e456a56283aadfe55260ba43ec89d7d93eff8bddfbc4b1137040f7e93a9",
+    "Sources/GeneratedTeaQL/Requests/QueryGroupRequest.swift": "45a1d15b2b9faa26f35cf40298292a32a41e9cec15d7cce940881a26978c874b",
+    "Sources/GeneratedTeaQL/Requests/QueryRecordRequest.swift": "3585bdd19a7bedcb112e22e4e3392371cc5f26ce2a096a2a6b5ff8a2f40b9634",
+    "Sources/GeneratedTeaQL/Q.swift": "b6696ccd285479be878de3a9357a91a51a9eabbed8ac7255b3b915ee5eb83f40"
+  },
+  "applicationManifestsPreserved": true,
+  "producerSource": {
+    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
+    "sourceContentsSha256": "9a813d18169b59384a994adc3fac0ac986df7a9e36e5db604009f435c1a477d0"
+  },
+  "generatedManifestSha256": "ee08cee6dade90d04f9d2e8a6a6e40e7386ee1e88a36736f1d48cde17244dc37",
+  "producerReceiptSha256": "912afdf0e238c2c8998a75dabf5a663e2d3a408c8a2f4e5a55e7b0ed327e2935",
+  "evaluationErrors": 0
+}
