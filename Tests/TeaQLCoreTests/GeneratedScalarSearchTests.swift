@@ -59,9 +59,8 @@ final class GeneratedScalarSearchTests: XCTestCase {
   }
 
   func testNativeNumericDateReferenceMembershipAndNullBindings() throws {
-    let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-11T00:00:00Z"))
     for (source, expected) in [
-      (#"{"filter":{"date":"2026-10-11"}}"#, TeaQLExpression.equal("date", .date(date))),
+      (#"{"filter":{"date":"2026-10-11"}}"#, TeaQLExpression.equal("date", .calendarDate("2026-10-11"))),
       (#"{"filter":{"created":1791676800000}}"#, .equal("created", .timestamp(1791676800000))),
       (#"{"filter":{"ratio":{"$lt":1.25}}}"#, .lessThan("ratio", .double(1.25))),
       (#"{"filter":{"customer":{"$in":[1,2]}}}"#, .inList("customerId", [.int(1), .int(2)])),
@@ -75,6 +74,36 @@ final class GeneratedScalarSearchTests: XCTestCase {
       var query = base(); query.filter = nil
       let result = try DynamicSearch.mergeGeneratedScalar(query, source: source, models: models)
       XCTAssertEqual(result.query.filter, expected, source)
+    }
+  }
+
+  func testCalendarDateOperatorsPreserveCanonicalGregorianTextAndTypedNull() throws {
+    for day in ["0001-01-01", "1582-10-10", "2000-02-29", "2024-02-29", "9999-12-31"] {
+      let expected: [(String, TeaQLExpression)] = [
+        ("$eq", .equal("date", .calendarDate(day))), ("$ne", .notEqual("date", .calendarDate(day))),
+        ("$gt", .greaterThan("date", .calendarDate(day))), ("$gte", .greaterThanOrEqual("date", .calendarDate(day))),
+        ("$lt", .lessThan("date", .calendarDate(day))), ("$lte", .lessThanOrEqual("date", .calendarDate(day))),
+        ("$in", .inList("date", [.calendarDate(day)])), ("$notIn", .notInList("date", [.calendarDate(day)])),
+      ]
+      for (operation, expression) in expected {
+        let value = ["$in", "$notIn"].contains(operation) ? "[\"\(day)\"]" : "\"\(day)\""
+        let original = base()
+        let result = try DynamicSearch.mergeGeneratedScalar(original,
+          source: "{\"filter\":{\"date\":{\"\(operation)\":\(value)}}}", models: models)
+        XCTAssertEqual(result.query.filter, .and([.equal("scope", .int(7)), expression]))
+        XCTAssertEqual(original.filter, .equal("scope", .int(7)))
+      }
+    }
+    for invalid in ["0000-01-01", "1900-02-29", "2024-02-30", "2024-2-29", "2024-02-29T00:00:00Z"] {
+      var warnings: [DynamicSearchWarning] = []
+      XCTAssertThrowsError(try DynamicSearch.mergeGeneratedScalar(base(),
+        source: "{\"filter\":{\"date\":\"\(invalid)\",\"removed\":\"SECRET-CANARY\"}}",
+        models: models, warn: { warnings.append($0) }))
+      XCTAssertTrue(warnings.isEmpty)
+    }
+    // The local UI contract still rejects unsafe JSON numbers and context controls.
+    for source in [#"{"filter":{"customer":9007199254740992}}"#, #"{"tenant":7}"#] {
+      XCTAssertThrowsError(try DynamicSearch.mergeGeneratedScalar(base(), source: source, models: models))
     }
   }
 }

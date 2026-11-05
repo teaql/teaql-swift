@@ -193,6 +193,55 @@ private func datePredicates(_ context: UserContext, id: Int64, day: Date,
   report.checks[prefix + "count"] = counts.count == 1 && counts.first?["dateMatches"]?.int64Value == 1
 }
 
+private func dynamicDatePredicates(_ context: UserContext, id: Int64, day: Date,
+  optional: Bool, report: inout Report) async throws {
+  func text(_ value: Date) -> String { String(ISO8601DateFormatter().string(from: value).prefix(10)) }
+  let current = text(day), before = text(day.addingTimeInterval(-86_400)), after = text(day.addingTimeInterval(86_400))
+  let fields = optional ? ["optional_date", "optionalDate"] : ["required_date", "requiredDate"]
+  let predicates: [(String, String, Int)] = [
+    ("equal", "{\"$eq\":\"\(current)\"}", 1), ("not_equal", "{\"$ne\":\"\(before)\"}", 1),
+    ("greater", "{\"$gt\":\"\(before)\"}", 1), ("greater_equal", "{\"$gte\":\"\(current)\"}", 1),
+    ("less", "{\"$lt\":\"\(after)\"}", 1), ("less_equal", "{\"$lte\":\"\(current)\"}", 1),
+    ("in", "{\"$in\":[\"\(before)\",\"\(current)\"]}", 1), ("not_in", "{\"$notIn\":[\"\(before)\",\"\(after)\"]}", 1),
+    ("wrong_day", "{\"$eq\":\"\(after)\"}", 0), ("not_equal_self", "{\"$ne\":\"\(current)\"}", 0),
+    ("strict_greater", "{\"$gt\":\"\(current)\"}", 0), ("strict_less", "{\"$lt\":\"\(current)\"}", 0),
+    ("missing_in", "{\"$in\":[\"\(before)\",\"\(after)\"]}", 0), ("excluded_in", "{\"$notIn\":[\"\(current)\"]}", 0),
+    ("empty_in", "{\"$in\":[]}", 0), ("empty_not_in", "{\"$notIn\":[]}", 1),
+    ("not_null", "{\"$ne\":null}", 1), ("is_null", "null", 0),
+  ]
+  for field in fields {
+    for (label, predicate, expected) in predicates {
+      let original = Q.scalarTypeProbes().withIdIs(id).limit(2)
+        .comment("Load one bounded scalar through generated dynamic Date search")
+        .purpose("Keep typed and JSON predicates aligned without weakening trusted scope")
+      let snapshot = original.toQuery()
+      let merged = try original.filterByJson("{\"filter\":{\"\(field)\":\(predicate)}}")
+      let rows = try await merged.executeForList(context)
+      let prefix = "dynamic_date." + field + "." + label
+      report.checks[prefix] = rows.count == expected && (expected == 0 || rows.first?.id == id)
+      report.checks[prefix + ".immutable"] = original.toQuery() == snapshot
+    }
+    let outsideScope = try await Q.scalarTypeProbes().withIdIs(id + 10_000).limit(1)
+      .filterByJson("{\"filter\":{\"\(field)\":\"\(current)\"}}")
+      .comment("Keep an impossible trusted identity predicate")
+      .purpose("Prove dynamic filters cannot broaden the original request").executeForList(context)
+    report.checks["dynamic_date." + field + ".scope"] = outsideScope.isEmpty
+    var warnings: [DynamicSearchWarning] = []
+    let tolerated = try await Q.scalarTypeProbes().withIdIs(id).limit(2)
+      .filterByJson("{\"filter\":{\"\(field)\":\"\(current)\",\"removed_field\":\"SECRET-CANARY\"}}", warn: { warnings.append($0) })
+      .comment("Ignore only the removed field, not its valid Date sibling")
+      .purpose("Keep schema drift tolerant and Date filtering authoritative").executeForList(context)
+    report.checks["dynamic_date." + field + ".unknown_sibling"] = tolerated.count == 1 && warnings.count == 1
+      && warnings[0].code == "DYNAMIC_SEARCH_UNKNOWN_FIELD" && warnings[0].fieldPath == "removed_field"
+    for (index, literal) in ["\"2026-02-30\"", "\"2024-2-29\"", "\"2024-02-29T00:00:00Z\"", "{\"$gt\":null}"].enumerated() {
+      var rejected = false, lateWarnings: [DynamicSearchWarning] = []
+      do { _ = try Q.scalarTypeProbes().filterByJson("{\"filter\":{\"\(field)\":\(literal),\"removed_field\":\"SECRET-CANARY\"}}", warn: { lateWarnings.append($0) }) }
+      catch is DynamicSearchError { rejected = true }
+      report.checks["dynamic_date." + field + ".invalid.\(index)"] = rejected && lateWarnings.isEmpty
+    }
+  }
+}
+
 @main private enum ScalarRoundtripVerification {
   static func main() async {
     let database = ProcessInfo.processInfo.environment["TEAQL_SWIFT_ROUNDTRIP_DB"]!
@@ -247,6 +296,7 @@ private func datePredicates(_ context: UserContext, id: Int64, day: Date,
       report.checks["query." + key] = found.count == 1 && found.first?.id == high.id
     }
     try await datePredicates(context, id: high.id, day: leapDay, optional: false, report: &report)
+    try await dynamicDatePredicates(context, id: high.id, day: leapDay, optional: false, report: &report)
     let nullDates = try await Q.scalarTypeProbes().withIdIs(high.id).withOptionalDateIn([leapDay]).limit(1)
       .comment("Do not equate a loaded null date with a calendar day").purpose("Preserve SQL null date semantics").executeForList(context)
     report.checks["optional_date.null_not_in_day"] = nullDates.isEmpty
@@ -264,6 +314,15 @@ private func datePredicates(_ context: UserContext, id: Int64, day: Date,
       let rows = try await query.withIdIs(high.id).limit(2).comment("Verify instant predicate " + name)
         .purpose("Keep timestamp milliseconds distinct from calendar days").executeForList(context)
       report.checks["datetime_control." + name] = rows.count == count
+    }
+    for field in ["required_datetime", "requiredDatetime"] {
+      for (value, expected) in [(Int64(1_792_488_600_125), 1), (Int64(1_792_488_600_126), 0)] {
+        let rows = try await Q.scalarTypeProbes().withIdIs(high.id).limit(1)
+          .filterByJson("{\"filter\":{\"\(field)\":\(value)}}")
+          .comment("Keep dynamic instant equality at millisecond precision")
+          .purpose("Do not reinterpret a DateTime as a calendar day").executeForList(context)
+        report.checks["dynamic_datetime." + field + ".\(value)"] = rows.count == expected
+      }
     }
 
     // TeaQLEntity is Codable. Use the native standard-library codec, not a
@@ -340,6 +399,7 @@ private func datePredicates(_ context: UserContext, id: Int64, day: Date,
     report.checks["updated_version"] = saved.version == version + 1
     report.phase = "populated."; checkFields(saved, name, clock, &report, populated: true, requiredBoolean: true, requiredDecimal: Decimal(string: "0.1")!); report.phase = ""
     try await datePredicates(context, id: saved.id, day: ordinaryDay, optional: true, report: &report)
+    try await dynamicDatePredicates(context, id: saved.id, day: ordinaryDay, optional: true, report: &report)
     var cleared = try JSONDecoder().decode(ScalarTypeProbe.self, from: JSONEncoder().encode(saved))
     report.phase = "populated_json."; checkFields(cleared, name, clock, &report, populated: true, requiredBoolean: true, requiredDecimal: Decimal(string: "0.1")!); report.phase = ""
     cleared.updateOptionalString(nil); cleared.updateOptionalBoolean(nil); cleared.updateOptionalInteger(nil); cleared.updateOptionalLong(nil)
@@ -348,6 +408,15 @@ private func datePredicates(_ context: UserContext, id: Int64, day: Date,
     cleared.updateRequiredInteger(0)
     let clearedSave = try await cleared.auditAs("Clear all nullable families through one audited mutation").save(context)
     let final = try await reload(context, id: clearedSave.id)
+    for field in ["optional_date", "optionalDate"] {
+      for (name, predicate, expected) in [("null", "null", 1), ("not_null", "{\"$ne\":null}", 0), ("in", "{\"$in\":[\"2026-10-23\"]}", 0)] {
+        let rows = try await Q.scalarTypeProbes().withIdIs(final.id).limit(1)
+          .filterByJson("{\"filter\":{\"\(field)\":\(predicate)}}")
+          .comment("Query a nullable Date after it has been explicitly cleared")
+          .purpose("Distinguish SQL null from a date value").executeForList(context)
+        report.checks["dynamic_date.cleared." + field + "." + name] = rows.count == expected
+      }
+    }
     report.phase = "cleared."; checkFields(final, name, clock, &report, requiredBoolean: true, requiredInteger: 0, requiredDecimal: Decimal(string: "0.1")!); report.phase = ""
     let clearDecoded = try JSONDecoder().decode(ScalarTypeProbe.self, from: JSONEncoder().encode(final))
     report.phase = "cleared_json."; checkFields(clearDecoded, name, clock, &report, requiredBoolean: true, requiredInteger: 0, requiredDecimal: Decimal(string: "0.1")!); report.phase = ""

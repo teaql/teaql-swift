@@ -89,10 +89,10 @@ extension DynamicSearch {
       default: break
       }
     case "date":
-      if case .string(let text) = raw,
-        let date = ISO8601DateFormatter().date(from: text + "T00:00:00Z") {
-        return .date(date)
-      }
+      // normalize already checked the canonical Gregorian date. Preserve that
+      // date-only storage carrier; converting it to an instant breaks equality,
+      // inclusive comparisons and membership against generated calendar fields.
+      if case .string(let text) = raw { return .calendarDate(text) }
     default: break
     }
     throw DynamicSearchError.invalid("Unsupported known-field value")

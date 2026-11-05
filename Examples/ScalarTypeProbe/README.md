@@ -89,3 +89,10 @@ The current Swift carrier profiles are explicit: Time is a String and modeled
 Float uses a Double carrier. Native Codable retains exact Swift Int64/Decimal
 values; this is not a JavaScript-number-safe or TFP wire guarantee, a binary32
 native-carrier guarantee, or acceptance of the complete scalar workstream.
+
+Dynamic Date search uses the same executable and frozen library. Both canonical
+and native field aliases exercise equality, comparisons, IN/NOT IN, nulls,
+schema-drift warnings, invalid dates, request immutability and preserved trusted
+identity scope. DateTime controls retain exact milliseconds. Every round now
+contains 522 named checks, including 178 dynamic Date/DateTime checks, plus the
+same 24 nonfinite rejection vectors. This local search path is not TFP.
