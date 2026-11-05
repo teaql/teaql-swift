@@ -737,7 +737,12 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
           .field(idProperty.name, in: mutation.entity), .field(versionProperty.name, in: mutation.entity)],
         generatedSQL: true, executionOutcome: "success").withTelemetryCorrelation(observation?.correlation)
     let (record, read) = try fetchPersistedRecord(entity: mutation.entity, id: id, write: metadata)
-    return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: .int(next)],
+    // Triggers may replace the computed transition. Both result views must
+    // describe the same row read inside this transaction, not a prediction.
+    guard let persistedVersion = record[versionProperty.name] else {
+      throw TeaQLError.execution("Persisted version transition is missing its version field")
+    }
+    return MutationResult(affectedRows: changed, generatedValues: [versionProperty.name: persistedVersion],
       persistedRecord: record, metadata: metadata.includingStatements([metadata, read]))
   }
 

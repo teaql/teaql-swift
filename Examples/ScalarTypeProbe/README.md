@@ -60,3 +60,16 @@ Eight valid rows per round are then corrupted through an explicitly test-only
 external SQLite writer. Their real Q read fails precisely, an ID-only projection
 still works, and the corrupt data/version remain available for a read-only
 oracle. All ordinary rows and updates use generated audited Mutation APIs.
+
+`TombstoneVerification` runs six cases twice on one additional retained SQLite
+database. Generated Q/E and audited Save exercise ordinary soft deletion,
+trigger-authored version/text/null/temporal values, commit failure followed by
+retry of the same deletion intent, and rejection of repeated deletion before
+clock, policy or provider calls. Explicit provider transactions separately test
+commit and rollback/retry without pretending they deliver Context audit events.
+The recovery control restores visibility and rejects versionless deletion.
+`MutationResult.generatedValues` must agree with the transaction's actual
+`persistedRecord`, including trigger-authored versions. CSQLite is used only for
+trigger injection and the independent read-only storage/audit oracle. This does
+not establish physical delete or caller-owned transactions around generated
+Save. No generated implementation is edited.

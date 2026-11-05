@@ -146,6 +146,61 @@ struct VersionLifecycleSQLiteTests {
     }
   }
 
+  @Test func deletionResultUsesTheTriggerAuthoredVersionInBothViews() async throws {
+    try await withFixture(version: 1) { service, path in
+      try installTransitionTrigger(path, predicate: "NEW.version<0 AND OLD.version>0", delta: -40)
+      let saved = try await service.execute(Mutation(kind: .delete, entity: entity, id: .int(1),
+        expectedVersion: 1, auditReason: "read the authoritative deletion version"))
+      #expect(saved.generatedValues["version"] == .int(-42))
+      #expect(saved.persistedRecord?["version"] == .int(-42))
+      #expect(saved.persistedRecord?["name"] == .string("trigger-authored"))
+      #expect(saved.metadata?.statements.count == 2)
+      let persisted = try storedVersion(path), audit = try await service.auditEvents()
+      #expect(persisted == -42 && audit.count == 1)
+    }
+  }
+
+  @Test func recoveryResultUsesTheTriggerAuthoredVersionInBothViews() async throws {
+    try await withFixture(version: -2) { service, path in
+      try installTransitionTrigger(path, predicate: "NEW.version>0 AND OLD.version<0", delta: 40)
+      let saved = try await service.execute(Mutation(kind: .recover, entity: entity, id: .int(1),
+        expectedVersion: -2, auditReason: "read the authoritative recovery version"))
+      #expect(saved.generatedValues["version"] == .int(43))
+      #expect(saved.persistedRecord?["version"] == .int(43))
+      #expect(saved.persistedRecord?["name"] == .string("trigger-authored"))
+      let persisted = try storedVersion(path), audit = try await service.auditEvents()
+      #expect(persisted == 43 && audit.map { $0["operation"] } == [.string("recover")])
+    }
+  }
+
+  @Test func rolledBackTriggerVersionCanBeRetriedWithoutAnAuditLeak() async throws {
+    try await withFixture(version: 1) { service, path in
+      try installTransitionTrigger(path, predicate: "NEW.version<0 AND OLD.version>0", delta: -40)
+      let mutation = Mutation(kind: .delete, entity: entity, id: .int(1), expectedVersion: 1,
+        auditReason: "retry the original deletion after rolling back")
+      try await service.beginGraphTransaction()
+      let first = try await service.execute(mutation)
+      #expect(first.generatedValues["version"] == .int(-42))
+      #expect(first.persistedRecord?["version"] == .int(-42))
+      try await service.rollbackGraphTransaction()
+      let before = try storedVersion(path), auditBefore = try await service.auditEvents()
+      #expect(before == 1 && auditBefore.isEmpty)
+      let retried = try await service.execute(mutation)
+      #expect(retried.generatedValues["version"] == .int(-42))
+      #expect(retried.persistedRecord?["version"] == .int(-42))
+      let after = try storedVersion(path), auditAfter = try await service.auditEvents()
+      #expect(after == -42 && auditAfter.count == 1)
+    }
+  }
+
+  private func installTransitionTrigger(_ path: String, predicate: String, delta: Int64) throws {
+    var raw: OpaquePointer?
+    guard sqlite3_open(path, &raw) == SQLITE_OK else { throw TeaQLError.execution("transition trigger open") }
+    defer { sqlite3_close(raw) }
+    let sql = "CREATE TRIGGER version_transition AFTER UPDATE OF version ON version_probe WHEN \(predicate) BEGIN UPDATE version_probe SET version=NEW.version+(\(delta)),name='trigger-authored' WHERE id=NEW.id; END"
+    guard sqlite3_exec(raw, sql, nil, nil, nil) == SQLITE_OK else { throw TeaQLError.execution("transition trigger injection") }
+  }
+
   // Direct SQLite is restricted to boundary injection and the independent
   // storage oracle. Business writes still exercise the actual provider API.
   private func withFixture(version: Int64,
