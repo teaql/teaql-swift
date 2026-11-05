@@ -67,4 +67,12 @@ for round in 1 2; do
     "$evidence/dynamic-decimal-round-$round.log" "$round"
   sha256sum -c generated.sha256
 done
+for round in 1 2; do
+  TEAQL_BOOLEAN_DB="$evidence/boolean.sqlite" TEAQL_BOOLEAN_ROUND="$round" \
+    swift run --scratch-path "$scratch" --skip-build BooleanBoundaryVerification \
+    | tee "$evidence/boolean-round-$round.log"
+  node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_BOOLEAN_BOUNDARY=")).map(v=>JSON.parse(v.slice("SWIFT_BOOLEAN_BOUNDARY=".length)));assert.equal(rows.length,1);const r=rows[0];assert(r.passed&&r.round===+process.argv[2]);assert.equal(Object.keys(r.rows).length,4);assert.equal(Object.keys(r.checks).length,22);assert(Object.values(r.checks).every(Boolean));' \
+    "$evidence/boolean-round-$round.log" "$round"
+  sha256sum -c generated.sha256
+done
 echo "PASS Swift scalar example twice without cleanup; evidence: $evidence"

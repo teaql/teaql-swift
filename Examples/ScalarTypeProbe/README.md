@@ -1,5 +1,14 @@
 # Generated scalar fixture: exact SQLite Decimal
 
+`BooleanBoundaryVerification` additionally verifies generated Boolean Q/E,
+true/false/unknown, and COUNT aliases that resemble modeled fields. It runs twice
+without resetting `boolean.sqlite`. A clearly labeled negative-test UPDATE
+injects INTEGER `2` into one separate legacy row; selecting that field must fail
+with `invalid_type` and `/requiredBoolean`, while ID-only queries still succeed
+and E reports NotLoaded. Ordinary seeds use generated audited Mutation APIs.
+The runtime also rejects non-Boolean mutation carriers before provider execution
+and validates custom Fix results before publishing them into the ledger.
+
 Run from the runtime repository:
 
 ```bash

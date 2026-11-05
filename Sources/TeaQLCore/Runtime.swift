@@ -1956,6 +1956,7 @@ public struct UserContext: Sendable {
       })
     }
     try ModeledInteger32.normalizeMutation(&validated.values, entity: originalEntity, violations: &violations)
+    ModeledBoolean.validateMutation(validated.values, entity: originalEntity, violations: &violations)
     try roots.validate(validated, final: true)
     if !violations.isEmpty { throw CheckException(violations) }
     _ = try validated.validatedForExecution()

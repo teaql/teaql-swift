@@ -12,7 +12,8 @@ let package = Package(
     .executable(name: "Integer32Verification", targets: ["Integer32Verification"]),
     .executable(name: "TombstoneVerification", targets: ["TombstoneVerification"]),
     .executable(name: "ScalarRoundtripVerification", targets: ["ScalarRoundtripVerification"]),
-    .executable(name: "DynamicDecimalVerification", targets: ["DynamicDecimalVerification"])],
+    .executable(name: "DynamicDecimalVerification", targets: ["DynamicDecimalVerification"]),
+    .executable(name: "BooleanBoundaryVerification", targets: ["BooleanBoundaryVerification"])],
   dependencies: [.package(name: "teaql-swift", path: runtimePath)],
   targets: [
     .target(name: "GeneratedTeaQL",
@@ -46,6 +47,10 @@ let package = Package(
       .product(name: "TeaQLTestSupport", package: "teaql-swift"),
     ]),
     .executableTarget(name: "DynamicDecimalVerification", dependencies: [
+      "GeneratedTeaQL", .product(name: "TeaQLCore", package: "teaql-swift"),
+      .product(name: "TeaQLSQLite", package: "teaql-swift"),
+    ]),
+    .executableTarget(name: "BooleanBoundaryVerification", dependencies: [
       "GeneratedTeaQL", .product(name: "TeaQLCore", package: "teaql-swift"),
       .product(name: "TeaQLSQLite", package: "teaql-swift"),
     ]),

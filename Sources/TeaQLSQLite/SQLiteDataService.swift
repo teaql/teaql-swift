@@ -776,16 +776,26 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     try bind(compiled.parameters, to: statement)
     let grouped = query.map { !$0.aggregates.isEmpty || !$0.groupBy.isEmpty } ?? false
     var resultTypes: [String: PropertyType] = [:]
+    var resultProperties: [String: PropertyDescriptor] = [:]
     if let query {
       for field in query.groupBy {
         if let property = entity.property(named: field) {
-          resultTypes[query.groupByAliases?[field] ?? property.name] = property.type
+          let alias = query.groupByAliases?[field] ?? property.name
+          resultTypes[alias] = property.type
+          resultProperties[alias] = property
         }
       }
       for aggregate in query.aggregates {
         if aggregate.function == .count { resultTypes[aggregate.alias] = .int }
         else if let property = entity.property(named: aggregate.field) {
-          resultTypes[aggregate.alias] = property.type
+          // SUM/AVG of the physical 0/1 representation are numeric results,
+          // not a new Boolean. MIN/MAX and group keys retain the source type.
+          if property.type == .bool && (aggregate.function == .sum || aggregate.function == .avg) {
+            resultTypes[aggregate.alias] = .int
+          } else {
+            resultTypes[aggregate.alias] = property.type
+            resultProperties[aggregate.alias] = property
+          }
         }
       }
     }
@@ -800,7 +810,8 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
             $0.column.caseInsensitiveCompare(column) == .orderedSame
           }
           record[property?.name ?? column] = try decode(statement, index: index,
-            type: grouped ? resultTypes[column] : property?.type)
+            type: grouped ? resultTypes[column] : property?.type,
+            property: grouped ? resultProperties[column] : property, entity: entity)
         }
         records.append(record)
       case SQLITE_DONE: return records
@@ -948,9 +959,20 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   private func decode(_ statement: OpaquePointer, index: Int32,
-    type: PropertyType?) throws -> TeaQLValue
+    type: PropertyType?, property: PropertyDescriptor?, entity: EntityDescriptor) throws -> TeaQLValue
   {
     let storageType = sqlite3_column_type(statement, index)
+    if type == .bool && storageType != SQLITE_NULL {
+      guard let property else { throw TeaQLError.execution("Boolean result lacks source field metadata") }
+      guard storageType == SQLITE_INTEGER else {
+        throw CheckException([ModeledBoolean.invalidValue(entity: entity, property: property)])
+      }
+      let value = sqlite3_column_int64(statement, index)
+      guard value == 0 || value == 1 else {
+        throw CheckException([ModeledBoolean.invalidValue(entity: entity, property: property)])
+      }
+      return .bool(value == 1)
+    }
     if type == .decimal && storageType != SQLITE_NULL && storageType != SQLITE_TEXT {
       throw TeaQLError.execution("SQLite Decimal value is not stored as exact text; migrate the column before reading")
     }
@@ -958,7 +980,6 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     case SQLITE_NULL: return .null
     case SQLITE_INTEGER:
       let value = sqlite3_column_int64(statement, index)
-      if type == .bool { return .bool(value != 0) }
       if type == .timestamp { return .timestamp(value) }
       return .int(value)
     case SQLITE_FLOAT:
@@ -1015,6 +1036,9 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
     var normalized: TeaQLRecord = [:]
     for (inputName, value) in values {
       let property = try requireProperty(inputName, entity)
+      if let violation = ModeledBoolean.violation(value, entity: entity, property: property) {
+        throw CheckException([violation])
+      }
       if let existing = normalized[property.name], existing != value {
         throw TeaQLError.execution(
           "Conflicting mutation values for \(entity.name).\(property.name)")
