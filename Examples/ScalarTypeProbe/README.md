@@ -96,3 +96,18 @@ schema-drift warnings, invalid dates, request immutability and preserved trusted
 identity scope. DateTime controls retain exact milliseconds. Every round now
 contains 522 named checks, including 178 dynamic Date/DateTime checks, plus the
 same 24 nonfinite rejection vectors. This local search path is not TFP.
+
+`DynamicDecimalVerification` uses that same frozen generated library, a separate
+retained SQLite file and the generated audited Mutation/Q/E APIs. Four exact
+values include `0.1`, a 38-digit coefficient, `10^80`, and the rounded value that
+an invalid 59-digit search used to match incorrectly. Each round has 116 checks:
+20 positive storage/query checks and 96 rejected predicates across two aliases,
+eight operators, positive/negative/fractional inputs, and quoted/raw JSON.
+Rejected input never reaches the query provider or emits partial drift warnings.
+Numbers retain their original JSON lexemes until exact Decimal validation;
+equivalent scales and exactly representable large powers are accepted.
+The package-only exact parser is shared with SQLite, not a public API.
+Decimal operands must fit Foundation Decimal exactly and the existing 256-byte
+storage-parser limit. Ordinary floating fields and JSON wire remain separate
+profiles. Running twice retains the same four rows and versions; no cleanup is
+performed between rounds. This is source verification, not an artifact release.

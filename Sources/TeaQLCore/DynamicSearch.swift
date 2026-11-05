@@ -78,6 +78,7 @@ public enum DynamicSearch {
     var resultFilters: [DynamicSearchFilter] = []
     var resultOrders: [DynamicSearchOrder] = []
     var warnings: [DynamicSearchWarning] = []
+    var decimalLiterals: [String: TeaQLValue]?
     for path in filters.keys.sorted() {
       let predicate = filters[path]!
       var operation = "$eq"
@@ -99,6 +100,12 @@ public enum DynamicSearch {
         continue
       }
       guard kind != "unsupported" else { throw invalid("Unsupported known-field type") }
+      if kind == "decimal" {
+        if decimalLiterals == nil { decimalLiterals = try DynamicSearchDecimal.literalFilters(source) }
+        var literal = decimalLiterals?[path] ?? .null
+        if case .object(let parts) = literal { literal = parts[operation] ?? .null }
+        value = try DynamicSearchDecimal.exactValue(value, literal: literal)
+      }
       if operation == "$contains", kind != "string" { throw invalid("String operator requires a string field") }
       if case .array(let values) = value {
         guard operation == "$in" || operation == "$notIn" else { throw invalid("Unexpected search value list") }
@@ -173,6 +180,7 @@ public enum DynamicSearch {
     case "decimal":
       if case .string(let text) = value {
         valid = text.range(of: #"\A[+-]?[0-9]+(?:\.[0-9]+)?\z"#, options: .regularExpression) != nil
+          && parseExactDecimal(text) != nil
       } else { valid = number != nil }
     case "date":
       if case .string(let text) = value { valid = validDate(text) } else { valid = false }

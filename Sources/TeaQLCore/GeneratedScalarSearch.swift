@@ -82,8 +82,8 @@ extension DynamicSearch {
       case .uint(let value): return .decimal(Decimal(value))
       case .double(let value): return .decimal(Decimal(value))
       case .string(let text):
-        guard let value = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")), !value.isNaN else {
-          throw DynamicSearchError.invalid("Decimal is outside the native range")
+        guard let value = parseExactDecimal(text) else {
+          throw DynamicSearchError.invalid("Decimal is outside the exact native range")
         }
         return .decimal(value)
       default: break
