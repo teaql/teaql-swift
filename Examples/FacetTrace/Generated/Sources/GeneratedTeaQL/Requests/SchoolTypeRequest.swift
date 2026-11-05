@@ -892,9 +892,23 @@ public struct SchoolTypeRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByPlatformAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("platform", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupById() -> Self {
         var copy = self
         copy.query.groupBy.append("id")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
         return copy
     }
 
@@ -906,9 +920,23 @@ public struct SchoolTypeRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCode() -> Self {
         var copy = self
         copy.query.groupBy.append("code")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCodeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("code", as: alias)
         return copy
     }
 
@@ -920,9 +948,23 @@ public struct SchoolTypeRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByDisplayOrderAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("displayOrder", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 

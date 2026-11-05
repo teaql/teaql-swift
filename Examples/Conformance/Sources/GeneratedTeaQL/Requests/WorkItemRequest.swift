@@ -588,9 +588,23 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByTitle() -> Self {
         var copy = self
         copy.query.groupBy.append("title")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByTitleAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("title", as: alias)
         return copy
     }
 
@@ -602,6 +616,13 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByDescriptionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("description", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByPlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("platform")
@@ -609,9 +630,23 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByPlatformAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("platform", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 

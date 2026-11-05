@@ -73,3 +73,19 @@ The recovery control restores visibility and rejects versionless deletion.
 trigger injection and the independent read-only storage/audit oracle. This does
 not establish physical delete or caller-owned transactions around generated
 Save. No generated implementation is edited.
+
+`ScalarRoundtripVerification` exercises all 21 scalar fields through generated
+Mutation/Q/E and native Codable. It covers ASCII/Unicode/NUL text (including a
+large text), empty string versus null, Boolean states, Integer boundaries and
+zero, Long above JavaScript's safe-number range and `Int64.min`, exact positive
+and negative Decimal values, finite positive/negative Float/Double, leap and
+ordinary dates, fractional wall-clock time, and an offset-normalized instant.
+All nullable families are populated then cleared; complete native JSON can be
+saved again, but a modified incomplete projection is rejected before provider,
+clock or audit activity. Each of 24 nonfinite create/update cases rejects before
+provider I/O. The script runs twice on one retained `roundtrip.sqlite`.
+
+The current Swift carrier profiles are explicit: Time is a String and modeled
+Float uses a Double carrier. Native Codable retains exact Swift Int64/Decimal
+values; this is not a JavaScript-number-safe or TFP wire guarantee, a binary32
+native-carrier guarantee, or acceptance of the complete scalar workstream.

@@ -53,4 +53,10 @@ for round in 1 2; do
   node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_TOMBSTONE=")).map(v=>JSON.parse(v.slice("SWIFT_TOMBSTONE=".length)));assert.equal(rows.length,6);assert(rows.every(v=>v.passed&&v.round===+process.argv[2]&&v.nativeGeneratedVersionConsistent));' "$evidence/tombstone-round-$round.log" "$round"
   sha256sum -c generated.sha256
 done
+for round in 1 2; do
+  TEAQL_SWIFT_ROUNDTRIP_DB="$evidence/roundtrip.sqlite" TEAQL_SWIFT_ROUNDTRIP_ROUND="$round" \
+    swift run --scratch-path "$scratch" --skip-build ScalarRoundtripVerification | tee "$evidence/roundtrip-round-$round.log"
+  node -e 'const fs=require("node:fs"),assert=require("node:assert/strict");const rows=fs.readFileSync(process.argv[1],"utf8").split(/\r?\n/).filter(v=>v.startsWith("SWIFT_SCALAR_ROUNDTRIP=")).map(v=>JSON.parse(v.slice("SWIFT_SCALAR_ROUNDTRIP=".length)));assert.equal(rows.length,1);const r=rows[0];assert(r.passed&&r.round===+process.argv[2]);assert.equal(r.finalVersion,4);assert.equal(r.rejections.length,24);assert(r.rejections.every(v=>v.rejected&&v.counts.query===0&&v.counts.mutate===0&&v.counts.begin===0));assert(Object.values(r.checks).every(Boolean));assert.equal(r.nativeScalarFields,21);' "$evidence/roundtrip-round-$round.log" "$round"
+  sha256sum -c generated.sha256
+done
 echo "PASS Swift scalar example twice without cleanup; evidence: $evidence"

@@ -1004,9 +1004,23 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByName() -> Self {
         var copy = self
         copy.query.groupBy.append("name")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
         return copy
     }
 
@@ -1018,9 +1032,23 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByCodeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("code", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByColor() -> Self {
         var copy = self
         copy.query.groupBy.append("color")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByColorAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("color", as: alias)
         return copy
     }
 
@@ -1032,6 +1060,13 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByDisplayOrderAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("displayOrder", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCommercePlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("commercePlatform")
@@ -1039,9 +1074,23 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByCommercePlatformAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("commercePlatform", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 

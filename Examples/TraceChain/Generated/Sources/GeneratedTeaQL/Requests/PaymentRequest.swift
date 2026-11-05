@@ -555,9 +555,23 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCustomerOrder() -> Self {
         var copy = self
         copy.query.groupBy.append("customerOrder")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCustomerOrderAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("customerOrder", as: alias)
         return copy
     }
 
@@ -569,9 +583,23 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByReferenceCodeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("referenceCode", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 

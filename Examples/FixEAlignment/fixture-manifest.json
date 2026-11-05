@@ -2,10 +2,10 @@
   "schema": "teaql.generated-example-fixture/v1",
   "language": "swift",
   "modelSha256": "a2cf4c907cb084cb0946e993eeba586c8c0701a89fdc4a849808aa743be033b7",
-  "generatedManifestSha256": "d17581957ae9ad55302d0d1a8faa80bedd2dce0a922a8d6e31c1e72b2f13de1e",
+  "generatedManifestSha256": "8366a661896c046b2ac25cef0e95de7d85d8c14ca0b6a334291c43f4e2bae14a",
   "producerSource": {
-    "commit": "303099f8c0fef931186d51662d5d8747f455f01d",
-    "sourceContentsSha256": "2d93a9db919a3e30ceffc8a8d0fdae80281eab43c06418737009f5f802b1c496"
+    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
+    "tree": "c741ab1f22e21ae0b04c88181b93b80e61ef835a"
   },
   "evaluatedScope": "swift-lib-core",
   "evaluationErrors": 0,
@@ -22,12 +22,12 @@
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "c7361d32595015f1bc9d82f128eb3ec8137609ec552f204621810838aa180915",
     "Sources/GeneratedTeaQL/Q.swift": "f1f631087c879167f615cd0602d81f5dd073f30f82567eb92ae53d00b34b28b7",
     "README.md": "2f922ecea2e048e6d44fdf6beb2cf13d7afb9711906f0496b4f52512a86c6683",
-    "Sources/GeneratedTeaQL/Requests/TenantRequest.swift": "e5eb02c1f0e66ab76ab30b7f41292a9276e612943cad3193731c8bb3ff6292af",
-    "Sources/GeneratedTeaQL/Requests/PurchaseOrderRequest.swift": "8ee2409a6c75ce9c142397508b6fb78d9da8008b8d038a8c6dbe47b31bcc6a1c",
-    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "5545719a4631be026988675878560e48cff4e718cd68be323bb2592fa7f7531a"
+    "Sources/GeneratedTeaQL/Requests/TenantRequest.swift": "6d62a4de7dca98e1fd5351f06415cabfdfd87ec93e04c33c6d62d9b709bcb216",
+    "Sources/GeneratedTeaQL/Requests/PurchaseOrderRequest.swift": "57a61477894f010bc7f3383709a7a3906f302287572abf248cf96fa425815d90",
+    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "2896bf547f5c1fa58c7b0e2270907a6bd04531b46ce7978ea88c4ff80c3ac044"
   },
   "previousProducerReceiptSha256": "ea0c3df750eb2bb8f0459dffbcc80c0fb0480719d5f5659e2edc8e89b9624d38",
   "producerReportSha256": "59cfa2004fd93e09f3e00a5bae78bcd22024d59fdacf6cbe6d2f117339a7dcc7",
-  "previousFixtureManifestSha256": "121c5aba1de974011503e445abd6752901c4185f748ea52c4d46afa6acdea79e",
-  "producerReceiptSha256": "99f4dfaf16155c111786af009c330b9b2024363966fbaacbaeef9bc50570ad90"
+  "previousFixtureManifestSha256": "fb1491ff14f1266ba7e77159f3eec2390f274a074f52c8c23b743e77dd27921c",
+  "producerReceiptSha256": "0d143776219536f76b3c4474f87cb78c6cd1a2e5a07163513e1bc8b5a8df3f5b"
 }

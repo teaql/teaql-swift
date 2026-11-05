@@ -645,47 +645,47 @@ public struct SchoolRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withEstablishedDateIs(_ value: Date) -> Self {
-        adding(.equal("establishedDate", .date(value)))
+        adding(.equal("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withEstablishedDateIn(_ values: [Date]) -> Self {
-        adding(.inList("establishedDate", values.map { .date($0) }))
+        adding(.inList("establishedDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withEstablishedDateIsNot(_ value: Date) -> Self {
-        adding(.notEqual("establishedDate", .date(value)))
+        adding(.notEqual("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withEstablishedDateNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("establishedDate", values.map { .date($0) }))
+        adding(.notInList("establishedDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withEstablishedDateGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("establishedDate", .date(value)))
+        adding(.greaterThan("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withEstablishedDateGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("establishedDate", .date(value)))
+        adding(.greaterThanOrEqual("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withEstablishedDateLessThan(_ value: Date) -> Self {
-        adding(.lessThan("establishedDate", .date(value)))
+        adding(.lessThan("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withEstablishedDateLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("establishedDate", .date(value)))
+        adding(.lessThanOrEqual("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withEstablishedDateBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("establishedDate", .date(lower), .date(upper)))
+        adding(.between("establishedDate", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
@@ -1077,9 +1077,23 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByPlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("platform")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByPlatformAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("platform", as: alias)
         return copy
     }
 
@@ -1091,9 +1105,23 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupBySchoolTypeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("schoolType", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByName() -> Self {
         var copy = self
         copy.query.groupBy.append("name")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
         return copy
     }
 
@@ -1105,9 +1133,23 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByAddressAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("address", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByEstablishedDate() -> Self {
         var copy = self
         copy.query.groupBy.append("establishedDate")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByEstablishedDateAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("establishedDate", as: alias)
         return copy
     }
 
@@ -1119,9 +1161,23 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByStudentCapacityAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("studentCapacity", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByActive() -> Self {
         var copy = self
         copy.query.groupBy.append("active")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByActiveAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("active", as: alias)
         return copy
     }
 
@@ -1133,6 +1189,13 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByCreateTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("createTime", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByUpdateTime() -> Self {
         var copy = self
         copy.query.groupBy.append("updateTime")
@@ -1140,9 +1203,23 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByUpdateTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("updateTime", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 

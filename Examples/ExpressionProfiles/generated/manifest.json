@@ -135,8 +135,8 @@
         "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "70c25f232c16f61e632a2ba75e7b23259bb8e09dca49911a4c1252c23b45fbcb",
         "Sources/GeneratedTeaQL/Q.swift": "b8c8b2433f6f260ec48a7e4cadd3088cd2da3b0b5d2d61124a13893a7dd6bab3",
         "README.md": "e74e7540d80fafba417d4d7be5beb7735757b8dc0a676f76861050b838f0a1b5",
-        "Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "88ca11bd8e819cd1f1cd41f0a4f82382341a39be1de3f0409ae6e98060b9c66a",
-        "Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "d4c613a21d66ddee8e804526a9fa90cb045df9d6896b3eb84968d98d13ec89ca"
+        "Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "35821895d9a5e4c27505b24e20ab0a2e23888a6ca47d713c301e7492dd80c4e8",
+        "Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "c3952257fcd6c06c329c7c96d336dd0f92d92b11429a0d872a34f92146c73327"
       }
     },
     "snake_case": {
@@ -270,8 +270,8 @@
         "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "70c25f232c16f61e632a2ba75e7b23259bb8e09dca49911a4c1252c23b45fbcb",
         "Sources/GeneratedTeaQL/Q.swift": "b8c8b2433f6f260ec48a7e4cadd3088cd2da3b0b5d2d61124a13893a7dd6bab3",
         "README.md": "e74e7540d80fafba417d4d7be5beb7735757b8dc0a676f76861050b838f0a1b5",
-        "Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "88ca11bd8e819cd1f1cd41f0a4f82382341a39be1de3f0409ae6e98060b9c66a",
-        "Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "d4c613a21d66ddee8e804526a9fa90cb045df9d6896b3eb84968d98d13ec89ca"
+        "Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "35821895d9a5e4c27505b24e20ab0a2e23888a6ca47d713c301e7492dd80c4e8",
+        "Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "c3952257fcd6c06c329c7c96d336dd0f92d92b11429a0d872a34f92146c73327"
       }
     },
     "PascalCase": {
@@ -405,8 +405,8 @@
         "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "93fe1d79b10ac4fd637d899d5657a29e1ac7296370b9cbe8efa3b4a514a61379",
         "Sources/GeneratedTeaQL/Q.swift": "b8c8b2433f6f260ec48a7e4cadd3088cd2da3b0b5d2d61124a13893a7dd6bab3",
         "README.md": "e74e7540d80fafba417d4d7be5beb7735757b8dc0a676f76861050b838f0a1b5",
-        "Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "88ca11bd8e819cd1f1cd41f0a4f82382341a39be1de3f0409ae6e98060b9c66a",
-        "Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "d4c613a21d66ddee8e804526a9fa90cb045df9d6896b3eb84968d98d13ec89ca"
+        "Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "35821895d9a5e4c27505b24e20ab0a2e23888a6ca47d713c301e7492dd80c4e8",
+        "Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "c3952257fcd6c06c329c7c96d336dd0f92d92b11429a0d872a34f92146c73327"
       }
     }
   }

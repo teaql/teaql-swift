@@ -1,11 +1,11 @@
 {
   "schema": "teaql.generated-scalar-fixture/v1",
   "modelSha256": "8d3017392ffd00abbc06be2555ced27ac6360e2d05fabc4299e27a5ef8f1c762",
-  "generatedManifestSha256": "d17581957ae9ad55302d0d1a8faa80bedd2dce0a922a8d6e31c1e72b2f13de1e",
-  "producerReceiptSha256": "99f4dfaf16155c111786af009c330b9b2024363966fbaacbaeef9bc50570ad90",
+  "generatedManifestSha256": "8366a661896c046b2ac25cef0e95de7d85d8c14ca0b6a334291c43f4e2bae14a",
+  "producerReceiptSha256": "0d143776219536f76b3c4474f87cb78c6cd1a2e5a07163513e1bc8b5a8df3f5b",
   "producerSource": {
-    "commit": "303099f8c0fef931186d51662d5d8747f455f01d",
-    "sourceContentsSha256": "2d93a9db919a3e30ceffc8a8d0fdae80281eab43c06418737009f5f802b1c496"
+    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
+    "tree": "c741ab1f22e21ae0b04c88181b93b80e61ef835a"
   },
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
@@ -18,9 +18,9 @@
     "Generated/Sources/GeneratedTeaQL/RuntimeModule.swift": "9c7c9964aeaa38778878e5de01f909bfc4a153a7e1cf4b9a7d04e703a4ecfaca",
     "Generated/Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "70c25f232c16f61e632a2ba75e7b23259bb8e09dca49911a4c1252c23b45fbcb",
     "Generated/Sources/GeneratedTeaQL/Q.swift": "b8c8b2433f6f260ec48a7e4cadd3088cd2da3b0b5d2d61124a13893a7dd6bab3",
-    "Generated/Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "88ca11bd8e819cd1f1cd41f0a4f82382341a39be1de3f0409ae6e98060b9c66a",
-    "Generated/Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "d4c613a21d66ddee8e804526a9fa90cb045df9d6896b3eb84968d98d13ec89ca",
+    "Generated/Sources/GeneratedTeaQL/Requests/TypePlatformRequest.swift": "35821895d9a5e4c27505b24e20ab0a2e23888a6ca47d713c301e7492dd80c4e8",
+    "Generated/Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "c3952257fcd6c06c329c7c96d336dd0f92d92b11429a0d872a34f92146c73327",
     "model.xml": "8d3017392ffd00abbc06be2555ced27ac6360e2d05fabc4299e27a5ef8f1c762"
   },
-  "previousFixtureManifestSha256": "71bff8122d94eddd42b6cc23f0fbce7261ba97af2f986250f217a564513ff7b9"
+  "previousFixtureManifestSha256": "478717e09238da06cd34232546c50ee8904114f8d111687b923c4b0cbc813aed"
 }

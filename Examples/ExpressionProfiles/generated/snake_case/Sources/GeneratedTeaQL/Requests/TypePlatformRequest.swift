@@ -1429,6 +1429,13 @@ public struct TypePlatformRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByName() -> Self {
         var copy = self
         copy.query.groupBy.append("name")
@@ -1436,9 +1443,23 @@ public struct TypePlatformRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 

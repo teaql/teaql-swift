@@ -10,7 +10,8 @@ let package = Package(
     .executable(name: "QueryPropertyVerification", targets: ["QueryPropertyVerification"]),
     .executable(name: "EmptyAggregateVerification", targets: ["EmptyAggregateVerification"]),
     .executable(name: "Integer32Verification", targets: ["Integer32Verification"]),
-    .executable(name: "TombstoneVerification", targets: ["TombstoneVerification"])],
+    .executable(name: "TombstoneVerification", targets: ["TombstoneVerification"]),
+    .executable(name: "ScalarRoundtripVerification", targets: ["ScalarRoundtripVerification"])],
   dependencies: [.package(name: "teaql-swift", path: runtimePath)],
   targets: [
     .target(name: "GeneratedTeaQL",
@@ -37,6 +38,11 @@ let package = Package(
     .executableTarget(name: "TombstoneVerification", dependencies: [
       "GeneratedTeaQL", .product(name: "TeaQLCore", package: "teaql-swift"),
       .product(name: "TeaQLSQLite", package: "teaql-swift"),
+    ]),
+    .executableTarget(name: "ScalarRoundtripVerification", dependencies: [
+      "GeneratedTeaQL", .product(name: "TeaQLCore", package: "teaql-swift"),
+      .product(name: "TeaQLSQLite", package: "teaql-swift"),
+      .product(name: "TeaQLTestSupport", package: "teaql-swift"),
     ]),
   ],
   swiftLanguageModes: [.v6]

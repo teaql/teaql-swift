@@ -6,11 +6,11 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "303099f8c0fef931186d51662d5d8747f455f01d",
-    "sourceContentsSha256": "2d93a9db919a3e30ceffc8a8d0fdae80281eab43c06418737009f5f802b1c496"
+    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
+    "tree": "c741ab1f22e21ae0b04c88181b93b80e61ef835a"
   },
-  "producerReceiptSha256": "99f4dfaf16155c111786af009c330b9b2024363966fbaacbaeef9bc50570ad90",
-  "generatedManifestSha256": "d17581957ae9ad55302d0d1a8faa80bedd2dce0a922a8d6e31c1e72b2f13de1e",
+  "producerReceiptSha256": "0d143776219536f76b3c4474f87cb78c6cd1a2e5a07163513e1bc8b5a8df3f5b",
+  "generatedManifestSha256": "8366a661896c046b2ac25cef0e95de7d85d8c14ca0b6a334291c43f4e2bae14a",
   "files": {
     "Sources/GeneratedTeaQL/Models/Platform.swift": "f6d9b32be64354045b1a3aa22ab1d99be14e600f71103ccb33b4bb397827d08b",
     "Sources/GeneratedTeaQL/Models/SchoolType.swift": "3f2eb7716318395410e567d05c805e45d045e33dee979a16f21964a6e453885d",
@@ -20,10 +20,10 @@
     "Sources/GeneratedTeaQL/RuntimeModule.swift": "bd5a74978cc69f374c55cc9cb48dcbd55af6eb6fda5af493e2bdd06896200b0c",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "636de51e11502959e01afc503c8aafb92e896f8067e05cda543f0b4276c94458",
     "Sources/GeneratedTeaQL/Q.swift": "43c8f6aa5cb8f762121529babae4926a4b7668a879da509f9a0d2bb1a6ee20ce",
-    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "75a7788378ace539047bd3cb40b1d7bdbf826c54a076657bdae914f98df80f7f",
-    "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift": "411fbef3c41a0bdef7e19095ee8fedfe238f556030d5a1bb5008d6281a7d6c48",
-    "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift": "2bc73da96d225b2e4022ba2bb888e05fefd0efca1c79b79192f1753ac2750072"
+    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "8c79482747c18fccc613ec955ebc3da16a4ba4ea101158e0a5e925026e55d050",
+    "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift": "20716bb9240ce6eef5bc0a8dfa4dd890cd2d0830e9e465de9c2fa42c972ca41e",
+    "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift": "28b88db5682a02d003cd51ae74994786302c83bf2f78600d33334eac7be0b812"
   },
-  "previousFixtureManifestSha256": "d8d70e8ffac27ad6b199a8307fb2704352e7ba3e6209f039fb915b338f4eee28",
+  "previousFixtureManifestSha256": "5ae6114bf1b172e298c083d2e8a876ab3887c93de6ab3faa87b80b4ba92e0b77",
   "applicationManifestsPreserved": true
 }

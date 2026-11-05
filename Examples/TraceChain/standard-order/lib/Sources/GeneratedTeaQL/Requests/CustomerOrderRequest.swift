@@ -721,47 +721,47 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withOrderDateIs(_ value: Date) -> Self {
-        adding(.equal("orderDate", .date(value)))
+        adding(.equal("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOrderDateIn(_ values: [Date]) -> Self {
-        adding(.inList("orderDate", values.map { .date($0) }))
+        adding(.inList("orderDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withOrderDateIsNot(_ value: Date) -> Self {
-        adding(.notEqual("orderDate", .date(value)))
+        adding(.notEqual("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOrderDateNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("orderDate", values.map { .date($0) }))
+        adding(.notInList("orderDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withOrderDateGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("orderDate", .date(value)))
+        adding(.greaterThan("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOrderDateGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("orderDate", .date(value)))
+        adding(.greaterThanOrEqual("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOrderDateLessThan(_ value: Date) -> Self {
-        adding(.lessThan("orderDate", .date(value)))
+        adding(.lessThan("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOrderDateLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("orderDate", .date(value)))
+        adding(.lessThanOrEqual("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOrderDateBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("orderDate", .date(lower), .date(upper)))
+        adding(.between("orderDate", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
@@ -1055,9 +1055,23 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCustomer() -> Self {
         var copy = self
         copy.query.groupBy.append("customer")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCustomerAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("customer", as: alias)
         return copy
     }
 
@@ -1069,9 +1083,23 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByStatusAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("status", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOrderNumber() -> Self {
         var copy = self
         copy.query.groupBy.append("orderNumber")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOrderNumberAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("orderNumber", as: alias)
         return copy
     }
 
@@ -1083,6 +1111,13 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByOrderDateAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("orderDate", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByTotalAmount() -> Self {
         var copy = self
         copy.query.groupBy.append("totalAmount")
@@ -1090,9 +1125,23 @@ public struct CustomerOrderRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByTotalAmountAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("totalAmount", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
