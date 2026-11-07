@@ -63,7 +63,7 @@ struct RestoredMutationTests {
   }
 
   @Test func newEntitiesRetainTheirAssignmentsEvenWithAnEqualSnapshot() async throws {
-    var entity = try RestoredProbe(version: 0)
+    var entity = try RestoredProbe(version: 0, snapshotOrigin: .creationBaseline)
     entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
     entity.assign("name", .string("original"))
     let probe = RestoredEffects(), context = try context(probe)
@@ -177,7 +177,8 @@ private struct RestoredProbe: TeaQLMutationRootedEntity {
   let teaqlEntityRoot: EntityRoot
   let teaqlLoadedSnapshot: LoadedEntitySnapshot?
   var teaqlEntityKey: EntityKey { EntityKey(entity: Self.descriptor.name, id: .int(id)) }
-  init(version: Int64 = 7, omit: Set<String> = [], overrides: TeaQLRecord = [:]) throws {
+  init(version: Int64 = 7, omit: Set<String> = [], overrides: TeaQLRecord = [:],
+       snapshotOrigin: EntitySnapshotOrigin = .hydrated) throws {
     self.version = version; teaqlEntityRoot = EntityRoot()
     var original: TeaQLRecord = ["name": .string("original"), "optionalName": .null, "active": .bool(true),
       "quantity": .int(9_007_199_254_740_993), "unsigned": .uint(UInt64.max),
@@ -188,7 +189,7 @@ private struct RestoredProbe: TeaQLMutationRootedEntity {
     original.merge(overrides) { _, value in value }; values = original
     let key = EntityKey(entity: Self.descriptor.name, id: .int(1))
     try teaqlEntityRoot.setOriginalVersion(key, version: version)
-    teaqlLoadedSnapshot = LoadedEntitySnapshots().capture(key: key, version: version, record: original)
+    teaqlLoadedSnapshot = LoadedEntitySnapshots().capture(key: key, version: version, record: original, origin: snapshotOrigin)
   }
   mutating func assign(_ name: String, _ value: TeaQLValue) {
     values[name] = value

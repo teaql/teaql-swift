@@ -341,7 +341,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     let rooted = entity as? any TeaQLMutationRootedEntity
     try validateLoadedIdentity(rooted: rooted)
     LoadedScalarRestoration.discardRestoredFields(of: entity)
-    if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return }
+    if let rooted, (entity.version != 0 || rooted.teaqlLoadedSnapshot != nil),
+      !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return }
     _ = try context.preflightMutation(
       makeMutation(rooted: rooted),
       ledgerRoot: rooted?.teaqlEntityRoot,
@@ -354,7 +355,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   public func validateVersion() throws -> Bool {
     let rooted = entity as? any TeaQLMutationRootedEntity
     try validateLoadedIdentity(rooted: rooted)
-    if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return false }
+    if let rooted, (entity.version != 0 || rooted.teaqlLoadedSnapshot != nil),
+      !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return false }
     _ = try makeMutation(rooted: rooted).validatedForExecution()
     return true
   }
@@ -366,7 +368,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     try context.requireGraphSession(session)
     let rooted = entity as? any TeaQLMutationRootedEntity
     try validateLoadedIdentity(rooted: rooted)
-    if let rooted, entity.version != 0, !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return entity }
+    if let rooted, (entity.version != 0 || rooted.teaqlLoadedSnapshot != nil),
+      !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return entity }
     var mutation = try makeMutation(rooted: rooted)
     mutation.auditReason = session.intent.auditReason
     mutation.mutationLineage = rooted.map { $0.teaqlEntityRoot.traceChain($0.teaqlEntityKey, fallback: scope) }
@@ -401,6 +404,14 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
 
   private func makeMutation(rooted: (any TeaQLMutationRootedEntity)?) throws -> Mutation {
     try validateLoadedIdentity(rooted: rooted)
+    // A sparse decoded/read view may omit version. It stays inert when
+    // unchanged, but editing it must never turn version zero into INSERT.
+    // Even a caller-supplied markAsNew cannot erase its loaded provenance.
+    if Entity.descriptor.versionProperty != nil, let rooted,
+      let snapshot = rooted.teaqlLoadedSnapshot, snapshot.version == 0,
+      !(snapshot.origin == .creationBaseline && rooted.teaqlEntityRoot.isNew(rooted.teaqlEntityKey)) {
+      throw EntityCreationError(entityType: Entity.descriptor.name)
+    }
     if let rooted {
       let key = rooted.teaqlEntityKey
       // New entities may still have ID zero and use their complete scalar

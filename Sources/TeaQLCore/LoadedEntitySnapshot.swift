@@ -1,14 +1,21 @@
 import Foundation
 
+/// Process-local provenance, never a field read from JSON or a query row.
+public enum EntitySnapshotOrigin: Sendable, Equatable {
+  case hydrated
+  case creationBaseline
+}
+
 /// Immutable provider-loaded values. Sharing these never shares mutation ownership.
 /// Record access returns a Swift value copy; callers cannot modify the stored record.
 public final class LoadedEntitySnapshot: Sendable {
   public let key: EntityKey
   public let version: Int64
   public let record: TeaQLRecord
+  public let origin: EntitySnapshotOrigin
 
-  fileprivate init(key: EntityKey, version: Int64, record: TeaQLRecord) {
-    self.key = key; self.version = version; self.record = record
+  fileprivate init(key: EntityKey, version: Int64, record: TeaQLRecord, origin: EntitySnapshotOrigin) {
+    self.key = key; self.version = version; self.record = record; self.origin = origin
   }
 }
 
@@ -20,12 +27,13 @@ public final class LoadedEntitySnapshots: @unchecked Sendable {
 
   public init() {}
 
-  public func capture(key: EntityKey, version: Int64, record: TeaQLRecord) -> LoadedEntitySnapshot {
+  public func capture(key: EntityKey, version: Int64, record: TeaQLRecord,
+                      origin: EntitySnapshotOrigin = .hydrated) -> LoadedEntitySnapshot {
     lock.withLock {
-      if let snapshot = snapshots[key]?.first(where: { $0.version == version && sameMutationRecord($0.record, record) }) {
+      if let snapshot = snapshots[key]?.first(where: { $0.version == version && $0.origin == origin && sameMutationRecord($0.record, record) }) {
         return snapshot
       }
-      let snapshot = LoadedEntitySnapshot(key: key, version: version, record: record)
+      let snapshot = LoadedEntitySnapshot(key: key, version: version, record: record, origin: origin)
       snapshots[key, default: []].append(snapshot)
       return snapshot
     }
