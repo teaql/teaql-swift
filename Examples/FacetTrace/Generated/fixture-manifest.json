@@ -6,14 +6,14 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "ea421529ea1eee52d39778ea674e64209b75838a"
+    "commit": "b43c34d02eb32b44dfd52b1641ad9fa09548e5c4"
   },
-  "producerReceiptSha256": "c55cb0b9049bafa1c1b4decddaedeed050bdd7f344e0f998b80d8041867dd879",
-  "generatedManifestSha256": "42f8b17490dc39ac58f8f73f8846bca16a3fb2476c9588bb20d4d00a5cd287da",
+  "producerReceiptSha256": "781d867d711fe13bccb62151744685f9c8f09696b5037e30a3c4266906c00f46",
+  "generatedManifestSha256": "9d76a6afb2e426665c0a96727fa1f1dd9bb2741a13076673ef5e5e9018bb3a9d",
   "files": {
-    "Sources/GeneratedTeaQL/Models/Platform.swift": "bd5f6bfc1683f3a60220cacd6f57adb94904964c63ea79974204a6ec5dc391bb",
-    "Sources/GeneratedTeaQL/Models/SchoolType.swift": "37a815ccfda1cb72c077760d9a1780c65c27cf66bc0eb37eb7458f8ae8fb01a7",
-    "Sources/GeneratedTeaQL/Models/School.swift": "bba2fbe92ecfda6e53ef3b85acd979501508c528d3ca5f39b63e8731ed12e8b1",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "d806e9c302ee2159a413ce969a801e5ff706526c83661e9702c80d7fed3cc707",
+    "Sources/GeneratedTeaQL/Models/SchoolType.swift": "83b8a4a4a59afc3ee652e8629e314e1f5f41039a774a36b33197994a7c7b0fac",
+    "Sources/GeneratedTeaQL/Models/School.swift": "cdf9dbc41c074729c17df59b1f479fe852fcc48868882415709f5ee8db86443b",
     "Sources/GeneratedTeaQL/E.swift": "750ae4697ef1014790c94fbdfee632755cd909df8cbfd942b551cd9a842a9c65",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
     "Sources/GeneratedTeaQL/RuntimeModule.swift": "b2dba9166c8400043bf0692a188f2793d1e0e3ba8dcf597bc607c36b807394da",
@@ -23,6 +23,6 @@
     "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift": "68dfd1ebc4a9101f241c45c5cb44851211fb4d492d49f2b1a178cf4bacbfb584",
     "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift": "a0ee0d0adcc840d0491fe61c825011335d7b40ef74a5f23eab671c71262bd11b"
   },
-  "previousFixtureManifestSha256": "b702b80ed198b5b8b6da329392bf32b8726e252ccf4bc899d26813c3d61f527e",
+  "previousFixtureManifestSha256": "5fde3a21fbfae1f06fee9ba0fe61af589882be81edaf8f415aafb254f04e58f3",
   "applicationManifestsPreserved": true
 }

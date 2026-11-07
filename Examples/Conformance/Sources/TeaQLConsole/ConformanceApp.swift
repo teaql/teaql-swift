@@ -63,7 +63,10 @@ enum ConformanceApp {
         try await context.ensureSchema(GeneratedRuntimeModule.module)
         print("PASS ensureSchema (context-scoped SQLite DDL from Runtime Module)")
 
-        var invalid = WorkItem()
+        var invalid = try await Q.workItems()
+            .comment("Prepare a work item with a missing title")
+            .purpose("Verify Checker rejection before business SQL")
+            .newEntity(context)
         invalid.updatePlatform(1)
         let evidenceBeforeInvalid = await evidence.snapshot().count
         do {
@@ -79,7 +82,10 @@ enum ConformanceApp {
                     "Checker must run before mutation SQL")
         print("PASS Checker (canonical title key, rejected before SQL)")
 
-        var denied = WorkItem()
+        var denied = try await Q.workItems()
+            .comment("Prepare a work item that policy must deny")
+            .purpose("Verify whole-graph Mutation Policy admission")
+            .newEntity(context)
         denied.updateTitle("Blocked by policy")
         denied.updatePlatform(1)
         let evidenceBeforePolicy = await evidence.snapshot().count
@@ -93,7 +99,10 @@ enum ConformanceApp {
                     "Mutation Policy denial reached SQLite")
         print("PASS Mutation Policy (whole graph denied before provider SQL)")
 
-        var item = WorkItem()
+        var item = try await Q.workItems()
+            .comment("Prepare a conformance work item")
+            .purpose("Verify reserved identity and audited persistence")
+            .newEntity(context)
         item.updateTitle("Verify Swift runtime")
         item.updatePlatform(1)
         let created = try await item.auditAs("Create conformance work item").save(context)

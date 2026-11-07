@@ -1,17 +1,17 @@
 {
   "schema": "teaql.generated-scalar-fixture/v1",
   "modelSha256": "8d3017392ffd00abbc06be2555ced27ac6360e2d05fabc4299e27a5ef8f1c762",
-  "generatedManifestSha256": "42f8b17490dc39ac58f8f73f8846bca16a3fb2476c9588bb20d4d00a5cd287da",
-  "producerReceiptSha256": "c55cb0b9049bafa1c1b4decddaedeed050bdd7f344e0f998b80d8041867dd879",
+  "generatedManifestSha256": "9d76a6afb2e426665c0a96727fa1f1dd9bb2741a13076673ef5e5e9018bb3a9d",
+  "producerReceiptSha256": "781d867d711fe13bccb62151744685f9c8f09696b5037e30a3c4266906c00f46",
   "producerSource": {
-    "commit": "ea421529ea1eee52d39778ea674e64209b75838a"
+    "commit": "b43c34d02eb32b44dfd52b1641ad9fa09548e5c4"
   },
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "previousManifestSha256": "24d431590bd5c41d2ad755cd2075964edd2c477f338b063decb2f2787b11cf29",
   "files": {
-    "Generated/Sources/GeneratedTeaQL/Models/TypePlatform.swift": "1f85db8e6fff53cb91bc83b143b87a0b8601332a0177cd02cff6b64d78fa2a29",
-    "Generated/Sources/GeneratedTeaQL/Models/ScalarTypeProbe.swift": "fcbbf9168f9df35382a3757d1f5e08891f203f0a2806c15e0e8982deaf913b0f",
+    "Generated/Sources/GeneratedTeaQL/Models/TypePlatform.swift": "276f592a29ab467ffbf07f880b9dee7927066e5e2bcc3133676566d1a402a4ed",
+    "Generated/Sources/GeneratedTeaQL/Models/ScalarTypeProbe.swift": "dfc68999653348486e1f601dc51366785847d4065d4706623625e140aa89bfd7",
     "Generated/Sources/GeneratedTeaQL/E.swift": "662e9e66024597c0af7a151b896007a1ca33418590857e3052761a7c286e1d76",
     "Generated/Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
     "Generated/Sources/GeneratedTeaQL/RuntimeModule.swift": "a6a148ed9adec44de4e781813c360fe37d83a6e4b0063543a92042d756d4fb3c",
@@ -21,5 +21,5 @@
     "Generated/Sources/GeneratedTeaQL/Requests/ScalarTypeProbeRequest.swift": "3a5889136993112b73320f30bab2a55694240f80cdbcafb3fad0c810c4bf29af",
     "model.xml": "8d3017392ffd00abbc06be2555ced27ac6360e2d05fabc4299e27a5ef8f1c762"
   },
-  "previousFixtureManifestSha256": "b079442041568013a2ee5260d40bd2e6245a7d00c37d76a1ac7865968c8d6f4c"
+  "previousFixtureManifestSha256": "c87c91278cfaedcd2c3a93d5c0840432008bad6beba26f30dc84f85dd741ce12"
 }

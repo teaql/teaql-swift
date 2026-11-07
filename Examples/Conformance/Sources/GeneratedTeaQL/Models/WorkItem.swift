@@ -20,11 +20,9 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
         }
     }
     private var _loadedFields: Set<String> = []
-    public var teaqlEntityRoot = EntityRoot()
+    public var teaqlEntityRoot: EntityRoot
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
 
-    private static let teaqlIDLock = NSLock()
-    nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "WorkItem", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
@@ -38,7 +36,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public init(from decoder: Decoder) throws {
-        self.init()
+        self.init(teaqlHydrationRoot: EntityRoot())
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.id) {
@@ -71,8 +69,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
-        // JSON hydration owns a read ledger, not the constructor's new ledger.
-        self.teaqlEntityRoot = EntityRoot()
+        // Hydration never creates or discards an intermediate insert ledger.
         self.teaqlLedgerID = id
         try teaqlEntityRoot.setOriginalVersion(teaqlEntityKey, version: version)
         let record = toRecord().filter { _loadedFields.contains($0.key) }
@@ -105,10 +102,10 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
         try dynamicProperties.encode(to: encoder)
     }
 
-    public init() {
-        Self.teaqlIDLock.lock(); Self.teaqlNextTemporaryID -= 1; teaqlLedgerID = Self.teaqlNextTemporaryID; Self.teaqlIDLock.unlock()
-        _loadedFields = Set(["id", "title", "description", "platform", "version"])
-        teaqlEntityRoot.markAsNew(teaqlEntityKey)
+    /// Read construction is private and owns no insertion intention.
+    /// Applications create through the Context-aware generated Q factory.
+    private init(teaqlHydrationRoot: EntityRoot) {
+        self.teaqlEntityRoot = teaqlHydrationRoot
     }
 
     public static let descriptor = EntityDescriptor(
@@ -132,9 +129,7 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
-        var entity = Self()
-        // Discard the constructor's new-entity ledger during hydration.
-        entity.teaqlEntityRoot = root
+        var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -230,8 +225,12 @@ public struct WorkItem: TeaQLEntity, TeaQLMutationRootedEntity {
     /// Construct only after the Context-selected allocator succeeds.
     static func teaqlNewWithID(_ value: Int64) throws -> Self {
         guard value > 0 else { throw InternalIDError.invalidValue(value) }
-        var entity = Self()
-        try entity.teaqlInitializeGeneratedBootstrapId(value)
+        var entity = Self(teaqlHydrationRoot: EntityRoot())
+        entity.id = value
+        entity.teaqlLedgerID = value
+        entity._loadedFields = Set(["id", "title", "description", "platform", "version"])
+        entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
+        entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
     }
 

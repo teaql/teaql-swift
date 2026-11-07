@@ -4,9 +4,9 @@
   "modelSha256": "61aabdcd49fdaba722debf5c200738e1878fdf26776ba30268c3481737eb73e2",
   "evaluatedScope": "swift-lib-core",
   "files": {
-    "Sources/GeneratedTeaQL/Models/QueryPlatform.swift": "27cef21c9f734498eb9f99a68391eabd0cad47c207bd7990ec1bcd0f4d9b2146",
-    "Sources/GeneratedTeaQL/Models/QueryGroup.swift": "6a797e7bfbbeb1360c9e00b7b7d9492f50fbe2a6fdddbc834c39f5fccf602cfa",
-    "Sources/GeneratedTeaQL/Models/QueryRecord.swift": "a2f4f3cbc8ff6280d6d09ae7682068bb120db0b372bf0868cdc6ed2010d6fe84",
+    "Sources/GeneratedTeaQL/Models/QueryPlatform.swift": "48689940e1c362c725c8b0dbbc856901de59c1b3ca22ece011a661de9e8c5442",
+    "Sources/GeneratedTeaQL/Models/QueryGroup.swift": "50029325961d7329c2f6a36bddc1561fa2c8215b6d40b9f85f2c657fb29b5f90",
+    "Sources/GeneratedTeaQL/Models/QueryRecord.swift": "8569c333201f513de66b246d5bb033300e5658a79a89548e039a0c22c6561824",
     "Sources/GeneratedTeaQL/E.swift": "e80e146d1287d118ffc88f381df587ec74198a1ad6f8cbf83823c5e8acd16fb5",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
     "Sources/GeneratedTeaQL/RuntimeModule.swift": "80ae997866a58b6bfaae114ba7979b25669addf7665be4d8304a77e1069e7b61",
@@ -18,11 +18,11 @@
   },
   "applicationManifestsPreserved": true,
   "producerSource": {
-    "commit": "ea421529ea1eee52d39778ea674e64209b75838a"
+    "commit": "b43c34d02eb32b44dfd52b1641ad9fa09548e5c4"
   },
-  "generatedManifestSha256": "42f8b17490dc39ac58f8f73f8846bca16a3fb2476c9588bb20d4d00a5cd287da",
-  "producerReceiptSha256": "c55cb0b9049bafa1c1b4decddaedeed050bdd7f344e0f998b80d8041867dd879",
+  "generatedManifestSha256": "9d76a6afb2e426665c0a96727fa1f1dd9bb2741a13076673ef5e5e9018bb3a9d",
+  "producerReceiptSha256": "781d867d711fe13bccb62151744685f9c8f09696b5037e30a3c4266906c00f46",
   "evaluationErrors": 0,
-  "previousFixtureManifestSha256": "8773db4ebaf65f1fb3787645a331868d60d42e8cc7696d08eac3ab1425d34376",
+  "previousFixtureManifestSha256": "91be5d9dafe1f66c1020704d04553293f532173da5cb5b3cc65507894cae7517",
   "evaluationWarnings": 5
 }
