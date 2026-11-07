@@ -679,6 +679,7 @@ public struct UserContext: Sendable {
   public private(set) var i18nCatalog: I18nCatalog
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
+  private let internalIDGenerator: (any InternalIDGenerator)?
   private let continuousPageState: ContinuousPageState
   private let idSetObservationState: IdSetObservationState
   private let idSetStore: any IdSetStore
@@ -719,7 +720,8 @@ public struct UserContext: Sendable {
     mutationGovernanceSink: (any MutationGovernanceSink)? = nil,
     objectStorageProvider: (any ObjectStorageProvider)? = nil,
     objectStorageObserver: ObjectStorageObserver? = nil,
-    businessClock: any BusinessClock = SystemBusinessClock()
+    businessClock: any BusinessClock = SystemBusinessClock(),
+    internalIDGenerator: (any InternalIDGenerator)? = nil
   ) {
     self.runtime = runtime
     self.businessClock = businessClock
@@ -743,6 +745,7 @@ public struct UserContext: Sendable {
     self.i18nCatalog = i18nCatalog
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
+    self.internalIDGenerator = internalIDGenerator
     self.continuousPageState = ContinuousPageState()
     self.idSetObservationState = IdSetObservationState()
     self.graphTransactionGate = GraphTransactionGate()
@@ -968,7 +971,8 @@ public struct UserContext: Sendable {
       entityCreationObserver: entityCreationObserver,
       objectStorageProvider: objectStorageProvider,
       objectStorageObserver: objectStorageObserver,
-      businessClock: businessClock)
+      businessClock: businessClock,
+      internalIDGenerator: internalIDGenerator)
     // Retain customer governance configuration, not an active caller plan or
     // invocation. The new context still owns fresh graph/Fix execution state.
     bootstrap.mutationPolicyCoordinator = mutationPolicyCoordinator.fork()
@@ -980,6 +984,33 @@ public struct UserContext: Sendable {
   public mutating func installI18nCatalog(_ catalog: I18nCatalog) { i18nCatalog = catalog }
   public func translateCheckResults(_ results: [CheckResult]) -> [CheckResult] {
     results.map { CheckerPrivacy.project($0, runtime: runtime, catalog: i18nCatalog, locale: locale) }
+  }
+
+  /// Reserve before construction. The selected allocator is authoritative;
+  /// neither failures nor invalid values fall back to a different generator.
+  public func generateInternalID(for entity: String) async throws -> Int64 {
+    try Task.checkCancellation()
+    guard !entity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw InternalIDError.invalidEntityName
+    }
+    try requireProviderAccess()
+    guard graphSession == nil, standaloneFixInvocation == nil,
+      !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
+      throw InternalIDError.activeGraph
+    }
+    guard let generator = internalIDGenerator ?? (mutationExecutor as? any InternalIDGenerator) else {
+      throw InternalIDError.unavailable
+    }
+    await graphTransactionGate.acquire()
+    defer { graphTransactionGate.release(evidence: graphTransactionGate.lastFixEvidence) }
+    try Task.checkCancellation()
+    let value = try await GraphTransactionGate.Reentry.$active.withValue(
+      GraphTransactionGate.Reentry.active.union([graphTransactionGate.id])) {
+        try await generator.nextID(for: entity, context: self)
+    }
+    try Task.checkCancellation()
+    guard value > 0 else { throw InternalIDError.invalidValue(value) }
+    return value
   }
 
   /// Applies trusted local defaults without exposing them as generated input.

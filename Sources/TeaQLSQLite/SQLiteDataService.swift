@@ -62,7 +62,7 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor {
+public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor, InternalIDGenerator {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
@@ -292,6 +292,28 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
       }, nil, nil, nil)
     guard status == SQLITE_OK else {
       throw SQLiteError.sqlite(code: status, message: String(cString: sqlite3_errmsg(database)), sql: nil)
+    }
+  }
+
+  /// Creation reserves a durable ID in its own transaction. Never join a
+  /// business graph transaction: its rollback must not recycle a returned ID.
+  public func nextID(for entity: String, context: UserContext) throws -> Int64 {
+    try Task.checkCancellation()
+    guard !entity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      throw InternalIDError.invalidEntityName
+    }
+    guard !graphTransactionActive else { throw InternalIDError.activeGraph }
+    try executeSQL("BEGIN IMMEDIATE")
+    do {
+      try executeSQL("CREATE TABLE IF NOT EXISTS teaql_id_space (type_name TEXT NOT NULL PRIMARY KEY, current_level INTEGER NOT NULL)")
+      let id = try allocateID(typeName: entity)
+      guard id > 0 else { throw InternalIDError.invalidValue(id) }
+      try Task.checkCancellation()
+      try executeSQL("COMMIT")
+      return id
+    } catch {
+      try? executeSQL("ROLLBACK")
+      throw error
     }
   }
 
