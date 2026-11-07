@@ -7,7 +7,11 @@ import TeaQLSQLite
 private struct BoundaryEffects: Codable, Sendable, Equatable {
   var queries = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
-private actor BoundaryProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor BoundaryProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var effects = BoundaryEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -113,10 +117,11 @@ enum CheckerBoundaryProbe {
       wrappers[name] = BoundaryChecker(base: base, policy: policy)
     }
     try runtime.install(RuntimeModule(name: "Observed Checker boundaries", entities: [], checkers: wrappers))
-    func context(_ runtime: TeaQLRuntime, _ provider: BoundaryProvider, _ policy: BoundaryPolicy) -> UserContext {
+    func context(_ runtime: TeaQLRuntime, _ provider: BoundaryProvider, _ policy: BoundaryPolicy,
+      allocator: (any InternalIDGenerator)? = nil) -> UserContext {
       UserContext(runtime: runtime, actor: "checker-boundary-example", activeRoot: ContextEntityRef(entity: "Tenant", id: .int(1)),
         queryExecutor: provider, mutationExecutor: provider, requestPolicy: RequestPolicy { $0 }, auditSink: provider,
-        mutationPolicyRegistry: policy, businessClock: FixedBusinessClock(clock))
+        mutationPolicyRegistry: policy, businessClock: FixedBusinessClock(clock), internalIDGenerator: allocator)
     }
     let active = context(runtime, provider, policy)
     let schema = UserContext(runtime: runtime, actor: "checker-boundary-schema", activeRoot: ContextEntityRef(entity: "Tenant", id: .int(1)),
@@ -146,13 +151,13 @@ enum CheckerBoundaryProbe {
     try record("bootstrap-policy-denial", ["code": "BOOTSTRAP_DENIED", "persistedRoots": 0,
       "callbacks": try object(deniedCallbacks), "effects": try object(deniedEffects), "schemaAllowed": true])
     func reset() async { await provider.reset(); policy.reset() }
-    func owner(_ phone: String = "5550100") throws -> PurchaseOrder {
-      var row = try Q.purchaseOrders().comment("Prepare a generated Checker boundary")
+    func owner(_ phone: String = "5550100") async throws -> PurchaseOrder {
+      var row = try await Q.purchaseOrders().comment("Prepare a generated Checker boundary")
         .purpose("Require modeled admission before provider execution").newEntity(active)
       row.updateContactPhone(phone); return row
     }
-    func item(_ valid: Bool = true) throws -> OrderItem {
-      var row = try Q.orderItems().comment("Prepare a generated Checker child")
+    func item(_ valid: Bool = true) async throws -> OrderItem {
+      var row = try await Q.orderItems().comment("Prepare a generated Checker child")
         .purpose("Verify post-Fix values through the normal graph save").newEntity(active)
       if valid { row.updateProductName("Boundary item") }
       row.updateUnitPrice(Decimal(string: valid ? "10.00" : "0")!); return row
@@ -178,8 +183,11 @@ enum CheckerBoundaryProbe {
       isolatedWrappers[name] = BoundaryChecker(base: base, policy: isolatedPolicy)
     }
     try isolatedRuntime.install(RuntimeModule(name: "Schema-free Checker boundaries", entities: [], checkers: isolatedWrappers))
-    let isolated = context(isolatedRuntime, isolatedProvider, isolatedPolicy)
-    let missing = try Q.purchaseOrders().comment("Prepare omitted required input without schema creation")
+    // This case isolates Checker admission without creating any SQL schema.
+    // Explicit memory allocation is intentional; ordinary cases above remain durable.
+    let isolated = context(isolatedRuntime, isolatedProvider, isolatedPolicy,
+      allocator: try InMemoryInternalIDGenerator())
+    let missing = try await Q.purchaseOrders().comment("Prepare omitted required input without schema creation")
       .purpose("Install module Checkers independently of bootstrap or DDL").newEntity(isolated)
     var isolatedRejected = false
     do { _ = try await missing.auditAs("Reject invalid input before provider or schema access").save(isolated) }
@@ -189,7 +197,7 @@ enum CheckerBoundaryProbe {
     try require(try physical(path + ".no-schema.sqlite", schemaOnly: true) == "{\"sqlite_master\":[]}", "schema was unexpectedly created")
     try record("module-checker-without-schema", ["schemaCalled": false, "tables": 0, "providerCalls": 0,
       "installedCheckers": names, "checkerCalls": isolatedPolicy.snapshot.checkers])
-    var parent = try owner(); let child = try item(); parent.orderItemList.append(child)
+    var parent = try await owner(); let child = try await item(); parent.orderItemList.append(child)
     await reset(); let saved = try await parent.auditAs("Calibrate one complete generated graph transaction").save(active)
     let calibrated = try await Q.purchaseOrders().withIdIs(saved.id).limit(1)
       .comment("Calibrate an actual provider query").purpose("Prove the read observer is active").executeForList(active)
@@ -205,7 +213,7 @@ enum CheckerBoundaryProbe {
     guard let childID else { throw TeaQLError.execution("Missing persisted calibration child") }
     try record("exact-provider-calibration", ["parentID": saved.id, "childID": childID,
       "effects": try object(positive), "callbacks": try object(positiveCallbacks)])
-    let orphan = try item()
+    let orphan = try await item()
     let required = try await rejected("required", "purchase_order", "OrderItem") {
       _ = try await orphan.auditAs("Reject an omitted required parent relation").save(active)
     }
@@ -250,7 +258,7 @@ enum CheckerBoundaryProbe {
       "effects": try object(ownerEffects), "callbacks": try object(policy.snapshot)])
     for (name, mode, rule, field) in [("required-null", BoundaryPolicy.Fix.requiredNull, "required", "product_name"),
       ("min-zero", BoundaryPolicy.Fix.minZero, "min", "unit_price")] {
-      var graph = try owner(); let original = try item(); graph.orderItemList.append(original); policy.set(mode)
+      var graph = try await owner(); let original = try await item(); graph.orderItemList.append(original); policy.set(mode)
       let violations = try await rejected(rule, "order_item_list[0]." + field, "OrderItem") {
         _ = try await graph.auditAs("Validate the customer's actual Fix result before SQL").save(active)
       }
@@ -261,7 +269,7 @@ enum CheckerBoundaryProbe {
       try record("post-fix-" + name, ["originalInputRetained": true, "wire": try object(result.wire()),
         "effects": try object(await provider.snapshot()), "callbacks": try object(policy.snapshot)])
     }
-    var repaired = try owner(); let invalidChild = try item(false)
+    var repaired = try await owner(); let invalidChild = try await item(false)
     try require(invalidChild.teaqlEntityRoot.change(invalidChild.teaqlEntityKey)["product_name"] == nil,
       "repair must start with an omitted required field")
     try require(try E.orderItem(invalidChild).unitPrice().eval() == 0, "repair must start with an invalid price")
@@ -299,12 +307,15 @@ enum CheckerBoundaryProbe {
         let payload = try fields.map { try json($0.0) + ":" + json(object($0.1)) }.joined(separator: ",")
         let submitted = "{\"payload/order\":{" + payload + "}}", before = try physical(path)
         await reset(); var mapperCalls = 0, saveCalls = 0, createdID: Int64?
+        var reservedID: Int64?, beforeSave: String?
         var normalized: NormalizedWireInput?, violations: [CheckResult] = [], inputFailure: WireInputError?
         do {
           let envelope = try JSONDecoder().decode([String: TeaQLValue].self, from: Data(submitted.utf8))
           guard let outer = envelope["payload/order"], case .object(let input) = outer else { throw TeaQLError.execution("Missing JSON object") }
           normalized = try normalizeWireInput(input, metadata: metadata, parentPointer: "/payload~1order")
-          mapperCalls += 1; var entity = try owner()
+          mapperCalls += 1; var entity = try await owner()
+          reservedID = entity.id
+          beforeSave = try physical(path)
           switch normalized!.values["contact_phone"] {
           case .some(.string(let phone)): entity.updateContactPhone(phone)
           case .some(.null): entity.updateContactPhone(nil)
@@ -328,10 +339,13 @@ enum CheckerBoundaryProbe {
               "alias provenance or canonical pointer was lost")
             wires[output.rawValue] = try object(wire)
           }
-          try require(effects == BoundaryEffects() && callbacks.policies == 0 && callbacks.reviews == 0 && physical(path) == before,
+          // Creation already committed its independent reservation. Rejection
+          // must not add business I/O or change that pre-save allocation state.
+          try require(reservedID.map { $0 > 0 } == true && beforeSave != nil
+            && effects == BoundaryEffects() && callbacks.policies == 0 && callbacks.reviews == 0 && physical(path) == beforeSave,
             "invalid alias input changed provider state")
           try record(name, ["profile": profile.rawValue, "wires": wires, "mapperCalls": mapperCalls, "saveCalls": saveCalls,
-            "effects": try object(effects), "callbacks": try object(callbacks)])
+            "reservedID": reservedID!, "reservationBeforeSave": true, "effects": try object(effects), "callbacks": try object(callbacks)])
         } else if name == "wire-positive-control" {
           guard let createdID else { throw TeaQLError.execution("Valid input failed to persist") }
           try require(inputFailure == nil && violations.isEmpty && effects.mutations == 1 && effects.begins == 1 && effects.commits == 1 && effects.audits == 1,

@@ -5,7 +5,11 @@ import TeaQLCore
 import TeaQLSQLite
 
 private struct WidthEffects: Encodable, Equatable { var queries = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0 }
-private actor WidthProvider: QueryExecutor, GraphTransactionExecutor {
+private actor WidthProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var effects = WidthEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -41,8 +45,8 @@ private struct WidthLegacyRow: Encodable { let id: Int64, field: String, fault: 
 @main enum Integer32Verification {
   private static let purpose = "Verify generated modeled Integer boundaries after Fix and during typed reads"
   private static func require(_ value: Bool, _ message: String) throws { if !value { throw TeaQLError.execution(message) } }
-  private static func make(_ context: UserContext, tag: String, long: Int64 = 1_234_567) throws -> ScalarTypeProbe {
-    var entity = try Q.scalarTypeProbes().comment("Prepare a generated Integer fixture").purpose(purpose).newEntity(context)
+  private static func make(_ context: UserContext, tag: String, long: Int64 = 1_234_567) async throws -> ScalarTypeProbe {
+    var entity = try await Q.scalarTypeProbes().comment("Prepare a generated Integer fixture").purpose(purpose).newEntity(context)
     entity.updateTypePlatform(1); entity.updateRequiredString(tag); entity.updateRequiredBoolean(true)
     entity.updateRequiredInteger(7); entity.updateRequiredLong(long); entity.updateRequiredDecimal(1)
     entity.updateRequiredFloat(1.25); entity.updateRequiredDouble(2.5)
@@ -118,7 +122,7 @@ private struct WidthLegacyRow: Encodable { let id: Int64, field: String, fault: 
     let ordinary = context(runtime, provider), prefix = "integer32-round-\(round)"
     var cases: [WidthCase] = [], controls: [Int64] = [], legacy: [WidthLegacyRow] = []
     for (index, bound) in [Int64(-2_147_483_648), 2_147_483_647].enumerated() {
-      var value = try make(ordinary, tag: "\(prefix)-control-\(index)", long: index == 0 ? Int64.min : Int64.max)
+      var value = try await make(ordinary, tag: "\(prefix)-control-\(index)", long: index == 0 ? Int64.min : Int64.max)
       value.updateRequiredInteger(bound); value.updateOptionalInteger(nil)
       let saved = try await value.auditAs("Persist exact Integer endpoints with a genuinely wide Long").save(ordinary)
       try require(try E.scalarTypeProbe(saved).requiredInteger().eval() == bound, "Endpoint changed")
@@ -128,7 +132,7 @@ private struct WidthLegacyRow: Encodable { let id: Int64, field: String, fault: 
     guard let generatedChecker = runtime.checker(named: "ScalarTypeProbe") else { throw TeaQLError.execution("Generated Checker missing") }
     for field in WidthField.allCases {
       for (label, number) in [("below", Int64(-2_147_483_649)), ("above", Int64(2_147_483_648))] {
-        let create = try make(ordinary, tag: "\(prefix)-invalid-create-\(field.rawValue)-\(label)")
+        let create = try await make(ordinary, tag: "\(prefix)-invalid-create-\(field.rawValue)-\(label)")
         var pendingCreate = create; field.assign(&pendingCreate, number)
         cases.append(await rejected("create-\(field.rawValue)-\(label)", field: field, context: ordinary, provider: provider) {
           _ = try await pendingCreate.auditAs("Reject an out-of-domain Integer before SQLite").save(ordinary)
@@ -146,7 +150,7 @@ private struct WidthLegacyRow: Encodable { let id: Int64, field: String, fault: 
           let fix = WidthFix(base: generatedChecker, field: field.rawValue, replacement: .int(number))
           var customRuntime = runtime; try customRuntime.install(RuntimeModule(name: "width-fix", entities: [], checkers: ["ScalarTypeProbe": fix]))
           let custom = context(customRuntime, provider)
-          var value = isUpdate ? try await load(ordinary, controls[0]) : try make(custom, tag: "\(prefix)-invalid-fix-\(field.rawValue)-\(label)")
+          var value = isUpdate ? try await load(ordinary, controls[0]) : try await make(custom, tag: "\(prefix)-invalid-fix-\(field.rawValue)-\(label)")
           field.assign(&value, 7)
           let originalPending = value.teaqlEntityRoot.change(value.teaqlEntityKey)
           cases.append(await rejected("fix-\(isUpdate ? "update" : "create")-\(field.rawValue)-\(label)", field: field, context: custom, provider: provider, fix: fix) {
@@ -198,7 +202,7 @@ private struct WidthLegacyRow: Encodable { let id: Int64, field: String, fault: 
     for field in WidthField.allCases {
       for (fault, raw): (String, TeaQLValue) in [("below", .int(-2_147_483_649)), ("above", .int(2_147_483_648)),
         ("fractional", .double(1.5)), ("text", .string("INVALID-WIDTH-TEXT"))] {
-        let value = try make(ordinary, tag: "\(prefix)-legacy-\(field.rawValue)-\(fault)")
+        let value = try await make(ordinary, tag: "\(prefix)-legacy-\(field.rawValue)-\(fault)")
         let saved = try await value.auditAs("Prepare a valid row before the external legacy corruption").save(ordinary)
         try corruptLegacy(path, id: saved.id, field: field, value: raw)
         legacy.append(WidthLegacyRow(id: saved.id, field: field.rawValue, fault: fault))

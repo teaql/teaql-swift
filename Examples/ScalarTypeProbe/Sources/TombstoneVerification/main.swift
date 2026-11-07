@@ -10,7 +10,11 @@ private enum TombstoneFault: Error, Sendable { case beforeCommit }
 private struct TombstoneEffects: Codable, Equatable, Sendable {
   var queries = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
-private actor TombstoneProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor TombstoneProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var calls = TombstoneEffects(), events: [AuditEvent] = []
   private var failCommit = false, auditCountAtFailure = 0
@@ -96,8 +100,8 @@ private struct TombstonePhysical: Equatable {
       try require(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK, "Cannot inject the owned SQLite trigger")
     }
   }
-  private static func make(_ context: UserContext, name: String) throws -> ScalarTypeProbe {
-    var row = try Q.scalarTypeProbes().comment("Prepare one tombstone fixture").purpose("Verify authoritative deletion").newEntity(context)
+  private static func make(_ context: UserContext, name: String) async throws -> ScalarTypeProbe {
+    var row = try await Q.scalarTypeProbes().comment("Prepare one tombstone fixture").purpose("Verify authoritative deletion").newEntity(context)
     row.updateTypePlatform(1); row.updateRequiredString(name); row.updateOptionalString("before deletion")
     row.updateRequiredBoolean(true); row.updateRequiredInteger(7); row.updateRequiredLong(8); row.updateRequiredDecimal(Decimal(string: "3.50")!)
     row.updateRequiredFloat(1.25); row.updateRequiredDouble(2.5); row.updateRequiredDate(Date(timeIntervalSince1970: 1_709_164_800))
@@ -117,7 +121,7 @@ private struct TombstonePhysical: Equatable {
     let context = UserContext(runtime: runtime, queryExecutor: provider, mutationExecutor: provider, requestPolicy: RequestPolicy { $0 },
       auditSink: provider, querySQLLogEnabled: false, mutationSQLLogEnabled: false, mutationPolicyRegistry: callbacks, businessClock: callbacks)
     let name = "swift-tombstone-\(round)-\(kind)-" + UUID().uuidString
-    let seed = try make(context, name: name), saved = try await seed.auditAs("Seed an existing deletion fixture").save(context)
+    let seed = try await make(context, name: name), saved = try await seed.auditAs("Seed an existing deletion fixture").save(context)
     guard var row = try await load(context, id: saved.id) else { throw TeaQLError.execution("Generated fixture not loaded") }
     try require(row.version == 1 && saved.id > 0, "Seed identity/version missing")
     let triggered = kind != "ordinary", expected: Int64 = triggered ? -42 : -2

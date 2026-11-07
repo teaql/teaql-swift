@@ -295,7 +295,7 @@ public enum GeneratedRuntimeModule {
         let bootstrapContext = callerContext._generatedBootstrapContext()
         var domainRoot = try await Q.commercePlatforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
-            var created = try Q.commercePlatforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            var created = try await Q.commercePlatforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
             try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Northwind Demo")
             do { domainRoot = try await created.auditAs("create generated Domain Root CommercePlatform").save(bootstrapContext) }
@@ -305,7 +305,7 @@ public enum GeneratedRuntimeModule {
         let rootedContext = callerContext._generatedBootstrapContext(activeRoot: ContextEntityRef(entity: "CommercePlatform", id: .int(domainRoot.id)))
         var constantOrderStatus1001 = try await Q.orderStatuses().withIdIs(1001).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantOrderStatus1001 == nil {
-            var created = try Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            var created = try await Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
             try created.teaqlInitializeGeneratedBootstrapId(1001)
             created.updateName("Pending")
             created.updateCode("PENDING")
@@ -341,7 +341,7 @@ public enum GeneratedRuntimeModule {
         }
         var constantOrderStatus1002 = try await Q.orderStatuses().withIdIs(1002).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantOrderStatus1002 == nil {
-            var created = try Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            var created = try await Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
             try created.teaqlInitializeGeneratedBootstrapId(1002)
             created.updateName("Confirmed")
             created.updateCode("CONFIRMED")

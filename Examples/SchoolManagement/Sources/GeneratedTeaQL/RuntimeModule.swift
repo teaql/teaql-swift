@@ -138,7 +138,7 @@ public enum GeneratedRuntimeModule {
         let bootstrapContext = callerContext._generatedBootstrapContext()
         var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
-            var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            var created = try await Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
             try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Campus Learning Platform")
             created.updateBaseUrl("https://campus.example.com")
@@ -149,7 +149,7 @@ public enum GeneratedRuntimeModule {
         let rootedContext = callerContext._generatedBootstrapContext(activeRoot: ContextEntityRef(entity: "Platform", id: .int(domainRoot.id)))
         var constantSchoolType1001 = try await Q.schoolTypes().withIdIs(1001).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantSchoolType1001 == nil {
-            var created = try Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            var created = try await Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
             try created.teaqlInitializeGeneratedBootstrapId(1001)
             created.updatePlatform(domainRoot.id)
             created.updateName("Primary")
@@ -180,7 +180,7 @@ public enum GeneratedRuntimeModule {
         }
         var constantSchoolType1002 = try await Q.schoolTypes().withIdIs(1002).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantSchoolType1002 == nil {
-            var created = try Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            var created = try await Q.schoolTypes().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
             try created.teaqlInitializeGeneratedBootstrapId(1002)
             created.updatePlatform(domainRoot.id)
             created.updateName("Secondary")

@@ -10,7 +10,11 @@ private struct ViewEffects: Codable, Equatable, Sendable {
   var fixes = 0, policies = 0, reviews = 0, clockReads = 0
   var positive: Bool { [queries, mutations, begins, commits, rollbacks, audits, fixes, policies, reviews, clockReads].allSatisfy { $0 > 0 } }
 }
-private actor ViewProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor ViewProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var calls = ViewEffects(), fault: ViewFault?, observed: TeaQLRecord?
   private var injections = 0
@@ -133,7 +137,7 @@ enum UnchangedViewsProbe {
       result.fixes = c.fixes; result.policies = c.policies; result.reviews = c.reviews; result.clockReads = c.clockReads; return result
     }
     func reset() async { await provider.reset(); callbacks.reset() }
-    var seed = try Q.purchaseOrders().comment("Prepare the unchanged-view scenario")
+    var seed = try await Q.purchaseOrders().comment("Prepare the unchanged-view scenario")
       .purpose("Verify loaded geometry and rollback retry through generated APIs").newEntity(context)
     seed.updateContactPhone("5550800"); seed.updateInternalNote(nil)
     let saved = try await seed.auditAs("Create the unchanged-view fixture").save(context)

@@ -64,7 +64,7 @@ private struct Report: Encodable {
       var rows = try await Q.scalarTypeProbes().withRequiredStringIs(marker).limit(1)
         .comment("Find the retained exact monetary fixture").purpose("Repeat generated queries without resetting the database").executeForList(context)
       if rows.isEmpty {
-        var row = try Q.scalarTypeProbes().comment("Prepare one exact Decimal counterexample").purpose("Verify generated monetary query admission").newEntity(context)
+        var row = try await Q.scalarTypeProbes().comment("Prepare one exact Decimal counterexample").purpose("Verify generated monetary query admission").newEntity(context)
         row.updateTypePlatform(1); row.updateRequiredString(marker); row.updateRequiredBoolean(true)
         row.updateRequiredInteger(7); row.updateRequiredLong(1_234_567); row.updateRequiredDecimal(expected)
         row.updateRequiredFloat(1.25); row.updateRequiredDouble(2.5)

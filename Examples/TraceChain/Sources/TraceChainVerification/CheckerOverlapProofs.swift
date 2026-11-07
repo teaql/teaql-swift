@@ -42,7 +42,11 @@ private actor CheckerDiagnostics: DiagnosticSQLLogSink {
     func clear() { values.removeAll() }
 }
 
-private actor CheckerCommands: GraphTransactionExecutor {
+private actor CheckerCommands: GraphTransactionExecutor, InternalIDGenerator {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
     let service: SQLiteDataService
     private var requests: [MutationRequest] = [], physical: [SQLExecutionMetadata] = []
     private var starts = 0, commits = 0, rollbacks = 0, active = 0, maximum = 0
@@ -157,8 +161,8 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
         scenario += 1
         let nonce = UUID().uuidString, privateName = "private-checked-item-\(nonce)"
         for id in [firstID, secondID] {
-            var seed = try order(context, id: id, label: "checker-\(nonce)-\(id)")
-            var child = try Q.orderItems().comment("initialize complete Checker child")
+            var seed = try await order(context, id: id, label: "checker-\(nonce)-\(id)")
+            var child = try await Q.orderItems().comment("initialize complete Checker child")
                 .purpose("seed accepted and rejected graph fixtures").newEntity(context)
             child.updateId(id + 10); child.updateName("original-child-\(id)")
             seed.orderItemList.append(child)
@@ -178,7 +182,7 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
         good.orderItemList[0].updateName(privateName)
         _ = good.orderItemList[0].auditAs("accepted child responsibility")
         bad.updateDescription("rejected-pending-\(nonce)")
-        var missing = try Q.orderItems().comment("initialize incomplete Checker child")
+        var missing = try await Q.orderItems().comment("initialize incomplete Checker child")
             .purpose("verify a real missing-required-field rejection").newEntity(context)
         missing.updateId(secondID + 20) // Deliberately omit updateName; no fake Checker failure.
         _ = missing.auditAs("rejected child responsibility")

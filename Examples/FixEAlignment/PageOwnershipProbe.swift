@@ -9,7 +9,7 @@ enum PageOwnershipProbe {
   static func verify(_ context: UserContext, idA: Int64, idB: Int64) async throws {
     let before = try await Q.purchaseOrders().limit(20).comment("Inspect the page ownership fixture")
       .purpose("Establish the bounded exact total").executeForList(context)
-    var sentinel = try Q.purchaseOrders().comment("Prepare a page-offset sentinel")
+    var sentinel = try await Q.purchaseOrders().comment("Prepare a page-offset sentinel")
       .purpose("Exercise a genuine nonzero page offset").newEntity(context)
     sentinel.updateContactPhone("5550500")
     _ = try await sentinel.auditAs("Save the synthetic page sentinel").save(context)

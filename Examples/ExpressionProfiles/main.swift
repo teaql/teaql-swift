@@ -7,7 +7,11 @@ private func require(_ condition: Bool, _ message: String) throws {
   if !condition { throw TeaQLError.execution(message) }
 }
 
-private actor ObservedProvider: QueryExecutor, GraphTransactionExecutor {
+private actor ObservedProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var queries = 0, mutations = 0, begins = 0
   init(_ service: SQLiteDataService) { self.service = service }

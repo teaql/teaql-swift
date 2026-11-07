@@ -25,7 +25,7 @@ private func require(_ condition: Bool, _ message: String) throws {
       .purpose("verify repeated schema setup").executeForList(context)
     try require(roots.count == 1 && roots.first?.id == 1, "duplicate or missing seeded root")
 
-    var invalid = try Q.scalarTypeProbes().comment("prepare missing required fields")
+    var invalid = try await Q.scalarTypeProbes().comment("prepare missing required fields")
       .purpose("verify canonical checker rejection").newEntity(context)
     do {
       _ = try await invalid.auditAs("reject incomplete scalar fixture").save(context)
@@ -41,7 +41,7 @@ private func require(_ condition: Bool, _ message: String) throws {
     let fresh = existing.isEmpty
     if fresh {
       for (name, amount) in [("numeric-two", Decimal(2)), ("numeric-ten", Decimal(10)), ("exact-high", precise)] {
-        var entity = try newProbe(context, name: name, amount: amount)
+        var entity = try await newProbe(context, name: name, amount: amount)
         _ = try await entity.auditAs("seed through generated scalar mutation API").save(context)
       }
     }
@@ -90,8 +90,8 @@ private func require(_ condition: Bool, _ message: String) throws {
     print("PASS Swift generated scalar Decimal fresh=\(fresh) rows=3 version=\(saved.version) exact=\(precise) Q=PASS E=PASS Checker=PASS Mutation=PASS")
   }
 
-  private static func newProbe(_ context: UserContext, name: String, amount: Decimal) throws -> ScalarTypeProbe {
-    var entity = try Q.scalarTypeProbes().comment("prepare one scalar fixture")
+  private static func newProbe(_ context: UserContext, name: String, amount: Decimal) async throws -> ScalarTypeProbe {
+    var entity = try await Q.scalarTypeProbes().comment("prepare one scalar fixture")
       .purpose("verify exact SQLite storage").newEntity(context)
     entity.updateTypePlatform(1)
     entity.updateRequiredString(name)

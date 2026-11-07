@@ -6,7 +6,11 @@ import TeaQLSQLite
 private struct ExpressionEffects: Codable, Equatable, Sendable {
   var queries = 0, rootLookups = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
-private actor ExpressionProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor ExpressionProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var effects = ExpressionEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -96,16 +100,16 @@ enum ExpressionBoundaryProbe {
     let context = UserContext(runtime: runtime, actor: "expression-example", activeRoot: ContextEntityRef(entity: "Tenant", id: .int(1)),
       queryExecutor: provider, mutationExecutor: provider, requestPolicy: RequestPolicy { $0 }, auditSink: provider,
       mutationPolicyRegistry: policy, businessClock: FixedBusinessClock(time))
-    var draft = try Q.purchaseOrders().comment("Prepare the bounded expression graph")
+    var draft = try await Q.purchaseOrders().comment("Prepare the bounded expression graph")
       .purpose("Verify generated E failures without implicit work").newEntity(context)
     draft.updateContactPhone("5550960"); draft.updateInternalNote(nil)
     for i in 0..<3 {
-      var child = try Q.orderItems().comment("Prepare an expression item").purpose("Exercise real list indices").newEntity(context)
+      var child = try await Q.orderItems().comment("Prepare an expression item").purpose("Exercise real list indices").newEntity(context)
       child.updateProductName("Expression item \(i)"); child.updateUnitPrice(Decimal(string: "10.00")!)
       draft.orderItemList.append(child)
     }
     var saved = try await draft.auditAs("Create the expression graph").save(context)
-    var empty = try Q.purchaseOrders().comment("Prepare a loaded-empty owner").purpose("Distinguish empty from NotLoaded").newEntity(context)
+    var empty = try await Q.purchaseOrders().comment("Prepare a loaded-empty owner").purpose("Distinguish empty from NotLoaded").newEntity(context)
     empty.updateContactPhone("5550962"); empty.updateInternalNote(nil)
     let savedEmpty = try await empty.auditAs("Create the empty expression control").save(context)
     saved.updateContactPhone("5550961")

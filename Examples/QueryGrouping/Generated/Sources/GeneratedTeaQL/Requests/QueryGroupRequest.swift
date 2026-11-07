@@ -1586,9 +1586,10 @@ public extension QueryGroupRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> QueryGroup {
+    func newEntity(_ context: UserContext) async throws -> QueryGroup {
         try ensureIntent()
-        return context.initializeEntity("QueryGroup", QueryGroup())
+        let id = try await context.generateInternalID(for: "QueryGroup")
+        return context.initializeEntity("QueryGroup", try QueryGroup.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<QueryGroup> {

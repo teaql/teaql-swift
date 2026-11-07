@@ -24,8 +24,8 @@ private struct BooleanReport: Encodable {
     if !report.passed { exit(1) }
   }
 
-  private static func newProbe(_ context: UserContext, tag: String, flag: Bool, optional: Bool?) throws -> ScalarTypeProbe {
-    var row = try Q.scalarTypeProbes().comment("Prepare a typed Boolean fixture")
+  private static func newProbe(_ context: UserContext, tag: String, flag: Bool, optional: Bool?) async throws -> ScalarTypeProbe {
+    var row = try await Q.scalarTypeProbes().comment("Prepare a typed Boolean fixture")
       .purpose("Verify Boolean Q and E without truthiness conversions").newEntity(context)
     row.updateTypePlatform(1); row.updateRequiredString(tag); row.updateRequiredBoolean(flag)
     row.updateOptionalBoolean(optional); row.updateRequiredInteger(7); row.updateRequiredLong(1_234_567)
@@ -48,7 +48,7 @@ private struct BooleanReport: Encodable {
       var rows = try await Q.scalarTypeProbes().withRequiredStringIs(tag).limit(1)
         .comment("Find a retained Boolean seed").purpose(purpose).executeForList(context)
       if rows.isEmpty {
-        let row = try newProbe(context, tag: tag, flag: flag, optional: optional)
+        let row = try await newProbe(context, tag: tag, flag: flag, optional: optional)
         _ = try await row.auditAs("Seed a Boolean fixture through generated audited Mutation APIs").save(context)
         rows = try await Q.scalarTypeProbes().withRequiredStringIs(tag).limit(1)
           .comment("Reload the persisted Boolean seed").purpose(purpose).executeForList(context)
@@ -70,7 +70,7 @@ private struct BooleanReport: Encodable {
     var legacy = try await Q.scalarTypeProbesWithMinimalFields().withRequiredStringIs("boolean-legacy").limit(1)
       .comment("Find a legacy row without selecting its damaged field").purpose(purpose).executeForList(context)
     if legacy.isEmpty {
-      let row = try newProbe(context, tag: "boolean-legacy", flag: true, optional: nil)
+      let row = try await newProbe(context, tag: "boolean-legacy", flag: true, optional: nil)
       let saved = try await row.auditAs("Seed a valid row before deliberately corrupting its storage").save(context)
       legacy = try await Q.scalarTypeProbesWithMinimalFields().withIdIs(saved.id).limit(1)
         .comment("Read only the identity of the corruption fixture").purpose(purpose).executeForList(context)

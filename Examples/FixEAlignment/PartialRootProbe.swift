@@ -7,7 +7,11 @@ import TeaQLSQLite
 private struct RootEffects: Codable, Equatable, Sendable {
   var queries = 0, rootLookups = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
-private actor RootProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor RootProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var effects = RootEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -82,15 +86,15 @@ enum PartialRootProbe {
     try await schema.ensureSchema(module)
     let initial = context(root: 1, time: t0)
     await provider.reset(); policy.reset()
-    var other = try Q.tenants().comment("Prepare an independent persisted root")
+    var other = try await Q.tenants().comment("Prepare an independent persisted root")
       .purpose("Never test ownership against an invented context identity").newEntity(initial)
     other.updateName("Independent partial root")
     let independent = try await other.auditAs("Create the independent active-root control").save(initial)
     try require(independent.id != 1, "The independent root must differ from the bootstrap root")
-    var parent = try Q.purchaseOrders().comment("Prepare the managed partial-ancestor graph")
+    var parent = try await Q.purchaseOrders().comment("Prepare the managed partial-ancestor graph")
       .purpose("Use an actual complete child under two sparse ancestors").newEntity(initial)
     parent.updateContactPhone("5550801"); parent.updateInternalNote(nil)
-    var child = try Q.orderItems().comment("Prepare the root-bound leaf")
+    var child = try await Q.orderItems().comment("Prepare the root-bound leaf")
       .purpose("Preserve the original root outside the mutation delta").newEntity(initial)
     child.updateProductName("Managed partial original"); child.updateUnitPrice(Decimal(string: "10.00")!)
     parent.orderItemList.append(child)

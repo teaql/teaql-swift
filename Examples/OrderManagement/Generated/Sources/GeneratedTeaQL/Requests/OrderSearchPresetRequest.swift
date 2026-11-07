@@ -1103,9 +1103,10 @@ public extension OrderSearchPresetRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> OrderSearchPreset {
+    func newEntity(_ context: UserContext) async throws -> OrderSearchPreset {
         try ensureIntent()
-        return context.initializeEntity("OrderSearchPreset", OrderSearchPreset())
+        let id = try await context.generateInternalID(for: "OrderSearchPreset")
+        return context.initializeEntity("OrderSearchPreset", try OrderSearchPreset.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderSearchPreset> {

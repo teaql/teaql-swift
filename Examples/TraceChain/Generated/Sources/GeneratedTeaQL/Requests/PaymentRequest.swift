@@ -628,9 +628,10 @@ public extension PaymentRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> Payment {
+    func newEntity(_ context: UserContext) async throws -> Payment {
         try ensureIntent()
-        return context.initializeEntity("Payment", Payment())
+        let id = try await context.generateInternalID(for: "Payment")
+        return context.initializeEntity("Payment", try Payment.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Payment> {

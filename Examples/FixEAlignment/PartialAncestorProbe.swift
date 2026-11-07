@@ -8,7 +8,11 @@ private struct PartialEffects: Codable, Sendable, Equatable {
   var queries = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
 
-private actor PartialProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor PartialProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var effects = PartialEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -61,10 +65,10 @@ enum PartialAncestorProbe {
     try await schemaContext.ensureSchema(module)
     let initial = context(at: first)
     await provider.clear(); policies.clear()
-    var parent = try Q.purchaseOrders().comment("Prepare the partial-ancestor fixture")
+    var parent = try await Q.purchaseOrders().comment("Prepare the partial-ancestor fixture")
       .purpose("Validate only modified business objects for graph saves").newEntity(initial)
     parent.updateContactPhone("5550600"); parent.updateInternalNote(nil)
-    var child = try Q.orderItems().comment("Prepare one complete leaf")
+    var child = try await Q.orderItems().comment("Prepare one complete leaf")
       .purpose("Use generated relations and audited graph save").newEntity(initial)
     child.updateProductName("Partial graph original"); child.updateUnitPrice(Decimal(string: "10.00")!)
     parent.orderItemList.append(child)

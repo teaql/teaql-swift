@@ -302,6 +302,14 @@ public struct OrderStatus: TeaQLEntity, TeaQLMutationRootedEntity {
         return saved
     }
 
+    /// Construct only after the Context-selected allocator succeeds.
+    static func teaqlNewWithID(_ value: Int64) throws -> Self {
+        guard value > 0 else { throw InternalIDError.invalidValue(value) }
+        var entity = Self()
+        try entity.teaqlInitializeGeneratedBootstrapId(value)
+        return entity
+    }
+
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {

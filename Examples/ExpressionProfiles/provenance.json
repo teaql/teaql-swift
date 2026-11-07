@@ -1,8 +1,7 @@
 {
-  "producerReportSha256": "0d143776219536f76b3c4474f87cb78c6cd1a2e5a07163513e1bc8b5a8df3f5b",
-  "manifestSha256": "c8f9b9c908f1b5fd13fccadc5d11fb2ade837fc6d513d6b35966e4b5718bb375",
+  "producerReportSha256": "c55cb0b9049bafa1c1b4decddaedeed050bdd7f344e0f998b80d8041867dd879",
+  "manifestSha256": "9b2c50623e9e433fb0c5b818912a2feb6ae28235656e7790f807d46eac23d2d4",
   "producer": {
-    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
-    "tree": "c741ab1f22e21ae0b04c88181b93b80e61ef835a"
+    "commit": "ea421529ea1eee52d39778ea674e64209b75838a"
   }
 }

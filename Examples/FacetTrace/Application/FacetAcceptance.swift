@@ -99,7 +99,7 @@ func verifySQL(_ facts: [SQLExecutionMetadata],
             let existing = try await Q.schools().withNameIs(name).limit(1)
                 .comment("find retained fixture").purpose("idempotent fixture seed").executeForList(seed)
             if existing.isEmpty {
-                var school = try Q.schools().comment("initialize fixture").purpose("seed generated Facets").newEntity(seed)
+                var school = try await Q.schools().comment("initialize fixture").purpose("seed generated Facets").newEntity(seed)
                 school.updatePlatform(1); school.updateSchoolType(1001); school.updateName(name)
                 school.updateAddress("12 River Road"); school.updateEstablishedDate(Date(timeIntervalSince1970: 810950400))
                 school.updateStudentCapacity(800); school.updateActive(true)

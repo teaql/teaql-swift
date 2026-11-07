@@ -46,14 +46,14 @@ enum OrderManagementApp {
       let customer: Customer
       if let found = customers.first { customer = found }
       else {
-        var draft = try Q.customers().comment("Prepare the demo customer")
+        var draft = try await Q.customers().comment("Prepare the demo customer")
           .purpose("Seed the example through generated audited mutation").newEntity(context)
         draft.updateName("Swift quick-start customer")
         draft.updateEmail("swift-demo@example.com")
         draft.updateCommercePlatform(1)
         customer = try await draft.auditAs("Create the quick-start customer").save(context)
       }
-      var order = try Q.customerOrders().comment("Prepare the quick-start order")
+      var order = try await Q.customerOrders().comment("Prepare the quick-start order")
         .purpose("Demonstrate generated audited save with automatic Checker/Fix").newEntity(context)
       order.updateOrderNumber("SWIFT-ORDER-001")
       order.updateOrderDate(context.businessTime)

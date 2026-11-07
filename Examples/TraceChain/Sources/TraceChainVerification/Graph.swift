@@ -2,8 +2,8 @@ import Foundation
 import GeneratedTeaQL
 import TeaQLCore
 
-func order(_ context: UserContext, id: Int64?, label: String) throws -> CustomerOrder {
-    var value = try Q.customerOrders().comment("initialize order")
+func order(_ context: UserContext, id: Int64?, label: String) async throws -> CustomerOrder {
+    var value = try await Q.customerOrders().comment("initialize order")
         .purpose("construct trace verification graph").newEntity(context)
     if let id { value.updateId(id) }
     value.updatePlatform(1)
@@ -12,8 +12,8 @@ func order(_ context: UserContext, id: Int64?, label: String) throws -> Customer
     return value
 }
 
-func payment(_ context: UserContext, id: Int64?, parentID: Int64, label: String) throws -> Payment {
-    var value = try Q.payments().comment("initialize payment")
+func payment(_ context: UserContext, id: Int64?, parentID: Int64, label: String) async throws -> Payment {
+    var value = try await Q.payments().comment("initialize payment")
         .purpose("compose order graph").newEntity(context)
     if let id { value.updateId(id) }
     value.updateCustomerOrder(parentID)
@@ -35,7 +35,7 @@ func normativeGraph(
 ) async throws {
     // Seed only through generated APIs. The removed child must already exist.
     _ = try await order(context, id: base, label: "TRACE-\(base)").auditAs("seed draft order").save(context)
-    var unavailable = try Q.orderItems().comment("initialize unavailable item")
+    var unavailable = try await Q.orderItems().comment("initialize unavailable item")
         .purpose("prepare loaded deletion fixture").newEntity(context)
     unavailable.updateId(base + 102)
     unavailable.updateCustomerOrder(base)
@@ -43,7 +43,7 @@ func normativeGraph(
     unavailable = try await unavailable.auditAs("seed unavailable item").save(context)
     var root = try await loadOrder(context, id: base)
     root.updateDescription("Submitted order")
-    var available = try Q.orderItems().comment("initialize available item")
+    var available = try await Q.orderItems().comment("initialize available item")
         .purpose("compose normative graph").newEntity(context)
     available.updateId(base + 101)
     available.updateName("Available item")
@@ -51,15 +51,15 @@ func normativeGraph(
     unavailable.markForDeletion()
     _ = unavailable.auditAs("remove unavailable item")
     // Equal numeric IDs across entity types must not collapse into one target.
-    var pay = try payment(context, id: base, parentID: base, label: "TRACE-PAYMENT")
+    var pay = try await payment(context, id: base, parentID: base, label: "TRACE-PAYMENT")
     _ = pay.auditAs("authorize payment")
-    var attempt = try Q.paymentAttempts().comment("initialize attempt")
+    var attempt = try await Q.paymentAttempts().comment("initialize attempt")
         .purpose("compose payment graph").newEntity(context)
     attempt.updateId(base + 301)
     attempt.updatePayment(pay.id)
     attempt.updateReferenceCode("TRACE-ATTEMPT")
     pay.paymentAttemptList.append(attempt)
-    var shipment = try Q.shipments().comment("initialize shipment")
+    var shipment = try await Q.shipments().comment("initialize shipment")
         .purpose("compose order graph").newEntity(context)
     shipment.updateId(base + 401)
     shipment.updateCustomerOrder(base)
@@ -109,8 +109,8 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
             .selectCustomerOrderWith(Q.customerOrders().limit(1)
                 .selectPlatformWith(Q.platforms().limit(1))))
         .comment(comment).purpose(purpose).executeForList(context)
-    guard let row = rows.first, let pay = try E.paymentAttempt(row).payment().eval(),
-          let root = try E.payment(pay).customerOrder().eval(),
+    guard let row = rows.first, let pay = try await E.paymentAttempt(row).payment().eval(),
+          let root = try await E.payment(pay).customerOrder().eval(),
           let platform = try E.customerOrder(root).platform().eval()
     else { throw TeaQLError.execution("generated Q/E graph was not loaded") }
     try require(try E.platform(platform).name().eval() == "Trace Chain Verification", "deep E value differs")
@@ -142,7 +142,7 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
         .comment("load filtered forward identity").purpose("distinguish NotLoaded detail from null")
         .executeForList(context)
     guard let hiddenPayment = hidden.first,
-          let identity = try E.payment(hiddenPayment).customerOrder().eval()
+          let identity = try await E.payment(hiddenPayment).customerOrder().eval()
     else { throw TeaQLError.execution("filtered detail erased the real reference") }
     try require(try E.customerOrder(identity).id().eval() == base, "filtered reference lost its FK")
     func assertUnfetched() throws {
@@ -160,7 +160,7 @@ func generatedThreeLevelQuery(_ context: UserContext, sql: SQLExecutionEvidenceS
         .comment("load independent full reference").purpose("verify edge-owned load boundaries")
         .executeForList(context)
     guard let visiblePayment = visible.first,
-          let full = try E.payment(visiblePayment).customerOrder().eval()
+          let full = try await E.payment(visiblePayment).customerOrder().eval()
     else { throw TeaQLError.execution("full reference was not loaded") }
     try require(try E.customerOrder(full).description().eval() != nil, "full detail missing")
     try assertUnfetched()

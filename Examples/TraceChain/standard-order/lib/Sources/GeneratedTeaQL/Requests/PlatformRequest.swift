@@ -704,9 +704,10 @@ public extension PlatformRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> Platform {
+    func newEntity(_ context: UserContext) async throws -> Platform {
         try ensureIntent()
-        return context.initializeEntity("Platform", Platform())
+        let id = try await context.generateInternalID(for: "Platform")
+        return context.initializeEntity("Platform", try Platform.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Platform> {

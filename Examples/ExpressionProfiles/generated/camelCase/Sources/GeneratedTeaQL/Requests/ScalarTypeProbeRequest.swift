@@ -3117,9 +3117,10 @@ public extension ScalarTypeProbeRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> ScalarTypeProbe {
+    func newEntity(_ context: UserContext) async throws -> ScalarTypeProbe {
         try ensureIntent()
-        return context.initializeEntity("ScalarTypeProbe", ScalarTypeProbe())
+        let id = try await context.generateInternalID(for: "ScalarTypeProbe")
+        return context.initializeEntity("ScalarTypeProbe", try ScalarTypeProbe.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<ScalarTypeProbe> {

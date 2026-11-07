@@ -46,8 +46,8 @@ private struct BucketObservation: Encodable { let id: String; let parents: [Int6
   private static func encoded<T: Encodable>(_ value: T) throws -> String {
     String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
   }
-  private static func newProbe(_ context: UserContext, owner: Int64, tag: String, amount: Decimal?) throws -> ScalarTypeProbe {
-    var entity = try Q.scalarTypeProbes().comment("Prepare an empty-aggregate contribution")
+  private static func newProbe(_ context: UserContext, owner: Int64, tag: String, amount: Decimal?) async throws -> ScalarTypeProbe {
+    var entity = try await Q.scalarTypeProbes().comment("Prepare an empty-aggregate contribution")
       .purpose(purpose).newEntity(context)
     entity.updateTypePlatform(owner); entity.updateRequiredString(tag)
     entity.updateRequiredBoolean(true); entity.updateRequiredInteger(7); entity.updateRequiredLong(1_234_567)
@@ -97,7 +97,7 @@ private struct BucketObservation: Encodable { let id: String; let parents: [Int6
     for vector in vectors.scalarCases {
       let tag = "\(prefix)-\(vector.id)"
       for value in vector.values {
-        let entity = try newProbe(context, owner: 1, tag: tag, amount: value.map(Decimal.init))
+        let entity = try await newProbe(context, owner: 1, tag: tag, amount: value.map(Decimal.init))
         _ = try await entity.auditAs("Seed an approved scalar aggregate vector").save(context)
       }
     }
@@ -105,7 +105,7 @@ private struct BucketObservation: Encodable { let id: String; let parents: [Int6
     for vector in vectors.bucketCases {
       var ids: [Int64] = []
       for ordinal in vector.parents {
-        var owner = try Q.typePlatforms().comment("Prepare an independent aggregate bucket").purpose(purpose).newEntity(context)
+        var owner = try await Q.typePlatforms().comment("Prepare an independent aggregate bucket").purpose(purpose).newEntity(context)
         owner.updateName("\(prefix)-\(vector.id)-\(ordinal)")
         let saved = try await owner.auditAs("Seed an aggregate bucket through the generated API").save(context)
         try require(try E.typePlatform(saved).name().eval() == "\(prefix)-\(vector.id)-\(ordinal)", "Bucket E readback changed")
@@ -114,12 +114,12 @@ private struct BucketObservation: Encodable { let id: String; let parents: [Int6
       owners[vector.id] = ids
       for child in vector.children {
         guard let index = vector.parents.firstIndex(of: child.parent) else { throw TeaQLError.execution("Unknown vector parent") }
-        let entity = try newProbe(context, owner: ids[index], tag: "\(prefix)-\(vector.id)", amount: child.value.map(Decimal.init))
+        let entity = try await newProbe(context, owner: ids[index], tag: "\(prefix)-\(vector.id)", amount: child.value.map(Decimal.init))
         _ = try await entity.auditAs("Seed an approved related aggregate vector").save(context)
       }
     }
     for amount in [Decimal(string: "123456789012.3456789")!, Decimal(string: "0.0000001")!] {
-      let entity = try newProbe(context, owner: 1, tag: "\(prefix)-exact", amount: amount)
+      let entity = try await newProbe(context, owner: 1, tag: "\(prefix)-exact", amount: amount)
       _ = try await entity.auditAs("Seed exact Decimal contributions without floating conversion").save(context)
     }
     await telemetry.reset()

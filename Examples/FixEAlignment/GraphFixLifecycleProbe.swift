@@ -7,7 +7,11 @@ private enum LifecycleFault: Error, Sendable { case afterChildWrite }
 private struct LifecycleEffects: Codable, Equatable, Sendable {
   var queries = 0, parentWrites = 0, childWrites = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
-private final class LifecycleProvider: QueryExecutor, GraphTransactionExecutor, AuditSink, @unchecked Sendable {
+private final class LifecycleProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink, @unchecked Sendable {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private let lock = NSLock()
   private var calls = LifecycleEffects(), fault = false, cancel = false
@@ -129,11 +133,11 @@ enum GraphFixLifecycleProbe {
       let clock = LifecycleClock(Date(timeIntervalSince1970: 2_145_916_800 + Double(round * 3600 + ordinal * 60)))
       return (context(clock), clock)
     }
-    func newGraph(_ label: String, valid: Bool = true) throws -> PurchaseOrder {
-      var parent = try Q.purchaseOrders().comment("Prepare a graph lifecycle parent")
+    func newGraph(_ label: String, valid: Bool = true) async throws -> PurchaseOrder {
+      var parent = try await Q.purchaseOrders().comment("Prepare a graph lifecycle parent")
         .purpose("Verify generated graph transaction boundaries").newEntity(preparation)
       parent.updateContactPhone("5550811"); parent.updateInternalNote(nil)
-      var child = try Q.orderItems().comment("Prepare a graph lifecycle child")
+      var child = try await Q.orderItems().comment("Prepare a graph lifecycle child")
         .purpose("Verify duplicate references and non-idempotent customer Fix").newEntity(preparation)
       if valid { child.updateProductName(label + "-" + String(round)) }
       child.updateUnitPrice(Decimal(string: "10.00")!)
@@ -178,7 +182,7 @@ enum GraphFixLifecycleProbe {
       throw TeaQLError.execution("Controlled graph failure unexpectedly committed")
     }
 
-    var primary = try newGraph("customer-fix")
+    var primary = try await newGraph("customer-fix")
     var (execution, clock) = begin()
     primary = try await primary.auditAs("Create the repeated-child graph").save(execution)
     try observe("customer-fix-create-duplicate", clock,
@@ -205,12 +209,13 @@ enum GraphFixLifecycleProbe {
     try await check(loaded, price: "30.01", parentVersion: 2, childVersion: 3)
 
     for cancelled in [false, true] {
-      let label = cancelled ? "cancel-retry" : "provider-retry", graph = try newGraph(label)
+      let label = cancelled ? "cancel-retry" : "provider-retry", graph = try await newGraph(label)
       (execution, clock) = begin(); provider.arm(failure: !cancelled, cancellation: cancelled)
       let error = try await failed(graph, execution)
       try observe(cancelled ? "provider-cancellation" : "provider-write-failure", clock,
         condition: provider.snapshot == expected(1, 1, committed: false) && policy.calls == 1
-          && provider.childReadback?["version"] == .int(1) && graph.id == 0
+          && provider.childReadback?["version"] == .int(1) && graph.id > 0
+          && graph.teaqlEntityRoot.isNew(graph.teaqlEntityKey)
           && (cancelled ? error is CancellationError : error is LifecycleFault), error: error)
       let absent = try await Q.orderItems().withProductNameIs(label + "-" + String(round)).limit(1)
         .comment("Verify the failed real child insert was rolled back")
@@ -219,11 +224,11 @@ enum GraphFixLifecycleProbe {
       (execution, clock) = begin()
       let saved = try await graph.auditAs("Retry the exact same failed object graph").save(execution)
       try observe(cancelled ? "same-graph-cancellation-retry" : "same-graph-provider-retry", clock,
-        condition: provider.snapshot == expected(1, 1) && policy.calls == 1)
+        condition: provider.snapshot == expected(1, 1) && policy.calls == 1 && saved.id == graph.id)
       try await check(saved, price: "10.01", parentVersion: 1, childVersion: 1)
     }
 
-    var invalid = try newGraph("missing-input", valid: false)
+    var invalid = try await newGraph("missing-input", valid: false)
     (execution, clock) = begin(); let missing = try await failed(invalid, execution)
     try observe("missing-child-input-before-io", clock,
       condition: provider.snapshot == LifecycleEffects() && policy.calls == 0 && missing is CheckException, error: missing)

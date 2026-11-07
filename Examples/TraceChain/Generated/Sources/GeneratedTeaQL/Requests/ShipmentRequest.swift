@@ -551,9 +551,10 @@ public extension ShipmentRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> Shipment {
+    func newEntity(_ context: UserContext) async throws -> Shipment {
         try ensureIntent()
-        return context.initializeEntity("Shipment", Shipment())
+        let id = try await context.generateInternalID(for: "Shipment")
+        return context.initializeEntity("Shipment", try Shipment.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Shipment> {

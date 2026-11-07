@@ -42,7 +42,7 @@ private struct Result: Encodable {
     if existing.isEmpty {
       try require(round == 1 && parents.isEmpty, "do not silently repair or reseed an incomplete fixture")
       for name in ["Group A", "Group B"] {
-        var parent = try Q.queryGroups().comment("prepare grouping parent").purpose(purpose).newEntity(context)
+        var parent = try await Q.queryGroups().comment("prepare grouping parent").purpose(purpose).newEntity(context)
         parent.updateQueryPlatform(roots[0].id); parent.updateGroupName(name)
         _ = try await parent.auditAs("seed grouping parent through generated mutation").save(context)
         seeded += 1
@@ -50,7 +50,7 @@ private struct Result: Encodable {
       parents = try await Q.queryGroups().orderByIdAscending().limit(10).comment("reload persisted grouping parents").purpose(purpose).executeForList(context)
       try require(parents.count == 2, "parent count changed")
       for index in 0..<4 {
-        var record = try Q.queryRecords().comment("prepare exact grouping contribution").purpose(purpose).newEntity(context)
+        var record = try await Q.queryRecords().comment("prepare exact grouping contribution").purpose(purpose).newEntity(context)
         record.updateQueryGroup(index == 3 ? nil : parents[index < 2 ? 0 : 1].id)
         record.updateRequiredText("row-\(index + 1)"); record.updateRequiredInteger(Int64(index + 1))
         record.updateRequiredLong(9_007_199_254_740_993); record.updateRequiredDecimal(exact)

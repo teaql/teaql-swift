@@ -42,24 +42,24 @@ func assignedGraph(_ originalContext: UserContext, commands: CommandCapture, sql
     for logging in [false, true] {
     var context = originalContext
     context.querySQLLogEnabled = logging; context.mutationSQLLogEnabled = logging
-    var root = try order(context, id: nil, label: "TRACE-ALLOCATED")
-    var pay = try payment(context, id: nil, parentID: 0, label: "TRACE-ALLOCATED-PAYMENT")
+    var root = try await order(context, id: nil, label: "TRACE-ALLOCATED")
+    var pay = try await payment(context, id: nil, parentID: 0, label: "TRACE-ALLOCATED-PAYMENT")
     _ = pay.auditAs("authorize allocated payment")
-    var attempt = try Q.paymentAttempts().comment("initialize allocated attempt")
+    var attempt = try await Q.paymentAttempts().comment("initialize allocated attempt")
         .purpose("verify late identity inheritance").newEntity(context)
     attempt.updatePayment(0); attempt.updateReferenceCode("TRACE-ALLOCATED-ATTEMPT")
     pay.paymentAttemptList.append(attempt); root.paymentList.append(pay)
-    var sibling = try Q.orderItems().comment("initialize allocated unannotated sibling")
+    var sibling = try await Q.orderItems().comment("initialize allocated unannotated sibling")
         .purpose("verify child responsibility cannot contaminate siblings").newEntity(context)
     sibling.updateCustomerOrder(0); sibling.updateName("TRACE-ALLOCATED-SIBLING")
     root.orderItemList.append(sibling)
     let before = ["CustomerOrder": root.id, "Payment": pay.id, "PaymentAttempt": attempt.id, "OrderItem": sibling.id]
-    try require(before.values.allSatisfy { $0 <= 0 }, "allocation fixture must not set persistent IDs before save")
+    try require(before.values.allSatisfy { $0 > 0 }, "generated factories must reserve identity before returning")
     await commands.clear(commitBarrier: true); await sql.enableAll(); await audit.clear()
     let saved = try await root.auditAs("submit allocated order").save(context)
     let events = await audit.snapshot(), physical = await sql.snapshot(), requests = await commands.snapshot()
     let entries = physical.filter { $0.operation != .select }, reads = physical.filter { $0.operation == .select }
-    try require(events.count == 4 && entries.count == 4 && reads.count == 4 && saved.id > 0,
+    try require(events.count == 4 && entries.count == 4 && reads.count == 4 && saved.id == before["CustomerOrder"],
         "allocated graph did not persist and read back four nodes")
     guard let paymentID = events.first(where: { $0.entity == "Payment" })?.entityID?.int64Value,
           let attemptID = events.first(where: { $0.entity == "PaymentAttempt" })?.entityID?.int64Value,
@@ -69,8 +69,8 @@ func assignedGraph(_ originalContext: UserContext, commands: CommandCapture, sql
     let leaf = NodeExpectation(type: "Payment", id: paymentID, reason: "authorize allocated payment")
     let expected = [key("CustomerOrder", saved.id): [parent], key("OrderItem", siblingID): [parent],
         key("Payment", paymentID): [parent, leaf], key("PaymentAttempt", attemptID): [parent, leaf]]
-    // SQLite allocates in INSERT. Keep the actual pre-allocation request;
-    // do not manufacture an assigned command ID from the returned metadata.
+    // Reservation precedes save. Keep the actual command and verify the same
+    // type-qualified identity survives planning, SQL, readback and audit.
     try require(requests.count == 4, "allocated graph lost a real create command")
     var observedTypes: Set<String> = []
     for (index, request) in requests.enumerated() {
@@ -78,16 +78,11 @@ func assignedGraph(_ originalContext: UserContext, commands: CommandCapture, sql
         guard let event = events.first(where: { $0.entity == type }), let id = event.entityID?.int64Value,
               let wanted = expected[key(type, id)] else { throw TeaQLError.execution("allocated command target missing") }
         try require(observedTypes.insert(type).inserted && request.mutation.kind == .create
-            && request.mutation.id == nil && request.mutation.values["id"] == nil
-            && request.intent.comment == "submit allocated order", "pre-allocation command was rewritten")
+            && id == before[type]
+            && (request.mutation.id ?? request.mutation.values["id"]) == .int(id)
+            && request.intent.comment == "submit allocated order", "reserved command identity changed")
         let lineage = request.mutation.mutationLineage ?? []
-        var planned = wanted
-        if wanted.last?.type == type {
-            guard let temporary = lineage.last?.entityID?.int64Value, temporary <= 0
-            else { throw TeaQLError.execution("pre-allocation scope must retain its temporary typed key") }
-            planned[planned.count - 1] = NodeExpectation(type: type, id: temporary, reason: wanted.last!.reason)
-        }
-        try checkChain(lineage, planned, boundary: "pre-allocation command \(type)")
+        try checkChain(lineage, wanted, boundary: "reserved command \(type)")
         let write = physical[index * 2], read = physical[index * 2 + 1]
         try require(write.operation == .insert && write.affectedRows == 1 && write.executionOutcome == "success"
             && read.operation == .select && read.resultCount == 1 && read.executionOutcome == "success"
@@ -129,8 +124,8 @@ func assignedGraph(_ originalContext: UserContext, commands: CommandCapture, sql
 func ledgerReplacement(_ context: UserContext, commands: CommandCapture, sql: SQLExecutionEvidenceStore,
                        audit: AuditCapture, base: Int64) async throws {
     let rootID = base + 1_000, paymentID = rootID + 1
-    var root = try order(context, id: rootID, label: "TRACE-LEDGER")
-    let pay = try payment(context, id: paymentID, parentID: rootID, label: "TRACE-LEDGER-PAYMENT")
+    var root = try await order(context, id: rootID, label: "TRACE-LEDGER")
+    let pay = try await payment(context, id: paymentID, parentID: rootID, label: "TRACE-LEDGER-PAYMENT")
     _ = pay.auditAs("authorize graph fallback")
     let owned: any TeaQLMutationRootedEntity = pay
     owned.teaqlEntityRoot.setTraceChain(owned.teaqlEntityKey, chain: [
@@ -142,7 +137,7 @@ func ledgerReplacement(_ context: UserContext, commands: CommandCapture, sql: SQ
     root.paymentList.append(pay)
     // A complete chain belongs to one typed key, not to the entire graph.
     let siblingID = rootID + 2
-    var sibling = try Q.orderItems().comment("initialize unannotated ledger sibling")
+    var sibling = try await Q.orderItems().comment("initialize unannotated ledger sibling")
         .purpose("verify independent graph fallback").newEntity(context)
     sibling.updateId(siblingID)
     sibling.updateCustomerOrder(rootID)
@@ -195,8 +190,8 @@ func concurrentGraphs(_ context: UserContext, commands: CommandCapture, sql: SQL
                       audit: AuditCapture, base: Int64) async throws {
     await commands.clear(); await sql.enableAll(); await audit.clear()
     @Sendable func save(_ id: Int64, label: String) async throws {
-        var root = try order(context, id: id, label: "TRACE-\(label)")
-        let pay = try payment(context, id: id, parentID: id, label: "TRACE-\(label)-PAYMENT")
+        var root = try await order(context, id: id, label: "TRACE-\(label)")
+        let pay = try await payment(context, id: id, parentID: id, label: "TRACE-\(label)-PAYMENT")
         _ = pay.auditAs("authorize \(label)")
         root.paymentList.append(pay)
         await Task.yield()

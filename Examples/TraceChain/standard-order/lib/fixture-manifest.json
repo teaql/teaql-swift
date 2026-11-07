@@ -6,28 +6,27 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
-    "tree": "c741ab1f22e21ae0b04c88181b93b80e61ef835a"
+    "commit": "ea421529ea1eee52d39778ea674e64209b75838a"
   },
-  "producerReceiptSha256": "0d143776219536f76b3c4474f87cb78c6cd1a2e5a07163513e1bc8b5a8df3f5b",
-  "generatedManifestSha256": "8366a661896c046b2ac25cef0e95de7d85d8c14ca0b6a334291c43f4e2bae14a",
+  "producerReceiptSha256": "c55cb0b9049bafa1c1b4decddaedeed050bdd7f344e0f998b80d8041867dd879",
+  "generatedManifestSha256": "42f8b17490dc39ac58f8f73f8846bca16a3fb2476c9588bb20d4d00a5cd287da",
   "files": {
-    "Sources/GeneratedTeaQL/Models/Platform.swift": "70acb26e883487f8df6c7c4ce1c97f0fe587fe68ebbae5cb2c1494ea0ff63fbb",
-    "Sources/GeneratedTeaQL/Models/OrderStatus.swift": "7058841d6bc5e17896261432772a29eb439406d38a5a2be59e3a1d699532fa1d",
-    "Sources/GeneratedTeaQL/Models/Customer.swift": "6eee17ce115f3e9c78a01f58d4b4426e7fe626dac238495173a69d36e2668e0a",
-    "Sources/GeneratedTeaQL/Models/CustomerOrder.swift": "90c3604bd3182dc371c5fb2ee18d4e5cf55f5466003ec8a5042352bba9a7ffab",
-    "Sources/GeneratedTeaQL/Models/OrderItem.swift": "f76520b8900666c4285268b3837c3c49dd0a1ed17291db320c6215507d816c63",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "d23242cf5fd4341b922ebc74f8607822f9bd9dc16089ae85f420adb80fb021dc",
+    "Sources/GeneratedTeaQL/Models/OrderStatus.swift": "a97b04e2e494b438cc9a0c6f19d31c8eec55e0a25a865e00f51cfd904f1a9dbb",
+    "Sources/GeneratedTeaQL/Models/Customer.swift": "f1164cb35f90a393938ebbe44d01775da8667d7479cec486d4a9e936a07c24ef",
+    "Sources/GeneratedTeaQL/Models/CustomerOrder.swift": "ae7e44c9c7f624b28cfb5d9692d552b6381060858687b2e3568e38b4a8e7203b",
+    "Sources/GeneratedTeaQL/Models/OrderItem.swift": "63d2264627184268f87530adf2b9d4384ef8795ca2ff72a3ae558e020053b984",
     "Sources/GeneratedTeaQL/E.swift": "5415a702568d71e12c440b138bd46bdbae584076b798627829912d5fccf55a3e",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
-    "Sources/GeneratedTeaQL/RuntimeModule.swift": "dbfdc93979fe5ebbf337d5a5a0b484429f27a5effb33b41750eaa84876954f25",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "bab05f77deed929cfa413eb86e417034be9746108aefa564e8015d992dffd8df",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "5da726733fdbb196e19955119be281ef5cc38932d21062d47517f5eda3c583a7",
     "Sources/GeneratedTeaQL/Q.swift": "a100f2591ed448effd7034e97026336ff32de8f36b393c4fe52b94f0d7cd1981",
-    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "aaa0ba87e0677442faf1e69375c98a4265b0fe1ea05f4a76eb1b94883a00b75a",
-    "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": "a7f9a4046e00fc1531e2791f7001cff057eecba4080b327ff9d06c9c7d4065b0",
-    "Sources/GeneratedTeaQL/Requests/CustomerRequest.swift": "b9fa430ad2383750767ab85526903d2bf3798198d9e8f0157bd716af3c5d5eb1",
-    "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": "f290feac1150e98aa7ab229e569543bb40d40dbe42673c70216e9c0236c49335",
-    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "6f8086d000f100f05290fe2274943e664404feca7ebcad43c362d726b67a650d"
+    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "f1568c12b7e4f831772826fb3cde1515c3bacb7f9ee55050a150a6b347410693",
+    "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": "adb0266e08b13e78c0848a7960eec1fb2cbda2953a7d26cf6d58ccde6640596e",
+    "Sources/GeneratedTeaQL/Requests/CustomerRequest.swift": "2efd4b7badbc1794539a0e76dc8d115e6a09ff6762f41ae05e4ac9c845d4337c",
+    "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": "e365933b10cc1ac3bfd0f780dd4d14a7150e73b923cd7aff7e2a575d04dd9afb",
+    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "1e565ca0fff8484502822cc2cb81c247340e28359916bd963df8b510391b58cf"
   },
-  "previousFixtureManifestSha256": "f9b143060e1a7e416b545a6493e18312b66d390befb7a150c0eada3b4329c4b4",
+  "previousFixtureManifestSha256": "60307dbcad0c175165839bc26afc70b6718c0a79a5b70a436bc57b4e7a4cd55a",
   "applicationManifestsPreserved": true
 }

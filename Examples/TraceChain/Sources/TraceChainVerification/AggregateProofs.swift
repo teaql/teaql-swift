@@ -56,15 +56,15 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
     let rootID = base + 80_000, itemID = rootID + 101, otherItemID = rootID + 102
     let payID = rootID + 201, attemptID = rootID + 301
     let secret = "AGGREGATE-PRIVATE-\(rootID)"
-    var root = try order(context, id: rootID, label: "AGGREGATE-\(rootID)")
+    var root = try await order(context, id: rootID, label: "AGGREGATE-\(rootID)")
     for (id, name) in [(itemID, secret), (otherItemID, "Other aggregate item")] {
-        var item = try Q.orderItems().comment("initialize aggregate item")
+        var item = try await Q.orderItems().comment("initialize aggregate item")
             .purpose("compose actual membership fixture").newEntity(context)
         item.updateId(id); item.updateCustomerOrder(rootID); item.updateName(name)
         root.orderItemList.append(item)
     }
-    var pay = try payment(context, id: payID, parentID: rootID, label: "AGGREGATE-PAYMENT")
-    var attempt = try Q.paymentAttempts().comment("initialize aggregate attempt")
+    var pay = try await payment(context, id: payID, parentID: rootID, label: "AGGREGATE-PAYMENT")
+    var attempt = try await Q.paymentAttempts().comment("initialize aggregate attempt")
         .purpose("compose nested membership fixture").newEntity(context)
     attempt.updateId(attemptID); attempt.updatePayment(payID); attempt.updateReferenceCode("AGGREGATE-ATTEMPT")
     pay.paymentAttemptList.append(attempt); root.paymentList.append(pay)
@@ -90,8 +90,8 @@ func generatedAggregateProofs(runtime: TeaQLRuntime, service: SQLiteDataService,
                 let rows = try await Q.paymentAttempts().withIdIs(attemptID).limit(1)
                     .selectPaymentWith(Q.payments().limit(1).selectCustomerOrderWith(request))
                     .comment(comment).purpose(purpose).executeForList(context)
-                guard let row = rows.first, let pay = try E.paymentAttempt(row).payment().eval(),
-                      let order = try E.payment(pay).customerOrder().eval()
+                guard let row = rows.first, let pay = try await E.paymentAttempt(row).payment().eval(),
+                      let order = try await E.payment(pay).customerOrder().eval()
                 else { throw TeaQLError.execution("nested aggregate owner missing") }
                 loaded = order
             } else {

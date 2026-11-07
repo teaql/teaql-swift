@@ -1392,9 +1392,10 @@ public extension CommercePlatformRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> CommercePlatform {
+    func newEntity(_ context: UserContext) async throws -> CommercePlatform {
         try ensureIntent()
-        return context.initializeEntity("CommercePlatform", CommercePlatform())
+        let id = try await context.generateInternalID(for: "CommercePlatform")
+        return context.initializeEntity("CommercePlatform", try CommercePlatform.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<CommercePlatform> {

@@ -39,7 +39,7 @@ private func missing<T>(
     }
     let initialContext = context(at: first)
     try await initialContext.ensureSchema(module)
-    var draft = try Q.purchaseOrders().comment("Prepare the synthetic clock fixture")
+    var draft = try await Q.purchaseOrders().comment("Prepare the synthetic clock fixture")
       .purpose("Verify generated audited save and E diagnostics").newEntity(initialContext)
     draft.updateContactPhone("5550100")
     let order = try await draft.auditAs("Create the synthetic Fix order").save(initialContext)

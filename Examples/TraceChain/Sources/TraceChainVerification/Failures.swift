@@ -19,8 +19,8 @@ func installReadbackFault(path: String, id: Int64) throws {
 
 func generatedFailureProofs(_ context: UserContext, sql: SQLExecutionEvidenceStore, audit: AuditCapture,
                             path: String, base: Int64) async throws {
-    var root = try order(context, id: base + 5_000, label: "TRACE-FAILED-ROOT")
-    let duplicate = try payment(context, id: base, parentID: root.id, label: "TRACE-DUPLICATE")
+    var root = try await order(context, id: base + 5_000, label: "TRACE-FAILED-ROOT")
+    let duplicate = try await payment(context, id: base, parentID: root.id, label: "TRACE-DUPLICATE")
     _ = duplicate.auditAs("authorize failing payment")
     root.paymentList.append(duplicate)
     await sql.enableAll(); await audit.clear()
@@ -46,8 +46,8 @@ func generatedFailureProofs(_ context: UserContext, sql: SQLExecutionEvidenceSto
 
     let rootID = base + 6_000, paymentID = rootID + 1
     try installReadbackFault(path: path, id: paymentID)
-    var refreshed = try order(context, id: rootID, label: "TRACE-READBACK")
-    let pay = try payment(context, id: paymentID, parentID: rootID, label: "TRACE-READBACK-PAYMENT")
+    var refreshed = try await order(context, id: rootID, label: "TRACE-READBACK")
+    let pay = try await payment(context, id: paymentID, parentID: rootID, label: "TRACE-READBACK-PAYMENT")
     _ = pay.auditAs("authorize readback payment"); refreshed.paymentList.append(pay)
     await sql.enableAll(); await audit.clear()
     do {

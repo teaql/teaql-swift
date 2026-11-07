@@ -1116,9 +1116,10 @@ public extension OrderLineRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> OrderLine {
+    func newEntity(_ context: UserContext) async throws -> OrderLine {
         try ensureIntent()
-        return context.initializeEntity("OrderLine", OrderLine())
+        let id = try await context.generateInternalID(for: "OrderLine")
+        return context.initializeEntity("OrderLine", try OrderLine.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderLine> {

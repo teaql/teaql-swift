@@ -23,7 +23,11 @@ private actor BootstrapDiagnostics: DiagnosticSQLLogSink {
     func snapshot() -> [SQLExecutionMetadata] { values }
     func clear() { values.removeAll() }
 }
-private actor BootstrapCommands: GraphTransactionExecutor {
+private actor BootstrapCommands: GraphTransactionExecutor, InternalIDGenerator {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
     let service: SQLiteDataService
     private var requests: [MutationRequest] = [], results: [MutationResult] = []
     private var active = false, commits = 0

@@ -11,7 +11,11 @@ private struct ProjectionEffects: Codable, Equatable, Sendable {
       rollbacks: a.rollbacks-b.rollbacks, audits: a.audits-b.audits, policies: a.policies-b.policies)
   }
 }
-private actor ProjectionProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor ProjectionProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var calls = ProjectionEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -87,7 +91,7 @@ enum ProjectionViewsProbe {
       var result = await provider.snapshot(); result.policies = policies.count; return result
     }
     func seed() async throws -> PurchaseOrder {
-      var row = try Q.purchaseOrders().comment("Prepare an independent query-view fixture")
+      var row = try await Q.purchaseOrders().comment("Prepare an independent query-view fixture")
         .purpose("Verify projection boundaries and independent mutation ledgers").newEntity(context)
       row.updateContactPhone("5550700"); row.updateInternalNote(nil)
       let before = await counts()

@@ -49,7 +49,11 @@ private final class Clock: @unchecked Sendable, BusinessClock {
   func reset() { lock.withLock { reads = 0 } }
   var count: Int { lock.withLock { reads } }
 }
-private actor ObservedProvider: QueryExecutor, GraphTransactionExecutor {
+private actor ObservedProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var calls = Counts()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -70,8 +74,8 @@ private let ordinaryDay = ISO8601DateFormatter().date(from: "2026-10-23T00:00:00
 private let offsetInstant = ISO8601DateFormatter().date(from: "2032-02-29T23:30:00+02:00")!
 private let largeText = "Unicode 精确数值\nleft\0right " + String(repeating: "bounded large text 中文 ", count: 1_024)
 
-private func newProbe(_ context: UserContext, name: String) throws -> ScalarTypeProbe {
-  var row = try Q.scalarTypeProbes().comment("prepare one bounded scalar fixture")
+private func newProbe(_ context: UserContext, name: String) async throws -> ScalarTypeProbe {
+  var row = try await Q.scalarTypeProbes().comment("prepare one bounded scalar fixture")
     .purpose("verify generated strong scalar APIs").newEntity(context)
   row.updateTypePlatform(1)
   row.updateRequiredString(name)
@@ -272,7 +276,7 @@ private func dynamicDatePredicates(_ context: UserContext, id: Int64, day: Date,
     let context = UserContext(runtime: runtime, queryExecutor: provider, mutationExecutor: provider,
       requestPolicy: RequestPolicy { $0 }, auditSink: audit, querySQLLogEnabled: false, mutationSQLLogEnabled: false, businessClock: clock)
     let name = "native-scalars-\(report.round)-\(UUID().uuidString)"
-    let created = try newProbe(context, name: name)
+    let created = try await newProbe(context, name: name)
     clock.reset(); await provider.reset()
     let persisted = try await created.auditAs("persist the native scalar boundary fixture").save(context)
     report.saveClockReads = clock.count

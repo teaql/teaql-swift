@@ -42,7 +42,11 @@ actor GraphBeginPause {
 /// Records the real generated command before delegating to SQLite; it neither
 /// creates nor modifies intent, IDs or lineage. Failure tests use the native
 /// provider directly so its package-only diagnostic SPI is not erased.
-actor CommandCapture: GraphTransactionExecutor {
+actor CommandCapture: GraphTransactionExecutor, InternalIDGenerator {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
     let service: SQLiteDataService
     let audit: AuditCapture
     private var requests: [MutationRequest] = []

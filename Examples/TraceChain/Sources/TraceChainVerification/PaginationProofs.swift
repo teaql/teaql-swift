@@ -85,8 +85,8 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
         mutationPolicyRegistry: DelegatingMutationPolicyRegistry { _ in policy })
     let ids = [base + 8_000, base + 8_001, base + 8_002]
     for id in ids {
-        var root = try order(context, id: id, label: "page-\(id)")
-        var child = try Q.orderItems().comment("initialize pagination child")
+        var root = try await order(context, id: id, label: "page-\(id)")
+        var child = try await Q.orderItems().comment("initialize pagination child")
             .purpose("prepare independent page graphs").newEntity(context)
         child.updateId(id + 100); child.updateCustomerOrder(id); child.updateName("page child \(id)")
         root.orderItemList.append(child)

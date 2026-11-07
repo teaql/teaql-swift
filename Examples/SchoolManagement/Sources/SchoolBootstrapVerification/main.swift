@@ -109,7 +109,7 @@ private actor BootstrapAuditSink: AuditSink {
 
     let createRequest = Q.schools().comment("create school through constant helper")
       .purpose("prove seeded constants form a usable relation graph")
-    var school = try createRequest.newEntity(context)
+    var school = try await createRequest.newEntity(context)
     let now = Date()
     school.updatePlatform(1)
     school.updateSchoolTypeToPrimary()

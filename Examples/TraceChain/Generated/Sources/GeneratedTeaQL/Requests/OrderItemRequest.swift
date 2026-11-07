@@ -551,9 +551,10 @@ public extension OrderItemRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> OrderItem {
+    func newEntity(_ context: UserContext) async throws -> OrderItem {
         try ensureIntent()
-        return context.initializeEntity("OrderItem", OrderItem())
+        let id = try await context.generateInternalID(for: "OrderItem")
+        return context.initializeEntity("OrderItem", try OrderItem.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderItem> {

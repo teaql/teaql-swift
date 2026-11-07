@@ -7,7 +7,11 @@ private struct CheckerEffects: Codable, Sendable, Equatable {
   var queries = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
 
-private actor CheckerProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor CheckerProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var effects = CheckerEffects()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -52,11 +56,11 @@ enum CheckerMetadataProbe {
         auditSink: provider, locale: locale, businessClock: FixedBusinessClock(now))
     }
     var context = makeContext(runtime)
-    func owner() throws -> PurchaseOrder {
-      try Q.purchaseOrders().comment("Prepare a Checker metadata regression")
+    func owner() async throws -> PurchaseOrder {
+      try await Q.purchaseOrders().comment("Prepare a Checker metadata regression")
         .purpose("Verify real generated-save admission before provider entry").newEntity(context)
     }
-    var calibration = try owner(); calibration.updateContactPhone("5550970")
+    var calibration = try await owner(); calibration.updateContactPhone("5550970")
     let good = try await calibration.auditAs("Calibrate successful SQLite and committed audit instrumentation").save(context)
     let effects = await provider.snapshot()
     try require(effects.begins == 1 && effects.mutations == 1 && effects.commits == 1 && effects.audits == 1,
@@ -107,11 +111,11 @@ enum CheckerMetadataProbe {
           "Unexpected save did not have an authoritative persisted row")
       }
     }
-    let missing = try owner()
+    let missing = try await owner()
     try await invalid("parent_required", type: "PurchaseOrder", path: "contact_phone", rule: "required") {
       try await missing.auditAs("Reject an omitted required phone").save(context).id
     }
-    var tooLong = try owner(); tooLong.updateContactPhone(String(repeating: "x", count: 33))
+    var tooLong = try await owner(); tooLong.updateContactPhone(String(repeating: "x", count: 33))
     try await invalid("parent_length", type: "PurchaseOrder", path: "contact_phone", rule: "max_length") {
       try await tooLong.auditAs("Reject a modeled string length violation").save(context).id
     }
@@ -131,8 +135,8 @@ enum CheckerMetadataProbe {
     }
     func badChild(_ scenario: String, product: String?, price: String, rule: String, field: String,
       type: String = "OrderItem") async throws {
-      var parent = try owner(); parent.updateContactPhone("5550973")
-      var child = try Q.orderItems().comment("Prepare an invalid indexed child")
+      var parent = try await owner(); parent.updateContactPhone("5550973")
+      var child = try await Q.orderItems().comment("Prepare an invalid indexed child")
         .purpose("Keep child Checker type and source pointer across graph boundaries").newEntity(context)
       if let product { child.updateProductName(product) }
       child.updateUnitPrice(Decimal(string: price, locale: Locale(identifier: "en_US_POSIX"))!)
@@ -146,7 +150,7 @@ enum CheckerMetadataProbe {
     try await badChild("child_min", product: "Synthetic Checker Widget", price: "0", rule: "min", field: "unit_price")
     try await badChild("child_max", product: "Synthetic Checker Widget", price: "1000001", rule: "max", field: "unit_price")
     try context.setLocaleCode("zh-CN")
-    let localized = try owner()
+    let localized = try await owner()
     try await invalid("localized_required", type: "PurchaseOrder", path: "contact_phone", rule: "required") {
       try await localized.auditAs("Reject a missing scalar with a localized message").save(context).id
     }
@@ -164,8 +168,8 @@ enum CheckerMetadataProbe {
     }
     var validBoundIDs: [Int64] = []
     for (name, price) in [("inclusive-minimum", "0.01"), ("inclusive-maximum", "1000000")] {
-      var parent = try owner(); parent.updateContactPhone("5550975")
-      var child = try Q.orderItems().comment("Prepare a valid exact-bound child")
+      var parent = try await owner(); parent.updateContactPhone("5550975")
+      var child = try await Q.orderItems().comment("Prepare a valid exact-bound child")
         .purpose("Ensure numeric Checker ranges remain inclusive").newEntity(context)
       child.updateProductName(name); child.updateUnitPrice(Decimal(string: price)!)
       parent.orderItemList.append(child)

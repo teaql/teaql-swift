@@ -704,9 +704,10 @@ public extension TenantRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> Tenant {
+    func newEntity(_ context: UserContext) async throws -> Tenant {
         try ensureIntent()
-        return context.initializeEntity("Tenant", Tenant())
+        let id = try await context.generateInternalID(for: "Tenant")
+        return context.initializeEntity("Tenant", try Tenant.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Tenant> {

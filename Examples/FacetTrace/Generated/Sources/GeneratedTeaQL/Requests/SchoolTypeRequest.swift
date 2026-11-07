@@ -993,9 +993,10 @@ public extension SchoolTypeRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> SchoolType {
+    func newEntity(_ context: UserContext) async throws -> SchoolType {
         try ensureIntent()
-        return context.initializeEntity("SchoolType", SchoolType())
+        let id = try await context.generateInternalID(for: "SchoolType")
+        return context.initializeEntity("SchoolType", try SchoolType.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<SchoolType> {

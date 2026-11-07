@@ -8,7 +8,11 @@ private struct RestorationCalls: Codable, Equatable, Sendable {
   var queries = 0, mutations = 0, begins = 0, commits = 0, rollbacks = 0, audits = 0
 }
 
-private actor RestorationProvider: QueryExecutor, GraphTransactionExecutor, AuditSink {
+private actor RestorationProvider: QueryExecutor, GraphTransactionExecutor, InternalIDGenerator, AuditSink {
+  // Reservation is infrastructure I/O, not a business query/mutation/audit.
+  func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await service.nextID(for: entity, context: context)
+  }
   let service: SQLiteDataService
   private var calls = RestorationCalls()
   init(_ service: SQLiteDataService) { self.service = service }
@@ -96,10 +100,10 @@ enum RestorationProbe {
     let initial = context(provider, provider, FixedBusinessClock(t0), observed: true)
     let current = context(provider, provider, clock, observed: true)
     await provider.reset(); policy.reset()
-    var parent = try Q.purchaseOrders().comment("Prepare a known persisted restoration baseline")
+    var parent = try await Q.purchaseOrders().comment("Prepare a known persisted restoration baseline")
       .purpose("Verify cancellation without losing real graph edits").newEntity(initial)
     parent.updateContactPhone("5550800"); parent.updateInternalNote(nil)
-    var child = try Q.orderItems().comment("Prepare the child used by graph restoration controls")
+    var child = try await Q.orderItems().comment("Prepare the child used by graph restoration controls")
       .purpose("Calibrate real generated graph writes").newEntity(initial)
     child.updateProductName("Restoration original"); child.updateUnitPrice(Decimal(string: "10.00")!)
     parent.orderItemList.append(child)

@@ -5,8 +5,8 @@ import TeaQLCore
 func generatedLoadedPrivacy(_ context: UserContext, commands: CommandCapture, sql: SQLExecutionEvidenceStore,
                             audit: AuditCapture, base: Int64) async throws {
     await commands.clear(); await audit.clear()
-    var root = try order(context, id: base + 9000, label: "PRIVACY-\(base)")
-    var item = try Q.orderItems().comment("initialize private item")
+    var root = try await order(context, id: base + 9000, label: "PRIVACY-\(base)")
+    var item = try await Q.orderItems().comment("initialize private item")
         .purpose("verify loaded scalar privacy").newEntity(context)
     item.updateId(base + 9001); item.updateName("PRIVATEOLDITEM")
     root.orderItemList.append(item)

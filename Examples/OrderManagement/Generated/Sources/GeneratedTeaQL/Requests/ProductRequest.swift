@@ -1150,9 +1150,10 @@ public extension ProductRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> Product {
+    func newEntity(_ context: UserContext) async throws -> Product {
         try ensureIntent()
-        return context.initializeEntity("Product", Product())
+        let id = try await context.generateInternalID(for: "Product")
+        return context.initializeEntity("Product", try Product.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Product> {

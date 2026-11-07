@@ -6,30 +6,29 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 0,
   "producerSource": {
-    "commit": "75852d27438820c0c56b069d2db4229cf85fbcde",
-    "tree": "c741ab1f22e21ae0b04c88181b93b80e61ef835a"
+    "commit": "ea421529ea1eee52d39778ea674e64209b75838a"
   },
-  "producerReceiptSha256": "0d143776219536f76b3c4474f87cb78c6cd1a2e5a07163513e1bc8b5a8df3f5b",
-  "generatedManifestSha256": "8366a661896c046b2ac25cef0e95de7d85d8c14ca0b6a334291c43f4e2bae14a",
+  "producerReceiptSha256": "c55cb0b9049bafa1c1b4decddaedeed050bdd7f344e0f998b80d8041867dd879",
+  "generatedManifestSha256": "42f8b17490dc39ac58f8f73f8846bca16a3fb2476c9588bb20d4d00a5cd287da",
   "files": {
-    "Sources/GeneratedTeaQL/Models/Platform.swift": "b3a0287bdf11751f960d204763bb20a90fa188758541b03201f31937ce7128bc",
-    "Sources/GeneratedTeaQL/Models/CustomerOrder.swift": "a1e588ca75318774f8a092183dbafe4bced7eb371ee0a3e2b1c7dfc8382eed0f",
-    "Sources/GeneratedTeaQL/Models/OrderItem.swift": "07fb938ce725543b0a98ecfc275adf959e090b828c7e3ca670466cafc96eecc0",
-    "Sources/GeneratedTeaQL/Models/Payment.swift": "7ae11a0951dea628deae579c48838dcd60351126ae9224893aebd6d4666caee8",
-    "Sources/GeneratedTeaQL/Models/PaymentAttempt.swift": "d2394dc510913bed436ab57016262cc923e5e0a095b3c9d31b2a2c91be501f7c",
-    "Sources/GeneratedTeaQL/Models/Shipment.swift": "0532828794ef2b951a2b1a8fff245bb79c9b999237f3a2e44c0335de7209eb95",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "c83b48e785f8009b0c1f3d7358f06a3731cda01ebf2f9177e96d72f8c3c6819c",
+    "Sources/GeneratedTeaQL/Models/CustomerOrder.swift": "064b7285a68c34590d4488672534d2fa3af5009aa1ad8dc5fed098803e651e52",
+    "Sources/GeneratedTeaQL/Models/OrderItem.swift": "ff2544630635e7c9cc00adda6214564179591854ea219ea33a426557bfa14bda",
+    "Sources/GeneratedTeaQL/Models/Payment.swift": "66095f4ac52f9da536a885e8ed850b7c365b1af671ba3ebd7520592fd2ce9680",
+    "Sources/GeneratedTeaQL/Models/PaymentAttempt.swift": "e8339fd1ff48f08969302312acff2b52d890aa4ed03db115c2ec33b6540be5c9",
+    "Sources/GeneratedTeaQL/Models/Shipment.swift": "12eab9aa5dc5b58ab9dd00552d897d0119a36900ffc1d16cae9cacc29a825a49",
     "Sources/GeneratedTeaQL/E.swift": "95923575f328f0d00dfcb333f33d7c4dbd87e94c673d3eee36e5eb73e87608dd",
     "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
-    "Sources/GeneratedTeaQL/RuntimeModule.swift": "4058e7ce8497ce11c87076bf6f8c1258d6acfe09aa3784932ecd1d1518aa4a3a",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "a8cf26adea6e0e876e51c9c593068bb55ce9cf450f71a3ab6263f96dc24041da",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "1ce50345e39b7691d12af64b10698e06edc3caeb0b73ae55f812538318d77b01",
     "Sources/GeneratedTeaQL/Q.swift": "1c3456d3d2d22c88c6dcbacda6a072a177c2ff92dbd17e8982b33815700791be",
-    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "41859d14c22ac0061bebf1c9b74cf865aefb382f20b8327c900651b3b9745697",
-    "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": "fefeef9d447d3ee4dda58981e174628e5dbc3902285a099bd3a12930ba701421",
-    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "c691a7a5a93f399ea7cecad7ed560068ce390e198fe298101afeab49368fba35",
-    "Sources/GeneratedTeaQL/Requests/PaymentRequest.swift": "a94e5bfc0d92136e91342896eb1ddd5e1d88d9415dab4d0efd988d6819277361",
-    "Sources/GeneratedTeaQL/Requests/PaymentAttemptRequest.swift": "7e9916ff5c55f70a57d2dff60085d1259065ed0109042eac98d4ad859c6cbb54",
-    "Sources/GeneratedTeaQL/Requests/ShipmentRequest.swift": "0983a48b032fdf1cf8a6c450f38f5dd7e0654202a28838f89864fca3c7753b32"
+    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "52c54b50cf422e7fe871fcb931aa81a16d661ab36a0cf191f9d7e326210208f0",
+    "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": "c839fef9f3012b4d17b673ba7eb1ff0ae3f2cf054eead0dff5ae512e859f89e8",
+    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "4d2c70c66200a254d2344138c7526bca8bbf825f8399df5dc3afa3ebe0972f90",
+    "Sources/GeneratedTeaQL/Requests/PaymentRequest.swift": "67816c7c65ea773817b08a6fc9c564078efe77609fd7ff1ec27efdd86045ee3c",
+    "Sources/GeneratedTeaQL/Requests/PaymentAttemptRequest.swift": "dee9b723359be3eebb035fc06c7d4d88f92292b59ad043997a0d6198f2179b71",
+    "Sources/GeneratedTeaQL/Requests/ShipmentRequest.swift": "98a99ec8c5e373d113187082e3934735d151a33de8087d563dc9b8c0602ca9d5"
   },
-  "previousFixtureManifestSha256": "2839d8793348e1b086deba0a14c5ec1d40a92f75c70e31e9e909a80e9c7b46a1",
+  "previousFixtureManifestSha256": "c6ec990ebdf758ac040b2768959a398c4a9660e85c8c3b768257c1ddab122f66",
   "applicationManifestsPreserved": true
 }

@@ -37,18 +37,18 @@ private actor Audits: AuditSink {
     try await context.ensureSchema(GeneratedRuntimeModule.module)
     try require(await audit.value() == first, "repeated schema seed")
     let secret = "ORDER-PRIVATE-" + UUID().uuidString
-    var customer = try Q.customers().comment("create customer").purpose("prepare standard Order graph").newEntity(context)
+    var customer = try await Q.customers().comment("create customer").purpose("prepare standard Order graph").newEntity(context)
     customer.updatePlatform(1); customer.updateName("North Star Retail"); customer.updateVersion(1)
     customer = try await customer.auditAs("seed standard customer").save(context)
     for index in 0..<4 {
-      var order = try Q.customerOrders().comment("create order").purpose("prepare standard Order graph").newEntity(context)
+      var order = try await Q.customerOrders().comment("create order").purpose("prepare standard Order graph").newEntity(context)
       order.updateCustomer(customer.id); order.updateStatus(index == 0 ? 1001 : 1002)
       order.updateOrderNumber(index == 3 ? "OTHER-004" : secret + String(format: "-%03d", index + 1))
       order.updateOrderDate(Date(timeIntervalSince1970: 1_790_812_800 + Double(index) * 86_400))
       order.updateTotalAmount(Decimal(index == 3 ? 900 : (index + 1) * 100)); order.updateVersion(1)
       order = try await order.auditAs("seed standard order").save(context)
       for number in 1...5 {
-        var item = try Q.orderItems().comment("create item").purpose("prepare bounded previews").newEntity(context)
+        var item = try await Q.orderItems().comment("create item").purpose("prepare bounded previews").newEntity(context)
         item.updateCustomerOrder(order.id); item.updateProductName("Box \(number)")
         item.updateQuantity(Int64(number)); item.updateUnitPrice(20); item.updateVersion(1)
         _ = try await item.auditAs("seed standard item").save(context)

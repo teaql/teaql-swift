@@ -675,9 +675,10 @@ public extension WorkItemRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> WorkItem {
+    func newEntity(_ context: UserContext) async throws -> WorkItem {
         try ensureIntent()
-        return context.initializeEntity("WorkItem", WorkItem())
+        let id = try await context.generateInternalID(for: "WorkItem")
+        return context.initializeEntity("WorkItem", try WorkItem.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<WorkItem> {

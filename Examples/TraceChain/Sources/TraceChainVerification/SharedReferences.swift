@@ -109,9 +109,9 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
     // Existing rollback/readback fixtures reserve the +5000 and +6000 bands.
     let firstID = base + 7_000, secondID = firstID + 1
     for (id, label) in [(firstID, "ownership-A"), (secondID, "ownership-B")] {
-        var root = try order(context, id: id, label: label)
+        var root = try await order(context, id: id, label: label)
         for offset in [Int64(10), 20] {
-            var child = try Q.orderItems().comment("initialize ownership child")
+            var child = try await Q.orderItems().comment("initialize ownership child")
                 .purpose("prepare isolated graphs").newEntity(context)
             child.updateId(id + offset); child.updateCustomerOrder(id); child.updateName("child \(id + offset)")
             root.orderItemList.append(child)
