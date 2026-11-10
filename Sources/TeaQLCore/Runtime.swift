@@ -1111,7 +1111,14 @@ public struct UserContext: Sendable {
       ["teaql.result.cardinality": .integer(Int64(rows.count))]
     }) { authorized in
       var query = authorized.query
-      if countRequested, let alias = query.pageCountOperation?.alias {
+      guard query.groupBy.isEmpty else {
+        throw TeaQLError.unsupportedQueryCapability("grouped projections require the record query terminal")
+      }
+      let countAlias = countRequested ? query.pageCountOperation?.alias : nil
+      let aggregateOnly = query.aggregates.contains {
+        !($0.function == .count && $0.alias == countAlias)
+      }
+      if countRequested, let alias = countAlias {
         query.aggregates.removeAll { $0.function == .count && $0.alias == alias }
       }
       let rowsRequest = authorized.withQuery(query)
@@ -1119,15 +1126,24 @@ public struct UserContext: Sendable {
       var total: Int?
       if countRequested {
         let observation = await idSetPaginationObservation()
-        total = query.idSetPagination != nil && observation.countAccuracy == "EXACT"
+        total = !aggregateOnly && query.idSetPagination != nil && observation.countAccuracy == "EXACT"
           ? observation.count : try await count(rowsRequest)
       }
-      let named = total.flatMap { value in
+      var aggregations = total.flatMap { value in
         query.pageCountOperation?.alias.map { [$0: TeaQLValue.int(Int64(value))] }
       } ?? [:]
-      return SmartList(try result.records.enumerated().map { index, record in
-        try hydrate(record, result.loadedRelations[index] ?? [:])
-      }, totalCount: total, aggregations: named, facets: result.facets)
+      let rows: [Entity]
+      if aggregateOnly {
+        rows = []
+        if let scalar = result.records.first {
+          aggregations.merge(scalar) { _, value in value }
+        }
+      } else {
+        rows = try result.records.enumerated().map { index, record in
+          try hydrate(record, result.loadedRelations[index] ?? [:])
+        }
+      }
+      return SmartList(rows, totalCount: total, aggregations: aggregations, facets: result.facets)
     }
   }
 
