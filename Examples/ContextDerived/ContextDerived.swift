@@ -24,6 +24,9 @@ private final class Resolver: ContextFixResolver, @unchecked Sendable {
   private let lock = NSLock()
   private var phase = "A", failToken = false
   private var count = 0, tokenCount = 0, nowCount = 0
+  private var normalizedName: String?
+  func normalize(to value: String?) { lock.withLock { normalizedName = value } }
+  var normalization: String? { lock.withLock { normalizedName } }
   func configure(_ phase: String, fail: Bool = false) { lock.withLock { self.phase = phase; failToken = fail } }
   func reset() { lock.withLock { count = 0 } }
   var calls: Int { lock.withLock { count } }
@@ -43,6 +46,7 @@ private final class Resolver: ContextFixResolver, @unchecked Sendable {
 }
 private struct Checker: EntityChecker {
   let generated: any EntityChecker
+  let resolver: Resolver
   func checkAndFix(context: UserContext, mutation: inout Mutation, now: Date) throws -> [CheckResult] {
     if mutation.kind == .create {
       try ContextFix.apply(context, mutation: &mutation, now: now, field: "source_ip", function: "ip")
@@ -50,7 +54,11 @@ private struct Checker: EntityChecker {
     }
     try ContextFix.apply(context, mutation: &mutation, now: now, field: "last_ip", function: "ip")
     try ContextFix.apply(context, mutation: &mutation, now: now, field: "changed_by", function: "actor")
-    return try generated.checkAndFix(context: context, mutation: &mutation, now: now)
+    let results = try generated.checkAndFix(context: context, mutation: &mutation, now: now)
+    if mutation.kind == .update, mutation.values["name"] == .string("NORMALIZE"), let value = resolver.normalization {
+      mutation.values["name"] = .string(value)
+    }
+    return results
   }
 }
 
@@ -61,7 +69,7 @@ private struct Checker: EntityChecker {
     let service = try SQLiteDataService(path: database), observer = Observer(service), resolver = Resolver()
     var runtime = TeaQLRuntime(); try runtime.install(module)
     try runtime.install(RuntimeModule(name: "Application Context metadata", entities: [],
-      checkers: ["Entry": Checker(generated: runtime.checker(named: "Entry")!)],
+      checkers: ["Entry": Checker(generated: runtime.checker(named: "Entry")!, resolver: resolver)],
       contextFixFields: ["Entry": ["source_ip": .init(create: "ip"), "last_ip": .init(create: "ip", update: "ip"),
         "opened_by": .init(create: "actor"), "changed_by": .init(create: "actor", update: "actor")]]))
     func context(_ time: Date, schema: Bool = false) -> UserContext {
@@ -96,8 +104,14 @@ private struct Checker: EntityChecker {
     resolver.configure("B"); let b = context(now.addingTimeInterval(86_400)); reset()
     for _ in 0..<2 { _ = try await loaded.auditAs("Changed Context must not manufacture an update").save(b) }
     try zero("no-op"); try require(resolver.calls == 0 && loaded.version == version, "no-op Context/version")
+    let originalName = loaded.name!
+    resolver.normalize(to: originalName); loaded.updateName("NORMALIZE"); reset()
+    loaded = try await loaded.auditAs("Normalize the last business edit back to baseline").save(b)
+    try zero("normalized business edit")
+    try require(loaded.name == originalName && loaded.version == version && loaded.touchedAt == now && loaded.lastIp == "ip-A", "normalized native state")
+    let clocksBeforeUpdate = resolver.clocks
     loaded.updateName("updated-" + suffix); reset(); loaded = try await loaded.auditAs("Apply Context alongside a real business edit").save(b)
-    try require(observer.counts.audits == 1 && resolver.clocks == 3, "one accepted update / once-only Fix")
+    try require(observer.counts.audits == 1 && resolver.clocks == clocksBeforeUpdate + 1, "one accepted update / once-only Fix")
     loaded = try await load(loaded.id, b)
     try require(loaded.version == version + 1 && loaded.bornAt == now && loaded.touchedAt == now.addingTimeInterval(86_400), "update Clock/version")
     try require(loaded.sourceIp == "ip-A" && loaded.openedBy == "actor-A" && loaded.lastIp == "ip-B" && loaded.changedBy == "actor-B" && loaded.guardedToken == token, "Context scopes")
@@ -120,7 +134,25 @@ private struct Checker: EntityChecker {
       .comment("Load the complete Context graph").purpose("Verify later-child failure and retry").executeForList(b)
     parent = parents[0]; try require(parent.entryList.count == 2, "graph cardinality")
     var first = parent.entryList[0], second = parent.entryList[1]
-    let firstName = first.name, secondName = second.name, parentVersion = parent.version, secondVersion = second.version
+    let firstName = first.name, parentVersion = parent.version, firstVersion = first.version
+    var secondName = second.name, secondVersion = second.version
+    resolver.normalize(to: firstName); first.updateName("NORMALIZE"); parent.entryList = SmartList([first, second]); reset()
+    parent = try await parent.auditAs("Normalize one child without writing clean relatives").save(b)
+    try zero("normalized child-only graph")
+    first = parent.entryList[0]; second = parent.entryList[1]
+    try require(first.name == firstName && first.version == firstVersion && parent.version == parentVersion, "normalized graph native values")
+    first.updateName("NORMALIZE"); second.updateName("real-sibling-" + suffix); parent.entryList = SmartList([first, second]); reset()
+    parent = try await parent.auditAs("Save the real sibling, not the normalized child").save(b)
+    first = parent.entryList[0]; second = parent.entryList[1]
+    try require(observer.counts.audits == 1 && first.name == firstName && first.version == firstVersion
+      && parent.version == parentVersion && second.version == secondVersion + 1, "mixed graph writes only the genuine sibling")
+    secondName = second.name; secondVersion = second.version
+    first.updateName("NORMALIZE"); second.updateName(String(repeating: "x", count: 300)); parent.entryList = SmartList([first, second]); reset()
+    let normalizedError = try await reject { _ = try await parent.auditAs("Reject an invalid sibling after a normalized child").save(b) }
+    try require(normalizedError.violations.contains { $0.location.instancePath == "/entryList/1/name" }, "normalized graph indexed location")
+    try zero("normalized child before failed sibling")
+    first.updateName(firstName); second.updateName(secondName); parent.entryList = SmartList([first, second]); reset()
+    _ = try await parent.auditAs("Restore a rejected normalized graph").save(b); try zero("restored normalized graph")
     first.updateName("dirty-" + suffix); second.updateName(String(repeating: "x", count: 300)); parent.entryList = SmartList([first, second])
     resolver.configure("D"); reset()
     let graphError = try await reject { _ = try await parent.auditAs("Reject the second child before writing either").save(b) }

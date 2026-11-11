@@ -14,6 +14,9 @@ package final class PreparedGraphMutations: @unchecked Sendable {
     let ledgerKey: EntityKey?
     var state: EntityRoot.MutationSnapshot?
     let references: [String: Reference]
+    let baseline: LoadedEntitySnapshot?
+    let restored: TeaQLRecord
+    var isNoOp: Bool { baseline != nil && fixed.kind == .update && fixed.values.isEmpty }
   }
   private struct Reference {
     let target: Key
@@ -66,7 +69,8 @@ package final class PreparedGraphMutations: @unchecked Sendable {
   }
 
   package func record(original: Mutation, fixed: Mutation, ledger: EntityRoot?,
-    ledgerKey: EntityKey?, state: EntityRoot.MutationSnapshot?) throws {
+    ledgerKey: EntityKey?, state: EntityRoot.MutationSnapshot?,
+    baseline: LoadedEntitySnapshot? = nil, restored: TeaQLRecord = [:]) throws {
     try lock.withLock {
       guard !sealed else { throw MutationPolicyError.preflightAfterReview }
       if let ledger, let ledgerKey, let state,
@@ -83,7 +87,8 @@ package final class PreparedGraphMutations: @unchecked Sendable {
         }
       }
       queues[identity, default: Queue()].entries.append(
-        Entry(original: original, fixed: fixed, ledger: ledger, ledgerKey: ledgerKey, state: state, references: references))
+        Entry(original: original, fixed: fixed, ledger: ledger, ledgerKey: ledgerKey, state: state,
+          references: references, baseline: baseline, restored: restored))
     }
   }
 
@@ -92,6 +97,13 @@ package final class PreparedGraphMutations: @unchecked Sendable {
   }
 
   package func validateLedgers() throws { try lock.withLock { try validateLedgersLocked() } }
+
+  package var isEmptyPlan: Bool { lock.withLock {
+    required && sealed && queues.values.allSatisfy { $0.entries.allSatisfy(\.isNoOp) }
+  } }
+  package func wasNormalized(ledger: EntityRoot, key: EntityKey) -> Bool { lock.withLock {
+    queues[.ledger(ObjectIdentifier(ledger), key)]?.entries.contains { !$0.restored.isEmpty } ?? false
+  } }
 
   /// Policy first sees the immutable post-Fix plan while the caller's ledger
   /// still contains its original intent. Only an approved plan may publish
@@ -115,8 +127,10 @@ package final class PreparedGraphMutations: @unchecked Sendable {
               !sameMutationRecord([field: value], entry.original.values[field].map { [field: $0] } ?? [:]) else { continue }
             differences[field] = value
           }
+          for (field, value) in entry.restored { differences[field] = value }
         }
-        let published = try ledger.publishValidatedFix(differences, key: key, expected: state)
+        let published = try ledger.publishValidatedFix(differences, key: key, expected: state,
+          restoring: first.baseline, descriptor: first.original.entity)
         for i in queue.entries.indices { queue.entries[i].state = published }
         queues[identity] = queue
       }
@@ -136,6 +150,7 @@ package final class PreparedGraphMutations: @unchecked Sendable {
         throw MutationPolicyError.operationOutsideReviewedPlan
       }
       let entry = queue.entries[queue.consumed]
+      guard !entry.isNoOp else { throw MutationPolicyError.operationOutsideReviewedPlan }
       guard proposed.kind == entry.original.kind, proposed.entity == entry.original.entity,
         proposed.id == entry.original.id, proposed.expectedVersion == entry.original.expectedVersion,
         (sameMutationRecord(proposed.values, entry.original.values)

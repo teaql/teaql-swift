@@ -33,12 +33,20 @@ package final class ContextFixFrame: @unchecked Sendable {
   init(_ original: Mutation, fields: [String: ContextFieldFunctions]) {
     self.original = original
     self.fields = fields
-    allowed = original.kind == .create || original.kind == .update && original.values.contains { field, value in
+    allowed = Self.hasBusinessChange(original, baseline: original, fields: fields)
+  }
+  private static func hasBusinessChange(_ mutation: Mutation, baseline: Mutation,
+    fields: [String: ContextFieldFunctions]) -> Bool {
+    mutation.kind == .create || mutation.kind == .update && mutation.values.contains { field, value in
       guard !field.hasPrefix("_"), field != "id", field != "version", fields[field] == nil else { return false }
-      guard let property = original.entity.property(named: field) else { return true }
-      let old = original.loadedValues[property.name] ?? original.loadedValues[field] ?? original.loadedValues[property.column]
-      return old.map { !sameMutationRecord([field: value], [field: $0]) } ?? true
+      guard let property = baseline.entity.property(named: field) else { return true }
+      let old = baseline.loadedValues[property.name] ?? baseline.loadedValues[field] ?? baseline.loadedValues[property.column]
+      return old.map { !LoadedScalarRestoration.same(value, $0, property: property) } ?? true
     }
+  }
+  func normalizeFinalIntent(_ mutation: inout Mutation) {
+    guard mutation.kind == .update, !Self.hasBusinessChange(mutation, baseline: original, fields: fields) else { return }
+    for field in fields.keys { mutation.values[field] = original.values[field] }
   }
   func isActive() -> Bool { lock.withLock { active } }
   func close() { lock.withLock { active = false } }

@@ -59,7 +59,9 @@ public final class EntityRoot: @unchecked Sendable {
   }
 
   package func discardRestoredFields(_ key: EntityKey, snapshot: LoadedEntitySnapshot, descriptor: EntityDescriptor) {
-    lock.withLock {
+    lock.withLock { discardRestoredFieldsLocked(key, snapshot: snapshot, descriptor: descriptor) }
+  }
+  private func discardRestoredFieldsLocked(_ key: EntityKey, snapshot: LoadedEntitySnapshot, descriptor: EntityDescriptor) {
       guard snapshot.key == key, snapshot.version != 0, originalVersions[key] == snapshot.version,
         !newKeys.contains(key), !deletedKeys.contains(key), let pending = changes[key] else { return }
       for (field, value) in pending {
@@ -71,7 +73,6 @@ public final class EntityRoot: @unchecked Sendable {
         changes[key]?.removeValue(forKey: field)
       }
       if changes[key]?.isEmpty == true { changes.removeValue(forKey: key) }
-    }
   }
 
   package struct MutationSnapshot: Sendable {
@@ -95,12 +96,14 @@ public final class EntityRoot: @unchecked Sendable {
   /// Publish runtime-validated Fix differences without overwriting a later
   /// caller edit or changing identity, version, trace or commit state.
   package func publishValidatedFix(_ values: TeaQLRecord, key: EntityKey,
-    expected: MutationSnapshot) throws -> MutationSnapshot {
+    expected: MutationSnapshot, restoring snapshot: LoadedEntitySnapshot? = nil,
+    descriptor: EntityDescriptor? = nil) throws -> MutationSnapshot {
     try lock.withLock {
       guard expected.matches(mutationSnapshotLocked(key)) else {
         throw MutationPolicyError.operationOutsideReviewedPlan
       }
       for (field, value) in values { changes[key, default: [:]][field] = value }
+      if let snapshot, let descriptor { discardRestoredFieldsLocked(key, snapshot: snapshot, descriptor: descriptor) }
       return mutationSnapshotLocked(key)
     }
   }

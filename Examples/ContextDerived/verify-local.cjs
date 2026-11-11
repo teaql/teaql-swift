@@ -36,6 +36,10 @@ async function main(){try{
   try{result=await runner.run(command,{cwd:work,env,timeout,stdio:['ignore',fd,fd]});}finally{fs.closeSync(fd);}
   const bytes=fs.readFileSync(f);report.commands.push({command,exitCode:result.status,signal:result.signal,logSha256:sha(bytes)});
   assert.equal(result.status,0,bytes.toString().slice(-9000));return bytes.toString();}
+ if(process.env.TEAQL_CONTEXT_FIX_UNIT_TESTS==='1'){
+  await run(['swift','test','--package-path',repo,'--scratch-path',path.join(scratch,'unit-build'),'--jobs','2','--skip-update'], 'unit-tests.log',600000);
+  report.completeRuntimeTests=true;
+ }
  await run(['swift','build',...flags,'--product','ContextDerivedExample','--skip-update'],'build.log',540000);
  const resolved=JSON.parse(fs.readFileSync(path.join(work,'Package.resolved'))),originalPins=JSON.parse(fs.readFileSync(lockfile));
  for(const pin of resolved.pins){const expected=originalPins.pins.find(p=>p.identity===pin.identity);assert(expected,'unexpected dependency '+pin.identity);assert.deepEqual(pin.state,expected.state,pin.identity);}

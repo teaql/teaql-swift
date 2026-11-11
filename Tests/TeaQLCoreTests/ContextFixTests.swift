@@ -31,6 +31,10 @@ private struct ContextFixTestChecker: EntityChecker {
     if mutation.kind == .create { try ContextFix.apply(context, mutation: &mutation, now: now, field: "born_at", function: "now") }
     try ContextFix.apply(context, mutation: &mutation, now: now, field: "touched_at", function: "now")
     try ContextFix.apply(context, mutation: &mutation, now: now, field: "source_ip", function: "ip")
+    if case .string(let mode) = mutation.values["name"], ["NORMALIZE", "REPAIR_OTHER", "UNKNOWN_BASELINE"].contains(mode) {
+      mutation.values["name"] = .string("same")
+      if mode == "REPAIR_OTHER" { mutation.values["note"] = .string("business repair") }
+    }
     return reject ? [CheckResult(ruleID: "required", location: .property("name"))] : []
   }
 }
@@ -43,6 +47,7 @@ struct ContextFixTests {
       PropertyDescriptor(name: "id", type: .int, isID: true),
       PropertyDescriptor(name: "version", type: .int, isVersion: true),
       PropertyDescriptor(name: "name", type: .string),
+      PropertyDescriptor(name: "note", type: .string),
       PropertyDescriptor(name: "bornAt", modelName: "born_at", type: .timestamp, createFunction: "now"),
       PropertyDescriptor(name: "touchedAt", modelName: "touched_at", type: .timestamp, createFunction: "now", updateFunction: "now"),
       PropertyDescriptor(name: "sourceIp", modelName: "source_ip", type: .string, createFunction: "ip", updateFunction: "ip")
@@ -58,6 +63,17 @@ struct ContextFixTests {
   private func update(_ values: TeaQLRecord, old: TeaQLRecord = [:]) -> Mutation {
     var mutation = Mutation(kind: .update, entity: descriptor, id: .int(1), values: values, expectedVersion: 7, auditReason: "check frozen Context eligibility")
     mutation.loadedValues = old; return mutation
+  }
+
+  @Test(arguments: ["NORMALIZE", "REPAIR_OTHER", "UNKNOWN_BASELINE"])
+  func finalBusinessIntentControlsAutomaticValues(_ mode: String) throws {
+    let ctx = try context(ContextFixProbe())
+    let fixed = try ctx.preflightMutation(update(["name": .string(mode)],
+      old: mode == "UNKNOWN_BASELINE" ? [:] : ["name": .string("same")]))
+    #expect(fixed.values["name"] == .string("same"))
+    #expect((fixed.values["touched_at"] == nil) == (mode == "NORMALIZE"))
+    #expect((fixed.values["source_ip"] == nil) == (mode == "NORMALIZE"))
+    if mode == "REPAIR_OTHER" { #expect(fixed.values["note"] == .string("business repair")) }
   }
 
   @Test(arguments: ["empty", "managed", "restored"])
@@ -106,7 +122,7 @@ struct ContextFixTests {
   @Test func metadataDecodesOlderShapeAndRoundTripsContextScope() throws {
     let old = try JSONDecoder().decode(PropertyDescriptor.self, from: Data(#"{"name":"name","type":"string"}"#.utf8))
     #expect(old.createFunction == nil && old.updateFunction == nil)
-    let scoped = descriptor.properties[4]
+    let scoped = descriptor.properties[5]
     #expect(try JSONDecoder().decode(PropertyDescriptor.self, from: JSONEncoder().encode(scoped)) == scoped)
   }
 

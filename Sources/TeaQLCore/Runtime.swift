@@ -346,7 +346,7 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     _ = try context.preflightMutation(
       makeMutation(rooted: rooted),
       ledgerRoot: rooted?.teaqlEntityRoot,
-      ledgerKey: rooted?.teaqlEntityKey)
+      ledgerKey: rooted?.teaqlEntityKey, loadedSnapshot: rooted?.teaqlLoadedSnapshot)
   }
 
   /// Generator bridge for a complete input-graph pass before its first Fix.
@@ -369,7 +369,12 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     let rooted = entity as? any TeaQLMutationRootedEntity
     try validateLoadedIdentity(rooted: rooted)
     if let rooted, (entity.version != 0 || rooted.teaqlLoadedSnapshot != nil),
-      !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) { return entity }
+      !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) {
+      if session.preparedMutations.wasNormalized(ledger: rooted.teaqlEntityRoot, key: rooted.teaqlEntityKey) {
+        return try Entity.from(record: session.readback().scalarRecord(for: entity))
+      }
+      return entity
+    }
     var mutation = try makeMutation(rooted: rooted)
     mutation.auditReason = session.intent.auditReason
     mutation.mutationLineage = rooted.map { $0.teaqlEntityRoot.traceChain($0.teaqlEntityKey, fallback: scope) }
@@ -866,16 +871,25 @@ public struct UserContext: Sendable {
         try session.preparedMutations.publishFixesAfterReview()
       }
       try Task.checkCancellation()
-      try await transaction.beginGraphTransaction()
-      transactionStarted = true
+      let emptyPreparedPlan = preparation != nil && session.preparedMutations.isEmptyPlan
+      if !emptyPreparedPlan {
+        try await transaction.beginGraphTransaction()
+        transactionStarted = true
+      }
+      var executionContext = graphContext
+      if emptyPreparedPlan {
+        let denied = GraphPreparationExecutor()
+        executionContext.queryExecutor = denied; executionContext.mutationExecutor = denied
+      }
+      let executingContext = executionContext
       result = try await GraphTransactionGate.Reentry.$active.withValue(
         GraphTransactionGate.Reentry.active.union([graphTransactionGate.id])) {
-          try await operation(graphContext, session)
+          try await operation(executingContext, session)
       }
       try policy.ensureGraphComplete()
       try Task.checkCancellation()
       try session.preparedMutations.validateLedgers()
-      try await transaction.commitGraphTransaction()
+      if transactionStarted { try await transaction.commitGraphTransaction() }
       committed = true
       policy.endGraph()
     } catch {
@@ -1891,7 +1905,8 @@ public struct UserContext: Sendable {
   }
 
   public func preflightMutation(
-    _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil
+    _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil,
+    loadedSnapshot: LoadedEntitySnapshot? = nil
   ) throws -> Mutation {
     let original = try MutationRequest(mutation: mutation).mutation
     if let graphSession, let ledgerRoot, let ledgerKey {
@@ -1899,12 +1914,30 @@ public struct UserContext: Sendable {
       if !fields.isEmpty { try graphSession.afterRollback(ledgerRoot.captureContextFields(ledgerKey, fields: fields)) }
     }
     let state = ledgerKey.flatMap { ledgerRoot?.mutationSnapshot($0) }
-    let validated = try checkAndFixMutation(
+    var validated = try checkAndFixMutation(
       mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+    var baseline: LoadedEntitySnapshot?, restored: TeaQLRecord = [:]
+    if graphSession != nil, validated.kind == .update, let state, let loadedSnapshot,
+      loadedSnapshot.origin == .hydrated, loadedSnapshot.key == ledgerKey,
+      loadedSnapshot.version == validated.expectedVersion, state.version == loadedSnapshot.version,
+      !state.isNew, !state.isDeleted, validated.id == ledgerKey?.id {
+      baseline = loadedSnapshot
+      for (field, value) in validated.values {
+        guard let property = validated.entity.property(named: field), !property.isID, !property.isVersion,
+          field == (property.modelName ?? property.name) else { continue }
+        let aliases = [property.name, property.modelName ?? property.name, property.column]
+        let known = aliases.compactMap { loadedSnapshot.record[$0] }
+        if !known.isEmpty && known.allSatisfy({ LoadedScalarRestoration.same(value, $0, property: property) }) {
+          restored[field] = value; validated.values.removeValue(forKey: field)
+        }
+      }
+    }
     try graphSession?.preparedMutations.record(original: original, fixed: validated,
-      ledger: ledgerRoot, ledgerKey: ledgerKey, state: state)
-    try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey,
-      references: graphSession?.preparedMutations.policyReferences(ledger: ledgerRoot, key: ledgerKey))
+      ledger: ledgerRoot, ledgerKey: ledgerKey, state: state, baseline: baseline, restored: restored)
+    if baseline == nil || validated.kind != .update || !validated.values.isEmpty {
+      try mutationPolicyCoordinator.recordPreflight(validated, ledgerKey: ledgerKey,
+        references: graphSession?.preparedMutations.policyReferences(ledger: ledgerRoot, key: ledgerKey))
+    }
     graphSession?.recordProvenance(Array(validated.values.values))
     graphSession?.recordLoadedProvenance(LogPrivacy.loadedMutationSource(validated))
     return validated
@@ -1959,6 +1992,7 @@ public struct UserContext: Sendable {
     try roots.validate(validated)
     try roots.applyCreateDefaults(&validated)
     let checker = runtime.checker(named: validated.entity.name)
+    let contextFix = ContextFixFrame(request.mutation, fields: ContextFix.fields(self, mutation: request.mutation))
     var violations: [CheckResult] = []
     if let checker {
       let declaringEntityType = request.mutation.entity.name
@@ -1966,7 +2000,7 @@ public struct UserContext: Sendable {
       var scope = CheckerPrivacy.capture(request.mutation, owner: owner, runtime: runtime)
       var rawResults: [CheckResult] = []
       var callbackFailure: (any Error)?
-      let frame = ContextFixFrame(request.mutation, fields: ContextFix.fields(self, mutation: request.mutation))
+      let frame = contextFix
       var checkingContext = self
       checkingContext.contextFixFrame = frame
       defer { frame.close() }
@@ -2031,6 +2065,7 @@ public struct UserContext: Sendable {
     try roots.validate(validated, final: true)
     if !violations.isEmpty { throw CheckException(violations) }
     _ = try validated.validatedForExecution()
+    contextFix.normalizeFinalIntent(&validated)
     if checker != nil && graphSession == nil {
       if let ledgerRoot, let ledgerKey {
         for (field, value) in validated.values {

@@ -13,11 +13,17 @@ database. An independent read-only SQLite query verifies the typed E observation
 Its owned build outputs and dependency checkouts are removed after children exit;
 compact logs, receipt, lockfile and database remain. Shared caches/services remain
 untouched. Set `TEAQL_CONTEXT_FIX_EVIDENCE_DIR` to a new absolute evidence path.
+Set `TEAQL_CONTEXT_FIX_UNIT_TESTS=1` to run the complete runtime suite in an owned
+scratch directory before building and running the generated consumer.
 
 Checks include changed clock/IP/actor without business changes (zero provider
 calls, audits or version bumps), scoped create/update defaults, once-only Fix,
 safe field-local provider errors, failed Check rollback and retry, indexed
 `/entryList/1/name`, and child-only updates without refreshing parent/sibling.
+Business Fix may also normalize the last edit back to its known persisted value.
+Automatic Context values are then withdrawn without repeating Fix. Both ledger
+and returned value agree, including mixed graphs with a genuinely dirty sibling
+and a later invalid sibling. Empty prepared plans never open a transaction.
 
 The actual generated Checker supplies clock/unique-string behavior; application
 SPI decorates it for IP/actor string fields. `RuntimeModule.contextFixFields`
