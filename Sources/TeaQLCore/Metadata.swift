@@ -20,9 +20,12 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
   /// KSML Integer uses a signed 32-bit domain even when its native carrier is
   /// Int64. Long, identity, version and relation fields must not set this flag.
   public let isInt32: Bool
+  public let createFunction: String?
+  public let updateFunction: String?
 
   private enum CodingKeys: String, CodingKey {
     case name, modelName, column, type, nullable, isID, isVersion, isRelation, referencedEntity, isInt32
+    case createFunction, updateFunction
   }
 
   public init(
@@ -35,7 +38,9 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     isVersion: Bool = false,
     isRelation: Bool = false,
     referencedEntity: String? = nil,
-    isInt32: Bool = false
+    isInt32: Bool = false,
+    createFunction: String? = nil,
+    updateFunction: String? = nil
   ) {
     self.name = name
     self.modelName = modelName
@@ -47,6 +52,8 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     self.isRelation = isRelation
     self.referencedEntity = referencedEntity
     self.isInt32 = isInt32
+    self.createFunction = createFunction
+    self.updateFunction = updateFunction
   }
 
   public init(from decoder: Decoder) throws {
@@ -61,6 +68,8 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     isRelation = try fields.decodeIfPresent(Bool.self, forKey: .isRelation) ?? false
     referencedEntity = try fields.decodeIfPresent(String.self, forKey: .referencedEntity)
     isInt32 = try fields.decodeIfPresent(Bool.self, forKey: .isInt32) ?? false
+    createFunction = try fields.decodeIfPresent(String.self, forKey: .createFunction)
+    updateFunction = try fields.decodeIfPresent(String.self, forKey: .updateFunction)
     if isInt32 && (type != .int || isID || isVersion || isRelation || referencedEntity != nil) {
       throw DecodingError.dataCorruptedError(forKey: .isInt32, in: fields,
         debugDescription: "The Integer marker requires a non-identity signed integral scalar")
@@ -76,6 +85,8 @@ public struct PropertyDescriptor: Sendable, Hashable, Codable {
     try fields.encodeIfPresent(referencedEntity, forKey: .referencedEntity)
     // Older 64-bit descriptors keep their exact metadata shape.
     if isInt32 { try fields.encode(true, forKey: .isInt32) }
+    try fields.encodeIfPresent(createFunction, forKey: .createFunction)
+    try fields.encodeIfPresent(updateFunction, forKey: .updateFunction)
   }
 }
 

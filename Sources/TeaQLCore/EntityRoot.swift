@@ -47,6 +47,17 @@ public final class EntityRoot: @unchecked Sendable {
     lock.lock(); defer { lock.unlock() }; return changes[key] ?? [:]
   }
 
+  // Short-lived graph undo, scoped to Context fields only. Do not replace a
+  // caller's complete mutation snapshot, versions, trace or lifecycle flags.
+  package func captureContextFields(_ key: EntityKey, fields: Set<String>) -> @Sendable () throws -> Void {
+    let before = lock.withLock { (changes[key] ?? [:]).filter { fields.contains($0.key) } }
+    return { [self] in lock.withLock {
+      for field in fields { changes[key]?.removeValue(forKey: field) }
+      if changes[key]?.isEmpty == true { changes.removeValue(forKey: key) }
+      for (field, value) in before { changes[key, default: [:]][field] = value }
+    } }
+  }
+
   package func discardRestoredFields(_ key: EntityKey, snapshot: LoadedEntitySnapshot, descriptor: EntityDescriptor) {
     lock.withLock {
       guard snapshot.key == key, snapshot.version != 0, originalVersions[key] == snapshot.version,

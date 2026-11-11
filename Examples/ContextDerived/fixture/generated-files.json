@@ -1,0 +1,15 @@
+{
+  "Package.swift" : "e48ab57db31f8d6d41118037f0e950de485c7132627f543cd39c057ebf44a3d1",
+  "README.md" : "bda4e2a298e95842b066ebf94b9714d4812467b587a51b71ec08e6b44870e37e",
+  "Sources/GeneratedTeaQL/E.swift" : "ae0484b0cf96669799ab8f49efeb7eff0b4194f45fabf466b70956bd133f43fb",
+  "Sources/GeneratedTeaQL/GeneratedSearchModels.swift" : "53cc25d195eae9b1f337c3548e0ff71d3011a8ed67e81006cd7f52c6784557b2",
+  "Sources/GeneratedTeaQL/Models/Catalog.swift" : "7ddc87daf47017765323a5652ba23ec12fc58d68c515fd41a18639f394ebb691",
+  "Sources/GeneratedTeaQL/Models/Entry.swift" : "91c0c87beef341d54d3555cebb35fe44170838321fadc88234812c2026b65d5d",
+  "Sources/GeneratedTeaQL/Q.swift" : "05d020d02addffbfb653e31cc6675fe948ac034ca799e94785b8b24606421868",
+  "Sources/GeneratedTeaQL/RequestState.swift" : "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+  "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift" : "0ab464d28963e54078e9322d5af1d8b50b49ee8b2c89a15ba19f7ec359e0246a",
+  "Sources/GeneratedTeaQL/Requests/EntryRequest.swift" : "72129427154c2079fef2b87895f3ab3ce4483e2bb5867638959df6633b5d5bf8",
+  "Sources/GeneratedTeaQL/RuntimeModule.swift" : "4075871792adb46b3b75163e1a9397b9c6610ffe97be372d2c0f22fb1e37daaf",
+  "teaql-i18n.json" : "872f2be4fb4df7d76c732d627ae016b07cb39591ef833169277c67db4ec726e8",
+  "teaql/model-provenance.json" : "4f242bf75cb2667d84b5b2ede4d66f8d353aa17eb6a05a3c55dc28928522a8f1"
+}

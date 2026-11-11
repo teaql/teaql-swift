@@ -697,6 +697,8 @@ public struct UserContext: Sendable {
   private let graphTransactionGate: GraphTransactionGate
   private var graphSession: GraphMutationSession?
   private var standaloneFixInvocation: StandaloneFixInvocation?
+  package var contextFixFrame: ContextFixFrame?
+  public var contextFixResolver: (any ContextFixResolver)?
   private var mutationPolicyCoordinator: MutationPolicyCoordinator
   public let businessClock: any BusinessClock
   public var businessTime: Date { businessClock.now() }
@@ -732,7 +734,8 @@ public struct UserContext: Sendable {
     objectStorageProvider: (any ObjectStorageProvider)? = nil,
     objectStorageObserver: ObjectStorageObserver? = nil,
     businessClock: any BusinessClock = SystemBusinessClock(),
-    internalIDGenerator: (any InternalIDGenerator)? = nil
+    internalIDGenerator: (any InternalIDGenerator)? = nil,
+    contextFixResolver: (any ContextFixResolver)? = nil
   ) {
     self.runtime = runtime
     self.businessClock = businessClock
@@ -757,6 +760,8 @@ public struct UserContext: Sendable {
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
     self.internalIDGenerator = internalIDGenerator
+    self.contextFixResolver = contextFixResolver
+    self.contextFixFrame = nil
     self.continuousPageState = ContinuousPageState()
     self.idSetObservationState = IdSetObservationState()
     self.graphTransactionGate = GraphTransactionGate()
@@ -1889,6 +1894,10 @@ public struct UserContext: Sendable {
     _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil
   ) throws -> Mutation {
     let original = try MutationRequest(mutation: mutation).mutation
+    if let graphSession, let ledgerRoot, let ledgerKey {
+      let fields = Set(ContextFix.fields(self, mutation: original).keys)
+      if !fields.isEmpty { try graphSession.afterRollback(ledgerRoot.captureContextFields(ledgerKey, fields: fields)) }
+    }
     let state = ledgerKey.flatMap { ledgerRoot?.mutationSnapshot($0) }
     let validated = try checkAndFixMutation(
       mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
@@ -1957,7 +1966,11 @@ public struct UserContext: Sendable {
       var scope = CheckerPrivacy.capture(request.mutation, owner: owner, runtime: runtime)
       var rawResults: [CheckResult] = []
       var callbackFailure: (any Error)?
-      do { rawResults = try checker.checkAndFix(context: self, mutation: &validated, now: fixTime) }
+      let frame = ContextFixFrame(request.mutation, fields: ContextFix.fields(self, mutation: request.mutation))
+      var checkingContext = self
+      checkingContext.contextFixFrame = frame
+      defer { frame.close() }
+      do { rawResults = try checker.checkAndFix(context: checkingContext, mutation: &validated, now: fixTime) }
       catch let error as CheckException { rawResults = error.violations }
       catch { callbackFailure = error }
       scope.append(CheckerPrivacy.capture(validated, owner: owner, runtime: runtime))

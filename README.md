@@ -131,6 +131,12 @@ approval emits a warning; it is not automatic rejection. Marking for deletion
 stages a change—the audited Save performs it. Atomicity is provider/route scoped,
 not a distributed transaction across unrelated databases.
 
+Context-derived defaults supplement real business mutations: changed time, IP
+or actor alone must not cause updates. Create uses scoped defaults; update keeps
+create-only values. Rejected checks discard automatic values without losing
+caller edits. See the runnable [Context Fix example](Examples/ContextDerived)
+for typed Q/E, safe field locations and graph rollback/retry.
+
 ## Automatic logs without handwritten logging code
 
 **Debuggability and operability are core design goals.** The Q and Save
