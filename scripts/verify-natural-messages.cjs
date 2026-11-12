@@ -10,6 +10,24 @@ function sourceFiles(){
     assert(fs.lstatSync(file).isFile()&&!fs.lstatSync(file).isSymbolicLink(),name);result[name]=sha(fs.readFileSync(file));
   }return result;
 }
+function automaticFixture(root){
+  const names=[];function visit(dir,prefix=''){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+    assert(!entry.isSymbolicLink());const name=path.join(prefix,entry.name);assert(!['.build','bin','obj'].includes(entry.name));
+    if(entry.isDirectory())visit(path.join(dir,entry.name),name);else{assert(entry.isFile());names.push(name);}}}visit(root);
+  const json=name=>JSON.parse(fs.readFileSync(path.join(root,name)));
+  const files=json('generated-files.json'),assists=json('assist-files.json'),origin=json('generation.json');
+  assert.equal(Object.keys(files).length,14);assert.equal(Object.keys(assists).length,7);
+  assert.deepEqual(names.sort(),[...Object.keys(files),...Object.keys(assists),'generated-files.json','assist-files.json','model.xml','evaluation.json','generation.json'].sort());
+  for(const[name,hash]of Object.entries({...files,...assists})){
+    assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(fs.readFileSync(path.join(root,name))),hash,name);
+  }
+  assert.equal(json('evaluation.json').errors.length,0);assert.equal(origin.modelSha256,sha(fs.readFileSync(path.join(root,'model.xml'))));
+  assert(!origin.implementationHandEdited&&!origin.publicPublication);
+  const app=fs.readFileSync(path.join(repo,'Examples/NaturalMessages/AutomaticNaturalMessages.swift'),'utf8');
+  for(const forbidden of ['CheckerPresentationModel(', 'installCheckerPresentation(', 'struct AppChecker', 'AppChecker(', 'checkers:', 'RuntimeModule(name:'])
+    assert(!app.includes(forbidden),'automatic composition replaced: '+forbidden);
+  return {files,assists,origin,inputHashes:Object.fromEntries(names.map(name=>[name,sha(fs.readFileSync(path.join(root,name)))]))};
+}
 async function main(){
   const args=process.argv.slice(2);let focused=false,example=false,exampleOnly=false,output;
   for(let i=0;i<args.length;i++)if(args[i]==='--focused')focused=true;else if(args[i]==='--example')example=true;else if(args[i]==='--example-only'){example=true;exampleOnly=true;}
@@ -30,7 +48,7 @@ async function main(){
       const manifest='// swift-tools-version: 6.0\nimport PackageDescription\nlet package=Package(name:"NaturalMessageFocused",targets:[.target(name:"TeaQLCore",resources:[.process("Resources")]),.testTarget(name:"TeaQLCoreTests",dependencies:["TeaQLCore"],exclude:[],sources:["CheckerNaturalMessagesTests.swift","I18nTests.swift"],resources:[.process("fixtures")])],swiftLanguageModes:[.v6])\n';
       fs.writeFileSync(path.join(work,'Package.swift'),manifest);fs.writeFileSync(path.join(output,'focused-Package.swift'),manifest);
     }
-    const swift=process.env.SWIFT_EXE||'swift',env={...process.env,TEAQL_NATURAL_MESSAGES_DB:path.join(output,'fixture.sqlite')};
+    const swift=process.env.SWIFT_EXE||'swift',env={...process.env,TEAQL_NATURAL_MESSAGES_DB:path.join(output,'fixture.sqlite'),TEAQL_TELEMETRY_ENABLED:'false'};
     async function run(command,log,timeout=300000,cwd=work){
       const file=path.join(output,log),fd=fs.openSync(file,'wx');let result;
       try{result=await runner.run(command,{cwd,env,timeout,stdio:['ignore',fd,fd]});}finally{fs.closeSync(fd);}
@@ -39,14 +57,15 @@ async function main(){
     }
     if(!exampleOnly)await run([swift,'test','--package-path',work,'--scratch-path',path.join(scratch,'build'),'--jobs','2',...(focused?[]:['--skip-update','--force-resolved-versions'])], 'native-tests.log',focused?240000:900000);
     if(example){
-      const fixture=path.join(work,'Examples/NaturalMessages/fixture');
-      const generated=JSON.parse(fs.readFileSync(path.join(fixture,'generated-files.json')));
+      const fixture=path.join(work,'Examples/NaturalMessages/automatic-fixture');
+      const automatic=automaticFixture(fixture),generated=automatic.files;
       for(const[name,hash]of Object.entries(generated)){
         assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(fs.readFileSync(path.join(fixture,name))),hash,name);
       }
       receipt.fixtureFiles=generated;receipt.fixtureSha256=sha(fs.readFileSync(path.join(fixture,'generated-files.json')));
+      receipt.fixtureInputHashes=automatic.inputHashes;receipt.generation=automatic.origin;receipt.automaticComposition=true;
       const consumer=path.join(scratch,'consumer'),build=path.join(scratch,'consumer-build');fs.mkdirSync(path.join(consumer,'Sources/NaturalMessagesExample'),{recursive:true});
-      fs.cpSync(fixture,path.join(consumer,'generated'),{recursive:true});fs.copyFileSync(path.join(work,'Examples/NaturalMessages/NaturalMessages.swift'),path.join(consumer,'Sources/NaturalMessagesExample/NaturalMessages.swift'));
+      fs.cpSync(fixture,path.join(consumer,'generated'),{recursive:true});fs.copyFileSync(path.join(work,'Examples/NaturalMessages/AutomaticNaturalMessages.swift'),path.join(consumer,'Sources/NaturalMessagesExample/NaturalMessages.swift'));
       const manifest='// swift-tools-version: 6.0\nimport PackageDescription\nlet package=Package(name:"NaturalMessagesExample",dependencies:[.package(name:"teaql-swift",path:'+JSON.stringify(work)+')],targets:[.target(name:"GeneratedTeaQL",dependencies:[.product(name:"TeaQLCore",package:"teaql-swift")],path:"generated/Sources/GeneratedTeaQL"),.executableTarget(name:"NaturalMessagesExample",dependencies:["GeneratedTeaQL",.product(name:"TeaQLCore",package:"teaql-swift"),.product(name:"TeaQLSQLite",package:"teaql-swift")],path:"Sources/NaturalMessagesExample")],swiftLanguageModes:[.v6])\n';
       fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);fs.writeFileSync(path.join(output,'consumer-Package.swift'),manifest);fs.copyFileSync(path.join(work,'Package.resolved'),path.join(consumer,'Package.resolved'));
       const flags=['--package-path',consumer,'--scratch-path',build,'--jobs','2'];
@@ -61,22 +80,30 @@ async function main(){
       for(const round of[1,2]){
         const log=await run([binary],`round-${round}.log`,120000,consumer),marker='SWIFT_NATURAL_SQLITE=';
         const rows=log.split(/\r?\n/).filter(line=>line.startsWith(marker)).map(line=>JSON.parse(line.slice(marker.length)));assert.equal(rows.length,1);const row=rows[0];
-        for(const field of['passed','typedQ','typedE','unchangedParent'])assert.equal(row[field],true,field);
+        for(const field of['passed','typedQ','typedE','unchangedParent','automaticMetadata','originalGeneratedChecker','missingAuditRejected'])assert.equal(row[field],true,field);
         assert.equal(row.failedCheckProviderCalls,0);assert.equal(row.correctedWrites,1);assert.equal(row.correctedAudits,1);assert.equal(row.originalLength,101);assert.equal(row.unicodeScalars,202);
-        const oracle='import sqlite3,json,sys,pathlib\nc=sqlite3.connect(pathlib.Path(sys.argv[1]).resolve().as_uri()+"?mode=ro&immutable=1",uri=True)\nr=json.loads(sys.argv[2])\nassert c.execute("SELECT guarded_token,version FROM entry_data WHERE id=?",(r["secondId"],)).fetchone()==("safe-B",r["secondVersion"])\nassert c.execute("SELECT version FROM entry_data WHERE id=?",(r["firstId"],)).fetchone()==(r["firstVersion"],)\nassert c.execute("SELECT version FROM catalog_data WHERE id=?",(r["parentId"],)).fetchone()==(r["parentVersion"],)\nc.close()\nprint("SQLITE_ORACLE=passed")\n';
+        assert.equal(row.responses,4);assert.equal(row.customerRendererCalls,1);
+        const responses=log.split(/\r?\n/).filter(line=>line.startsWith('SWIFT_NATURAL_CHECKER_RESPONSE='))
+          .map(line=>JSON.parse(line.slice('SWIFT_NATURAL_CHECKER_RESPONSE='.length)));
+        assert.equal(responses.length,4);
+        assert.deepEqual(responses.map(v=>v.message),['The name of the 2nd entry is required.','请填写第2项明细的名称。',
+          'The name of the 2nd entry must not exceed 100 grapheme clusters; its current length is 101.','Private [REDACTED]']);
+        assert(responses.every(v=>v.entityType==='Entry'&&v.instancePath==='/entryList/1/name'));
+        assert(!JSON.stringify(responses).includes('e\u0301'.repeat(101)));
+        const oracle='import sqlite3,json,sys,pathlib\nc=sqlite3.connect(pathlib.Path(sys.argv[1]).resolve().as_uri()+"?mode=ro&immutable=1",uri=True)\nr=json.loads(sys.argv[2])\nassert c.execute("SELECT name,version FROM entry_data WHERE id=?",(r["secondId"],)).fetchone()==("accepted",r["secondVersion"])\nassert c.execute("SELECT name,version FROM entry_data WHERE id=?",(r["firstId"],)).fetchone()==("second",r["firstVersion"])\nassert c.execute("SELECT version FROM catalog_data WHERE id=?",(r["parentId"],)).fetchone()==(r["parentVersion"],)\nassert c.execute("pragma quick_check").fetchone()==("ok",)\nc.close()\nprint("SQLITE_ORACLE=passed")\n';
         await run(['python3','-B','-c',oracle,env.TEAQL_NATURAL_MESSAGES_DB,JSON.stringify(row)],`oracle-${round}.log`,120000,consumer);
-        receipt.rounds.push({round,observations:row,physicalOracle:true});
+        receipt.rounds.push({round,observations:row,responses,physicalOracle:true});
       }
       receipt.sameDatabase=true;receipt.databaseSha256=sha(fs.readFileSync(env.TEAQL_NATURAL_MESSAGES_DB));
     }
     assert.deepEqual(sourceFiles(),receipt.sourceHashes);
     if(!focused)assert.equal(sha(fs.readFileSync(path.join(work,'Package.resolved'))),receipt.sourceHashes['Package.resolved']);
-    receipt.passed=true;
+    receipt.sourceUnchanged=true;receipt.passed=true;
   }catch(error){receipt.error=String(error);process.exitCode=1;console.error(error);}
   finally{
     receipt.disposableBytesRemoved=runner.safeToClean?ownedBytes(scratch):0;
     if(runner.safeToClean)fs.rmSync(scratch,{recursive:true});else receipt.unsafeBuildRetention={path:scratch,processGroup:runner.unsafeGroup};
-    runner.dispose();fs.writeFileSync(path.join(output,'receipt.json'),JSON.stringify(receipt,null,2)+'\n');console.log(JSON.stringify({passed:receipt.passed,evidence:output,focused}));
+    receipt.scratchRemoved=!fs.existsSync(scratch);runner.dispose();fs.writeFileSync(path.join(output,'receipt.json'),JSON.stringify(receipt,null,2)+'\n');console.log(JSON.stringify({passed:receipt.passed,evidence:output,focused}));
   }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,13 @@
+{
+  "schema": "teaql.generated-example-provenance/v1",
+  "generatorCommit": "370563404fa5d85d02a09967921c9e7de3327ccd",
+  "upstreamTest": "com.skynet.codegenerator.SwiftNaturalMessagesGenerationTest",
+  "fixtureOutputProperty": "teaql.swift.natural.fixture.output",
+  "scope": "swift-lib-core",
+  "runtimeDependency": "local repository source",
+  "modelSha256": "7aee32998123562b88c2a697161dbe40bab28eed1980910290698cf4f90c70e7",
+  "generationReceipt": "teaql-conformance/evidence/2026-11-12-natural-checker-swift-automatic-generation-second/receipt.json",
+  "generationReceiptSha256": "ec5a42cb53f191794449b9a85a9f9b1f9632daa68d201e60dd7cd8afb2f884f2",
+  "implementationHandEdited": false,
+  "publicPublication": false
+}
