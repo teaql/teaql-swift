@@ -41,7 +41,7 @@ for round in first second; do
   timeout --kill-after=10s 180s env -u TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS -u TEAQL_SWIFT_TRACE_SCENARIO \
     swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
     --force-resolved-versions TraceChainVerification "$trace_database" \
-    2>&1 | tee "$trace_evidence/$round.log"
+    2> "$trace_evidence/$round.stderr.log" | tee "$trace_evidence/$round.log"
   rg -Fq 'PASS: Swift generated Checker isolation v2: accepted-first overlap; rejected-first before BEGIN; 4 cases' "$trace_evidence/$round.log"
   node "$repo/Examples/TraceChain/verify-checker-observation.cjs" "$trace_evidence/$round.log"
   rg -Fxq 'PASS TC-MUT-12 Swift shared readonly: forced public overlap, one BEGIN while paused, command/SQL/audit isolated' "$trace_evidence/$round.log"

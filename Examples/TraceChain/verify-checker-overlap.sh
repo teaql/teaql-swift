@@ -17,7 +17,8 @@ hash_library > "$evidence/verified-before.sha256"
 for round in first second; do
   timeout --kill-after=10s 180s env -u TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS TEAQL_SWIFT_TRACE_SCENARIO=checker-overlap \
     swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
-    --force-resolved-versions TraceChainVerification "$database" > "$evidence/$round.log" 2>&1
+    --force-resolved-versions TraceChainVerification "$database" \
+    > "$evidence/$round.log" 2> "$evidence/$round.stderr.log"
   rg -F 'PASS: Swift generated Checker isolation v2: accepted-first overlap; rejected-first before BEGIN; 4 cases' "$evidence/$round.log"
   node "$repo/Examples/TraceChain/verify-checker-observation.cjs" "$evidence/$round.log"
 done

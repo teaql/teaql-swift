@@ -24,6 +24,12 @@ manifests depend on the runtime source in this repository, not a public release.
 The model's version override does not turn this source test into package proof.
 No public package is claimed to contain these changes.
 
+Both verification scripts keep machine-readable stdout in `first.log` and
+`second.log`, and compiler/runtime diagnostics in the corresponding
+`first.stderr.log` and `second.stderr.log`. Do not merge the streams before
+parsing JSON: a diagnostic can otherwise split a buffered JSON record. Missing
+presentation-label warnings remain retained diagnostics, not suppressed output.
+
 ## Verified behavior
 
 | Check | Observed boundary |
@@ -107,14 +113,14 @@ and fails the script rather than hanging on an actor rendezvous.
 `CheckerOverlapProofs.swift` pauses the first real BEGIN while two public saves
 remain outstanding; the existing Context gate serializes transactions and
 Checker callbacks. Generated checkers are installed unchanged, with no fake
-results. The rejected graph reaches no mutation-provider command or business
-SQL metadata, but its transaction begins and rolls back. Raw successful SQL
+results. The rejected graph reaches no transaction BEGIN, mutation-provider
+command or business SQL metadata. Raw successful SQL
 bindings retain the private child value; safe telemetry/diagnostics mask it.
 Committed audits are checked against an already successful COMMIT. Q/E confirms
 the rejected database graph and shared Platform remain unchanged. A subsequent
 independent save preserves its own lineage, including a formerly private word
-now unrelated to its fields. This is not simultaneous Checker execution or a
-claim of zero transaction-control SQL.
+now unrelated to its fields. This is not simultaneous Checker execution; the
+accepted graph still starts and commits its one real transaction.
 
 `PaginationProofs.swift` uses current list-page Assist and generated Q/E/save.
 Its four `PAGE_OBSERVED` records retain real physical SQL (including COUNT),
