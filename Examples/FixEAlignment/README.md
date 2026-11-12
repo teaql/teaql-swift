@@ -53,6 +53,9 @@ transactions, performance or all-provider conformance.
 Set `TEAQL_FIX_E_EVIDENCE_DIR` to a new absolute directory to retain compact
 receipts, logs and synthetic stores. Task-owned build/dependency scratch is
 removed on exit after child processes finish; shared caches are not deleted.
+Each command retains stdout and a separate `.stderr.log`, with both hashes in
+its receipt. Warning diagnostics remain available without corrupting buffered
+JSON evidence frames.
 These are regression expectations, not a claim that an unexecuted candidate
 passes. Conformance source/private-artifact acceptance is recorded separately.
 
@@ -76,6 +79,12 @@ promise submitted-key order: a collision must identify an actual submitted leaf.
 The default verifier retains 33 observations per unreset round and three stores;
 generated implementations stay hash-bound. This is not recursive HTTP/TFP or
 installed-package acceptance.
+
+`CheckerMetadataProbe.swift` preserves the older generated library's lack of
+presentation metadata. It checks exact safe fallback sentences and separate
+canonical/wire/source paths instead of requiring technical paths inside human
+text. The NaturalMessages example separately qualifies automatic model-aware
+presentation with its current generated module and original Checker.
 
 The observed module also verifies bootstrap uses the injected Business Clock.
 `UserContext._generatedBootstrapContext` preserves the configured policy registry,

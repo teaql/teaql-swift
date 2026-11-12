@@ -50,13 +50,16 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
   const build = path.join(scratch, 'build'), flags = ['--package-path', scratch, '--scratch-path', build, '--jobs', '2'];
   const env = {...process.env, TEAQL_FIX_E_DB: path.join(evidence, 'fixture.sqlite')};
   async function run(command, log, timeout = 120000) {
-    const file = path.join(evidence, log), fd = fs.openSync(file, 'w'); let result;
-    try { result = await runner.run(command, {cwd: scratch, env, timeout, stdio: ['ignore', fd, fd]}); }
-    finally { fs.closeSync(fd); }
-    const bytes = fs.readFileSync(file);
-    report.commands.push({command, exitCode: result.status, signal: result.signal, logSha256: sha(bytes)});
+    const file = path.join(evidence, log), stderrLog = log.replace(/\.log$/, '.stderr.log');
+    const stderrFile = path.join(evidence, stderrLog), fd = fs.openSync(file, 'wx'), err = fs.openSync(stderrFile, 'wx'); let result;
+    // Preserve warning diagnostics, but never splice stderr into buffered JSON frames.
+    try { result = await runner.run(command, {cwd: scratch, env, timeout, stdio: ['ignore', fd, err]}); }
+    finally { fs.closeSync(fd); fs.closeSync(err); }
+    const bytes = fs.readFileSync(file), diagnostics = fs.readFileSync(stderrFile);
+    report.commands.push({command, exitCode: result.status, signal: result.signal, logSha256: sha(bytes),
+      stderrLog, stderrLogSha256: sha(diagnostics)});
     if (result.status !== 0) process.exitCode = result.status || 1;
-    assert.equal(result.status, 0, bytes.toString().slice(-12000)); return bytes.toString();
+    assert.equal(result.status, 0, bytes.toString().slice(-6000) + diagnostics.toString().slice(-6000)); return bytes.toString();
   }
   await run(['swift', 'build', ...flags, '--product', 'FixEAlignment'], 'build.log', 540000);
   if (fs.existsSync(path.join(scratch, 'Package.resolved'))) fs.copyFileSync(path.join(scratch, 'Package.resolved'), path.join(evidence, 'Package.resolved'));
