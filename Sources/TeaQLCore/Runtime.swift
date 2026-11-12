@@ -693,6 +693,10 @@ public struct UserContext: Sendable {
   public let runtimeTelemetry: any RuntimeTelemetry
   public private(set) var locale: TeaQLLocale
   public private(set) var i18nCatalog: I18nCatalog
+  private var checkerMessages: CheckerMessageServices
+  private var checkerMessageConfiguration: CheckerMessageConfiguration {
+    graphSession?.checkerConfiguration ?? CheckerMessageConfiguration(services:checkerMessages,locale:locale,legacy:i18nCatalog)
+  }
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
   private let internalIDGenerator: (any InternalIDGenerator)?
@@ -762,6 +766,7 @@ public struct UserContext: Sendable {
     self.idSetStore = idSetStore
     self.locale = locale
     self.i18nCatalog = i18nCatalog
+    self.checkerMessages = CheckerMessageServices(model:runtime.checkerPresentation)
     self.entityInitializers = entityInitializers
     self.entityCreationObserver = entityCreationObserver
     self.internalIDGenerator = internalIDGenerator
@@ -834,7 +839,8 @@ public struct UserContext: Sendable {
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
   ) async throws -> T {
     let policy = mutationPolicyCoordinator.fork()
-    let session = GraphMutationSession(intent: request.intent, policy: policy, fixTime: businessTime)
+    let session = GraphMutationSession(intent: request.intent, policy: policy, fixTime: businessTime,
+      checkerConfiguration:checkerMessageConfiguration,checkerOrigin:rootEntityType)
     var invocation = self
     invocation.graphSession = session
     invocation.mutationPolicyCoordinator = policy
@@ -899,6 +905,9 @@ public struct UserContext: Sendable {
       retainedEvidence = evidence
       for action in actions { try? action() }
       mutationPolicyCoordinator.retain(policy.lastSnapshot)
+      if let check = error as? CheckException {
+        throw CheckException(CheckerMessages.translate(check.violations,config:session.checkerConfiguration!,runtime:runtime,origin:rootEntityType))
+      }
       throw error
     }
     let (actions, events, evidence) = session.finish(committed: true)
@@ -1006,14 +1015,25 @@ public struct UserContext: Sendable {
     // Retain customer governance configuration, not an active caller plan or
     // invocation. The new context still owns fresh graph/Fix execution state.
     bootstrap.mutationPolicyCoordinator = mutationPolicyCoordinator.fork()
+    bootstrap.checkerMessages = checkerMessages
     return bootstrap
   }
 
   public mutating func setLocaleCode(_ code: String) throws { let value = try TeaQLLocale.parse(code); locale = value }
   public mutating func setLanguageCode(_ code: String) throws { try setLocaleCode(code) }
   public mutating func installI18nCatalog(_ catalog: I18nCatalog) { i18nCatalog = catalog }
+  public mutating func installCheckerPresentation(_ model: CheckerPresentationModel) { checkerMessages = checkerMessages.replacing(model:model) }
+  public mutating func installCheckerMessageCatalog(data: Data) throws {
+    let catalog = try CheckerMessageCatalog(data:data); checkerMessages = checkerMessages.replacing(catalog:catalog)
+  }
+  public mutating func installCheckerMessageRenderer(_ renderer: @escaping CheckerMessageRenderer) { checkerMessages = checkerMessages.replacing(renderer:renderer) }
+  public mutating func installCheckerMessageWarning(_ warning: @escaping CheckerMessageWarningSink) { checkerMessages = checkerMessages.replacing(warning:warning) }
   public func translateCheckResults(_ results: [CheckResult]) -> [CheckResult] {
-    results.map { CheckerPrivacy.project($0, runtime: runtime, catalog: i18nCatalog, locale: locale) }
+    CheckerMessages.translate(results,config:checkerMessageConfiguration,runtime:runtime,origin:graphSession?.checkerOrigin)
+  }
+  public func translateCheckResults(_ results: [CheckResult], from origin: String) -> [CheckResult] {
+    let config = checkerMessageConfiguration
+    return CheckerMessages.translate(results.map { CheckerMessages.bind($0,model:config.services.model,origin:origin) },config:config,runtime:runtime,origin:origin)
   }
 
   /// Reserve before construction. The selected allocator is authoritative;
@@ -1986,6 +2006,7 @@ public struct UserContext: Sendable {
     _ request: MutationRequest, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) throws -> Mutation {
     var validated = request.mutation
+    let messages = checkerMessageConfiguration
     validated.actor = actor
     validated.auditCategory = auditCategory
     let roots = ContextRootAdmission(context: self, mutation: request.mutation)
@@ -2015,10 +2036,16 @@ public struct UserContext: Sendable {
         if secrets.isEmpty { throw callbackFailure }
         throw CheckerExecutionError(description: CheckerPrivacy.scrub(String(describing: callbackFailure), secrets: secrets) ?? "Checker failed")
       }
-      violations = rawResults.map {
-        CheckerPrivacy.project($0.bindingDeclaringEntity(declaringEntityType), runtime: runtime,
-          owner: owner, scope: scope, catalog: i18nCatalog, locale: locale)
+      let results = rawResults.map { source in
+        var value = CheckerMessages.bind(source.bindingDeclaringEntity(declaringEntityType),model:messages.services.model,origin:declaringEntityType)
+        if value.observedLength == nil, value.inputValue == nil, ["checker.minLength","checker.maxLength"].contains(CheckerMessages.rule(value.ruleID)),
+          value.location.segments.count == 1, case .property(let field) = value.location.segments[0], case .string(let text) = validated.values[field] {
+          value.observedLength = text.count
+          value.observedLengthUnit = .grapheme
+        }
+        return value
       }
+      violations = CheckerMessages.translate(results,config:messages,runtime:runtime,owner:owner,scope:scope)
     }
     // Request-owned intent has always survived a Checker attempting to replace
     // it. Restore it here as well as at the final request/provider handoff.

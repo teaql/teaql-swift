@@ -35,7 +35,9 @@ private let metadataEntity = EntityDescriptor(name: "First", table: "checker_met
         #expect(value.location == original.location)
         #expect(value.sourceInstancePath == original.sourceInstancePath)
         #expect(value.systemValue == original.systemValue)
-        #expect(value.message?.contains("orderItemList[2].productName") == true)
+        #expect(value.message?.contains("product name") == true)
+        #expect(value.message?.contains(locale == .zhCN ? "第3" : "3rd") == true)
+        #expect(value.location.nativePath == "orderItemList[2].productName")
         for profile in [JsonFieldNamingProfile.camelCase, .snakeCase, .pascalCase] {
           let bytes = try JSONEncoder().encode(value.wire(profile: profile))
           let wire = try JSONDecoder().decode(WireCheckResult.self, from: bytes)

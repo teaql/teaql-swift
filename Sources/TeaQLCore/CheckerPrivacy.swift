@@ -193,6 +193,11 @@ enum CheckerPrivacy {
   static func project(_ source: CheckResult, runtime: TeaQLRuntime? = nil, owner: EntityDescriptor? = nil,
                       scope: CheckerPrivateScope = CheckerPrivateScope(), catalog: I18nCatalog? = nil,
                       locale: TeaQLLocale = .en, allowPlaintext: Bool? = nil) -> CheckResult {
+    prepared(source,runtime:runtime,owner:owner,scope:scope,catalog:catalog,locale:locale,allowPlaintext:allowPlaintext).result
+  }
+  static func prepared(_ source: CheckResult, runtime: TeaQLRuntime? = nil, owner: EntityDescriptor? = nil,
+                      scope: CheckerPrivateScope = CheckerPrivateScope(), catalog: I18nCatalog? = nil,
+                      locale: TeaQLLocale = .en, allowPlaintext: Bool? = nil) -> (result: CheckResult, scope: CheckerPrivateScope) {
     let allow = allowPlaintext ?? LogPrivacy.plaintextEnabled(), previous = source.presentation
     let declared = source.entityType.flatMap { runtime?.entity(named: $0) }
     let policies = [owner, declared].compactMap { $0 }.map { at($0, location: source.location, runtime: runtime) }
@@ -217,7 +222,7 @@ enum CheckerPrivacy {
       credential: combined.credential, secrets: displaySecrets) : safeSystem
     if safeSystem != source.systemValue, let raw = source.systemValue { safeSecrets.append(raw) }
     if displaySystem != source.systemValue, let raw = source.systemValue { displaySecrets.append(raw) }
-    let length = previous?.inputLength ?? source.inputValue.map { $0.unicodeScalars.count }
+    let length = previous?.inputLength ?? source.observedLength ?? source.inputValue.map { $0.unicodeScalars.count }
     let automatic = source.message == nil || previous?.automaticMessage == true
     let safeMessage: String?, displayMessage: String?
     if let catalog, automatic {
@@ -243,7 +248,10 @@ enum CheckerPrivacy {
       safeMessage: safeMessage, inputLength: length, masked: combined.masked, credential: combined.credential,
       sensitive: previous?.sensitive == true || combined.masked || combined.credential || !safeSecrets.isEmpty,
       automaticMessage: automatic)
-    return result
+    result.naturalPresentation = source.naturalPresentation
+    result.observedLength = source.observedLength
+    result.observedLengthUnit = source.observedLengthUnit
+    return (result,CheckerPrivateScope(safe:safeSecrets,debug:displaySecrets))
   }
 }
 

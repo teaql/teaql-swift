@@ -105,7 +105,8 @@ private func privacyPresentation(_ result: CheckResult) throws -> String {
   let result = try #require(context.translateCheckResults([first.prefixed(by: .property("child").index(1))]).first)
   #expect(result.inputValue == LogPrivacy.maskAuditValue(text))
   #expect(result.message?.contains(String(text.unicodeScalars.count)) == true)
-  #expect(result.message?.contains("child[1].contactPhone") == true)
+  #expect(result.message?.contains("第2") == true)
+  #expect(result.location.nativePath == "child[1].contactPhone")
   #expect(!(try privacyPresentation(result)).contains(text))
 }
 
@@ -381,7 +382,9 @@ private struct PrivateCheckerError: Error, CustomStringConvertible, LocalizedErr
   let final = try #require(context.translateCheckResults([prefixed]).first)
   #expect(final.sourceInstancePath == "/phone~1alias")
   #expect(final.message?.contains("12") == true)
-  #expect(final.message?.contains("child[1].contactPhone") == true)
+  #expect(final.message?.contains("2nd child") == true)
+  #expect(final.message?.contains("contact phone") == true)
+  #expect(final.location.nativePath == "child[1].contactPhone")
 }
 
 @Test func checkerMetadataPrivacyStructuredArrayRetainsOrdinarySiblings() throws {

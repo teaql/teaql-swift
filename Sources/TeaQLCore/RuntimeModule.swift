@@ -13,6 +13,7 @@ public struct RuntimeModule: Sendable {
   /// tenant/permission interpretation or mutable execution state lives here.
   public let contextRootFields: [String: [String: String]]
   public let contextFixFields: [String: [String: ContextFieldFunctions]]
+  public let checkerPresentation: CheckerPresentationModel
 
   public init(
     name: String, entities: [EntityDescriptor],
@@ -20,7 +21,8 @@ public struct RuntimeModule: Sendable {
     generatedBootstrap: (@Sendable (UserContext) async throws -> Void)? = nil,
     wireMetadata: [String: WireEntityMetadata] = [:],
     contextRootFields: [String: [String: String]] = [:],
-    contextFixFields: [String: [String: ContextFieldFunctions]] = [:]
+    contextFixFields: [String: [String: ContextFieldFunctions]] = [:],
+    checkerPresentation: CheckerPresentationModel = .empty
   ) {
     precondition(!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     self.name = name
@@ -30,6 +32,7 @@ public struct RuntimeModule: Sendable {
     self.wireMetadata = wireMetadata
     self.contextRootFields = contextRootFields
     self.contextFixFields = contextFixFields
+    self.checkerPresentation = checkerPresentation
   }
 }
 
@@ -40,10 +43,12 @@ public struct TeaQLRuntime: Sendable {
   private var wireMetadataByName: [String: WireEntityMetadata] = [:]
   private var managedRootsByName: [String: [String: String]] = [:]
   private var contextFixByName: [String: [String: ContextFieldFunctions]] = [:]
+  package private(set) var checkerPresentation: CheckerPresentationModel = .empty
 
   public init() {}
 
   public mutating func install(_ module: RuntimeModule) throws {
+    let mergedPresentation = try checkerPresentation.merging(module.checkerPresentation)
     for descriptor in module.entities { try ModeledInteger32.validateMetadata(descriptor) }
     let available = Dictionary(module.entities.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
     for (entity, fields) in module.contextFixFields {
@@ -86,6 +91,7 @@ public struct TeaQLRuntime: Sendable {
     for (name, metadata) in module.wireMetadata { wireMetadataByName[name] = metadata }
     for (name, fields) in module.contextRootFields { managedRootsByName[name] = fields }
     for (name, fields) in module.contextFixFields { contextFixByName[name, default: [:]].merge(fields) { _, new in new } }
+    checkerPresentation = mergedPresentation
   }
 
   public var entities: [EntityDescriptor] {

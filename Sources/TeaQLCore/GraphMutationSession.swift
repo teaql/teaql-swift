@@ -53,6 +53,8 @@ public final class GraphMutationSession: @unchecked Sendable {
   private let id = UUID()
   public let intent: MutationIntent
   public let fixTime: Date
+  let checkerConfiguration: CheckerMessageConfiguration?
+  let checkerOrigin: String?
   package let policy: MutationPolicyCoordinator
   package let preparedMutations = PreparedGraphMutations()
   private let lock = NSLock()
@@ -78,8 +80,10 @@ public final class GraphMutationSession: @unchecked Sendable {
   }
   private var visits: [GraphMutationTraversal: [VisitKey: Visit]] = [:]
 
-  package init(intent: MutationIntent, policy: MutationPolicyCoordinator, fixTime: Date) {
+  package init(intent: MutationIntent, policy: MutationPolicyCoordinator, fixTime: Date,
+    checkerConfiguration: CheckerMessageConfiguration? = nil, checkerOrigin: String? = nil) {
     self.intent = intent; self.policy = policy; self.fixTime = fixTime
+    self.checkerConfiguration = checkerConfiguration; self.checkerOrigin = checkerOrigin
   }
 
   package func ensureActive() throws {

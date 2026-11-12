@@ -23,6 +23,9 @@ public struct CheckResult: Sendable, CustomStringConvertible, CustomDebugStringC
   public let sourceInstancePath: String?
   // Safe alternatives and original length only; never a Context or raw-secret list.
   var presentation: CheckerPresentation?
+  var naturalPresentation: CheckerNaturalBinding?
+  var observedLength: Int?
+  var observedLengthUnit: CheckerLengthUnit?
 
   public init(ruleID: String, location: ObjectLocation, inputValue: String? = nil,
               systemValue: String? = nil, message: String? = nil, entityType: String? = nil,
@@ -38,6 +41,24 @@ public struct CheckResult: Sendable, CustomStringConvertible, CustomDebugStringC
       systemValue: systemValue, message: storedMessage, entityType: entityType ?? self.entityType,
       sourceInstancePath: sourceInstancePath ?? self.sourceInstancePath)
     result.presentation = presentation
+    result.naturalPresentation = naturalPresentation
+    result.observedLength = observedLength
+    result.observedLengthUnit = observedLengthUnit
+    return result
+  }
+  /// Attach the exact measurement made by a checker before presentation/masking.
+  /// This does not alter the wire DTO or change the checker's counting rule.
+  public func withLengthMeasurement(_ measurement: CheckerLengthMeasurement) -> Self {
+    var result = self; result.observedLength = measurement.count; result.observedLengthUnit = measurement.unit; return result
+  }
+  func withNaturalPresentation(_ message: String, snapshot: CheckerMessagePresentation, plan: CheckerMessagePlan) -> Self {
+    var result = self; result.storedMessage = message
+    if var state = result.presentation {
+      state = CheckerPresentation(safeInput:state.safeInput,safeSystem:state.safeSystem,safeMessage:message,
+        inputLength:state.inputLength,masked:state.masked,credential:state.credential,sensitive:state.sensitive,automaticMessage:true)
+      result.presentation = state
+    }
+    result.naturalPresentation = CheckerNaturalBinding(snapshot:snapshot,automaticMessage:message,plan:plan)
     return result
   }
   /// Rebase structural identity without changing the original submitted path
@@ -82,6 +103,9 @@ public final class I18nCatalog:@unchecked Sendable{
   public static let builtin:I18nCatalog={let url=Bundle.module.url(forResource:"builtin-messages-v1",withExtension:"json")!;return try! I18nCatalog(data:Data(contentsOf:url))}()
   public init(data:Data,fallback:I18nCatalog?=nil)throws{let value=try JSONDecoder().decode(CatalogFile.self,from:data);guard value.schema=="teaql.i18n/v1" else{throw CocoaError(.fileReadCorruptFile)};for code in value.locales.keys{_ = try TeaQLLocale.parse(code)};file=value;self.fallback=fallback?.file}
   public func message(_ locale:TeaQLLocale,_ key:String)->String{file.locales[locale.rawValue]?.messages[key] ?? fallback?.locales[locale.rawValue]?.messages[key] ?? file.locales["en"]?.messages[key] ?? fallback?.locales["en"]?.messages[key] ?? key}
+  func applicationMessage(_ locale: TeaQLLocale, _ key: String) -> String? {
+    self === Self.builtin ? nil : file.locales[locale.rawValue]?.messages[key]
+  }
   public func translate(_ source: CheckResult, locale: TeaQLLocale) -> CheckResult {
     CheckerPrivacy.project(source, catalog: self, locale: locale)
   }

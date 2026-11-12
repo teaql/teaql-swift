@@ -1,0 +1,20 @@
+{
+  "schema": "teaql.checker-additional-length-units/v1",
+  "locales": {
+    "en": {"grapheme": "grapheme clusters"},
+    "zh-CN": {"grapheme": "个字素簇"},
+    "zh-TW": {"grapheme": "個字素叢集"},
+    "ja": {"grapheme": "書記素クラスタ"},
+    "ko": {"grapheme": "자소 클러스터"},
+    "de": {"grapheme": "Graphemcluster"},
+    "fr": {"grapheme": "graphèmes"},
+    "es": {"grapheme": "grupos de grafemas"},
+    "pt": {"grapheme": "grupos de grafemas"},
+    "ar": {"grapheme": "عناقيد كتابية"},
+    "th": {"grapheme": "กลุ่มกราฟีม"},
+    "id": {"grapheme": "klaster grafem"},
+    "fil": {"grapheme": "kumpol ng grapema"},
+    "uk": {"grapheme": "графемних кластерів"},
+    "vi": {"grapheme": "cụm tự vị"}
+  }
+}
