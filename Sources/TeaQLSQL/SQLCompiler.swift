@@ -95,9 +95,15 @@ public struct SQLiteCompiler: Sendable {
       }
       sql += " ORDER BY " + orders.joined(separator: ", ")
     }
-    let effectiveLimit = query.limit ?? query.hardLimit
-    sql += " LIMIT ?"
-    parameters.append(.int(Int64(effectiveLimit)))
+    // Captured ancestry is package-private execution state, never a wire flag.
+    // A nested population has no default page; an explicit business limit stays.
+    let nested = query.requestScope?.parent != nil
+    if let effectiveLimit = query.limit ?? (nested ? nil : query.hardLimit) {
+      sql += " LIMIT ?"
+      parameters.append(.int(Int64(effectiveLimit)))
+    } else if query.offset > 0 {
+      sql += " LIMIT -1" // SQLite requires LIMIT for an explicit unbounded OFFSET.
+    }
     if query.offset > 0 {
       sql += " OFFSET ?"
       parameters.append(.int(Int64(query.offset)))

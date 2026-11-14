@@ -1482,7 +1482,10 @@ public struct UserContext: Sendable {
       + query.facets.map { $0.query.makeQuery() }
     for child in children {
       source = LogPrivacy.inheritIntent(
-        try await queryIntentProvenance(request.withQuery(child)), inherited: source)
+        // Preserve the child's captured ownership while compiling provenance.
+        // Rebinding it as the outer root wrongly re-applies the outer ceiling
+        // before a valid wide Top-N child can execute.
+        try await queryIntentProvenance(request.derive(child)), inherited: source)
     }
     return source
   }

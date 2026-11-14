@@ -295,8 +295,10 @@ public struct SelectQuery: Sendable, Hashable, Codable {
     }
     if let limit {
       guard limit > 0 else { throw TeaQLError.invalidLimit(limit) }
-      guard limit <= hardLimit else {
-        throw TeaQLError.hardLimitExceeded(limit: limit, hardLimit: hardLimit)
+      if requestScope?.parent == nil {
+        guard limit <= hardLimit else {
+          throw TeaQLError.hardLimitExceeded(limit: limit, hardLimit: hardLimit)
+        }
       }
     }
     guard offset >= 0 else { throw TeaQLError.invalidOffset(offset) }

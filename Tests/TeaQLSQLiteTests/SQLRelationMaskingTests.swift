@@ -121,8 +121,9 @@ func derivedRelationMasksAncestorIntent(shape: String, failure: Bool) async thro
   #expect(text.contains("Riverside") == debug)
   if shape == "nested" { #expect(text.contains("Lakeside") == debug) }
   #expect(text.contains(debug ? "EXPLICIT OPT-IN" : "SAFE"))
-  // SQLite binds FK + limit; a window also binds its lower rank bound.
-  #expect(entry.parameters.count == (shape == "window" ? 3 : 2))
+  // Unbounded nested populations bind only their FK. Explicit probe/nested
+  // pages bind a limit; a window additionally binds its lower rank bound.
+  #expect(entry.parameters.count == (shape == "window" ? 3 : ["probe", "nested"].contains(shape) ? 2 : 1))
   let retained = try #require(await sink.metadata().last)
   #expect(!LogPrivacy.project(retained, allowPlaintext: false).comment!.contains("Riverside"))
   #expect(!(await sink.metadata().description).contains("PASSWORD-CANARY"))
