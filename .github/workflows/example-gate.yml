@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   examples:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       TEAQL_S3_ENDPOINT: http://127.0.0.1:19010
       TEAQL_S3_BUCKET: teaql-swift-example-ci
