@@ -202,9 +202,17 @@ final class RuntimeLoggingTests: XCTestCase, @unchecked Sendable {
     defer { for child in children { if child.isRunning { child.terminate() }; child.waitUntilExit() } }
     for worker in 0..<4 {
       let child = Process(); child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+      #if os(macOS)
+      child.arguments = ["-XCTest", "TeaQLCoreTests.RuntimeLoggingTests/testProcessHelper", Bundle(for: RuntimeLoggingTests.self).bundleURL.path]
+      #else
       child.arguments = ["TeaQLCoreTests.RuntimeLoggingTests/testProcessHelper"]
-      child.environment = ["TEAQL_LOGGING_TEST_DIRECTORY": directory.path, "TEAQL_LOGGING_TEST_WORKER": "\(worker)", "TMPDIR": directory.path,
+      #endif
+      var environment = ["TEAQL_LOGGING_TEST_DIRECTORY": directory.path, "TEAQL_LOGGING_TEST_WORKER": "\(worker)", "TMPDIR": directory.path,
         "TEAQL_TELEMETRY_ENABLED": "false"]
+      for key in ["DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH"] {
+        if let value = ProcessInfo.processInfo.environment[key] { environment[key] = value }
+      }
+      child.environment = environment
       child.standardOutput = Pipe(); child.standardError = FileHandle.standardError
       try child.run(); children.append(child)
     }

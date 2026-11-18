@@ -1,4 +1,9 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 import GeneratedTeaQL
 import TeaQLCore
 import TeaQLSQLite
@@ -56,6 +61,7 @@ enum ProjectionViewsProbe {
   }
   // Swift's top-level thrown-error trap must not discard buffered diagnostics.
   private static func emit(_ line: String) {
+    _ = fflush(nil)
     FileHandle.standardOutput.write(Data(("\n" + line + "\n").utf8))
   }
   private static func object<T: Encodable>(_ value: T) throws -> [String: Any] {

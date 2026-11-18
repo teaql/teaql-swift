@@ -166,7 +166,9 @@ final class RuntimeLoggingPresentationsTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: path.path + ".1")), previous); XCTAssertEqual(try read([path], format).count, 1)
       }
       env["TEAQL_LOG_MAX_FILES"] = "0"; let zero = try make(format, env, base: base); XCTAssertTrue(zero.write(.info, event: "last", message: String(repeating: "界", count: 2000)))
-      XCTAssertEqual(try files(path), [path]); XCTAssertEqual(try read([path], format).count, 1)
+      // Directory enumeration may spell Darwin's /var alias as /private/var.
+      // Every entry comes from this same parent; only the active name remains.
+      XCTAssertEqual(try files(path).map(\.lastPathComponent), [path.lastPathComponent]); XCTAssertEqual(try read([path], format).count, 1)
     } }
   }
   private func assertBlocks(_ base: URL, _ format: String, _ count: Int, _ starts: Int) throws {

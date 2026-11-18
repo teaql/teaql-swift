@@ -1,4 +1,9 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 import GeneratedTeaQL
 import TeaQLCore
 import TeaQLSQLite
@@ -102,6 +107,7 @@ enum GraphFixLifecycleProbe {
   private static func emit<T: Encodable>(_ marker: String, _ row: T) throws {
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
     let bytes = try encoder.encode(row)
+    _ = fflush(nil)
     FileHandle.standardOutput.write(Data(("\n" + marker + "=" + String(decoding: bytes, as: UTF8.self) + "\n").utf8))
   }
   static func verify(path: String, round: Int) async throws {
