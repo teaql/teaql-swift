@@ -1,5 +1,10 @@
 import CSQLite
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 import GeneratedTeaQL
 import TeaQLCore
 import TeaQLSQLite
@@ -96,6 +101,7 @@ enum UnchangedViewsProbe {
     throw TeaQLError.execution("The unchanged view unexpectedly widened a NotLoaded field")
   }
   private static func emit<T: Encodable>(_ name: String, _ value: T) throws {
+    _ = fflush(nil)
     FileHandle.standardOutput.write(Data(("\n" + name + "=" + (try json(value)) + "\n").utf8))
   }
   static func verify(path: String) async throws {

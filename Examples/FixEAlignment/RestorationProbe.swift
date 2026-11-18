@@ -1,5 +1,10 @@
 import CSQLite
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 import GeneratedTeaQL
 import TeaQLCore
 import TeaQLSQLite
@@ -228,8 +233,12 @@ enum RestorationProbe {
       let observations: [Observation]
       let generatedImplementationsModified = false, directBusinessSQLWrites = false
     }
-    print("CORE_SWIFT_RESTORATION_RESULT=" + (try json(Report(calibration: calibration,
-      calibrationPolicy: calibrationPolicy, observations: observations))))
+    let frame = "\nCORE_SWIFT_RESTORATION_RESULT=" + (try json(Report(calibration: calibration,
+      calibrationPolicy: calibrationPolicy, observations: observations))) + "\n"
+    // Match the other large application probe frames. Buffered print mixed
+    // with their direct writes can split a JSON string between frame lines.
+    _ = fflush(nil)
+    try FileHandle.standardOutput.write(contentsOf: Data(frame.utf8))
   }
 
   private static func physical(_ path: String) throws -> String {
