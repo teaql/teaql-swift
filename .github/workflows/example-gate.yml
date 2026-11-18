@@ -8,6 +8,7 @@ jobs:
   examples:
     runs-on: ubuntu-24.04
     env:
+      TEAQL_FIX_E_EVIDENCE_DIR: ${{ runner.temp }}/teaql-swift-example-evidence/fix-e
       TEAQL_S3_ENDPOINT: http://127.0.0.1:19010
       TEAQL_S3_BUCKET: teaql-swift-example-ci
       TEAQL_S3_ACCESS_KEY: teaql-swift-example-ci
@@ -50,6 +51,18 @@ jobs:
           docker logs teaql-swift-example-s3
           exit 1
       - run: ./scripts/verify-examples.sh
+      - name: Retain compact example diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift-example-evidence
+          path: |
+            ${{ runner.temp }}/teaql-swift-example-evidence/
+            /tmp/teaql-swift-*-evidence-*/*.log
+            /tmp/teaql-swift-*-evidence-*/*.json
+            logs/*.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Stop dedicated S3 example fixture
         if: always()
         run: docker rm -f teaql-swift-example-s3 || true

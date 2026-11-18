@@ -12,6 +12,7 @@ final class RuntimeLoggingPresentationsTests: XCTestCase, @unchecked Sendable {
   override func setUpWithError() throws {
     directory = FileManager.default.temporaryDirectory.appendingPathComponent("teaql-presentations-" + UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    directory = directory.resolvingSymlinksInPath()
   }
   override func tearDownWithError() throws { try FileManager.default.removeItem(at: directory) }
   private func make(_ format: String, _ environment: [String: String] = [:], base: URL? = nil) throws -> RuntimeLogger {
@@ -187,15 +188,26 @@ final class RuntimeLoggingPresentationsTests: XCTestCase, @unchecked Sendable {
     guard let raw = getenv("TEAQL_PRESENTATION_DIRECTORY"), let rawFormat = getenv("TEAQL_PRESENTATION_FORMAT"), let rawWorker = getenv("TEAQL_PRESENTATION_WORKER") else { return }
     let base = URL(fileURLWithPath: String(cString: raw), isDirectory: true); let format = String(cString: rawFormat); let worker = String(cString: rawWorker)
     let endpoint = getenv("TEAQL_PRESENTATION_STREAM").map { String(cString: $0) }
-    if endpoint != nil { try FileHandle.standardOutput.write(contentsOf: Data("TEAQL_STREAM_BEGIN\n".utf8)) }
+    let capture = endpoint == "stderr" ? FileHandle.standardError : FileHandle.standardOutput
+    if endpoint != nil { try capture.write(contentsOf: Data("TEAQL_STREAM_BEGIN\n".utf8)) }
     let env = endpoint.map { ["TEAQL_LOG_ENDPOINT": $0] } ?? ["TEAQL_LOG_MAX_SIZE": "2K", "TEAQL_LOG_MAX_FILES": "100"]
     let logger = try RuntimeLogger(RuntimeLoggingOptions(logFormat: format, environment: env, workingDirectory: base))
-    if endpoint != nil { XCTAssertTrue(logger.write(.warn, event: "sql.retry", message: "Retry scheduled", safeFields: ["category": "SQL", "sql": "SELECT\nprobe"])); try FileHandle.standardOutput.write(contentsOf: Data("TEAQL_STREAM_END\n".utf8)); return }
+    if endpoint != nil { XCTAssertTrue(logger.write(.warn, event: "sql.retry", message: "Retry scheduled", safeFields: ["category": "SQL", "sql": "SELECT\nprobe"])); try capture.write(contentsOf: Data("TEAQL_STREAM_END\n".utf8)); return }
     for index in 0..<30 { let id = "\(worker)/\(index)"; XCTAssertTrue(logger.write(.info, event: "parallel", message: "原生并发", safeFields: ["id": id, "sql": "SELECT\n" + id])) }
   }
   private func child(_ base: URL, _ format: String, _ worker: String, stream: String? = nil) throws -> (Process, Pipe, Pipe) {
-    let child = Process(); child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]); child.arguments = ["TeaQLCoreTests.RuntimeLoggingPresentationsTests/testProcessWorker"]
+    let child = Process(); child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+    #if os(macOS)
+    child.arguments = ["-XCTest", "TeaQLCoreTests.RuntimeLoggingPresentationsTests/testProcessWorker", Bundle(for: RuntimeLoggingPresentationsTests.self).bundleURL.path]
+    #else
+    child.arguments = ["TeaQLCoreTests.RuntimeLoggingPresentationsTests/testProcessWorker"]
+    #endif
     var env = ["TEAQL_PRESENTATION_DIRECTORY": base.path, "TEAQL_PRESENTATION_FORMAT": format, "TEAQL_PRESENTATION_WORKER": worker, "TMPDIR": directory.path, "TEAQL_TELEMETRY_ENABLED": "false"]
+    // Darwin's XCTest runner needs the same selected Swift framework search
+    // paths as its parent; other environment input remains deliberately absent.
+    for key in ["DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH"] {
+      if let value = ProcessInfo.processInfo.environment[key] { env[key] = value }
+    }
     if let stream { env["TEAQL_PRESENTATION_STREAM"] = stream }; child.environment = env
     let output = Pipe(), error = Pipe(); child.standardOutput = output; child.standardError = error; try child.run(); return (child, output, error)
   }
@@ -210,7 +222,10 @@ final class RuntimeLoggingPresentationsTests: XCTestCase, @unchecked Sendable {
         let capture = try child(base, format, "stream", stream: endpoint); children.append(capture); capture.0.waitUntilExit(); XCTAssertEqual(capture.0.terminationStatus, 0)
         let output = String(decoding: capture.1.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self); let error = capture.2.fileHandleForReading.readDataToEndOfFile()
         let bytes: Data
-        if endpoint == "stderr" { bytes = error } else { bytes = Data(output.components(separatedBy: "TEAQL_STREAM_BEGIN\n")[1].components(separatedBy: "TEAQL_STREAM_END")[0].utf8) }
+        let selected = endpoint == "stderr" ? String(decoding: error, as: UTF8.self) : output
+        let begin = selected.components(separatedBy: "TEAQL_STREAM_BEGIN\n"); XCTAssertEqual(begin.count, 2)
+        let end = try XCTUnwrap(begin.last).components(separatedBy: "TEAQL_STREAM_END\n"); XCTAssertEqual(end.count, 2)
+        bytes = Data(try XCTUnwrap(end.first).utf8)
         let rows = try parse(bytes, format); XCTAssertEqual(rows.count, 2); let retry = try XCTUnwrap(rows.last); XCTAssertEqual(retry["level"] as? String, "WARN"); XCTAssertEqual(retry["sql"] as? String, "SELECT\nprobe")
       }
     }
