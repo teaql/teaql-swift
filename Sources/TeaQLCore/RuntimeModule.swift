@@ -38,6 +38,7 @@ public struct RuntimeModule: Sendable {
 
 /// Application-owned runtime assembly. Installing metadata never changes a database schema.
 public struct TeaQLRuntime: Sendable {
+  public let runtimeLogger: RuntimeLogger
   private var descriptorsByName: [String: EntityDescriptor] = [:]
   private var checkersByName: [String: any EntityChecker] = [:]
   private var wireMetadataByName: [String: WireEntityMetadata] = [:]
@@ -45,7 +46,15 @@ public struct TeaQLRuntime: Sendable {
   private var contextFixByName: [String: [String: ContextFieldFunctions]] = [:]
   package private(set) var checkerPresentation: CheckerPresentationModel = .empty
 
-  public init() {}
+  public init(runtimeLogger: RuntimeLogger = RuntimeLogger.defaultLogger()) { self.runtimeLogger = runtimeLogger }
+
+  /// Compose modules and resolve their known model names before startup.
+  public init(modules: [RuntimeModule], loggingOptions: RuntimeLoggingOptions = RuntimeLoggingOptions()) throws {
+    var options = loggingOptions
+    if options.modelNames.isEmpty { options.modelNames = Array(Set(modules.map(\.name))).sorted() }
+    self.runtimeLogger = try RuntimeLogger(options)
+    for module in modules { try install(module) }
+  }
 
   public mutating func install(_ module: RuntimeModule) throws {
     let mergedPresentation = try checkerPresentation.merging(module.checkerPresentation)

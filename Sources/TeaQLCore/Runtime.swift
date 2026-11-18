@@ -691,6 +691,9 @@ public struct UserContext: Sendable {
   public var querySQLLogEnabled: Bool
   public var mutationSQLLogEnabled: Bool
   public let runtimeTelemetry: any RuntimeTelemetry
+  public let runtimeLogger: RuntimeLogger
+  private var operationTelemetry: any RuntimeTelemetry { RuntimeLoggingTelemetry(delegate: runtimeTelemetry, logger: runtimeLogger) }
+  private var loggingAuditSink: any AuditSink { RuntimeLoggingAuditSink(logger: runtimeLogger, delegate: auditSink) }
   public private(set) var locale: TeaQLLocale
   public private(set) var i18nCatalog: I18nCatalog
   private var checkerMessages: CheckerMessageServices
@@ -718,7 +721,7 @@ public struct UserContext: Sendable {
   }
 
   public init(
-    runtime: TeaQLRuntime = TeaQLRuntime(),
+    runtime: TeaQLRuntime? = nil,
     actor: String? = nil,
     auditCategory: String? = nil,
     trustedTenant: String? = nil,
@@ -728,7 +731,7 @@ public struct UserContext: Sendable {
     requestPolicy: RequestPolicy,
     auditSink: (any AuditSink)? = nil,
     telemetrySink: (any RuntimeTelemetrySink)? = nil,
-    diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = TextDiagnosticSQLLogSink(),
+    diagnosticSQLLogSink: (any DiagnosticSQLLogSink)? = nil,
     querySQLLogEnabled: Bool = true,
     mutationSQLLogEnabled: Bool = true,
     runtimeTelemetry: any RuntimeTelemetry = RuntimeTelemetryStartup.defaultTelemetry(),
@@ -744,9 +747,13 @@ public struct UserContext: Sendable {
     objectStorageObserver: ObjectStorageObserver? = nil,
     businessClock: any BusinessClock = SystemBusinessClock(),
     internalIDGenerator: (any InternalIDGenerator)? = nil,
-    contextFixResolver: (any ContextFixResolver)? = nil
+    contextFixResolver: (any ContextFixResolver)? = nil,
+    runtimeLogger: RuntimeLogger? = nil
   ) {
+    let logger = runtimeLogger ?? runtime?.runtimeLogger ?? RuntimeLogger.defaultLogger()
+    let runtime = runtime ?? TeaQLRuntime(runtimeLogger: logger)
     self.runtime = runtime
+    self.runtimeLogger = logger
     self.businessClock = businessClock
     self.objectStorageProvider = objectStorageProvider
     self.objectStorageObserver = objectStorageObserver
@@ -759,7 +766,7 @@ public struct UserContext: Sendable {
     self.requestPolicy = requestPolicy
     self.auditSink = auditSink
     self.telemetrySink = telemetrySink
-    self.diagnosticSQLLogSink = diagnosticSQLLogSink ?? TextDiagnosticSQLLogSink()
+    self.diagnosticSQLLogSink = diagnosticSQLLogSink ?? RuntimeDiagnosticSQLLogSink(logger: logger)
     self.querySQLLogEnabled = querySQLLogEnabled
     self.mutationSQLLogEnabled = mutationSQLLogEnabled
     self.runtimeTelemetry = runtimeTelemetry
@@ -826,7 +833,7 @@ public struct UserContext: Sendable {
     // The runtime owns the graph boundary, including transaction completion
     // and post-commit audit delivery. Individual entity operations remain its
     // children; applications and generated libraries need no SDK calls.
-    return try await runtimeTelemetry.withOperation(RuntimeOperation(family: "mutation", name: "graph.save")) {
+    return try await operationTelemetry.withOperation(RuntimeOperation(family: "mutation", name: "graph.save")) {
       try await executeGraphTransaction(request, transaction: transaction, rootEntityType: rootEntityType,
         preparation: preparation, operation)
     }
@@ -922,7 +929,7 @@ public struct UserContext: Sendable {
     gateReleased = true
     // Commit already succeeded: a sink failure must never trigger rollback.
     for event in events {
-      do { try await auditSink?.record(event) }
+      do { try await loggingAuditSink.record(event) }
       catch { deliveryFailures.append(error) }
     }
     if !deliveryFailures.isEmpty { throw GraphCommittedError(causes: deliveryFailures) }
@@ -1011,7 +1018,8 @@ public struct UserContext: Sendable {
       objectStorageProvider: objectStorageProvider,
       objectStorageObserver: objectStorageObserver,
       businessClock: businessClock,
-      internalIDGenerator: internalIDGenerator)
+      internalIDGenerator: internalIDGenerator,
+      runtimeLogger: runtimeLogger)
     // Retain customer governance configuration, not an active caller plan or
     // invocation. The new context still owns fresh graph/Fix execution state.
     bootstrap.mutationPolicyCoordinator = mutationPolicyCoordinator.fork()
@@ -1080,7 +1088,14 @@ public struct UserContext: Sendable {
   }
 
   public func execute(_ query: SelectQuery) async throws -> QueryResult {
-    try await execute(QueryRequest(query: query))
+    let captured: QueryRequest
+    do { captured = try QueryRequest(query: query) }
+    catch {
+      runtimeLogger.write(.warn, event: "query.rejected", message: "TeaQL query rejected",
+        safeFields: ["category": "SQL", "outcome": "rejected", "error_code": "request_intent"])
+      throw error
+    }
+    return try await execute(captured)
   }
 
   public func execute(_ request: QueryRequest) async throws -> QueryResult {
@@ -1117,7 +1132,7 @@ public struct UserContext: Sendable {
     let owner = ListExecutionOwner(context: queryExecutionContext, root: authorized.scope.root,
       authorized: authorized.scope)
     return try await ListExecutionState.$owner.withValue(owner) {
-      try await runtimeTelemetry.withOperation(
+      try await operationTelemetry.withOperation(
       RuntimeOperation(
         family: "query", name: "\(authorized.query.entity.name).list",
         attributes: ["teaql.entity.type": .string(authorized.query.entity.name)]
@@ -1294,7 +1309,7 @@ public struct UserContext: Sendable {
         (queryExecutor as? any RelationTopNPlanning)?.relationTopNPolicy == .alwaysProbe
       let relationUsesProbes = relationLimited && ((relationAlwaysProbe && relationThreshold == nil)
         || (relationThreshold.map { $0 > 0 && relationParentCount <= $0 } ?? false))
-      try await runtimeTelemetry.withOperation(
+      try await operationTelemetry.withOperation(
         RuntimeOperation(
           family: "relation_load", name: "\(validated.entity.name).\(relation.name)",
           attributes: [
@@ -1500,7 +1515,7 @@ public struct UserContext: Sendable {
   private func executeProviderQuery(
     _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?
   ) async throws -> QueryResult {
-    let result = try await runtimeTelemetry.withOperation(
+    let result = try await operationTelemetry.withOperation(
       RuntimeOperation(family: "provider", name: "\(queryExecutor.providerKind).query",
         attributes: ["teaql.provider.kind": .string(queryExecutor.providerKind),
           "teaql.provider.operation": .string("query")])
@@ -1722,7 +1737,7 @@ public struct UserContext: Sendable {
     validated.aggregates = []
     validated.groupBy = []
     validated.groupByAliases = nil
-    return try await runtimeTelemetry.withOperation(
+    return try await operationTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(queryExecutor.providerKind).count",
         attributes: [
@@ -1795,7 +1810,7 @@ public struct UserContext: Sendable {
       await graphTransactionGate.acquire()
     }
     defer { if standalone { graphTransactionGate.release(evidence: graphTransactionGate.lastFixEvidence) } }
-    return try await runtimeTelemetry.withOperation(
+    return try await operationTelemetry.withOperation(
       RuntimeOperation(
         family: "mutation", name: "\(mutation.entity.name).\(mutation.kind.rawValue)",
         attributes: [
@@ -1838,7 +1853,7 @@ public struct UserContext: Sendable {
     try graphSession?.preparedMutations.validateLedgers()
     let submittedID = validated.id
       ?? validated.entity.idProperty.flatMap { validated.values[$0.name] }
-    let result = try await runtimeTelemetry.withOperation(
+    let result = try await operationTelemetry.withOperation(
       RuntimeOperation(
         family: "provider", name: "\(mutationExecutor.providerKind).mutation",
         attributes: [
@@ -1880,19 +1895,10 @@ public struct UserContext: Sendable {
         }
       }
     }
-    if result.affectedRows > 0, let auditSink, let reason = validated.auditReason {
+    if result.affectedRows > 0, let reason = validated.auditReason {
       let auditValues = Array(validated.values.values) + (auditID.map { [$0] } ?? [])
         + LogPrivacy.privateValues(oldProvenance)
-      try await runtimeTelemetry.withOperation(
-        RuntimeOperation(
-          family: "audit", name: "\(validated.entity.name).event",
-          attributes: [
-            "teaql.entity.type": .string(validated.entity.name),
-            "teaql.mutation.kind": .string(validated.kind.rawValue),
-            "teaql.audit.changed_field_count": .integer(Int64(validated.values.count)),
-          ]
-        )
-      ) {
+      let publish: () async throws -> Void = {
         let lineage = auditID.map {
           TraceChain.assignedLineage(validated.mutationLineage ?? [], key: EntityKey(entity: validated.entity.name, id: $0))
         } ?? validated.mutationLineage ?? []
@@ -1908,13 +1914,18 @@ public struct UserContext: Sendable {
             mutationLineage: lineage)
         if let graphSession { try graphSession.bufferAudit(event, values: auditValues) }
         else {
-          try await auditSink.record(AuditEvent(entity: event.entity, entityID: event.entityID,
+          try await loggingAuditSink.record(AuditEvent(entity: event.entity, entityID: event.entityID,
             operation: event.operation, reason: LogPrivacy.scrub(reason, values: auditValues),
             actor: event.actor, category: event.category, occurredAt: event.occurredAt,
             mutationGovernance: event.mutationGovernance,
             mutationLineage: TraceChain.maskLineage(lineage, values: auditValues)))
         }
       }
+      if auditSink != nil {
+        try await operationTelemetry.withOperation(RuntimeOperation(family: "audit", name: "\(validated.entity.name).event",
+          attributes: ["teaql.entity.type": .string(validated.entity.name), "teaql.mutation.kind": .string(validated.kind.rawValue),
+            "teaql.audit.changed_field_count": .integer(Int64(validated.values.count))]), publish)
+      } else { try await publish() }
     }
     // Preserve executed SQL diagnostics before rejecting a cancelled or changed
     // graph. Standalone providers may have already committed: only a graph can
