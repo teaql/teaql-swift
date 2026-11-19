@@ -154,7 +154,8 @@ enum GraphFixLifecycleProbe {
         .purpose("Verify duplicate references and non-idempotent customer Fix").newEntity(preparation)
       if valid { child.updateProductName(label + "-" + String(round)) }
       child.updateUnitPrice(Decimal(string: "10.00")!)
-      parent.orderItemList.append(child); parent.orderItemList.append(child)
+      parent.orderItemList = SmartList([child, child])
+      try require(parent.orderItemList.isLoaded, "Explicitly constructed graph relation must be selected")
       return parent
     }
     func reload(_ id: Int64) async throws -> PurchaseOrder {
