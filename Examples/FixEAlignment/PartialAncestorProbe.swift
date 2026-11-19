@@ -128,7 +128,10 @@ enum PartialAncestorProbe {
     let guardEffects = await provider.snapshot(), guardPolicies = policies.snapshot()
     try require(guardEffects == PartialEffects() && guardPolicies == 0, "E or JSON performed implicit work")
     let idSpaceBefore = try physical(path, table: "teaql_id_space")
-    graph.purchaseOrderList[0].orderItemList[0].updateProductName("Partial graph updated")
+    var graphOrder = graph.purchaseOrderList[0], graphLeaf = graph.purchaseOrderList[0].orderItemList[0]
+    graphLeaf.updateProductName("Partial graph updated")
+    try require(graphOrder.orderItemList.set(0, graphLeaf), "Missing selected graph leaf")
+    try require(graph.purchaseOrderList.set(0, graphOrder), "Missing selected graph order")
     _ = try await graph.auditAs("Save the complete modified leaf through untouched partial ancestors").save(context(at: second))
     let saveEffects = await provider.snapshot(), savePolicies = policies.snapshot()
     try require(saveEffects.begins == 1 && saveEffects.commits == 1 && saveEffects.rollbacks == 0
@@ -136,7 +139,10 @@ enum PartialAncestorProbe {
     try require(try physical(path, table: "teaql_id_space") == idSpaceBefore, "Updating a persisted leaf allocated an ID")
     let stored = try physical(path)
     var partial = try await load(false)
-    partial.purchaseOrderList[0].orderItemList[0].updateProductName("Rejected partial leaf")
+    var partialOrder = partial.purchaseOrderList[0], partialLeaf = partial.purchaseOrderList[0].orderItemList[0]
+    partialLeaf.updateProductName("Rejected partial leaf")
+    try require(partialOrder.orderItemList.set(0, partialLeaf), "Missing selected partial leaf")
+    try require(partial.purchaseOrderList.set(0, partialOrder), "Missing selected partial order")
     let leaf = partial.purchaseOrderList[0].orderItemList[0]
     let ledger = leaf.teaqlEntityRoot, key = leaf.teaqlEntityKey, pending = ledger.change(key)
     try require(pending["product_name"] == .string("Rejected partial leaf"), "The generated setter did not register real pending intent")

@@ -118,7 +118,10 @@ enum PartialRootProbe {
       && calibration.begins == 3 && calibration.commits == 2 && calibration.rollbacks == 1 && calibration.audits == 3
       && callbackCalibration.fixes == 3 && callbackCalibration.policies > 0 && callbackCalibration.reviews == 2,
       "All ten provider and callback boundaries must be positively calibrated")
-    graph.purchaseOrderList[0].orderItemList[0].updateProductName("Managed partial retry")
+    var pendingOrder = graph.purchaseOrderList[0], pendingLeaf = graph.purchaseOrderList[0].orderItemList[0]
+    pendingLeaf.updateProductName("Managed partial retry")
+    try require(pendingOrder.orderItemList.set(0, pendingLeaf), "Missing selected pending leaf")
+    try require(graph.purchaseOrderList.set(0, pendingOrder), "Missing selected pending order")
     let leaf = graph.purchaseOrderList[0].orderItemList[0], ledger = leaf.teaqlEntityRoot, key = leaf.teaqlEntityKey
     let pending = ledger.change(key), beforeView = try json(graph), beforeStorage = try physical(path)
     try require(pending["product_name"] == .string("Managed partial retry") && pending["tenant"] == nil,
