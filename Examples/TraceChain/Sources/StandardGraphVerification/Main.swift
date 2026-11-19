@@ -210,7 +210,7 @@ private actor GraphAudits: AuditSink {
         var shipment = try await Q.shipments().comment("create shipment").purpose("compose payment graph").newEntity(context)
         shipment.updateId(base + 401); shipment.updateCustomerOrder(base); shipment.updateReferenceCode("TRACE-SHIPMENT")
         _ = shipment.auditAs("dispatch shipment")
-        root.orderItemList = [available, removed]; root.paymentList.append(pay); root.shipmentList.append(shipment)
+        root.orderItemList = SmartList([available, removed]); root.paymentList.append(pay); root.shipmentList.append(shipment)
         await audit.clear(); await sql.enableAll()
         _ = try await root.auditAs("create payment graph").save(context)
         let created = await audit.snapshot()
@@ -223,11 +223,21 @@ private actor GraphAudits: AuditSink {
         try require(E.customerOrder(mixed).paymentList().first().id().eval() == base, "same numeric ID across types")
         try require(E.paymentAttempt(mixed.paymentList[0].paymentAttemptList[0]).id().eval() == base + 301, "loaded attempt")
         mixed.updateDescription("Submitted graph")
-        mixed.orderItemList[0].updateName(secret + " changed")
-        mixed.orderItemList[1].markForDeletion(); _ = mixed.orderItemList[1].auditAs("remove unavailable item")
-        mixed.paymentList[0].updateReferenceCode("TRACE-PAYMENT-UPDATED"); _ = mixed.paymentList[0].auditAs("authorize payment")
-        mixed.paymentList[0].paymentAttemptList[0].updateReferenceCode("TRACE-ATTEMPT-UPDATED")
-        mixed.shipmentList[0].updateReferenceCode("TRACE-SHIPMENT-UPDATED"); _ = mixed.shipmentList[0].auditAs("dispatch shipment")
+        var changedItem = mixed.orderItemList[0]
+        changedItem.updateName(secret + " changed")
+        mixed.orderItemList.set(0, changedItem)
+        var removedItem = mixed.orderItemList[1]
+        removedItem.markForDeletion(); _ = removedItem.auditAs("remove unavailable item")
+        mixed.orderItemList.set(1, removedItem)
+        var updatedPayment = mixed.paymentList[0]
+        updatedPayment.updateReferenceCode("TRACE-PAYMENT-UPDATED"); _ = updatedPayment.auditAs("authorize payment")
+        var updatedAttempt = updatedPayment.paymentAttemptList[0]
+        updatedAttempt.updateReferenceCode("TRACE-ATTEMPT-UPDATED")
+        updatedPayment.paymentAttemptList.set(0, updatedAttempt)
+        mixed.paymentList.set(0, updatedPayment)
+        var updatedShipment = mixed.shipmentList[0]
+        updatedShipment.updateReferenceCode("TRACE-SHIPMENT-UPDATED"); _ = updatedShipment.auditAs("dispatch shipment")
+        mixed.shipmentList.set(0, updatedShipment)
         try fault(path, id: base + 301, enabled: true)
         await audit.clear(); await sql.enableAll()
         do { _ = try await mixed.auditAs("attempt payment graph").save(context); throw TeaQLError.execution("fault was not exercised") }
