@@ -101,6 +101,13 @@ private final class LifecyclePolicy: MutationPolicy, @unchecked Sendable {
 /// Generated public Q/E and audited save are the business APIs. Provider seams
 /// observe real SQLite writes and inject faults only after a child was written.
 enum GraphFixLifecycleProbe {
+  private static func updateFirstItem(_ order: inout PurchaseOrder, _ edit: (inout OrderItem) -> Void) throws {
+    try require(!order.orderItemList.isEmpty, "Missing selected lifecycle child")
+    var child = order.orderItemList[0]
+    edit(&child)
+    try require(order.orderItemList.set(0, child), "Missing selected lifecycle child")
+  }
+
   private static func require(_ condition: Bool, _ message: String) throws {
     if !condition { throw TeaQLError.execution(message) }
   }
@@ -199,7 +206,7 @@ enum GraphFixLifecycleProbe {
 
     var loaded = try await reload(primary.id)
     loaded.orderItemList.append(loaded.orderItemList[0])
-    loaded.updateContactPhone("5550812"); loaded.orderItemList[0].updateUnitPrice(Decimal(string: "20.00")!)
+    loaded.updateContactPhone("5550812"); try updateFirstItem(&loaded) { $0.updateUnitPrice(Decimal(string: "20.00")!) }
     (execution, clock) = begin()
     loaded = try await loaded.auditAs("Update through one value copy of a repeated child").save(execution)
     try observe("customer-fix-update-duplicate", clock,
@@ -207,7 +214,7 @@ enum GraphFixLifecycleProbe {
     try await check(loaded, price: "20.01", parentVersion: 2, childVersion: 2)
 
     loaded = try await reload(primary.id); loaded.orderItemList.append(loaded.orderItemList[0])
-    loaded.orderItemList[0].updateUnitPrice(Decimal(string: "30.00")!)
+    try updateFirstItem(&loaded) { $0.updateUnitPrice(Decimal(string: "30.00")!) }
     (execution, clock) = begin()
     loaded = try await loaded.auditAs("Save only a changed child under an unchanged owner").save(execution)
     try observe("customer-fix-child-only", clock, expectedVisits: 1,
@@ -238,7 +245,7 @@ enum GraphFixLifecycleProbe {
     (execution, clock) = begin(); let missing = try await failed(invalid, execution)
     try observe("missing-child-input-before-io", clock,
       condition: provider.snapshot == LifecycleEffects() && policy.calls == 0 && missing is CheckException, error: missing)
-    invalid.orderItemList[0].updateProductName("repaired-input-" + String(round))
+    try updateFirstItem(&invalid) { $0.updateProductName("repaired-input-" + String(round)) }
     (execution, clock) = begin()
     let repaired = try await invalid.auditAs("Repair and retry the same invalid child").save(execution)
     try observe("same-graph-input-repair", clock, condition: provider.snapshot == expected(1, 1) && policy.calls == 1)
@@ -247,7 +254,7 @@ enum GraphFixLifecycleProbe {
     for duringWrite in [false, true] {
       loaded = try await reload(primary.id); loaded.orderItemList.append(loaded.orderItemList[0])
       let phone = duringWrite ? "5550819" : "5550818", price = duringWrite ? "50.00" : "40.00"
-      loaded.updateContactPhone(phone); loaded.orderItemList[0].updateUnitPrice(Decimal(string: price)!)
+      loaded.updateContactPhone(phone); try updateFirstItem(&loaded) { $0.updateUnitPrice(Decimal(string: price)!) }
       let captured = loaded
       let edit: @Sendable () -> Void = { var changed = captured; changed.updateContactPhone("5550999") }
       (execution, clock) = begin()
@@ -258,7 +265,7 @@ enum GraphFixLifecycleProbe {
           && policy.calls == 1 && error is MutationPolicyError, error: error)
       try require(loaded.teaqlEntityRoot.change(loaded.teaqlEntityKey)["contact_phone"] == .string("5550999"),
         "Rejected save lost the newer customer edit")
-      loaded.updateContactPhone(phone); loaded.orderItemList[0].updateUnitPrice(Decimal(string: price)!)
+      loaded.updateContactPhone(phone); try updateFirstItem(&loaded) { $0.updateUnitPrice(Decimal(string: price)!) }
       (execution, clock) = begin()
       let saved = try await loaded.auditAs("Retry after removing a late edit callback").save(execution)
       try observe(duringWrite ? "same-graph-provider-edit-retry" : "same-graph-policy-edit-retry", clock,

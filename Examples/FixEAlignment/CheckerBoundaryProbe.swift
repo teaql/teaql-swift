@@ -232,8 +232,10 @@ enum CheckerBoundaryProbe {
         .purpose("Separate completeness admission from missing root ownership").executeForList(active)
       guard var graph = roots.first, graph.purchaseOrderList.count == 1 else { throw TeaQLError.execution("Missing non-root projection") }
       try require(try E.purchaseOrder(graph.purchaseOrderList[0]).tenantId().eval() == 1, "the root FK must be loaded")
-      if absent == "contact_phone" { graph.purchaseOrderList[0].updateInternalNote("Rejected partial change") }
-      else { graph.purchaseOrderList[0].updateContactPhone("5550101") }
+      var incompleteChild = graph.purchaseOrderList[0]
+      if absent == "contact_phone" { incompleteChild.updateInternalNote("Rejected partial change") }
+      else { incompleteChild.updateContactPhone("5550101") }
+      try require(graph.purchaseOrderList.set(0, incompleteChild), "Missing selected incomplete child")
       let violations = try await rejected("invalid_type", "purchase_order_list[0]." + absent, "PurchaseOrder") {
         _ = try await graph.auditAs("Reject the incomplete modified descendant before SQL").save(active)
       }
