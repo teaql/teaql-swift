@@ -71,22 +71,22 @@ enum CheckerMetadataProbe {
       let failures: [String]
     }
     var observations: [Observation] = [], allFailures: [String] = []
-    // This retained older library has no presentation model. Its complete deep
-    // fallback is intentional; the automatic example qualifies model-aware text.
+    // The current regenerated library installs its presentation model. Match
+    // the complete localized message while checking canonical wire paths below.
     let expectedMessages = [
-      "parent_required": "The contact phone is required.\nLocation: current object",
-      "parent_length": "The contact phone must not exceed 32 grapheme clusters; its current length is 33.\nLocation: current object",
-      "update_null": "The contact phone is required.\nLocation: current object",
-      "child_required": "The product name is required.\nLocation: the 1st order item list",
-      "child_length": "The product name must not exceed 80 grapheme clusters; its current length is 81.\nLocation: the 1st order item list",
-      "child_min": "The unit price must be at least 0.01.\nLocation: the 1st order item list",
-      "child_max": "The unit price must not exceed 1000000.\nLocation: the 1st order item list",
-      "localized_required": "请填写contact phone。\n位置：当前对象",
-      "specialized_child": "请填写product name。\n位置：第1项order item list",
-      "range_zero": "unit price不得小于0.01。\n位置：第1项order item list",
-      "range_fraction_below": "unit price不得小于0.01。\n位置：第1项order item list",
-      "range_fraction_above": "unit price不得大于1000000。\n位置：第1项order item list",
-      "range_above": "unit price不得大于1000000。\n位置：第1项order item list"
+      "parent_required": "The contact phone is required.",
+      "parent_length": "The contact phone must not exceed 32 grapheme clusters; its current length is 33.",
+      "update_null": "The contact phone is required.",
+      "child_required": "The product name of the 1st order item is required.",
+      "child_length": "The product name of the 1st order item must not exceed 80 grapheme clusters; its current length is 81.",
+      "child_min": "The unit price of the 1st order item must be at least 0.01.",
+      "child_max": "The unit price of the 1st order item must not exceed 1000000.",
+      "localized_required": "请填写contact phone。",
+      "specialized_child": "请填写第1项order item的product name。",
+      "range_zero": "第1项order item的unit price不得小于0.01。",
+      "range_fraction_below": "第1项order item的unit price不得小于0.01。",
+      "range_fraction_above": "第1项order item的unit price不得大于1000000。",
+      "range_above": "第1项order item的unit price不得大于1000000。"
     ]
     func invalid(_ scenario: String, type: String, path: String, rule: String,
       _ save: () async throws -> Int64) async throws {
@@ -105,7 +105,7 @@ enum CheckerMetadataProbe {
         for value in violations {
           if value.entityType != type { failures.append("declaring entity type lost") }
           if value.ruleID != "invalid_type", value.message != expectedMessages[scenario] {
-            failures.append("complete localized fallback message differs")
+            failures.append("complete localized model-aware message differs")
           }
           if scenario == "specialized_child", value.sourceInstancePath != "/order_item_list/0/product~1name~0alias" {
             failures.append("original escaped input pointer lost")
