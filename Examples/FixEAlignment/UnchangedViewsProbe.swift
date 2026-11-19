@@ -210,13 +210,14 @@ enum UnchangedViewsProbe {
       catch let failure as ViewFault { rejected = failure == fault }
       try require(rejected, "The exact injected transaction failure was not propagated")
       let effects = await counts(), evidence = await provider.failureEvidence()
-      try require(evidence.0 == 1 && evidence.1?["version"] == .int(2) && evidence.1?["contact_phone"] == .string("5550801"), "Failure did not follow real uncommitted readback")
+      try require(evidence.0 == 1 && evidence.1?["version"] == .int(2) && evidence.1?["contact_phone"] == .string("5550801")
+        && evidence.1?["update_time"] == .timestamp(Int64(second.timeIntervalSince1970 * 1_000)), "Failure did not follow real uncommitted readback with the managed Business Clock")
       try require(effects.mutations == 1 && effects.begins == 1 && effects.rollbacks == 1 && effects.audits == 0
         && effects.commits == (fault == .beforeCommit ? 1 : 0), "Failed write committed or delivered an audit")
       try require(try physical(path) == beforeStorage && geometry(row) == beforeGeometry, "Rollback lost persisted state or selected view geometry")
       try require(row.version == 1 && ledger.originalVersion(key) == 1 && row.teaqlEntityRoot === ledger, "Rollback lost original version or ledger")
       let intent = ledger.change(key)
-      try require(intent["contact_phone"] == .string("5550801") && intent["update_time"] == .timestamp(Int64(second.timeIntervalSince1970 * 1_000)), "Rollback lost business or managed Fix intent")
+      try require(intent == ["contact_phone": .string("5550801")], "Rollback must retain exact business intent and undo invocation-owned Context Fix fields")
       denied = effects; retainedIntent = intent; observedWrite = evidence.1; injections = evidence.0
       await reset()
       let result = try await row.auditAs("Retry the same Swift value and ledger without requerying").save(context)

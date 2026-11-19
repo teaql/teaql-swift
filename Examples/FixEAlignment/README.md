@@ -37,8 +37,10 @@ an explicitly empty reverse list, and real transaction failures after UPDATE
 and before COMMIT. Ten side-effect observers are positively calibrated. The
 three no-op saves perform no provider/transaction/Fix/policy/audit/clock work;
 selected readonly count zero and absent aliases keep their distinct presence.
-Rollback must retain geometry, the original optimistic baseline and business
-plus managed Fix intent. Retry uses the same Swift value and ledger without
+Rollback must retain geometry, the original optimistic baseline and exact business
+intent while undoing invocation-owned Context Fix fields. The uncommitted readback
+must contain the managed Business Clock value, which retry resolves again.
+Retry uses the same Swift value and ledger without
 requerying. A genuine commit returns a new authoritative value/graph, advances
 both committed baselines and clears the old derived count. The returned graph
 is not required to reuse the input ledger's memory address.
