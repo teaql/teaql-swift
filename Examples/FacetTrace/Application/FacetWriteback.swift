@@ -27,7 +27,9 @@ func verifyWriteback(_ service: SQLiteDataService, runtime: TeaQLRuntime) async 
         let oldVersion = try E.school(parent.schoolList[0]).version().eval()
         let oldAddress = try E.school(parent.schoolList[0]).address().eval()
         let newAddress = oldAddress == "12 River Road" ? "14 River Road" : "12 River Road"
-        parent.schoolList[0].updateAddress(newAddress)
+        var changedSchool = parent.schoolList[0]
+        changedSchool.updateAddress(newAddress)
+        parent.schoolList.set(0, changedSchool)
         try require(try E.school(parent.schoolListResult[0]).address().eval() == newAddress,
             "array writeback diverged from SmartList carrier")
         try verifyFacets(parent.schoolListResult, includeAll: false, count: 2)

@@ -35,7 +35,7 @@ func verifyLoaded(_ service: SQLiteDataService, runtime: TeaQLRuntime) async thr
                 try require(parent.teaqlLoadedSnapshot?.record["facets"] == nil
                     && parent.teaqlLoadedSnapshot?.record["loadedRelations"] == nil, "sidecar entered mutation snapshot")
                 var copy = parent
-                copy.schoolList.removeAll()
+                copy.schoolList.retain { _ in false }
                 try require(copy.schoolListResult.isEmpty && copy.schoolListResult.facets.count == children.facets.count,
                     "mutable array is not backed by the same SmartList")
                 try require(parent.schoolListResult.count == count, "independent value copy changed owner")
