@@ -160,6 +160,7 @@ enum ProjectionViewsProbe {
     try require(try E.purchaseOrder(other).version().eval() == 1 && ledger.originalVersion(key) == 1
       && ledger.change(key)["internal_note"] == .string("pending-other-view"), "Save changed another view's pending edit or version")
     let beforeReject = await counts()
+    let originalUpdate = try E.purchaseOrder(other).updateTime().eval()
     var errorType: String?, message: String?, optimisticConflict = false
     do { _ = try await other.auditAs("Reject a stale independent view without losing pending intent").save(context) }
     catch {
@@ -181,8 +182,9 @@ enum ProjectionViewsProbe {
     try require(try E.purchaseOrder(other).version().eval() == 1 && ledger.originalVersion(key) == 1
       && pending["internal_note"] == .string("pending-other-view"), "Rejection lost intent or changed its original version")
     let derived = pending.keys.filter { $0 != "internal_note" }.sorted()
-    try require(derived == ["update_time"] && pending["update_time"] == .timestamp(Int64(second.timeIntervalSince1970 * 1_000)),
-      "Only the exact managed BusinessClock Fix may be added to pending intent")
+    try require(derived.isEmpty, "Rollback must discard staged Context Fix fields while retaining caller intent")
+    try require(try E.purchaseOrder(other).updateTime().eval() == originalUpdate,
+      "Rollback must restore the original BusinessClock field")
     try report("same-identity-independent-mutation-ledgers", two, ["separateViews": true, "otherPendingEditRetained": true,
       "noCrossViewWrite": true, "staleException": errorType!, "storedVersion": 2, "otherVersion": 1,
       "derivedFixFields": derived, "rejectionRolledBack": true, "commitAuditsOnRejection": 0])
