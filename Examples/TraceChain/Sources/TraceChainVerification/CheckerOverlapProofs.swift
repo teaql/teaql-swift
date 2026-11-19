@@ -179,8 +179,10 @@ func generatedCheckerOverlap(runtime: TeaQLRuntime, service: SQLiteDataService, 
         try require(shared === other && good.teaqlEntityRoot !== bad.teaqlEntityRoot
             && goodReference.teaqlEntityRoot !== badReference.teaqlEntityRoot, "shared snapshots must not share graph ownership")
         good.updateDescription("accepted-root-\(nonce)")
-        good.orderItemList[0].updateName(privateName)
-        _ = good.orderItemList[0].auditAs("accepted child responsibility")
+        var acceptedChild = good.orderItemList[0]
+        acceptedChild.updateName(privateName)
+        _ = acceptedChild.auditAs("accepted child responsibility")
+        good.orderItemList.set(0, acceptedChild)
         bad.updateDescription("rejected-pending-\(nonce)")
         var missing = try await Q.orderItems().comment("initialize incomplete Checker child")
             .purpose("verify a real missing-required-field rejection").newEntity(context)

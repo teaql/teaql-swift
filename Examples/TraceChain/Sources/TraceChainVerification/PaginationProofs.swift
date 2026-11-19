@@ -154,8 +154,10 @@ func generatedPaginationProofs(runtime: TeaQLRuntime, service: SQLiteDataService
 
     var cleanPage = try await loadPage(context, ids: ids, comment: "reload independently persisted page")
     var clean = cleanPage[0]
-    clean.orderItemList[0].updateName("saved paginated descendant")
-    _ = clean.orderItemList[0].auditAs("edit page descendant")
+    var changedChild = clean.orderItemList[0]
+    changedChild.updateName("saved paginated descendant")
+    _ = changedChild.auditAs("edit page descendant")
+    clean.orderItemList.set(0, changedChild)
     let childID = clean.orderItemList[0].id
     await commands.clear(); await sql.enableAll(); await audit.clear(); policy.clear()
     _ = try await clean.auditAs("save clean page ancestor").save(context)

@@ -65,7 +65,7 @@ func normativeGraph(
     shipment.updateCustomerOrder(base)
     shipment.updateReferenceCode("TRACE-SHIPMENT")
     _ = shipment.auditAs("dispatch shipment")
-    root.orderItemList = [available, unavailable]
+    root.orderItemList = SmartList([available, unavailable])
     root.paymentList.append(pay)
     root.shipmentList.append(shipment)
     await audit.clear(); await sql.enableAll(); await commands.clear(commitBarrier: true)

@@ -21,7 +21,9 @@ func generatedLoadedPrivacy(_ context: UserContext, commands: CommandCapture, sq
         // Both nodes must really change in both rounds. Reusing the same parent
         // value is correctly discarded as a restored/no-op ledger intention.
         loaded.updateDescription("ordinary public description \(index + 1)")
-        loaded.orderItemList[0].updateName(new)
+        var privateChild = loaded.orderItemList[0]
+        privateChild.updateName(new)
+        loaded.orderItemList.set(0, privateChild)
         await sql.enableAll(); await audit.clear(); await commands.clear(commitBarrier: true)
         let reason = "page one replace \(old) with \(new)"
         _ = try await loaded.auditAs(reason).save(context)

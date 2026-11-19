@@ -170,8 +170,10 @@ func sameIDVersions(_ context: UserContext, commands: CommandCapture, sql: SQLEx
     else { throw TeaQLError.execution("same-ID graph missing") }
     try require(loaded.version == 2 && loaded.paymentList[0].version == 1, "precondition versions are not 2/1")
     loaded.updateDescription("typed root update")
-    loaded.paymentList[0].updateReferenceCode("TRACE-TYPED-UPDATED")
-    _ = loaded.paymentList[0].auditAs("authorize typed payment")
+    var updatedPayment = loaded.paymentList[0]
+    updatedPayment.updateReferenceCode("TRACE-TYPED-UPDATED")
+    _ = updatedPayment.auditAs("authorize typed payment")
+    loaded.paymentList.set(0, updatedPayment)
     await commands.clear(); await sql.enableAll(); await audit.clear()
     _ = try await loaded.auditAs("submit typed order").save(context)
     let parent = NodeExpectation(type: "CustomerOrder", id: identity, reason: "submit typed order")

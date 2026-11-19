@@ -183,9 +183,13 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
 
     var target = persisted[0], foreign = persisted[1]
     foreign.updateDescription("unsaved foreign root")
-    foreign.orderItemList[1].updateName("unsaved unrelated sibling")
-    foreign.orderItemList[0].updateName("moved reached child")
-    _ = foreign.orderItemList[0].auditAs("move reached child")
+    var unrelatedSibling = foreign.orderItemList[1]
+    unrelatedSibling.updateName("unsaved unrelated sibling")
+    foreign.orderItemList.set(1, unrelatedSibling)
+    var reachedChild = foreign.orderItemList[0]
+    reachedChild.updateName("moved reached child")
+    _ = reachedChild.auditAs("move reached child")
+    foreign.orderItemList.set(0, reachedChild)
     let sourceLedger = foreign.teaqlEntityRoot, sourceBefore = sourceLedger.snapshot()
     let movedID = foreign.orderItemList[0].id
     target.orderItemList.append(foreign.orderItemList[0])
@@ -209,8 +213,10 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
 
     var clean = reachedReload[0]
     let parentVersion = clean.version, changedID = clean.orderItemList[0].id
-    clean.orderItemList[0].updateName("clean ancestor child edit")
-    _ = clean.orderItemList[0].auditAs("edit one descendant")
+    var changedChild = clean.orderItemList[0]
+    changedChild.updateName("clean ancestor child edit")
+    _ = changedChild.auditAs("edit one descendant")
+    clean.orderItemList.set(0, changedChild)
     await commands.clear(); await sql.enableAll(); await audit.clear(); policy.clear()
     _ = try await clean.auditAs("save clean ancestor graph").save(context)
     try checkObservedGraph([key("OrderItem", changedID): [NodeExpectation(type: "CustomerOrder", id: firstID, reason: "save clean ancestor graph"),
@@ -239,7 +245,7 @@ func sharedOwnershipProofs(runtime: TeaQLRuntime, service: SQLiteDataService, ba
     old = try OrderItem.from(record: oldSnapshot.record)
     old.updateName("old version pending"); current.updateName("current version pending")
     let oldBefore = old.teaqlEntityRoot.snapshot(), currentBefore = current.teaqlEntityRoot.snapshot()
-    var conflictRoot = cleanReload[0]; conflictRoot.orderItemList = [old, current]
+    var conflictRoot = cleanReload[0]; conflictRoot.orderItemList = SmartList([old, current])
     await commands.clear(); await sql.enableAll(); await audit.clear(); policy.clear()
     var rejected = false
     do { _ = try await conflictRoot.auditAs("reject mixed versions").save(context) }
