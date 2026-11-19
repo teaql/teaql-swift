@@ -50,10 +50,12 @@ async function main(){
     }
     const swift=process.env.SWIFT_EXE||'swift',env={...process.env,TEAQL_NATURAL_MESSAGES_DB:path.join(output,'fixture.sqlite'),TEAQL_TELEMETRY_ENABLED:'false'};
     async function run(command,log,timeout=300000,cwd=work){
-      const file=path.join(output,log),fd=fs.openSync(file,'wx');let result;
-      try{result=await runner.run(command,{cwd,env,timeout,stdio:['ignore',fd,fd]});}finally{fs.closeSync(fd);}
-      const bytes=fs.readFileSync(file);receipt.commands.push({command,log,exitCode:result.status,signal:result.signal,logSha256:sha(bytes)});
-      assert.equal(result.status,0,bytes.toString().slice(-14000));return bytes.toString();
+      const file=path.join(output,log),fd=fs.openSync(file,'wx'),stderrLog=log.replace(/\.log$/,'.stderr.log');
+      const errorFile=path.join(output,stderrLog),err=fs.openSync(errorFile,'wx');let result;
+      try{result=await runner.run(command,{cwd,env,timeout,stdio:['ignore',fd,err]});}finally{fs.closeSync(fd);fs.closeSync(err);}
+      const bytes=fs.readFileSync(file),diagnostics=fs.readFileSync(errorFile);
+      receipt.commands.push({command,log,exitCode:result.status,signal:result.signal,logSha256:sha(bytes),stderrLog,stderrLogSha256:sha(diagnostics)});
+      assert.equal(result.status,0,bytes.toString().slice(-10000)+diagnostics.toString().slice(-4000));return bytes.toString();
     }
     if(!exampleOnly)await run([swift,'test','--package-path',work,'--scratch-path',path.join(scratch,'build'),'--jobs','2',...(focused?[]:['--skip-update','--force-resolved-versions'])], 'native-tests.log',focused?240000:900000);
     if(example){
@@ -73,7 +75,9 @@ async function main(){
       const pins=JSON.parse(fs.readFileSync(path.join(consumer,'Package.resolved'))),original=JSON.parse(fs.readFileSync(path.join(work,'Package.resolved')));
       for(const pin of pins.pins){const source=original.pins.find(p=>p.identity===pin.identity);assert(source,pin.identity);assert.deepEqual(pin.state,source.state);}
       receipt.dependenciesMatchRuntimePins=true;
-      const description=JSON.parse(await run([swift,'package',...flags,'describe','--type','json'],'runtime-origin.log',120000,consumer));
+      const descriptionOutput=await run([swift,'package',...flags,'describe','--type','json'],'runtime-origin.log',120000,consumer);
+      const jsonStart=descriptionOutput.indexOf('{');assert(jsonStart>=0,'Swift package describe returned no JSON object');
+      const description=JSON.parse(descriptionOutput.slice(jsonStart));
       assert(description.dependencies.some(d=>d.path===work));receipt.localSourceDependency=true;
       const bin=(await run([swift,'build',...flags,'--show-bin-path'],'binary-path.log',120000,consumer)).trim();assert(bin.startsWith(build+path.sep));
       const binary=path.join(bin,'NaturalMessagesExample');receipt.binarySha256=sha(fs.readFileSync(binary));
