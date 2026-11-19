@@ -16,23 +16,23 @@
     "Sources/GeneratedTeaQL/Requests/QueryRecordRequest.swift": "aa8f9de6472cfe97f7fb930c16dbbcd71c8248effd39e0c5013022b43c4c07b4",
     "Sources/GeneratedTeaQL/RuntimeModule.swift": "e8691262ba043613f5087efd946fcd5b0c1d60ddbaf00a087b45cb9853ed91c4"
   },
-  "generatedManifestSha256": "550a912edae75064f6c185321863836549907ddc0d0ea782fbd4f39be23c5168",
-  "generationReceipt": "teaql-conformance/evidence/2026-11-19-runtime-examples-refresh/generation-unified-current-source/swift/QueryGrouping/model/receipt.json",
-  "generatorCommit": "19feda8a0608d7c7e0d64c7d9ec371c9021000fd",
-  "generatorJarSHA256": "dc6e26b561f618e1f9574c5c3b4c03b7a21da9ca630cc73a78ae8ccd0d89bd7e",
-  "generatorRelease": "unreleased-source-19feda8a",
+  "generatedManifestSha256": "8d6a35fcc8bb0eef0e47e7c01a11705ad022fba84aab9a84e1618b46f47372fc",
+  "generationReceipt": "teaql-conformance/evidence/2026-11-19-runtime-examples-refresh/generation-unified-intent-current-source/swift/QueryGrouping/model/receipt.json",
+  "generatorCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+  "generatorJarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+  "generatorRelease": "unreleased-source-021b1ed8",
   "modelSha256": "61aabdcd49fdaba722debf5c200738e1878fdf26776ba30268c3481737eb73e2",
   "modelSource": "Examples/QueryGrouping/model.xml",
-  "previousFixtureManifestSha256": "4e4a0f5e30a7159045605e980785f960872a50c367c8e45ddde2b62338d469c3",
+  "previousFixtureManifestSha256": "368227bd80e72a539df960d7d8597570a167a659a01e671176bd3dfe850d4c46",
   "previousOrigin": {
-    "commit": "17ce9be60918625dd18c05a8f44f53ce5d3b7996",
+    "commit": "ab9722b6d31a65d13ad66ccc3a361cd6f4f2425b",
     "path": "Examples/QueryGrouping/Generated/fixture-manifest.json"
   },
-  "producerReceiptSha256": "8776f7068857af0f5b4909e912ccacc6df8c969f8db36976762dff3a71f37471",
+  "producerReceiptSha256": "a60b6c2edec0b05ecdf7f7ca161d1f0aef11de51766a784b13aa02f21d9a65b3",
   "producerSource": {
-    "commit": "19feda8a0608d7c7e0d64c7d9ec371c9021000fd",
-    "jarSHA256": "dc6e26b561f618e1f9574c5c3b4c03b7a21da9ca630cc73a78ae8ccd0d89bd7e",
-    "release": "unreleased-source-19feda8a"
+    "commit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+    "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+    "release": "unreleased-source-021b1ed8"
   },
   "schema": "teaql.retained-example-fixture/v1"
 }
