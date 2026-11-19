@@ -62,7 +62,7 @@ private final class RendererCalls: @unchecked Sendable {
       queryExecutor: observer, mutationExecutor: observer, requestPolicy: RequestPolicy { $0 }, auditSink: observer,
       querySQLLogEnabled: false, mutationSQLLogEnabled: false, businessClock: clock, internalIDGenerator: observer)
     for name in ["first", "second"] {
-      var entry = try Q.entries().comment("Prepare an entry").purpose("Build the bounded validation graph").newEntity(context)
+      var entry = try await Q.entries().comment("Prepare an entry").purpose("Build the bounded validation graph").newEntity(context)
       entry.updateCatalog(rootID); entry.updateName(name)
       _ = try await entry.auditAs("Create an entry with generated audited Save").save(context)
     }
