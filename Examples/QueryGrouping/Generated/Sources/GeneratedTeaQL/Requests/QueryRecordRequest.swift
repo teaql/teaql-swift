@@ -1401,47 +1401,47 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withRequiredDateIs(_ value: Date) -> Self {
-        adding(.equal("requiredDate", .date(value)))
+        adding(.equal("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withRequiredDateIn(_ values: [Date]) -> Self {
-        adding(.inList("requiredDate", values.map { .date($0) }))
+        adding(.inList("requiredDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withRequiredDateIsNot(_ value: Date) -> Self {
-        adding(.notEqual("requiredDate", .date(value)))
+        adding(.notEqual("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withRequiredDateNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("requiredDate", values.map { .date($0) }))
+        adding(.notInList("requiredDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withRequiredDateGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("requiredDate", .date(value)))
+        adding(.greaterThan("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withRequiredDateGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("requiredDate", .date(value)))
+        adding(.greaterThanOrEqual("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withRequiredDateLessThan(_ value: Date) -> Self {
-        adding(.lessThan("requiredDate", .date(value)))
+        adding(.lessThan("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withRequiredDateLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("requiredDate", .date(value)))
+        adding(.lessThanOrEqual("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withRequiredDateBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("requiredDate", .date(lower), .date(upper)))
+        adding(.between("requiredDate", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
@@ -1457,47 +1457,47 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withOptionalDateIs(_ value: Date) -> Self {
-        adding(.equal("optionalDate", .date(value)))
+        adding(.equal("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOptionalDateIn(_ values: [Date]) -> Self {
-        adding(.inList("optionalDate", values.map { .date($0) }))
+        adding(.inList("optionalDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withOptionalDateIsNot(_ value: Date) -> Self {
-        adding(.notEqual("optionalDate", .date(value)))
+        adding(.notEqual("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOptionalDateNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("optionalDate", values.map { .date($0) }))
+        adding(.notInList("optionalDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withOptionalDateGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("optionalDate", .date(value)))
+        adding(.greaterThan("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOptionalDateGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("optionalDate", .date(value)))
+        adding(.greaterThanOrEqual("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOptionalDateLessThan(_ value: Date) -> Self {
-        adding(.lessThan("optionalDate", .date(value)))
+        adding(.lessThan("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOptionalDateLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("optionalDate", .date(value)))
+        adding(.lessThanOrEqual("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOptionalDateBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("optionalDate", .date(lower), .date(upper)))
+        adding(.between("optionalDate", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
@@ -2474,9 +2474,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByQueryGroup() -> Self {
         var copy = self
         copy.query.groupBy.append("queryGroup")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByQueryGroupAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("queryGroup", as: alias)
         return copy
     }
 
@@ -2488,9 +2502,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredTextAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredText", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalText() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalText")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalTextAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalText", as: alias)
         return copy
     }
 
@@ -2502,9 +2530,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredIntegerAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredInteger", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalInteger() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalInteger")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalIntegerAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalInteger", as: alias)
         return copy
     }
 
@@ -2516,9 +2558,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredLongAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredLong", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalLong() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalLong")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalLongAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalLong", as: alias)
         return copy
     }
 
@@ -2530,9 +2586,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredDecimalAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredDecimal", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalDecimal() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalDecimal")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalDecimalAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalDecimal", as: alias)
         return copy
     }
 
@@ -2544,9 +2614,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredFloatAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredFloat", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalFloat() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalFloat")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalFloatAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalFloat", as: alias)
         return copy
     }
 
@@ -2558,9 +2642,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredDoubleAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredDouble", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalDouble() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalDouble")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalDoubleAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalDouble", as: alias)
         return copy
     }
 
@@ -2572,9 +2670,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredDateAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredDate", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalDate() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalDate")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalDateAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalDate", as: alias)
         return copy
     }
 
@@ -2586,9 +2698,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredTime", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalTime() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalTime")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalTime", as: alias)
         return copy
     }
 
@@ -2600,9 +2726,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByRequiredTimestampAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requiredTimestamp", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByOptionalTimestamp() -> Self {
         var copy = self
         copy.query.groupBy.append("optionalTimestamp")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByOptionalTimestampAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("optionalTimestamp", as: alias)
         return copy
     }
 
@@ -2614,6 +2754,13 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByActiveAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("active", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByReviewed() -> Self {
         var copy = self
         copy.query.groupBy.append("reviewed")
@@ -2621,9 +2768,23 @@ public struct QueryRecordRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByReviewedAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("reviewed", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -2652,9 +2813,10 @@ public extension QueryRecordRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> QueryRecord {
+    func newEntity(_ context: UserContext) async throws -> QueryRecord {
         try ensureIntent()
-        return context.initializeEntity("QueryRecord", QueryRecord())
+        let id = try await context.generateInternalID(for: "QueryRecord")
+        return context.initializeEntity("QueryRecord", try QueryRecord.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<QueryRecord> {

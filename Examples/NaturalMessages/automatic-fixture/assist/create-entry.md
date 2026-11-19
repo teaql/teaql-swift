@@ -27,7 +27,7 @@ public func createEntry(
     _ input: CreateEntryInput,
     context: UserContext
 ) async throws -> Entry {
-    var entity = try Q.entries()
+    var entity = try await Q.entries()
         .comment("what: initialize entry")
         .purpose("why: create entry")
         .newEntity(context)
@@ -44,7 +44,10 @@ public func createEntry(
 Only the generated updater methods shown above are writable. Constant relation
 candidate methods, when present, are also generated and must be copied exactly:
 
-By default the runtime allocates the new ID. A trusted migration or deterministic
+The async factory reserves a nonzero ID through the Context-selected allocator
+before returning. Allocation errors propagate without an entity or insert intent;
+creation does not save business data. Do not remove `await` or allocate a local
+fallback ID. A trusted migration or deterministic
 fixture may set an explicit ID using `entity.updateId(100)` before saving; never
 derive it from untrusted input. ID and version are not ordinary writable fields.
 Swift entities have value semantics: keep or return the value produced by

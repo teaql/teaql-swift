@@ -478,9 +478,23 @@ public struct OrderItemRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCustomerOrder() -> Self {
         var copy = self
         copy.query.groupBy.append("customerOrder")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCustomerOrderAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("customerOrder", as: alias)
         return copy
     }
 
@@ -492,9 +506,23 @@ public struct OrderItemRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -523,9 +551,10 @@ public extension OrderItemRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> OrderItem {
+    func newEntity(_ context: UserContext) async throws -> OrderItem {
         try ensureIntent()
-        return context.initializeEntity("OrderItem", OrderItem())
+        let id = try await context.generateInternalID(for: "OrderItem")
+        return context.initializeEntity("OrderItem", try OrderItem.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderItem> {

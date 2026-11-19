@@ -24,11 +24,9 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         }
     }
     private var _loadedFields: Set<String> = []
-    public var teaqlEntityRoot = EntityRoot()
+    public var teaqlEntityRoot: EntityRoot
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
 
-    private static let teaqlIDLock = NSLock()
-    nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "OrderSearchPreset", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
@@ -39,6 +37,25 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         init(_ value: String) { stringValue = value }
         init?(stringValue: String) { self.init(stringValue) }
         init?(intValue: Int) { return nil }
+    }
+
+    // Reverse relations contain finite value graphs. Inspect every value view;
+    // deduplicating only by ID could hide a separate view's pending descendant.
+    func teaqlHasPendingGraph() -> Bool {
+        let reserved = EntityKey(entity: Self.descriptor.name, id: .int(teaqlLedgerID))
+        if teaqlEntityRoot.hasPending(teaqlEntityKey) || teaqlEntityRoot.hasPending(reserved) { return true }
+        return false
+    }
+
+    func teaqlIsCancelledNew() throws -> Bool {
+        let key = teaqlEntityKey
+        let reserved = EntityKey(entity: Self.descriptor.name, id: .int(teaqlLedgerID))
+        guard teaqlEntityRoot.isNew(reserved),
+            teaqlEntityRoot.isDeleted(key) || teaqlEntityRoot.isDeleted(reserved) else { return false }
+        guard id > 0, id == teaqlLedgerID, version == 0, teaqlLoadedSnapshot == nil else {
+            throw EntityCreationError(entityType: Self.descriptor.name)
+        }
+        return true
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -54,7 +71,7 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public init(from decoder: Decoder) throws {
-        self.init()
+        self.init(teaqlHydrationRoot: EntityRoot())
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.id) {
@@ -112,11 +129,9 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         dynamicProperties = QueryProjectionSnapshot(record: aliases)
         // External JSON decoding owns a read ledger, never a provider snapshot.
-        self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
         // External presentation JSON is not a trusted provider snapshot.
         self.teaqlLoadedSnapshot = nil
-        if id == 0 { teaqlEntityRoot.markAsNew(teaqlEntityKey) }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -156,10 +171,10 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         try dynamicProperties.encode(to: encoder)
     }
 
-    public init() {
-        Self.teaqlIDLock.lock(); Self.teaqlNextTemporaryID -= 1; teaqlLedgerID = Self.teaqlNextTemporaryID; Self.teaqlIDLock.unlock()
-        _loadedFields = Set(["id", "name", "filterJson", "requestId", "ownerUserId", "commercePlatform", "createTime", "updateTime", "version"])
-        teaqlEntityRoot.markAsNew(teaqlEntityKey)
+    /// Read construction is private and owns no insertion intention.
+    /// Applications create through the Context-aware generated Q factory.
+    private init(teaqlHydrationRoot: EntityRoot) {
+        self.teaqlEntityRoot = teaqlHydrationRoot
     }
 
     public static let descriptor = EntityDescriptor(
@@ -187,9 +202,7 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
-        var entity = Self()
-        // Discard the constructor's new-entity ledger during hydration.
-        entity.teaqlEntityRoot = root
+        var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -235,6 +248,7 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public mutating func teaqlAttachRoot(_ root: EntityRoot) throws {
+        if try teaqlIsCancelledNew() { return }
         if teaqlEntityRoot !== root && teaqlEntityRoot.hasPending(teaqlEntityKey) {
             try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
             teaqlEntityRoot = root
@@ -304,6 +318,18 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
             saved._loadedFields.insert("commercePlatformEntity")
         }
         return saved
+    }
+
+    /// Construct only after the Context-selected allocator succeeds.
+    static func teaqlNewWithID(_ value: Int64) throws -> Self {
+        guard value > 0 else { throw InternalIDError.invalidValue(value) }
+        var entity = Self(teaqlHydrationRoot: EntityRoot())
+        entity.id = value
+        entity.teaqlLedgerID = value
+        entity._loadedFields = Set(["id", "name", "filterJson", "requestId", "ownerUserId", "commercePlatform", "createTime", "updateTime", "version"])
+        entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
+        entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
+        return entity
     }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
@@ -423,6 +449,7 @@ public struct OrderSearchPresetAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> OrderSearchPreset {
         _ = try MutationIntent(comment: reason)
+        if try entity.teaqlIsCancelledNew() { throw TeaQLError.execution("Cannot save a cancelled new root") }
         try teaqlValidateLoadedIdentities()
         // Freeze an invocation-owned value graph before reviewing it. Attach
         // reached pending children in the value copy, not just in loop locals,
@@ -439,11 +466,11 @@ public struct OrderSearchPresetAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderSearchPreset", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderSearchPreset", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -460,6 +487,10 @@ public struct OrderSearchPresetAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> OrderSearchPreset {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
+        if try entity.teaqlIsCancelledNew() { return entity }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -467,14 +498,17 @@ public struct OrderSearchPresetAudited: Sendable {
 
     /// Check all original identities without attaching ledgers or changing FKs.
     func teaqlValidateLoadedIdentities() throws {
+        if try entity.teaqlIsCancelledNew() { return }
         try AuditedEntity(entity: entity, reason: reason).validateLoadedIdentity()
     }
 
     func teaqlNormalizeGraph() throws {
+        if try entity.teaqlIsCancelledNew() { return }
         LoadedScalarRestoration.discardRestoredFields(of: entity)
     }
 
     func teaqlValidateInputGraph() throws -> Bool {
+        if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -508,7 +542,9 @@ public struct OrderSearchPresetAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
+        if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {

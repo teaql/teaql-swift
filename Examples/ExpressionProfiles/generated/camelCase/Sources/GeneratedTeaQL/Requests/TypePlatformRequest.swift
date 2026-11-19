@@ -1429,6 +1429,13 @@ public struct TypePlatformRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByName() -> Self {
         var copy = self
         copy.query.groupBy.append("name")
@@ -1436,9 +1443,23 @@ public struct TypePlatformRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -1467,9 +1488,10 @@ public extension TypePlatformRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> TypePlatform {
+    func newEntity(_ context: UserContext) async throws -> TypePlatform {
         try ensureIntent()
-        return context.initializeEntity("TypePlatform", TypePlatform())
+        let id = try await context.generateInternalID(for: "TypePlatform")
+        return context.initializeEntity("TypePlatform", try TypePlatform.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<TypePlatform> {

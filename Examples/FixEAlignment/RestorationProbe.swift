@@ -165,8 +165,10 @@ enum RestorationProbe {
           .limit(1).comment("Preserve sparse geometry when the final graph is empty")
           .purpose("A no-op is not a reload").executeForList(current)
         guard var root = roots.first else { throw TeaQLError.execution("Missing sparse graph") }
-        root.purchaseOrderList[0].updateContactPhone("temporary")
-        root.purchaseOrderList[0].updateContactPhone(phone)
+        var restoredChild = root.purchaseOrderList[0]
+        restoredChild.updateContactPhone("temporary")
+        restoredChild.updateContactPhone(phone)
+        try require(root.purchaseOrderList.set(0, restoredChild), "Missing selected restorable child")
         graphJSON = try json(root); graph = root
       case "deletion-not-cancelled":
         row.updateContactPhone("temporary"); row.updateContactPhone(phone)
@@ -181,7 +183,10 @@ enum RestorationProbe {
         if name == "clean-parent-dirty-child" {
           try require(row.orderItemList.count == 1, "Missing selected child")
           childID = row.orderItemList[0].id
-          row.orderItemList[0].updateProductName("Restoration genuine child edit"); expectedMutations = 1
+          var dirtyChild = row.orderItemList[0]
+          dirtyChild.updateProductName("Restoration genuine child edit")
+          try require(row.orderItemList.set(0, dirtyChild), "Missing selected dirty child")
+          expectedMutations = 1
         }
       }
       let before = try physical(path), pending = row.teaqlEntityRoot.change(row.teaqlEntityKey)

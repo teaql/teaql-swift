@@ -960,9 +960,23 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByName() -> Self {
         var copy = self
         copy.query.groupBy.append("name")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
         return copy
     }
 
@@ -974,9 +988,23 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByFilterJsonAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("filterJson", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByRequestId() -> Self {
         var copy = self
         copy.query.groupBy.append("requestId")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByRequestIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("requestId", as: alias)
         return copy
     }
 
@@ -988,9 +1016,23 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByOwnerUserIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("ownerUserId", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCommercePlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("commercePlatform")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCommercePlatformAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("commercePlatform", as: alias)
         return copy
     }
 
@@ -1002,6 +1044,13 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByCreateTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("createTime", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByUpdateTime() -> Self {
         var copy = self
         copy.query.groupBy.append("updateTime")
@@ -1009,9 +1058,23 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByUpdateTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("updateTime", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -1040,9 +1103,10 @@ public extension OrderSearchPresetRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> OrderSearchPreset {
+    func newEntity(_ context: UserContext) async throws -> OrderSearchPreset {
         try ensureIntent()
-        return context.initializeEntity("OrderSearchPreset", OrderSearchPreset())
+        let id = try await context.generateInternalID(for: "OrderSearchPreset")
+        return context.initializeEntity("OrderSearchPreset", try OrderSearchPreset.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderSearchPreset> {

@@ -630,9 +630,23 @@ public struct EntryRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCatalog() -> Self {
         var copy = self
         copy.query.groupBy.append("catalog")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCatalogAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("catalog", as: alias)
         return copy
     }
 
@@ -644,9 +658,23 @@ public struct EntryRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("name", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByCreateTime() -> Self {
         var copy = self
         copy.query.groupBy.append("createTime")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByCreateTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("createTime", as: alias)
         return copy
     }
 
@@ -658,9 +686,23 @@ public struct EntryRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByUpdateTimeAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("updateTime", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -689,9 +731,10 @@ public extension EntryRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> Entry {
+    func newEntity(_ context: UserContext) async throws -> Entry {
         try ensureIntent()
-        return context.initializeEntity("Entry", Entry())
+        let id = try await context.generateInternalID(for: "Entry")
+        return context.initializeEntity("Entry", try Entry.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Entry> {

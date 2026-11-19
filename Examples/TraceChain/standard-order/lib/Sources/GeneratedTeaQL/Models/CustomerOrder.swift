@@ -42,11 +42,9 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         }
     }
     private var _loadedFields: Set<String> = []
-    public var teaqlEntityRoot = EntityRoot()
+    public var teaqlEntityRoot: EntityRoot
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
 
-    private static let teaqlIDLock = NSLock()
-    nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "CustomerOrder", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
@@ -57,6 +55,30 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         init(_ value: String) { stringValue = value }
         init?(stringValue: String) { self.init(stringValue) }
         init?(intValue: Int) { return nil }
+    }
+
+    // Reverse relations contain finite value graphs. Inspect every value view;
+    // deduplicating only by ID could hide a separate view's pending descendant.
+    func teaqlHasPendingGraph() -> Bool {
+        let reserved = EntityKey(entity: Self.descriptor.name, id: .int(teaqlLedgerID))
+        if teaqlEntityRoot.hasPending(teaqlEntityKey) || teaqlEntityRoot.hasPending(reserved) { return true }
+        if orderItemList.contains(where: { $0.teaqlHasPendingGraph() }) { return true }
+        return false
+    }
+
+    func teaqlIsCancelledNew() throws -> Bool {
+        let key = teaqlEntityKey
+        let reserved = EntityKey(entity: Self.descriptor.name, id: .int(teaqlLedgerID))
+        guard teaqlEntityRoot.isNew(reserved),
+            teaqlEntityRoot.isDeleted(key) || teaqlEntityRoot.isDeleted(reserved) else { return false }
+        guard id > 0, id == teaqlLedgerID, version == 0, teaqlLoadedSnapshot == nil else {
+            throw EntityCreationError(entityType: Self.descriptor.name)
+        }
+        if orderItemList.contains(where: { $0.teaqlHasPendingGraph() }) {
+            throw CheckException([CheckResult(ruleID: "invalid_deletion_state", location: .property("id"),
+                message: "Cancelled new entity has pending descendants; explicit resolution is required", entityType: Self.descriptor.name)])
+        }
+        return true
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -71,7 +93,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public init(from decoder: Decoder) throws {
-        self.init()
+        self.init(teaqlHydrationRoot: EntityRoot())
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.id) {
@@ -134,11 +156,9 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         dynamicProperties = QueryProjectionSnapshot(record: aliases)
         // External JSON decoding owns a read ledger, never a provider snapshot.
-        self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
         // External presentation JSON is not a trusted provider snapshot.
         self.teaqlLoadedSnapshot = nil
-        if id == 0 { teaqlEntityRoot.markAsNew(teaqlEntityKey) }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -182,10 +202,10 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         try dynamicProperties.encode(to: encoder)
     }
 
-    public init() {
-        Self.teaqlIDLock.lock(); Self.teaqlNextTemporaryID -= 1; teaqlLedgerID = Self.teaqlNextTemporaryID; Self.teaqlIDLock.unlock()
-        _loadedFields = Set(["id", "customer", "status", "orderNumber", "orderDate", "totalAmount", "version"])
-        teaqlEntityRoot.markAsNew(teaqlEntityKey)
+    /// Read construction is private and owns no insertion intention.
+    /// Applications create through the Context-aware generated Q factory.
+    private init(teaqlHydrationRoot: EntityRoot) {
+        self.teaqlEntityRoot = teaqlHydrationRoot
     }
 
     public static let descriptor = EntityDescriptor(
@@ -211,9 +231,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
-        var entity = Self()
-        // Discard the constructor's new-entity ledger during hydration.
-        entity.teaqlEntityRoot = root
+        var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -288,6 +306,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public mutating func teaqlAttachRoot(_ root: EntityRoot) throws {
+        if try teaqlIsCancelledNew() { return }
         if teaqlEntityRoot !== root && teaqlEntityRoot.hasPending(teaqlEntityKey) {
             try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
             teaqlEntityRoot = root
@@ -362,10 +381,23 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if isLoaded("orderItemList"), _orderItemListResult.isLoaded {
             saved._orderItemListResult = _orderItemListResult.replacingData(
-                try _orderItemListResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
+                try _orderItemListResult.data.filter { !(try $0.teaqlIsCancelledNew()) }
+                    .map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("orderItemList")
         }
         return saved
+    }
+
+    /// Construct only after the Context-selected allocator succeeds.
+    static func teaqlNewWithID(_ value: Int64) throws -> Self {
+        guard value > 0 else { throw InternalIDError.invalidValue(value) }
+        var entity = Self(teaqlHydrationRoot: EntityRoot())
+        entity.id = value
+        entity.teaqlLedgerID = value
+        entity._loadedFields = Set(["id", "customer", "status", "orderNumber", "orderDate", "totalAmount", "version"])
+        entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
+        entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
+        return entity
     }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
@@ -488,6 +520,7 @@ public struct CustomerOrderAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> CustomerOrder {
         _ = try MutationIntent(comment: reason)
+        if try entity.teaqlIsCancelledNew() { throw TeaQLError.execution("Cannot save a cancelled new root") }
         try teaqlValidateLoadedIdentities()
         // Freeze an invocation-owned value graph before reviewing it. Attach
         // reached pending children in the value copy, not just in loop locals,
@@ -504,11 +537,11 @@ public struct CustomerOrderAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "CustomerOrder", preparing: { context, _ in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "CustomerOrder", preparing: { context, session in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context)
+            try teaqlPreflightGraph(context, session: session)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -525,11 +558,16 @@ public struct CustomerOrderAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> CustomerOrder {
+        guard try session.visitEntity(entity, phase: .write) else {
+            return try entity.teaqlRebuildSavedGraph(session.readback())
+        }
+        if try entity.teaqlIsCancelledNew() { return entity }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
             to: EntityKey(entity: "CustomerOrder", id: .int(saved.id)))
         for (index, var child) in entity.orderItemList.enumerated() {
+            if try child.teaqlIsCancelledNew() { continue }
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
             // The runtime resolves declared temporary references in its private
             // outgoing mutation. Never change a reviewed caller ledger here.
@@ -552,6 +590,7 @@ public struct CustomerOrderAudited: Sendable {
 
     /// Check all original identities without attaching ledgers or changing FKs.
     func teaqlValidateLoadedIdentities() throws {
+        if try entity.teaqlIsCancelledNew() { return }
         try AuditedEntity(entity: entity, reason: reason).validateLoadedIdentity()
         for child in entity.orderItemList {
             try OrderItemAudited(entity: child, reason: reason).teaqlValidateLoadedIdentities()
@@ -559,8 +598,10 @@ public struct CustomerOrderAudited: Sendable {
     }
 
     func teaqlNormalizeGraph() throws {
+        if try entity.teaqlIsCancelledNew() { return }
         LoadedScalarRestoration.discardRestoredFields(of: entity)
         for var child in entity.orderItemList {
+            if try child.teaqlIsCancelledNew() { continue }
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
             if child.customerOrder != entity.teaqlPreflightID {
                 child.updateCustomerOrder(entity.teaqlPreflightID)
@@ -571,6 +612,7 @@ public struct CustomerOrderAudited: Sendable {
     }
 
     func teaqlValidateInputGraph() throws -> Bool {
+        if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -596,6 +638,7 @@ public struct CustomerOrderAudited: Sendable {
             }
         }
         for (index, var child) in entity.orderItemList.enumerated() {
+            if try child.teaqlIsCancelledNew() { continue }
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
             if child.customerOrder != entity.teaqlPreflightID {
                 child.updateCustomerOrder(entity.teaqlPreflightID)
@@ -615,7 +658,9 @@ public struct CustomerOrderAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext) throws {
+    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
+        guard try session.visitEntity(entity, phase: .preflight) else { return }
+        if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -642,6 +687,10 @@ public struct CustomerOrderAudited: Sendable {
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)
         for (index, var child) in entity.orderItemList.enumerated() {
+            if try child.teaqlIsCancelledNew() {
+                try OrderItemAudited(entity: child, reason: reason).teaqlPreflightGraph(context, session: session)
+                continue
+            }
             try child.teaqlAttachRoot(entity.teaqlEntityRoot)
             if child.customerOrder != entity.teaqlPreflightID {
                 child.updateCustomerOrder(entity.teaqlPreflightID)
@@ -650,7 +699,7 @@ public struct CustomerOrderAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "customer_order", to: entity)
             }
-            do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
+            do { try OrderItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_item_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

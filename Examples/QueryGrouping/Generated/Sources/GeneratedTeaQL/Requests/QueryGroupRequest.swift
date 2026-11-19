@@ -1513,9 +1513,23 @@ public struct QueryGroupRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByIdAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("id", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByQueryPlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("queryPlatform")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByQueryPlatformAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("queryPlatform", as: alias)
         return copy
     }
 
@@ -1527,9 +1541,23 @@ public struct QueryGroupRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
+    public func groupByGroupNameAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("groupName", as: alias)
+        return copy
+    }
+
+    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
+        return copy
+    }
+
+    @discardableResult
+    public func groupByVersionAs(_ alias: String) -> Self {
+        var copy = self
+        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -1558,9 +1586,10 @@ public extension QueryGroupRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) throws -> QueryGroup {
+    func newEntity(_ context: UserContext) async throws -> QueryGroup {
         try ensureIntent()
-        return context.initializeEntity("QueryGroup", QueryGroup())
+        let id = try await context.generateInternalID(for: "QueryGroup")
+        return context.initializeEntity("QueryGroup", try QueryGroup.teaqlNewWithID(id))
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<QueryGroup> {

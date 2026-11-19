@@ -3,14 +3,14 @@
   "README.md": "6e61977a9f74997ee5a812a70db2d89a6d60288c8697d30d04c96fb8834615a9",
   "Sources/GeneratedTeaQL/E.swift": "65478e6c663ca3ab3e315e4a704f06028bb53d5d1a40d8fc24219c7a916b7f29",
   "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "46ccaefb72f3156d980d9c10265f0892c6fbbf73b9e46216eef6e5861fbde290",
-  "Sources/GeneratedTeaQL/Models/Catalog.swift": "7ddc87daf47017765323a5652ba23ec12fc58d68c515fd41a18639f394ebb691",
-  "Sources/GeneratedTeaQL/Models/Entry.swift": "2bcfc54fcb4759a49cb2c0b6090c974649565289f2d927ebc29d8885fab3e4bd",
+  "Sources/GeneratedTeaQL/Models/Catalog.swift": "dfe2781ef7dadd247390cb9e4c208d0ca1595229a3d852d823a988a5bdaff7a6",
+  "Sources/GeneratedTeaQL/Models/Entry.swift": "05495bc0472719e4b358aedfc210d9effaef01ff0e20a728f2f52ac05b23da6a",
   "Sources/GeneratedTeaQL/Q.swift": "05d020d02addffbfb653e31cc6675fe948ac034ca799e94785b8b24606421868",
   "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
-  "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift": "115842b820b1f20d52b0974323cf6360d79a83a7f6f22888ab346cfb27647d84",
-  "Sources/GeneratedTeaQL/Requests/EntryRequest.swift": "868ab9753e8c4efad50302112642fbfff4d898e34712871cfb5151383174b3a5",
-  "Sources/GeneratedTeaQL/RuntimeModule.swift": "8c3694c3ec1c32a442086e7b999f9ab5659722da5ed60989db1910be9334e676",
+  "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift": "252a61dff8ff7ffa850ccddb0dab30bc853eb279d229727d72048689a71d46b5",
+  "Sources/GeneratedTeaQL/Requests/EntryRequest.swift": "44012140bbdc946525cdee6c1ea0bfcc4195cb33fb5dddab964e2e7c82f6529a",
+  "Sources/GeneratedTeaQL/RuntimeModule.swift": "dca7063225f96ad16327cc56f0b384e6e7930d082fa1bd4b1045fb3a7f168f4d",
   "teaql-i18n.json": "8bbd8285869941b68b39a8c9ebe58965619fe00f8f5f0a34f9e4366a5b438ce5",
   "teaql/checker-model.json": "dbac03cd54b294e3e60a62752aeb170ad1ad722a7dfb8feb639c569ff3e73b1a",
-  "teaql/model-provenance.json": "713092d98415609d6c111ab9d9cc57cdcf5961842078197bb8f88573e4987e39"
+  "teaql/model-provenance.json": "b7258ff8e69db00a0119d03e41358d272756522caa89f8701ffc5744fae2a6fe"
 }
