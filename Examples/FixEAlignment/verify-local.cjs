@@ -47,7 +47,10 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
 ], swiftLanguageModes: [.v6])
 `;
   fs.writeFileSync(path.join(scratch, 'Package.swift'), manifest); fs.writeFileSync(path.join(evidence, 'consumer-Package.swift'), manifest);
-  const build = path.join(scratch, 'build'), flags = ['--package-path', scratch, '--scratch-path', build, '--jobs', '2'];
+  const runtimeLock = fs.readFileSync(path.join(repo, 'Package.resolved'));
+  fs.writeFileSync(path.join(scratch, 'Package.resolved'), runtimeLock);
+  report.runtimeResolutionSha256 = sha(runtimeLock);
+  const build = path.join(scratch, 'build'), flags = ['--package-path', scratch, '--scratch-path', build, '--jobs', '2', '--skip-update', '--force-resolved-versions'];
   const env = {...process.env, TEAQL_FIX_E_DB: path.join(evidence, 'fixture.sqlite')};
   async function run(command, log, timeout = 120000) {
     const file = path.join(evidence, log), stderrLog = log.replace(/\.log$/, '.stderr.log');
@@ -62,6 +65,7 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     assert.equal(result.status, 0, bytes.toString().slice(-6000) + diagnostics.toString().slice(-6000)); return bytes.toString();
   }
   await run(['swift', 'build', ...flags, '--product', 'FixEAlignment'], 'build.log', 540000);
+  assert.equal(sha(fs.readFileSync(path.join(scratch, 'Package.resolved'))), report.runtimeResolutionSha256, 'Runtime dependency pins changed');
   if (fs.existsSync(path.join(scratch, 'Package.resolved'))) fs.copyFileSync(path.join(scratch, 'Package.resolved'), path.join(evidence, 'Package.resolved'));
   const bin = (await run(['swift', 'build', ...flags, '--show-bin-path'], 'bin-path.log')).trim();
   assert(bin.startsWith(build + path.sep), 'execute only the actual owned Swift build');

@@ -47,8 +47,11 @@ async function main(){
    fs.mkdirSync(path.join(work,'Sources/ExpressionProfiles'),{recursive:true});fs.copyFileSync(path.join(EXAMPLE,'main.swift'),path.join(work,'Sources/ExpressionProfiles/main.swift'));report.applicationSha256=digest(path.join(EXAMPLE,'main.swift'));
    const manifest='// swift-tools-version: 6.0\nimport PackageDescription\nlet package=Package(name:"ExpressionProfiles",dependencies:[.package(name:"teaql-swift",path:'+JSON.stringify(REPO)+')],targets:[.target(name:"GeneratedTeaQL",dependencies:[.product(name:"TeaQLCore",package:"teaql-swift")],path:"generated/Sources/GeneratedTeaQL"),.executableTarget(name:"ExpressionProfiles",dependencies:["GeneratedTeaQL",.product(name:"TeaQLCore",package:"teaql-swift"),.product(name:"TeaQLSQLite",package:"teaql-swift")],path:"Sources/ExpressionProfiles")],swiftLanguageModes:[.v6])\n';
    fs.writeFileSync(path.join(work,'Package.swift'),manifest);fs.writeFileSync(path.join(output,profile,'consumer-Package.swift'),manifest);
-   const build=path.join(scratch,'build'),flags=['--package-path',work,'--scratch-path',build,'--jobs','2'];
+   fs.copyFileSync(path.join(REPO,'Package.resolved'),path.join(work,'Package.resolved'));
+   state.runtimeResolutionSha256=digest(path.join(work,'Package.resolved'));
+   const build=path.join(scratch,'build'),flags=['--package-path',work,'--scratch-path',build,'--jobs','2','--force-resolved-versions'];
    await run(profile,'build',['swift','build',...flags,'--product','ExpressionProfiles','--skip-update'],work,540000);
+   assert.equal(digest(path.join(work,'Package.resolved')),state.runtimeResolutionSha256,'Runtime dependency pins changed');
    const description=JSON.parse(await run(profile,'runtime-origin',['swift','package',...flags,'describe','--type','json'],work));
    assert(description.dependencies.some(d=>d.path===REPO));state.runtimeOrigin=description.dependencies;
    const bin=(await run(profile,'bin-path',['swift','build',...flags,'--show-bin-path'],work)).trim();assert(bin.startsWith(build+path.sep));const executable=path.join(bin,'ExpressionProfiles');assert(fs.existsSync(executable));
