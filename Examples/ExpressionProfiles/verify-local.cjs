@@ -33,10 +33,12 @@ async function main(){
   scratch=fs.mkdtempSync(path.join(os.tmpdir(),'teaql-'+LANGUAGE+'-expression-build-'));runner=createOwnedRunner();
   const env={...process.env,TMPDIR:scratch};
   async function run(profile,name,command,cwd,timeout=300000){
-   const folder=path.join(output,profile);fs.mkdirSync(folder,{recursive:true});const file=path.join(folder,name+'.log'),fd=fs.openSync(file,'wx');let result;
-   try{result=await runner.run(command,{cwd,env,timeout,stdio:['ignore',fd,fd]});}finally{fs.closeSync(fd);}
-   const log=fs.readFileSync(file,'utf8');report.commands.push({profile,name,command,exitCode:result.status,signal:result.signal,logSha256:digest(file)});
-   assert.equal(result.status,0,log.slice(-6000));assert.equal(result.signal,null);assert(runner.safeToClean);return log;
+   const folder=path.join(output,profile);fs.mkdirSync(folder,{recursive:true});const file=path.join(folder,name+'.log'),fd=fs.openSync(file,'wx');
+   const stderrLog=name+'.stderr.log',errorFile=path.join(folder,stderrLog),err=fs.openSync(errorFile,'wx');let result;
+   try{result=await runner.run(command,{cwd,env,timeout,stdio:['ignore',fd,err]});}finally{fs.closeSync(fd);fs.closeSync(err);}
+   const log=fs.readFileSync(file,'utf8'),diagnostics=fs.readFileSync(errorFile,'utf8');
+   report.commands.push({profile,name,command,exitCode:result.status,signal:result.signal,logSha256:digest(file),stderrLog,stderrLogSha256:digest(errorFile)});
+   assert.equal(result.status,0,log.slice(-6000)+diagnostics.slice(-3000));assert.equal(result.signal,null);assert(runner.safeToClean);return log;
   }
   for(const profile of PROFILES){
    const work=path.join(scratch,profile);fs.mkdirSync(work);env.TEAQL_EXPRESSION_PROFILE=profile;env.TEAQL_EXPRESSION_DB=path.join(output,profile,'fixture.sqlite');
@@ -52,7 +54,9 @@ async function main(){
    const build=path.join(scratch,'build'),flags=['--package-path',work,'--scratch-path',build,'--jobs','2','--force-resolved-versions'];
    await run(profile,'build',['swift','build',...flags,'--product','ExpressionProfiles','--skip-update'],work,540000);
    assert.equal(digest(path.join(work,'Package.resolved')),state.runtimeResolutionSha256,'Runtime dependency pins changed');
-   const description=JSON.parse(await run(profile,'runtime-origin',['swift','package',...flags,'describe','--type','json'],work));
+   const descriptionOutput=await run(profile,'runtime-origin',['swift','package',...flags,'describe','--type','json'],work);
+   const jsonStart=descriptionOutput.indexOf('{');assert(jsonStart>=0,'Swift package describe returned no JSON object');
+   const description=JSON.parse(descriptionOutput.slice(jsonStart));
    assert(description.dependencies.some(d=>d.path===REPO));state.runtimeOrigin=description.dependencies;
    const bin=(await run(profile,'bin-path',['swift','build',...flags,'--show-bin-path'],work)).trim();assert(bin.startsWith(build+path.sep));const executable=path.join(bin,'ExpressionProfiles');assert(fs.existsSync(executable));
    if(fs.existsSync(path.join(work,'Package.resolved')))fs.copyFileSync(path.join(work,'Package.resolved'),path.join(output,profile,'Package.resolved'));

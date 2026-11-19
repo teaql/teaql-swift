@@ -32,10 +32,12 @@ async function main(){try{
  fs.copyFileSync(lockfile,path.join(work,'Package.resolved'));report.runtimeResolutionSha256=sha(fs.readFileSync(lockfile));
  const flags=['--package-path',work,'--scratch-path',build,'--jobs','2'];
  const env={...process.env,TEAQL_CONTEXT_FIX_DB:path.join(evidence,'fixture.sqlite')};
- async function run(command,log,timeout=120000){const f=path.join(evidence,log),fd=fs.openSync(f,'wx');let result;
-  try{result=await runner.run(command,{cwd:work,env,timeout,stdio:['ignore',fd,fd]});}finally{fs.closeSync(fd);}
-  const bytes=fs.readFileSync(f);report.commands.push({command,exitCode:result.status,signal:result.signal,logSha256:sha(bytes)});
-  assert.equal(result.status,0,bytes.toString().slice(-9000));return bytes.toString();}
+ async function run(command,log,timeout=120000){const f=path.join(evidence,log),fd=fs.openSync(f,'wx');
+  const stderrLog=log.replace(/\.log$/,'.stderr.log'),errorFile=path.join(evidence,stderrLog),err=fs.openSync(errorFile,'wx');let result;
+  try{result=await runner.run(command,{cwd:work,env,timeout,stdio:['ignore',fd,err]});}finally{fs.closeSync(fd);fs.closeSync(err);}
+  const bytes=fs.readFileSync(f),diagnostics=fs.readFileSync(errorFile);
+  report.commands.push({command,exitCode:result.status,signal:result.signal,logSha256:sha(bytes),stderrLog,stderrLogSha256:sha(diagnostics)});
+  assert.equal(result.status,0,bytes.toString().slice(-6000)+diagnostics.toString().slice(-3000));return bytes.toString();}
  if(process.env.TEAQL_CONTEXT_FIX_UNIT_TESTS==='1'){
   await run(['swift','test','--package-path',repo,'--scratch-path',path.join(scratch,'unit-build'),'--jobs','2','--skip-update'], 'unit-tests.log',600000);
   report.completeRuntimeTests=true;
@@ -44,7 +46,9 @@ async function main(){try{
  const resolved=JSON.parse(fs.readFileSync(path.join(work,'Package.resolved'))),originalPins=JSON.parse(fs.readFileSync(lockfile));
  for(const pin of resolved.pins){const expected=originalPins.pins.find(p=>p.identity===pin.identity);assert(expected,'unexpected dependency '+pin.identity);assert.deepEqual(pin.state,expected.state,pin.identity);}
  fs.copyFileSync(path.join(work,'Package.resolved'),path.join(evidence,'Package.resolved'));report.dependenciesMatchRuntimePins=true;
- const description=JSON.parse(await run(['swift','package',...flags,'describe','--type','json'],'runtime-origin.log'));
+ const descriptionOutput=await run(['swift','package',...flags,'describe','--type','json'],'runtime-origin.log');
+ const jsonStart=descriptionOutput.indexOf('{');assert(jsonStart>=0,'Swift package describe returned no JSON object');
+ const description=JSON.parse(descriptionOutput.slice(jsonStart));
  assert(description.dependencies.some(d=>d.path===repo));report.localSourceDependency=true;
  const bin=(await run(['swift','build',...flags,'--show-bin-path'],'binary-path.log')).trim();assert(bin.startsWith(build+path.sep));
  const binary=path.join(bin,'ContextDerivedExample');assert(fs.existsSync(binary));report.binarySha256=sha(fs.readFileSync(binary));
