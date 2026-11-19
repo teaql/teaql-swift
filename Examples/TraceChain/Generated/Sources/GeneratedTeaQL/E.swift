@@ -79,7 +79,7 @@ public struct PlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_order_list"))
         }
-        return CustomerOrderListExpression(value.customerOrderList, root: root, path: accessPath)
+        return CustomerOrderListExpression(value.customerOrderList.data, root: root, path: accessPath)
     }
 }
 
@@ -170,7 +170,7 @@ public struct CustomerOrderExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_item_list"))
         }
-        return OrderItemListExpression(value.orderItemList, root: root, path: accessPath)
+        return OrderItemListExpression(value.orderItemList.data, root: root, path: accessPath)
     }
 
     public func paymentList() -> PaymentListExpression {
@@ -184,7 +184,7 @@ public struct CustomerOrderExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "payment_list"))
         }
-        return PaymentListExpression(value.paymentList, root: root, path: accessPath)
+        return PaymentListExpression(value.paymentList.data, root: root, path: accessPath)
     }
 
     public func shipmentList() -> ShipmentListExpression {
@@ -198,7 +198,7 @@ public struct CustomerOrderExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "shipment_list"))
         }
-        return ShipmentListExpression(value.shipmentList, root: root, path: accessPath)
+        return ShipmentListExpression(value.shipmentList.data, root: root, path: accessPath)
     }
 }
 
@@ -347,7 +347,7 @@ public struct PaymentExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "payment_attempt_list"))
         }
-        return PaymentAttemptListExpression(value.paymentAttemptList, root: root, path: accessPath)
+        return PaymentAttemptListExpression(value.paymentAttemptList.data, root: root, path: accessPath)
     }
 }
 

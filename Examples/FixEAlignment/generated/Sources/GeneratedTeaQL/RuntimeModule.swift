@@ -8,8 +8,8 @@ private struct TenantChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Tenant")) }
-        if let value = mutation.values["name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("name"), systemValue: "1", entityType: "Tenant")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "80", entityType: "Tenant")) }
+        if let value = mutation.values["name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("name"), systemValue: "1", entityType: "Tenant").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "80", entityType: "Tenant").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -37,27 +37,24 @@ private struct PurchaseOrderChecker: EntityChecker {
 
 
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "PurchaseOrder", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "PurchaseOrder", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "PurchaseOrder", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
         if (mutation.kind == .create && mutation.values["tenant"] == nil) || mutation.values["tenant"] == .null { results.append(CheckResult(ruleID: "required", location: .property("tenant"), entityType: "PurchaseOrder")) }
 
         if (mutation.kind == .create && mutation.values["contact_phone"] == nil) || mutation.values["contact_phone"] == .null { results.append(CheckResult(ruleID: "required", location: .property("contact_phone"), entityType: "PurchaseOrder")) }
-        if let value = mutation.values["contact_phone"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("contact_phone"), systemValue: "1", entityType: "PurchaseOrder")) }
-        if let value = mutation.values["contact_phone"]?.stringValue, value.count > 32 { results.append(CheckResult(ruleID: "max_length", location: .property("contact_phone"), systemValue: "32", entityType: "PurchaseOrder")) }
+        if let value = mutation.values["contact_phone"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("contact_phone"), systemValue: "1", entityType: "PurchaseOrder").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
+        if let value = mutation.values["contact_phone"]?.stringValue, value.count > 32 { results.append(CheckResult(ruleID: "max_length", location: .property("contact_phone"), systemValue: "32", entityType: "PurchaseOrder").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
-        if let value = mutation.values["internal_note"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("internal_note"), systemValue: "100", entityType: "PurchaseOrder")) }
+        if let value = mutation.values["internal_note"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("internal_note"), systemValue: "100", entityType: "PurchaseOrder").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "PurchaseOrder")) }
 
@@ -95,17 +92,14 @@ private struct OrderItemChecker: EntityChecker {
 
 
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderItem", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderItem", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderItem", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
@@ -114,8 +108,8 @@ private struct OrderItemChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["tenant"] == nil) || mutation.values["tenant"] == .null { results.append(CheckResult(ruleID: "required", location: .property("tenant"), entityType: "OrderItem")) }
 
         if (mutation.kind == .create && mutation.values["product_name"] == nil) || mutation.values["product_name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("product_name"), entityType: "OrderItem")) }
-        if let value = mutation.values["product_name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("product_name"), systemValue: "1", entityType: "OrderItem")) }
-        if let value = mutation.values["product_name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("product_name"), systemValue: "80", entityType: "OrderItem")) }
+        if let value = mutation.values["product_name"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("product_name"), systemValue: "1", entityType: "OrderItem").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
+        if let value = mutation.values["product_name"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("product_name"), systemValue: "80", entityType: "OrderItem").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["unit_price"] == nil) || mutation.values["unit_price"] == .null { results.append(CheckResult(ruleID: "required", location: .property("unit_price"), entityType: "OrderItem")) }
         if let value = mutation.values["unit_price"]?.decimalValue, !(value >= Self.unitPriceMinimum) { results.append(CheckResult(ruleID: "min", location: .property("unit_price"), systemValue: "0.01", entityType: "OrderItem")) }
@@ -154,7 +148,8 @@ public enum GeneratedRuntimeModule {
         contextRootFields: [
             "PurchaseOrder": ["tenant": "Tenant"],
             "OrderItem": ["tenant": "Tenant"]
-        ])
+        ],
+        checkerPresentation: try! CheckerPresentationModel(data: Data("{\"schema\":\"teaql.checker-model/v1\",\"revision\":\"sha256:cbc03c71084d5ff17fe312ca583e790e692d2ecb065fe3a55ec2398eb9189248\",\"entities\":{\"OrderItem\":{\"labels\":{\"en\":\"order item\"},\"fields\":[{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"product_name\",\"labels\":{\"en\":\"product name\"},\"aliases\":[\"ProductName\",\"productName\"]},{\"name\":\"purchase_order\",\"targetType\":\"PurchaseOrder\",\"labels\":{\"en\":\"purchase order\"},\"aliases\":[\"PurchaseOrder\",\"purchaseOrder\"]},{\"name\":\"tenant\",\"targetType\":\"Tenant\",\"labels\":{\"en\":\"tenant\"},\"aliases\":[\"Tenant\"]},{\"name\":\"unit_price\",\"labels\":{\"en\":\"unit price\"},\"aliases\":[\"UnitPrice\",\"unitPrice\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"PurchaseOrder\":{\"labels\":{\"en\":\"purchase order\"},\"fields\":[{\"name\":\"contact_phone\",\"labels\":{\"en\":\"contact phone\"},\"aliases\":[\"ContactPhone\",\"contactPhone\"]},{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"internal_note\",\"labels\":{\"en\":\"internal note\"},\"aliases\":[\"InternalNote\",\"internalNote\"]},{\"name\":\"order_item_list\",\"targetType\":\"OrderItem\",\"labels\":{\"en\":\"order item\"},\"aliases\":[\"OrderItemList\",\"orderItemList\"]},{\"name\":\"tenant\",\"targetType\":\"Tenant\",\"labels\":{\"en\":\"tenant\"},\"aliases\":[\"Tenant\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"Tenant\":{\"labels\":{\"en\":\"tenant\"},\"fields\":[{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"order_item_list\",\"targetType\":\"OrderItem\",\"labels\":{\"en\":\"order item\"},\"aliases\":[\"OrderItemList\",\"orderItemList\"]},{\"name\":\"purchase_order_list\",\"targetType\":\"PurchaseOrder\",\"labels\":{\"en\":\"purchase order\"},\"aliases\":[\"PurchaseOrderList\",\"purchaseOrderList\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]}}}".utf8)))
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?
@@ -169,7 +164,7 @@ public enum GeneratedRuntimeModule {
         let bootstrapContext = callerContext._generatedBootstrapContext()
         var domainRoot = try await Q.tenants().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
-            var created = try await Q.tenants().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            var created = try Q.tenants().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
             try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Tenant Name")
             do { domainRoot = try await created.auditAs("create generated Domain Root Tenant").save(bootstrapContext) }

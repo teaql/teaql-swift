@@ -79,7 +79,7 @@ public struct TypePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "scalar_type_probe_list"))
         }
-        return ScalarTypeProbeListExpression(value.scalarTypeProbeList, root: root, path: accessPath)
+        return ScalarTypeProbeListExpression(value.scalarTypeProbeList.data, root: root, path: accessPath)
     }
 }
 

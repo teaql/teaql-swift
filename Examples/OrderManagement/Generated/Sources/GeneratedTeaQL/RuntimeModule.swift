@@ -8,22 +8,19 @@ private struct CommercePlatformChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "CommercePlatform", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "CommercePlatform", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "CommercePlatform", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "CommercePlatform")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "CommercePlatform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "CommercePlatform").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["create_time"] == nil) || mutation.values["create_time"] == .null { results.append(CheckResult(ruleID: "required", location: .property("create_time"), entityType: "CommercePlatform")) }
 
@@ -40,25 +37,22 @@ private struct CustomerChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "Customer", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "Customer", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "Customer", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Customer")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Customer")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Customer").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["email"] == nil) || mutation.values["email"] == .null { results.append(CheckResult(ruleID: "required", location: .property("email"), entityType: "Customer")) }
-        if let value = mutation.values["email"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("email"), systemValue: "100", entityType: "Customer")) }
+        if let value = mutation.values["email"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("email"), systemValue: "100", entityType: "Customer").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["commerce_platform"] == nil) || mutation.values["commerce_platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("commerce_platform"), entityType: "Customer")) }
 
@@ -77,12 +71,12 @@ private struct OrderStatusChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "OrderStatus")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderStatus")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderStatus").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["code"] == nil) || mutation.values["code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("code"), entityType: "OrderStatus")) }
-        if let value = mutation.values["code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("code"), systemValue: "100", entityType: "OrderStatus")) }
+        if let value = mutation.values["code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("code"), systemValue: "100", entityType: "OrderStatus").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
-        if let value = mutation.values["color"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("color"), systemValue: "100", entityType: "OrderStatus")) }
+        if let value = mutation.values["color"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("color"), systemValue: "100", entityType: "OrderStatus").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         if (mutation.kind == .create && mutation.values["commerce_platform"] == nil) || mutation.values["commerce_platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("commerce_platform"), entityType: "OrderStatus")) }
@@ -98,22 +92,19 @@ private struct CustomerOrderChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "CustomerOrder", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "CustomerOrder", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "CustomerOrder", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
         if (mutation.kind == .create && mutation.values["order_number"] == nil) || mutation.values["order_number"] == .null { results.append(CheckResult(ruleID: "required", location: .property("order_number"), entityType: "CustomerOrder")) }
-        if let value = mutation.values["order_number"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("order_number"), systemValue: "100", entityType: "CustomerOrder")) }
+        if let value = mutation.values["order_number"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("order_number"), systemValue: "100", entityType: "CustomerOrder").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["order_date"] == nil) || mutation.values["order_date"] == .null { results.append(CheckResult(ruleID: "required", location: .property("order_date"), entityType: "CustomerOrder")) }
 
@@ -140,27 +131,24 @@ private struct ProductChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "Product", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "Product", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "Product", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Product")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Product")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Product").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["sku"] == nil) || mutation.values["sku"] == .null { results.append(CheckResult(ruleID: "required", location: .property("sku"), entityType: "Product")) }
-        if let value = mutation.values["sku"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("sku"), systemValue: "100", entityType: "Product")) }
+        if let value = mutation.values["sku"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("sku"), systemValue: "100", entityType: "Product").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
-        if let value = mutation.values["image_url"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("image_url"), systemValue: "100", entityType: "Product")) }
+        if let value = mutation.values["image_url"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("image_url"), systemValue: "100", entityType: "Product").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["commerce_platform"] == nil) || mutation.values["commerce_platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("commerce_platform"), entityType: "Product")) }
 
@@ -179,8 +167,7 @@ private struct OrderLineChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderLine", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
 
@@ -189,10 +176,10 @@ private struct OrderLineChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["product"] == nil) || mutation.values["product"] == .null { results.append(CheckResult(ruleID: "required", location: .property("product"), entityType: "OrderLine")) }
 
         if (mutation.kind == .create && mutation.values["product_name"] == nil) || mutation.values["product_name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("product_name"), entityType: "OrderLine")) }
-        if let value = mutation.values["product_name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("product_name"), systemValue: "100", entityType: "OrderLine")) }
+        if let value = mutation.values["product_name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("product_name"), systemValue: "100", entityType: "OrderLine").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["sku"] == nil) || mutation.values["sku"] == .null { results.append(CheckResult(ruleID: "required", location: .property("sku"), entityType: "OrderLine")) }
-        if let value = mutation.values["sku"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("sku"), systemValue: "100", entityType: "OrderLine")) }
+        if let value = mutation.values["sku"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("sku"), systemValue: "100", entityType: "OrderLine").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["quantity"] == nil) || mutation.values["quantity"] == .null { results.append(CheckResult(ruleID: "required", location: .property("quantity"), entityType: "OrderLine")) }
 
@@ -211,31 +198,28 @@ private struct OrderSearchPresetChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if mutation.kind == .create && (mutation.values["create_time"] == nil || mutation.values["create_time"] == .null) {
-            mutation.values["create_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderSearchPreset", modelPath: "create_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "create_time", function: "now", arguments: [])
         }
 
         if mutation.kind == .create && (mutation.values["update_time"] == nil || mutation.values["update_time"] == .null) {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderSearchPreset", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
         if mutation.kind == .update {
-            mutation.values["update_time"] = .timestamp(Int64(now.timeIntervalSince1970 * 1_000))
-            context.recordFixEvidence(FixEvidence(entityType: "OrderSearchPreset", modelPath: "update_time", source: .clock, sourceLabel: "graphClock"))
+            try ContextFix.apply(context, mutation: &mutation, now: now, field: "update_time", function: "now", arguments: [])
         }
 
 
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "OrderSearchPreset")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderSearchPreset")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderSearchPreset").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["filter_json"] == nil) || mutation.values["filter_json"] == .null { results.append(CheckResult(ruleID: "required", location: .property("filter_json"), entityType: "OrderSearchPreset")) }
-        if let value = mutation.values["filter_json"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("filter_json"), systemValue: "100", entityType: "OrderSearchPreset")) }
+        if let value = mutation.values["filter_json"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("filter_json"), systemValue: "100", entityType: "OrderSearchPreset").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["request_id"] == nil) || mutation.values["request_id"] == .null { results.append(CheckResult(ruleID: "required", location: .property("request_id"), entityType: "OrderSearchPreset")) }
-        if let value = mutation.values["request_id"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("request_id"), systemValue: "100", entityType: "OrderSearchPreset")) }
+        if let value = mutation.values["request_id"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("request_id"), systemValue: "100", entityType: "OrderSearchPreset").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["owner_user_id"] == nil) || mutation.values["owner_user_id"] == .null { results.append(CheckResult(ruleID: "required", location: .property("owner_user_id"), entityType: "OrderSearchPreset")) }
-        if let value = mutation.values["owner_user_id"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("owner_user_id"), systemValue: "100", entityType: "OrderSearchPreset")) }
+        if let value = mutation.values["owner_user_id"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("owner_user_id"), systemValue: "100", entityType: "OrderSearchPreset").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["commerce_platform"] == nil) || mutation.values["commerce_platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("commerce_platform"), entityType: "OrderSearchPreset")) }
 
@@ -280,7 +264,8 @@ public enum GeneratedRuntimeModule {
             "Product": try! WireEntityMetadata(entityType: "Product", canonicalFields: ["id", "name", "sku", "image_url", "commerce_platform", "create_time", "update_time", "version"], aliases: ["id": ["id"], "name": ["name"], "sku": ["sku"], "image_url": ["image_url"], "commerce_platform": ["commerce_platform"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]]),
             "OrderLine": try! WireEntityMetadata(entityType: "OrderLine", canonicalFields: ["id", "customer_order", "product", "product_name", "sku", "quantity", "commerce_platform", "create_time", "version"], aliases: ["id": ["id"], "customer_order": ["customer_order"], "product": ["product"], "product_name": ["product_name"], "sku": ["sku"], "quantity": ["quantity"], "commerce_platform": ["commerce_platform"], "create_time": ["create_time"], "version": ["version"]]),
             "OrderSearchPreset": try! WireEntityMetadata(entityType: "OrderSearchPreset", canonicalFields: ["id", "name", "filter_json", "request_id", "owner_user_id", "commerce_platform", "create_time", "update_time", "version"], aliases: ["id": ["id"], "name": ["name"], "filter_json": ["filter_json"], "request_id": ["request_id"], "owner_user_id": ["owner_user_id"], "commerce_platform": ["commerce_platform"], "create_time": ["create_time"], "update_time": ["update_time"], "version": ["version"]])
-        ])
+        ],
+        checkerPresentation: try! CheckerPresentationModel(data: Data("{\"schema\":\"teaql.checker-model/v1\",\"revision\":\"sha256:feb0a6c97f37d35282317bf77fbd60ffde5a4dc18d6f6a371fd40d2c37d6c975\",\"entities\":{\"CommercePlatform\":{\"labels\":{\"en\":\"commerce platform\"},\"fields\":[{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"customer_list\",\"targetType\":\"Customer\",\"labels\":{\"en\":\"customer\"},\"aliases\":[\"CustomerList\",\"customerList\"]},{\"name\":\"customer_order_list\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"customer order\"},\"aliases\":[\"CustomerOrderList\",\"customerOrderList\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"order_line_list\",\"targetType\":\"OrderLine\",\"labels\":{\"en\":\"order line\"},\"aliases\":[\"OrderLineList\",\"orderLineList\"]},{\"name\":\"order_search_preset_list\",\"targetType\":\"OrderSearchPreset\",\"labels\":{\"en\":\"order search preset\"},\"aliases\":[\"OrderSearchPresetList\",\"orderSearchPresetList\"]},{\"name\":\"order_status_list\",\"targetType\":\"OrderStatus\",\"labels\":{\"en\":\"order status\"},\"aliases\":[\"OrderStatusList\",\"orderStatusList\"]},{\"name\":\"product_list\",\"targetType\":\"Product\",\"labels\":{\"en\":\"product\"},\"aliases\":[\"ProductList\",\"productList\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"Customer\":{\"labels\":{\"en\":\"customer\"},\"fields\":[{\"name\":\"commerce_platform\",\"targetType\":\"CommercePlatform\",\"labels\":{\"en\":\"commerce platform\"},\"aliases\":[\"CommercePlatform\",\"commercePlatform\"]},{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"customer_order_list\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"customer order\"},\"aliases\":[\"CustomerOrderList\",\"customerOrderList\"]},{\"name\":\"email\",\"labels\":{\"en\":\"email\"},\"aliases\":[\"Email\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"CustomerOrder\":{\"labels\":{\"en\":\"customer order\"},\"fields\":[{\"name\":\"commerce_platform\",\"targetType\":\"CommercePlatform\",\"labels\":{\"en\":\"commerce platform\"},\"aliases\":[\"CommercePlatform\",\"commercePlatform\"]},{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"customer\",\"targetType\":\"Customer\",\"labels\":{\"en\":\"customer\"},\"aliases\":[\"Customer\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"order_date\",\"labels\":{\"en\":\"order date\"},\"aliases\":[\"OrderDate\",\"orderDate\"]},{\"name\":\"order_line_list\",\"targetType\":\"OrderLine\",\"labels\":{\"en\":\"order line\"},\"aliases\":[\"OrderLineList\",\"orderLineList\"]},{\"name\":\"order_number\",\"labels\":{\"en\":\"order number\"},\"aliases\":[\"OrderNumber\",\"orderNumber\"]},{\"name\":\"status\",\"targetType\":\"OrderStatus\",\"labels\":{\"en\":\"status\"},\"aliases\":[\"Status\"]},{\"name\":\"total_amount\",\"labels\":{\"en\":\"total amount\"},\"aliases\":[\"TotalAmount\",\"totalAmount\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"OrderLine\":{\"labels\":{\"en\":\"order line\"},\"fields\":[{\"name\":\"commerce_platform\",\"targetType\":\"CommercePlatform\",\"labels\":{\"en\":\"commerce platform\"},\"aliases\":[\"CommercePlatform\",\"commercePlatform\"]},{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"customer_order\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"customer order\"},\"aliases\":[\"CustomerOrder\",\"customerOrder\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"product\",\"targetType\":\"Product\",\"labels\":{\"en\":\"product\"},\"aliases\":[\"Product\"]},{\"name\":\"product_name\",\"labels\":{\"en\":\"product name\"},\"aliases\":[\"ProductName\",\"productName\"]},{\"name\":\"quantity\",\"labels\":{\"en\":\"quantity\"},\"aliases\":[\"Quantity\"]},{\"name\":\"sku\",\"labels\":{\"en\":\"sku\"},\"aliases\":[\"Sku\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"OrderSearchPreset\":{\"labels\":{\"en\":\"order search preset\"},\"fields\":[{\"name\":\"commerce_platform\",\"targetType\":\"CommercePlatform\",\"labels\":{\"en\":\"commerce platform\"},\"aliases\":[\"CommercePlatform\",\"commercePlatform\"]},{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"filter_json\",\"labels\":{\"en\":\"filter json\"},\"aliases\":[\"FilterJson\",\"filterJson\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"owner_user_id\",\"labels\":{\"en\":\"owner user id\"},\"aliases\":[\"OwnerUserId\",\"ownerUserId\"]},{\"name\":\"request_id\",\"labels\":{\"en\":\"request id\"},\"aliases\":[\"RequestId\",\"requestId\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"OrderStatus\":{\"labels\":{\"en\":\"order status\"},\"fields\":[{\"name\":\"code\",\"labels\":{\"en\":\"code\"},\"aliases\":[\"Code\"]},{\"name\":\"color\",\"labels\":{\"en\":\"color\"},\"aliases\":[\"Color\"]},{\"name\":\"commerce_platform\",\"targetType\":\"CommercePlatform\",\"labels\":{\"en\":\"commerce platform\"},\"aliases\":[\"CommercePlatform\",\"commercePlatform\"]},{\"name\":\"customer_order_list\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"customer order\"},\"aliases\":[\"CustomerOrderList\",\"customerOrderList\"]},{\"name\":\"display_order\",\"labels\":{\"en\":\"display order\"},\"aliases\":[\"DisplayOrder\",\"displayOrder\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"Product\":{\"labels\":{\"en\":\"product\"},\"fields\":[{\"name\":\"commerce_platform\",\"targetType\":\"CommercePlatform\",\"labels\":{\"en\":\"commerce platform\"},\"aliases\":[\"CommercePlatform\",\"commercePlatform\"]},{\"name\":\"create_time\",\"labels\":{\"en\":\"create time\"},\"aliases\":[\"CreateTime\",\"createTime\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"image_url\",\"labels\":{\"en\":\"image url\"},\"aliases\":[\"ImageUrl\",\"imageUrl\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"order_line_list\",\"targetType\":\"OrderLine\",\"labels\":{\"en\":\"order line\"},\"aliases\":[\"OrderLineList\",\"orderLineList\"]},{\"name\":\"sku\",\"labels\":{\"en\":\"sku\"},\"aliases\":[\"Sku\"]},{\"name\":\"update_time\",\"labels\":{\"en\":\"update time\"},\"aliases\":[\"UpdateTime\",\"updateTime\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]}}}".utf8)))
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?
@@ -295,7 +280,7 @@ public enum GeneratedRuntimeModule {
         let bootstrapContext = callerContext._generatedBootstrapContext()
         var domainRoot = try await Q.commercePlatforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
-            var created = try await Q.commercePlatforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            var created = try Q.commercePlatforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
             try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Northwind Demo")
             do { domainRoot = try await created.auditAs("create generated Domain Root CommercePlatform").save(bootstrapContext) }
@@ -305,7 +290,7 @@ public enum GeneratedRuntimeModule {
         let rootedContext = callerContext._generatedBootstrapContext(activeRoot: ContextEntityRef(entity: "CommercePlatform", id: .int(domainRoot.id)))
         var constantOrderStatus1001 = try await Q.orderStatuses().withIdIs(1001).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantOrderStatus1001 == nil {
-            var created = try await Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            var created = try Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
             try created.teaqlInitializeGeneratedBootstrapId(1001)
             created.updateName("Pending")
             created.updateCode("PENDING")
@@ -341,7 +326,7 @@ public enum GeneratedRuntimeModule {
         }
         var constantOrderStatus1002 = try await Q.orderStatuses().withIdIs(1002).comment("what: locate generated constant").purpose("why: idempotent runtime bootstrap").executeForList(rootedContext).first
         if constantOrderStatus1002 == nil {
-            var created = try await Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
+            var created = try Q.orderStatuses().comment("what: create generated constant").purpose("why: initialize runtime bootstrap").newEntity(rootedContext)
             try created.teaqlInitializeGeneratedBootstrapId(1002)
             created.updateName("Confirmed")
             created.updateCode("CONFIRMED")

@@ -109,7 +109,7 @@ public struct PlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_type_list"))
         }
-        return SchoolTypeListExpression(value.schoolTypeList, root: root, path: accessPath)
+        return SchoolTypeListExpression(value.schoolTypeList.data, root: root, path: accessPath)
     }
 
     public func schoolList() -> SchoolListExpression {
@@ -123,7 +123,7 @@ public struct PlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_list"))
         }
-        return SchoolListExpression(value.schoolList, root: root, path: accessPath)
+        return SchoolListExpression(value.schoolList.data, root: root, path: accessPath)
     }
 }
 
@@ -224,7 +224,7 @@ public struct SchoolTypeExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "school_list"))
         }
-        return SchoolListExpression(value.schoolList, root: root, path: accessPath)
+        return SchoolListExpression(value.schoolList.data, root: root, path: accessPath)
     }
 }
 

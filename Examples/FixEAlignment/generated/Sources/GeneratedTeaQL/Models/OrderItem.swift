@@ -33,12 +33,22 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         }
     }
     private var _loadedFields: Set<String> = []
-    public var teaqlEntityRoot: EntityRoot
+    public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
 
+    private static let teaqlIDLock = NSLock()
+    nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "OrderItem", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
+
+    private struct TeaqlDynamicCodingKey: CodingKey {
+        let stringValue: String
+        var intValue: Int? { nil }
+        init(_ value: String) { stringValue = value }
+        init?(stringValue: String) { self.init(stringValue) }
+        init?(intValue: Int) { return nil }
+    }
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -52,7 +62,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public init(from decoder: Decoder) throws {
-        self.init(teaqlHydrationRoot: EntityRoot())
+        self.init()
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.id) {
@@ -107,12 +117,20 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
-        // Hydration never creates or discards an intermediate insert ledger.
+        let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
+        let modeled = Set(["id", "purchaseOrder", "tenant", "productName", "unitPrice", "createTime", "updateTime", "version"])
+            .union([])
+        var aliases: TeaQLRecord = [:]
+        for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
+            aliases[key.stringValue] = try dynamicContainer.decode(TeaQLValue.self, forKey: key)
+        }
+        dynamicProperties = QueryProjectionSnapshot(record: aliases)
+        // External JSON decoding owns a read ledger, never a provider snapshot.
+        self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
-        try teaqlEntityRoot.setOriginalVersion(teaqlEntityKey, version: version)
-        let record = toRecord().filter { _loadedFields.contains($0.key) }
-        self.teaqlLoadedSnapshot = LoadedEntitySnapshots().capture(key: teaqlEntityKey,
-            version: version, record: record)
+        // External presentation JSON is not a trusted provider snapshot.
+        self.teaqlLoadedSnapshot = nil
+        if id == 0 { teaqlEntityRoot.markAsNew(teaqlEntityKey) }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -154,10 +172,10 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         try dynamicProperties.encode(to: encoder)
     }
 
-    /// Read construction is private and owns no insertion intention.
-    /// Applications create through the Context-aware generated Q factory.
-    private init(teaqlHydrationRoot: EntityRoot) {
-        self.teaqlEntityRoot = teaqlHydrationRoot
+    public init() {
+        Self.teaqlIDLock.lock(); Self.teaqlNextTemporaryID -= 1; teaqlLedgerID = Self.teaqlNextTemporaryID; Self.teaqlIDLock.unlock()
+        _loadedFields = Set(["id", "purchaseOrder", "tenant", "productName", "unitPrice", "createTime", "updateTime", "version"])
+        teaqlEntityRoot.markAsNew(teaqlEntityKey)
     }
 
     public static let descriptor = EntityDescriptor(
@@ -169,8 +187,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "tenant", modelName: "tenant", column: "tenant", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Tenant"),
             PropertyDescriptor(name: "productName", modelName: "product_name", column: "product_name", type: .string, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "unitPrice", modelName: "unit_price", column: "unit_price", type: .decimal, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
@@ -184,7 +202,9 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
-        var entity = Self(teaqlHydrationRoot: root)
+        var entity = Self()
+        // Discard the constructor's new-entity ledger during hydration.
+        entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -316,18 +336,6 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         return saved
     }
 
-    /// Construct only after the Context-selected allocator succeeds.
-    static func teaqlNewWithID(_ value: Int64) throws -> Self {
-        guard value > 0 else { throw InternalIDError.invalidValue(value) }
-        var entity = Self(teaqlHydrationRoot: EntityRoot())
-        entity.id = value
-        entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "purchaseOrder", "tenant", "productName", "unitPrice", "createTime", "updateTime", "version"])
-        entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
-        return entity
-    }
-
     /// Generator-only fixed identity initialization for schema bootstrap.
     /// Application code must use the ordinary ID generator.
     mutating func teaqlInitializeGeneratedBootstrapId(_ value: Int64) throws {
@@ -452,11 +460,11 @@ public struct OrderItemAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderItem", preparing: { context, session in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "OrderItem", preparing: { context, _ in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context, session: session)
+            try teaqlPreflightGraph(context)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -473,9 +481,6 @@ public struct OrderItemAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> OrderItem {
-        guard try session.visitEntity(entity, phase: .write) else {
-            return try entity.teaqlRebuildSavedGraph(session.readback())
-        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -521,8 +526,7 @@ public struct OrderItemAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
-        guard try session.visitEntity(entity, phase: .preflight) else { return }
+    func teaqlPreflightGraph(_ context: UserContext) throws {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {

@@ -8,7 +8,7 @@ private struct PlatformChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Platform")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -23,10 +23,10 @@ private struct CustomerOrderChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"), entityType: "CustomerOrder")) }
 
         if (mutation.kind == .create && mutation.values["order_number"] == nil) || mutation.values["order_number"] == .null { results.append(CheckResult(ruleID: "required", location: .property("order_number"), entityType: "CustomerOrder")) }
-        if let value = mutation.values["order_number"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("order_number"), systemValue: "100", entityType: "CustomerOrder")) }
+        if let value = mutation.values["order_number"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("order_number"), systemValue: "100", entityType: "CustomerOrder").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["description"] == nil) || mutation.values["description"] == .null { results.append(CheckResult(ruleID: "required", location: .property("description"), entityType: "CustomerOrder")) }
-        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), systemValue: "100", entityType: "CustomerOrder")) }
+        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), systemValue: "100", entityType: "CustomerOrder").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -41,7 +41,7 @@ private struct OrderItemChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"), entityType: "OrderItem")) }
 
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "OrderItem")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderItem")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "OrderItem").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -56,7 +56,7 @@ private struct PaymentChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"), entityType: "Payment")) }
 
         if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"), entityType: "Payment")) }
-        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "Payment")) }
+        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "Payment").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -71,7 +71,7 @@ private struct PaymentAttemptChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["payment"] == nil) || mutation.values["payment"] == .null { results.append(CheckResult(ruleID: "required", location: .property("payment"), entityType: "PaymentAttempt")) }
 
         if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"), entityType: "PaymentAttempt")) }
-        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "PaymentAttempt")) }
+        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "PaymentAttempt").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -86,7 +86,7 @@ private struct ShipmentChecker: EntityChecker {
         if (mutation.kind == .create && mutation.values["customer_order"] == nil) || mutation.values["customer_order"] == .null { results.append(CheckResult(ruleID: "required", location: .property("customer_order"), entityType: "Shipment")) }
 
         if (mutation.kind == .create && mutation.values["reference_code"] == nil) || mutation.values["reference_code"] == .null { results.append(CheckResult(ruleID: "required", location: .property("reference_code"), entityType: "Shipment")) }
-        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "Shipment")) }
+        if let value = mutation.values["reference_code"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("reference_code"), systemValue: "100", entityType: "Shipment").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -122,7 +122,8 @@ public enum GeneratedRuntimeModule {
             "Payment": try! WireEntityMetadata(entityType: "Payment", canonicalFields: ["id", "customer_order", "reference_code", "version"], aliases: ["id": ["id"], "customer_order": ["customer_order"], "reference_code": ["reference_code"], "version": ["version"]]),
             "PaymentAttempt": try! WireEntityMetadata(entityType: "PaymentAttempt", canonicalFields: ["id", "payment", "reference_code", "version"], aliases: ["id": ["id"], "payment": ["payment"], "reference_code": ["reference_code"], "version": ["version"]]),
             "Shipment": try! WireEntityMetadata(entityType: "Shipment", canonicalFields: ["id", "customer_order", "reference_code", "version"], aliases: ["id": ["id"], "customer_order": ["customer_order"], "reference_code": ["reference_code"], "version": ["version"]])
-        ])
+        ],
+        checkerPresentation: try! CheckerPresentationModel(data: Data("{\"schema\":\"teaql.checker-model/v1\",\"revision\":\"sha256:3360338e7162e546ad5c97348770bb50933b4da775b55b99a9707d39f93c8b0a\",\"entities\":{\"CustomerOrder\":{\"labels\":{\"en\":\"Customer Order\"},\"fields\":[{\"name\":\"description\",\"labels\":{\"en\":\"description\"},\"aliases\":[\"Description\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"order_item_list\",\"targetType\":\"OrderItem\",\"labels\":{\"en\":\"Order Item\"},\"aliases\":[\"OrderItemList\",\"orderItemList\"]},{\"name\":\"order_number\",\"labels\":{\"en\":\"order number\"},\"aliases\":[\"OrderNumber\",\"orderNumber\"]},{\"name\":\"payment_list\",\"targetType\":\"Payment\",\"labels\":{\"en\":\"Payment\"},\"aliases\":[\"PaymentList\",\"paymentList\"]},{\"name\":\"platform\",\"targetType\":\"Platform\",\"labels\":{\"en\":\"Platform\"},\"aliases\":[\"Platform\"]},{\"name\":\"shipment_list\",\"targetType\":\"Shipment\",\"labels\":{\"en\":\"Shipment\"},\"aliases\":[\"ShipmentList\",\"shipmentList\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"OrderItem\":{\"labels\":{\"en\":\"Order Item\"},\"fields\":[{\"name\":\"customer_order\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"Customer Order\"},\"aliases\":[\"CustomerOrder\",\"customerOrder\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"Payment\":{\"labels\":{\"en\":\"Payment\"},\"fields\":[{\"name\":\"customer_order\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"Customer Order\"},\"aliases\":[\"CustomerOrder\",\"customerOrder\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"payment_attempt_list\",\"targetType\":\"PaymentAttempt\",\"labels\":{\"en\":\"Payment Attempt\"},\"aliases\":[\"PaymentAttemptList\",\"paymentAttemptList\"]},{\"name\":\"reference_code\",\"labels\":{\"en\":\"reference code\"},\"aliases\":[\"ReferenceCode\",\"referenceCode\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"PaymentAttempt\":{\"labels\":{\"en\":\"Payment Attempt\"},\"fields\":[{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"payment\",\"targetType\":\"Payment\",\"labels\":{\"en\":\"Payment\"},\"aliases\":[\"Payment\"]},{\"name\":\"reference_code\",\"labels\":{\"en\":\"reference code\"},\"aliases\":[\"ReferenceCode\",\"referenceCode\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"Platform\":{\"labels\":{\"en\":\"Platform\"},\"fields\":[{\"name\":\"customer_order_list\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"Customer Order\"},\"aliases\":[\"CustomerOrderList\",\"customerOrderList\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]},\"Shipment\":{\"labels\":{\"en\":\"Shipment\"},\"fields\":[{\"name\":\"customer_order\",\"targetType\":\"CustomerOrder\",\"labels\":{\"en\":\"Customer Order\"},\"aliases\":[\"CustomerOrder\",\"customerOrder\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"reference_code\",\"labels\":{\"en\":\"reference code\"},\"aliases\":[\"ReferenceCode\",\"referenceCode\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]}}}".utf8)))
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?
@@ -137,7 +138,7 @@ public enum GeneratedRuntimeModule {
         let bootstrapContext = callerContext._generatedBootstrapContext()
         var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
-            var created = try await Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
             try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Trace Chain Verification")
             do { domainRoot = try await created.auditAs("create generated Domain Root Platform").save(bootstrapContext) }

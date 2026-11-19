@@ -9,22 +9,31 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     public var version: Int64 = 0
     private var _workItemListResult: SmartList<WorkItem> = .empty
     public var workItemListResult: SmartList<WorkItem> { _workItemListResult }
-    public var workItemList: [WorkItem] {
-        get { _workItemListResult.data }
+    public var workItemList: SmartList<WorkItem> {
+        get { _workItemListResult }
         set {
-            _workItemListResult = SmartList(newValue, totalCount: _workItemListResult.totalCount,
-                aggregations: _workItemListResult.aggregations, summary: _workItemListResult.summary,
-                facets: _workItemListResult.facets)
-            _loadedFields.insert("workItemList")
+            _workItemListResult = newValue
+            if newValue.isLoaded { _loadedFields.insert("workItemList") }
+            else { _loadedFields.remove("workItemList") }
         }
     }
     private var _loadedFields: Set<String> = []
-    public var teaqlEntityRoot: EntityRoot
+    public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
 
+    private static let teaqlIDLock = NSLock()
+    nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "Platform", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
+
+    private struct TeaqlDynamicCodingKey: CodingKey {
+        let stringValue: String
+        var intValue: Int? { nil }
+        init(_ value: String) { stringValue = value }
+        init?(stringValue: String) { self.init(stringValue) }
+        init?(intValue: Int) { return nil }
+    }
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -34,7 +43,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public init(from decoder: Decoder) throws {
-        self.init(teaqlHydrationRoot: EntityRoot())
+        self.init()
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.id) {
@@ -50,14 +59,22 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("version")
         }
         if container.contains(.workItemList) {
-            self.workItemList = try container.decode([WorkItem].self, forKey: .workItemList)
+            self.workItemList = SmartList(try container.decode([WorkItem].self, forKey: .workItemList))
         }
-        // Hydration never creates or discards an intermediate insert ledger.
+        let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
+        let modeled = Set(["id", "name", "version"])
+            .union(["workItemList"])
+        var aliases: TeaQLRecord = [:]
+        for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
+            aliases[key.stringValue] = try dynamicContainer.decode(TeaQLValue.self, forKey: key)
+        }
+        dynamicProperties = QueryProjectionSnapshot(record: aliases)
+        // External JSON decoding owns a read ledger, never a provider snapshot.
+        self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
-        try teaqlEntityRoot.setOriginalVersion(teaqlEntityKey, version: version)
-        let record = toRecord().filter { _loadedFields.contains($0.key) }
-        self.teaqlLoadedSnapshot = LoadedEntitySnapshots().capture(key: teaqlEntityKey,
-            version: version, record: record)
+        // External presentation JSON is not a trusted provider snapshot.
+        self.teaqlLoadedSnapshot = nil
+        if id == 0 { teaqlEntityRoot.markAsNew(teaqlEntityKey) }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -73,14 +90,16 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if isLoaded("workItemList"), _workItemListResult.isLoaded {
             try container.encode(_workItemListResult.data, forKey: .workItemList)
+        } else if _workItemListResult.contains(where: { $0.teaqlEntityRoot.hasPending($0.teaqlEntityKey) }) {
+            try container.encode(_workItemListResult.data, forKey: .workItemList)
         }
         try dynamicProperties.encode(to: encoder)
     }
 
-    /// Read construction is private and owns no insertion intention.
-    /// Applications create through the Context-aware generated Q factory.
-    private init(teaqlHydrationRoot: EntityRoot) {
-        self.teaqlEntityRoot = teaqlHydrationRoot
+    public init() {
+        Self.teaqlIDLock.lock(); Self.teaqlNextTemporaryID -= 1; teaqlLedgerID = Self.teaqlNextTemporaryID; Self.teaqlIDLock.unlock()
+        _loadedFields = Set(["id", "name", "version"])
+        teaqlEntityRoot.markAsNew(teaqlEntityKey)
     }
 
     public static let descriptor = EntityDescriptor(
@@ -102,7 +121,9 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
-        var entity = Self(teaqlHydrationRoot: root)
+        var entity = Self()
+        // Discard the constructor's new-entity ledger during hydration.
+        entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -121,16 +142,16 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         if let relationValue = record["workItemList"] {
             switch relationValue {
             case .array(let values):
-                entity.workItemList = try values.enumerated().compactMap { index, value in
+                entity.workItemList = SmartList(try values.enumerated().compactMap { index, value in
                     guard case .object(let childRecord) = value else { return nil }
                     return try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot,
                         snapshots: snapshots, relations: relations["workItemList"]?.loadedRelations[index] ?? [:])
-                }
+                })
             case .object(let childRecord):
-                entity.workItemList = [try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot,
-                    snapshots: snapshots, relations: relations["workItemList"]?.loadedRelations[0] ?? [:])]
+                entity.workItemList = SmartList([try WorkItem.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["workItemList"]?.loadedRelations[0] ?? [:])])
             case .null:
-                entity.workItemList = []
+                entity.workItemList = SmartList()
             default:
                 throw TeaQLError.execution("Invalid relation payload: workItemList")
             }
@@ -145,7 +166,11 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
             teaqlEntityRoot = root
         }
-        for index in workItemList.indices { try workItemList[index].teaqlAttachRoot(root) }
+        for index in workItemList.indices {
+            var child = workItemList[index]
+            try child.teaqlAttachRoot(root)
+            workItemList.set(index, child)
+        }
     }
 
     public func toRecord() -> TeaQLRecord {
@@ -185,18 +210,6 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             saved._loadedFields.insert("workItemList")
         }
         return saved
-    }
-
-    /// Construct only after the Context-selected allocator succeeds.
-    static func teaqlNewWithID(_ value: Int64) throws -> Self {
-        guard value > 0 else { throw InternalIDError.invalidValue(value) }
-        var entity = Self(teaqlHydrationRoot: EntityRoot())
-        entity.id = value
-        entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "name", "version"])
-        entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
-        return entity
     }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
@@ -278,11 +291,11 @@ public struct PlatformAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "Platform", preparing: { context, session in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "Platform", preparing: { context, _ in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context, session: session)
+            try teaqlPreflightGraph(context)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -299,9 +312,6 @@ public struct PlatformAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> Platform {
-        guard try session.visitEntity(entity, phase: .write) else {
-            return try entity.teaqlRebuildSavedGraph(session.readback())
-        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
@@ -380,8 +390,7 @@ public struct PlatformAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
-        guard try session.visitEntity(entity, phase: .preflight) else { return }
+    func teaqlPreflightGraph(_ context: UserContext) throws {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -404,7 +413,7 @@ public struct PlatformAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "platform", to: entity)
             }
-            do { try WorkItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
+            do { try WorkItemAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("work_item_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

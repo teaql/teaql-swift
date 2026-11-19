@@ -79,7 +79,7 @@ public struct PlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_status_list"))
         }
-        return OrderStatusListExpression(value.orderStatusList, root: root, path: accessPath)
+        return OrderStatusListExpression(value.orderStatusList.data, root: root, path: accessPath)
     }
 
     public func customerList() -> CustomerListExpression {
@@ -93,7 +93,7 @@ public struct PlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_list"))
         }
-        return CustomerListExpression(value.customerList, root: root, path: accessPath)
+        return CustomerListExpression(value.customerList.data, root: root, path: accessPath)
     }
 }
 
@@ -204,7 +204,7 @@ public struct OrderStatusExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_order_list"))
         }
-        return CustomerOrderListExpression(value.customerOrderList, root: root, path: accessPath)
+        return CustomerOrderListExpression(value.customerOrderList.data, root: root, path: accessPath)
     }
 }
 
@@ -285,7 +285,7 @@ public struct CustomerExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_order_list"))
         }
-        return CustomerOrderListExpression(value.customerOrderList, root: root, path: accessPath)
+        return CustomerOrderListExpression(value.customerOrderList.data, root: root, path: accessPath)
     }
 }
 
@@ -410,7 +410,7 @@ public struct CustomerOrderExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_item_list"))
         }
-        return OrderItemListExpression(value.orderItemList, root: root, path: accessPath)
+        return OrderItemListExpression(value.orderItemList.data, root: root, path: accessPath)
     }
 }
 

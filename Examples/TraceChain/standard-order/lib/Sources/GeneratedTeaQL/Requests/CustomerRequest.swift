@@ -649,23 +649,9 @@ public struct CustomerRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByIdAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("id", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByPlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("platform")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByPlatformAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("platform", as: alias)
         return copy
     }
 
@@ -677,23 +663,9 @@ public struct CustomerRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByNameAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("name", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByVersionAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -722,10 +694,9 @@ public extension CustomerRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) async throws -> Customer {
+    func newEntity(_ context: UserContext) throws -> Customer {
         try ensureIntent()
-        let id = try await context.generateInternalID(for: "Customer")
-        return context.initializeEntity("Customer", try Customer.teaqlNewWithID(id))
+        return context.initializeEntity("Customer", Customer())
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<Customer> {
@@ -737,6 +708,33 @@ public extension CustomerRequest where State == RequestExecutable {
         }
     }
 
+    func executeForOne(_ context: UserContext) async throws -> Customer? {
+        var request = self
+        request.query.limit = 1
+        return try await request.executeForList(context).first
+    }
+
+    /// Pull-based typed stream. Each demand loads at most one bounded chunk;
+    /// no task eagerly buffers the entire query into a SmartList.
+    func executeForStream(_ context: UserContext) throws -> AsyncThrowingStream<Customer, Error> {
+        try ensureIntent()
+        guard query.groupBy.isEmpty && query.aggregates.isEmpty else {
+            throw TeaQLError.unsupportedQueryCapability("entity streams require an entity query")
+        }
+        var source = query
+        if !source.orderBy.contains(where: { $0.field == "id" }) { source.orderBy.append(OrderBy("id", .ascending)) }
+        let request = try QueryRequest(query: source)
+        let cursor = CustomerStreamCursor(offset: source.offset, remaining: source.limit) { offset, limit in
+            var page = request.query; page.offset = offset; page.limit = limit
+            let result = try await context.execute(request.withQuery(page))
+            let snapshots = LoadedEntitySnapshots()
+            return try result.records.map {
+                try Customer.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+            }
+        }
+        return AsyncThrowingStream(unfolding: { try await cursor.next() })
+    }
+
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
@@ -744,4 +742,33 @@ public extension CustomerRequest where State == RequestExecutable {
     }
 
 
+}
+
+private actor CustomerStreamCursor {
+    private var offset: Int
+    private var remaining: Int?
+    private var buffer: [Customer] = []
+    private var index = 0
+    private var finished = false
+    private let fetch: @Sendable (Int, Int) async throws -> [Customer]
+
+    init(offset: Int, remaining: Int?, fetch: @escaping @Sendable (Int, Int) async throws -> [Customer]) {
+        self.offset = offset; self.remaining = remaining; self.fetch = fetch
+    }
+
+    func next() async throws -> Customer? {
+        try _Concurrency.Task<Never, Never>.checkCancellation()
+        if index == buffer.count {
+            guard !finished else { return nil }
+            let size = min(128, remaining ?? 128)
+            guard size > 0 else { finished = true; return nil }
+            buffer = try await fetch(offset, size); index = 0
+            offset += buffer.count
+            if let count = remaining { remaining = count - buffer.count }
+            finished = buffer.count < size || remaining == 0
+            guard !buffer.isEmpty else { return nil }
+        }
+        defer { index += 1 }
+        return buffer[index]
+    }
 }

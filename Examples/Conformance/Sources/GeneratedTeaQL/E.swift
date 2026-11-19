@@ -79,7 +79,7 @@ public struct PlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "work_item_list"))
         }
-        return WorkItemListExpression(value.workItemList, root: root, path: accessPath)
+        return WorkItemListExpression(value.workItemList.data, root: root, path: accessPath)
     }
 }
 

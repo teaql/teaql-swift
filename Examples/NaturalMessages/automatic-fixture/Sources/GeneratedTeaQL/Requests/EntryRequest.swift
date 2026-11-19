@@ -752,7 +752,7 @@ private actor EntryStreamCursor {
     }
 
     func next() async throws -> Entry? {
-        try Task.checkCancellation()
+        try _Concurrency.Task<Never, Never>.checkCancellation()
         if index == buffer.count {
             guard !finished else { return nil }
             let size = min(128, remaining ?? 128)

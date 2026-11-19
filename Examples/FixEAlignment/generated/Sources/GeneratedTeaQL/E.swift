@@ -79,7 +79,7 @@ public struct TenantExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "purchase_order_list"))
         }
-        return PurchaseOrderListExpression(value.purchaseOrderList, root: root, path: accessPath)
+        return PurchaseOrderListExpression(value.purchaseOrderList.data, root: root, path: accessPath)
     }
 
     public func orderItemList() -> OrderItemListExpression {
@@ -93,7 +93,7 @@ public struct TenantExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_item_list"))
         }
-        return OrderItemListExpression(value.orderItemList, root: root, path: accessPath)
+        return OrderItemListExpression(value.orderItemList.data, root: root, path: accessPath)
     }
 }
 
@@ -204,7 +204,7 @@ public struct PurchaseOrderExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_item_list"))
         }
-        return OrderItemListExpression(value.orderItemList, root: root, path: accessPath)
+        return OrderItemListExpression(value.orderItemList.data, root: root, path: accessPath)
     }
 }
 

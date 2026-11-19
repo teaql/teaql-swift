@@ -9,33 +9,41 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     public var version: Int64 = 0
     private var _orderStatusListResult: SmartList<OrderStatus> = .empty
     public var orderStatusListResult: SmartList<OrderStatus> { _orderStatusListResult }
-    public var orderStatusList: [OrderStatus] {
-        get { _orderStatusListResult.data }
+    public var orderStatusList: SmartList<OrderStatus> {
+        get { _orderStatusListResult }
         set {
-            _orderStatusListResult = SmartList(newValue, totalCount: _orderStatusListResult.totalCount,
-                aggregations: _orderStatusListResult.aggregations, summary: _orderStatusListResult.summary,
-                facets: _orderStatusListResult.facets)
-            _loadedFields.insert("orderStatusList")
+            _orderStatusListResult = newValue
+            if newValue.isLoaded { _loadedFields.insert("orderStatusList") }
+            else { _loadedFields.remove("orderStatusList") }
         }
     }
     private var _customerListResult: SmartList<Customer> = .empty
     public var customerListResult: SmartList<Customer> { _customerListResult }
-    public var customerList: [Customer] {
-        get { _customerListResult.data }
+    public var customerList: SmartList<Customer> {
+        get { _customerListResult }
         set {
-            _customerListResult = SmartList(newValue, totalCount: _customerListResult.totalCount,
-                aggregations: _customerListResult.aggregations, summary: _customerListResult.summary,
-                facets: _customerListResult.facets)
-            _loadedFields.insert("customerList")
+            _customerListResult = newValue
+            if newValue.isLoaded { _loadedFields.insert("customerList") }
+            else { _loadedFields.remove("customerList") }
         }
     }
     private var _loadedFields: Set<String> = []
-    public var teaqlEntityRoot: EntityRoot
+    public var teaqlEntityRoot = EntityRoot()
     public private(set) var teaqlLoadedSnapshot: LoadedEntitySnapshot?
 
+    private static let teaqlIDLock = NSLock()
+    nonisolated(unsafe) private static var teaqlNextTemporaryID: Int64 = 0
     private var teaqlLedgerID: Int64 = 0
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "Platform", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
+
+    private struct TeaqlDynamicCodingKey: CodingKey {
+        let stringValue: String
+        var intValue: Int? { nil }
+        init(_ value: String) { stringValue = value }
+        init?(stringValue: String) { self.init(stringValue) }
+        init?(intValue: Int) { return nil }
+    }
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -46,7 +54,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public init(from decoder: Decoder) throws {
-        self.init(teaqlHydrationRoot: EntityRoot())
+        self.init()
         let container = try decoder.container(keyedBy: CodingKeys.self)
         _loadedFields.removeAll()
         if container.contains(.id) {
@@ -62,17 +70,25 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             _loadedFields.insert("version")
         }
         if container.contains(.orderStatusList) {
-            self.orderStatusList = try container.decode([OrderStatus].self, forKey: .orderStatusList)
+            self.orderStatusList = SmartList(try container.decode([OrderStatus].self, forKey: .orderStatusList))
         }
         if container.contains(.customerList) {
-            self.customerList = try container.decode([Customer].self, forKey: .customerList)
+            self.customerList = SmartList(try container.decode([Customer].self, forKey: .customerList))
         }
-        // Hydration never creates or discards an intermediate insert ledger.
+        let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
+        let modeled = Set(["id", "name", "version"])
+            .union(["orderStatusList", "customerList"])
+        var aliases: TeaQLRecord = [:]
+        for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
+            aliases[key.stringValue] = try dynamicContainer.decode(TeaQLValue.self, forKey: key)
+        }
+        dynamicProperties = QueryProjectionSnapshot(record: aliases)
+        // External JSON decoding owns a read ledger, never a provider snapshot.
+        self.teaqlEntityRoot = EntityRoot()
         self.teaqlLedgerID = id
-        try teaqlEntityRoot.setOriginalVersion(teaqlEntityKey, version: version)
-        let record = toRecord().filter { _loadedFields.contains($0.key) }
-        self.teaqlLoadedSnapshot = LoadedEntitySnapshots().capture(key: teaqlEntityKey,
-            version: version, record: record)
+        // External presentation JSON is not a trusted provider snapshot.
+        self.teaqlLoadedSnapshot = nil
+        if id == 0 { teaqlEntityRoot.markAsNew(teaqlEntityKey) }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -88,17 +104,21 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         }
         if isLoaded("orderStatusList"), _orderStatusListResult.isLoaded {
             try container.encode(_orderStatusListResult.data, forKey: .orderStatusList)
+        } else if _orderStatusListResult.contains(where: { $0.teaqlEntityRoot.hasPending($0.teaqlEntityKey) }) {
+            try container.encode(_orderStatusListResult.data, forKey: .orderStatusList)
         }
         if isLoaded("customerList"), _customerListResult.isLoaded {
+            try container.encode(_customerListResult.data, forKey: .customerList)
+        } else if _customerListResult.contains(where: { $0.teaqlEntityRoot.hasPending($0.teaqlEntityKey) }) {
             try container.encode(_customerListResult.data, forKey: .customerList)
         }
         try dynamicProperties.encode(to: encoder)
     }
 
-    /// Read construction is private and owns no insertion intention.
-    /// Applications create through the Context-aware generated Q factory.
-    private init(teaqlHydrationRoot: EntityRoot) {
-        self.teaqlEntityRoot = teaqlHydrationRoot
+    public init() {
+        Self.teaqlIDLock.lock(); Self.teaqlNextTemporaryID -= 1; teaqlLedgerID = Self.teaqlNextTemporaryID; Self.teaqlIDLock.unlock()
+        _loadedFields = Set(["id", "name", "version"])
+        teaqlEntityRoot.markAsNew(teaqlEntityKey)
     }
 
     public static let descriptor = EntityDescriptor(
@@ -120,7 +140,9 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
                             snapshots: LoadedEntitySnapshots = LoadedEntitySnapshots(),
                             relations: [String: QueryResult] = [:]) throws -> Self {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
-        var entity = Self(teaqlHydrationRoot: root)
+        var entity = Self()
+        // Discard the constructor's new-entity ledger during hydration.
+        entity.teaqlEntityRoot = root
         entity._loadedFields.removeAll()
         entity.id = record["id"]?.int64Value ?? 0
         if record.keys.contains("id") { entity._loadedFields.insert("id") }
@@ -139,16 +161,16 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         if let relationValue = record["orderStatusList"] {
             switch relationValue {
             case .array(let values):
-                entity.orderStatusList = try values.enumerated().compactMap { index, value in
+                entity.orderStatusList = SmartList(try values.enumerated().compactMap { index, value in
                     guard case .object(let childRecord) = value else { return nil }
                     return try OrderStatus.from(record: childRecord, root: entity.teaqlEntityRoot,
                         snapshots: snapshots, relations: relations["orderStatusList"]?.loadedRelations[index] ?? [:])
-                }
+                })
             case .object(let childRecord):
-                entity.orderStatusList = [try OrderStatus.from(record: childRecord, root: entity.teaqlEntityRoot,
-                    snapshots: snapshots, relations: relations["orderStatusList"]?.loadedRelations[0] ?? [:])]
+                entity.orderStatusList = SmartList([try OrderStatus.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["orderStatusList"]?.loadedRelations[0] ?? [:])])
             case .null:
-                entity.orderStatusList = []
+                entity.orderStatusList = SmartList()
             default:
                 throw TeaQLError.execution("Invalid relation payload: orderStatusList")
             }
@@ -158,16 +180,16 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         if let relationValue = record["customerList"] {
             switch relationValue {
             case .array(let values):
-                entity.customerList = try values.enumerated().compactMap { index, value in
+                entity.customerList = SmartList(try values.enumerated().compactMap { index, value in
                     guard case .object(let childRecord) = value else { return nil }
                     return try Customer.from(record: childRecord, root: entity.teaqlEntityRoot,
                         snapshots: snapshots, relations: relations["customerList"]?.loadedRelations[index] ?? [:])
-                }
+                })
             case .object(let childRecord):
-                entity.customerList = [try Customer.from(record: childRecord, root: entity.teaqlEntityRoot,
-                    snapshots: snapshots, relations: relations["customerList"]?.loadedRelations[0] ?? [:])]
+                entity.customerList = SmartList([try Customer.from(record: childRecord, root: entity.teaqlEntityRoot,
+                    snapshots: snapshots, relations: relations["customerList"]?.loadedRelations[0] ?? [:])])
             case .null:
-                entity.customerList = []
+                entity.customerList = SmartList()
             default:
                 throw TeaQLError.execution("Invalid relation payload: customerList")
             }
@@ -182,8 +204,16 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
             teaqlEntityRoot = root
         }
-        for index in orderStatusList.indices { try orderStatusList[index].teaqlAttachRoot(root) }
-        for index in customerList.indices { try customerList[index].teaqlAttachRoot(root) }
+        for index in orderStatusList.indices {
+            var child = orderStatusList[index]
+            try child.teaqlAttachRoot(root)
+            orderStatusList.set(index, child)
+        }
+        for index in customerList.indices {
+            var child = customerList[index]
+            try child.teaqlAttachRoot(root)
+            customerList.set(index, child)
+        }
     }
 
     public func toRecord() -> TeaQLRecord {
@@ -228,18 +258,6 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             saved._loadedFields.insert("customerList")
         }
         return saved
-    }
-
-    /// Construct only after the Context-selected allocator succeeds.
-    static func teaqlNewWithID(_ value: Int64) throws -> Self {
-        guard value > 0 else { throw InternalIDError.invalidValue(value) }
-        var entity = Self(teaqlHydrationRoot: EntityRoot())
-        entity.id = value
-        entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "name", "version"])
-        entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
-        entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
-        return entity
     }
 
     /// Generator-only fixed identity initialization for schema bootstrap.
@@ -321,11 +339,11 @@ public struct PlatformAudited: Sendable {
         try teaqlValidateLoadedIdentities()
         try teaqlNormalizeGraph()
         guard try teaqlValidateInputGraph() else { return entity }
-        return try await context.executeGraphSave(comment: reason, rootEntityType: "Platform", preparing: { context, session in
+        return try await context.executeGraphSave(comment: reason, rootEntityType: "Platform", preparing: { context, _ in
             try teaqlValidateLoadedIdentities()
             try teaqlNormalizeGraph()
             _ = try teaqlValidateInputGraph()
-            try teaqlPreflightGraph(context, session: session)
+            try teaqlPreflightGraph(context)
             // A later Fix can add an intent to an already visited owner.
             // Re-admit the entire graph before customer policy or provider I/O.
             try teaqlNormalizeGraph()
@@ -342,9 +360,6 @@ public struct PlatformAudited: Sendable {
     /// path so policy review remains a strict preflight-then-mutate sequence.
     func teaqlSavePreflighted(_ context: UserContext, session: GraphMutationSession,
                             scope: TraceScopeToken) async throws -> Platform {
-        guard try session.visitEntity(entity, phase: .write) else {
-            return try entity.teaqlRebuildSavedGraph(session.readback())
-        }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         let activeScope = try scope.assigning(entity.teaqlEntityKey,
@@ -469,8 +484,7 @@ public struct PlatformAudited: Sendable {
         return pending
     }
 
-    func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
-        guard try session.visitEntity(entity, phase: .preflight) else { return }
+    func teaqlPreflightGraph(_ context: UserContext) throws {
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -493,7 +507,7 @@ public struct PlatformAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "platform", to: entity)
             }
-            do { try OrderStatusAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
+            do { try OrderStatusAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("order_status_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in
@@ -510,7 +524,7 @@ public struct PlatformAudited: Sendable {
             if entity.id == 0 {
                 try context.bindGraphReference(child, field: "platform", to: entity)
             }
-            do { try CustomerAudited(entity: child, reason: childReason).teaqlPreflightGraph(context, session: session) }
+            do { try CustomerAudited(entity: child, reason: childReason).teaqlPreflightGraph(context) }
             catch let error as CheckException {
                 let prefix = ObjectLocation.property("customer_list").index(index)
                 throw CheckException(context.translateCheckResults(error.violations.map { violation in

@@ -8,7 +8,7 @@ private struct PlatformChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if (mutation.kind == .create && mutation.values["name"] == nil) || mutation.values["name"] == .null { results.append(CheckResult(ruleID: "required", location: .property("name"), entityType: "Platform")) }
-        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform")) }
+        if let value = mutation.values["name"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("name"), systemValue: "100", entityType: "Platform").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
 
         return results
@@ -21,10 +21,10 @@ private struct WorkItemChecker: EntityChecker {
     ) throws -> [CheckResult] {
         var results: [CheckResult] = []
         if (mutation.kind == .create && mutation.values["title"] == nil) || mutation.values["title"] == .null { results.append(CheckResult(ruleID: "required", location: .property("title"), entityType: "WorkItem")) }
-        if let value = mutation.values["title"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("title"), systemValue: "1", entityType: "WorkItem")) }
-        if let value = mutation.values["title"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("title"), systemValue: "80", entityType: "WorkItem")) }
+        if let value = mutation.values["title"]?.stringValue, !(value.count >= 1) { results.append(CheckResult(ruleID: "min_length", location: .property("title"), systemValue: "1", entityType: "WorkItem").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
+        if let value = mutation.values["title"]?.stringValue, value.count > 80 { results.append(CheckResult(ruleID: "max_length", location: .property("title"), systemValue: "80", entityType: "WorkItem").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
-        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), systemValue: "100", entityType: "WorkItem")) }
+        if let value = mutation.values["description"]?.stringValue, value.count > 100 { results.append(CheckResult(ruleID: "max_length", location: .property("description"), systemValue: "100", entityType: "WorkItem").withLengthMeasurement(try CheckerLengthMeasurement(value.count, unit: .grapheme))) }
 
         if (mutation.kind == .create && mutation.values["platform"] == nil) || mutation.values["platform"] == .null { results.append(CheckResult(ruleID: "required", location: .property("platform"), entityType: "WorkItem")) }
 
@@ -50,7 +50,8 @@ public enum GeneratedRuntimeModule {
         wireMetadata: [
             "Platform": try! WireEntityMetadata(entityType: "Platform", canonicalFields: ["id", "name", "version"], aliases: ["id": ["id"], "name": ["name"], "version": ["version"]]),
             "WorkItem": try! WireEntityMetadata(entityType: "WorkItem", canonicalFields: ["id", "title", "description", "platform", "version"], aliases: ["id": ["id"], "title": ["title"], "description": ["description"], "platform": ["platform"], "version": ["version"]])
-        ])
+        ],
+        checkerPresentation: try! CheckerPresentationModel(data: Data("{\"schema\":\"teaql.checker-model/v1\",\"revision\":\"sha256:f026153870cc54db18171cbbe02db1db174f3dea513e9d21e0ffe8af787ebaed\",\"entities\":{\"Platform\":{\"labels\":{\"en\":\"Platform\"},\"fields\":[{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"name\",\"labels\":{\"en\":\"name\"},\"aliases\":[\"Name\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]},{\"name\":\"work_item_list\",\"targetType\":\"WorkItem\",\"labels\":{\"en\":\"Work Item\"},\"aliases\":[\"WorkItemList\",\"workItemList\"]}]},\"WorkItem\":{\"labels\":{\"en\":\"Work Item\"},\"fields\":[{\"name\":\"description\",\"labels\":{\"en\":\"description\"},\"aliases\":[\"Description\"]},{\"name\":\"id\",\"labels\":{\"en\":\"id\"},\"aliases\":[\"Id\"]},{\"name\":\"platform\",\"targetType\":\"Platform\",\"labels\":{\"en\":\"Platform\"},\"aliases\":[\"Platform\"]},{\"name\":\"title\",\"labels\":{\"en\":\"title\"},\"aliases\":[\"Title\"]},{\"name\":\"version\",\"labels\":{\"en\":\"version\"},\"aliases\":[\"Version\"]}]}}}".utf8)))
 
     private static func ensureGeneratedBootstrap(_ callerContext: UserContext) async throws {
         var lastError: Error?
@@ -65,7 +66,7 @@ public enum GeneratedRuntimeModule {
         let bootstrapContext = callerContext._generatedBootstrapContext()
         var domainRoot = try await Q.platforms().withIdIs(1).comment("what: locate generated Domain Root").purpose("why: idempotent runtime bootstrap").executeForList(bootstrapContext).first
         if domainRoot == nil {
-            var created = try await Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
+            var created = try Q.platforms().comment("what: create generated Domain Root").purpose("why: initialize runtime bootstrap").newEntity(bootstrapContext)
             try created.teaqlInitializeGeneratedBootstrapId(1)
             created.updateName("Runtime Example")
             do { domainRoot = try await created.auditAs("create generated Domain Root Platform").save(bootstrapContext) }

@@ -99,7 +99,7 @@ public struct CommercePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_list"))
         }
-        return CustomerListExpression(value.customerList, root: root, path: accessPath)
+        return CustomerListExpression(value.customerList.data, root: root, path: accessPath)
     }
 
     public func orderStatusList() -> OrderStatusListExpression {
@@ -113,7 +113,7 @@ public struct CommercePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_status_list"))
         }
-        return OrderStatusListExpression(value.orderStatusList, root: root, path: accessPath)
+        return OrderStatusListExpression(value.orderStatusList.data, root: root, path: accessPath)
     }
 
     public func customerOrderList() -> CustomerOrderListExpression {
@@ -127,7 +127,7 @@ public struct CommercePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_order_list"))
         }
-        return CustomerOrderListExpression(value.customerOrderList, root: root, path: accessPath)
+        return CustomerOrderListExpression(value.customerOrderList.data, root: root, path: accessPath)
     }
 
     public func productList() -> ProductListExpression {
@@ -141,7 +141,7 @@ public struct CommercePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "product_list"))
         }
-        return ProductListExpression(value.productList, root: root, path: accessPath)
+        return ProductListExpression(value.productList.data, root: root, path: accessPath)
     }
 
     public func orderLineList() -> OrderLineListExpression {
@@ -155,7 +155,7 @@ public struct CommercePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_line_list"))
         }
-        return OrderLineListExpression(value.orderLineList, root: root, path: accessPath)
+        return OrderLineListExpression(value.orderLineList.data, root: root, path: accessPath)
     }
 
     public func orderSearchPresetList() -> OrderSearchPresetListExpression {
@@ -169,7 +169,7 @@ public struct CommercePlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_search_preset_list"))
         }
-        return OrderSearchPresetListExpression(value.orderSearchPresetList, root: root, path: accessPath)
+        return OrderSearchPresetListExpression(value.orderSearchPresetList.data, root: root, path: accessPath)
     }
 }
 
@@ -280,7 +280,7 @@ public struct CustomerExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_order_list"))
         }
-        return CustomerOrderListExpression(value.customerOrderList, root: root, path: accessPath)
+        return CustomerOrderListExpression(value.customerOrderList.data, root: root, path: accessPath)
     }
 }
 
@@ -391,7 +391,7 @@ public struct OrderStatusExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "customer_order_list"))
         }
-        return CustomerOrderListExpression(value.customerOrderList, root: root, path: accessPath)
+        return CustomerOrderListExpression(value.customerOrderList.data, root: root, path: accessPath)
     }
 }
 
@@ -560,7 +560,7 @@ public struct CustomerOrderExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_line_list"))
         }
-        return OrderLineListExpression(value.orderLineList, root: root, path: accessPath)
+        return OrderLineListExpression(value.orderLineList.data, root: root, path: accessPath)
     }
 }
 
@@ -681,7 +681,7 @@ public struct ProductExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "order_line_list"))
         }
-        return OrderLineListExpression(value.orderLineList, root: root, path: accessPath)
+        return OrderLineListExpression(value.orderLineList.data, root: root, path: accessPath)
     }
 }
 

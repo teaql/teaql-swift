@@ -79,7 +79,7 @@ public struct QueryPlatformExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "query_group_list"))
         }
-        return QueryGroupListExpression(value.queryGroupList, root: root, path: accessPath)
+        return QueryGroupListExpression(value.queryGroupList.data, root: root, path: accessPath)
     }
 }
 
@@ -160,7 +160,7 @@ public struct QueryGroupExpression: Sendable {
                 [], root: root, path: accessPath, present: false,
                 notLoaded: TeaQLNotLoadedError(path: accessPath.markMissing(), breakPoint: "query_record_list"))
         }
-        return QueryRecordListExpression(value.queryRecordList, root: root, path: accessPath)
+        return QueryRecordListExpression(value.queryRecordList.data, root: root, path: accessPath)
     }
 }
 

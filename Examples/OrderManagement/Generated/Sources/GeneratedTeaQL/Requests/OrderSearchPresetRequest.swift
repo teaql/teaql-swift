@@ -960,23 +960,9 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByIdAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("id", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByName() -> Self {
         var copy = self
         copy.query.groupBy.append("name")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByNameAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("name", as: alias)
         return copy
     }
 
@@ -988,23 +974,9 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByFilterJsonAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("filterJson", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByRequestId() -> Self {
         var copy = self
         copy.query.groupBy.append("requestId")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByRequestIdAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("requestId", as: alias)
         return copy
     }
 
@@ -1016,23 +988,9 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByOwnerUserIdAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("ownerUserId", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByCommercePlatform() -> Self {
         var copy = self
         copy.query.groupBy.append("commercePlatform")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByCommercePlatformAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("commercePlatform", as: alias)
         return copy
     }
 
@@ -1044,13 +1002,6 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByCreateTimeAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("createTime", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByUpdateTime() -> Self {
         var copy = self
         copy.query.groupBy.append("updateTime")
@@ -1058,23 +1009,9 @@ public struct OrderSearchPresetRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByUpdateTimeAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("updateTime", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByVersionAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -1103,10 +1040,9 @@ public extension OrderSearchPresetRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) async throws -> OrderSearchPreset {
+    func newEntity(_ context: UserContext) throws -> OrderSearchPreset {
         try ensureIntent()
-        let id = try await context.generateInternalID(for: "OrderSearchPreset")
-        return context.initializeEntity("OrderSearchPreset", try OrderSearchPreset.teaqlNewWithID(id))
+        return context.initializeEntity("OrderSearchPreset", OrderSearchPreset())
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderSearchPreset> {
@@ -1118,6 +1054,33 @@ public extension OrderSearchPresetRequest where State == RequestExecutable {
         }
     }
 
+    func executeForOne(_ context: UserContext) async throws -> OrderSearchPreset? {
+        var request = self
+        request.query.limit = 1
+        return try await request.executeForList(context).first
+    }
+
+    /// Pull-based typed stream. Each demand loads at most one bounded chunk;
+    /// no task eagerly buffers the entire query into a SmartList.
+    func executeForStream(_ context: UserContext) throws -> AsyncThrowingStream<OrderSearchPreset, Error> {
+        try ensureIntent()
+        guard query.groupBy.isEmpty && query.aggregates.isEmpty else {
+            throw TeaQLError.unsupportedQueryCapability("entity streams require an entity query")
+        }
+        var source = query
+        if !source.orderBy.contains(where: { $0.field == "id" }) { source.orderBy.append(OrderBy("id", .ascending)) }
+        let request = try QueryRequest(query: source)
+        let cursor = OrderSearchPresetStreamCursor(offset: source.offset, remaining: source.limit) { offset, limit in
+            var page = request.query; page.offset = offset; page.limit = limit
+            let result = try await context.execute(request.withQuery(page))
+            let snapshots = LoadedEntitySnapshots()
+            return try result.records.map {
+                try OrderSearchPreset.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+            }
+        }
+        return AsyncThrowingStream(unfolding: { try await cursor.next() })
+    }
+
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
@@ -1125,4 +1088,33 @@ public extension OrderSearchPresetRequest where State == RequestExecutable {
     }
 
 
+}
+
+private actor OrderSearchPresetStreamCursor {
+    private var offset: Int
+    private var remaining: Int?
+    private var buffer: [OrderSearchPreset] = []
+    private var index = 0
+    private var finished = false
+    private let fetch: @Sendable (Int, Int) async throws -> [OrderSearchPreset]
+
+    init(offset: Int, remaining: Int?, fetch: @escaping @Sendable (Int, Int) async throws -> [OrderSearchPreset]) {
+        self.offset = offset; self.remaining = remaining; self.fetch = fetch
+    }
+
+    func next() async throws -> OrderSearchPreset? {
+        try _Concurrency.Task<Never, Never>.checkCancellation()
+        if index == buffer.count {
+            guard !finished else { return nil }
+            let size = min(128, remaining ?? 128)
+            guard size > 0 else { finished = true; return nil }
+            buffer = try await fetch(offset, size); index = 0
+            offset += buffer.count
+            if let count = remaining { remaining = count - buffer.count }
+            finished = buffer.count < size || remaining == 0
+            guard !buffer.isEmpty else { return nil }
+        }
+        defer { index += 1 }
+        return buffer[index]
+    }
 }

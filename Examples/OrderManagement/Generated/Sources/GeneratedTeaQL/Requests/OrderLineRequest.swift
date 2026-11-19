@@ -973,23 +973,9 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByIdAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("id", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByCustomerOrder() -> Self {
         var copy = self
         copy.query.groupBy.append("customerOrder")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByCustomerOrderAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("customerOrder", as: alias)
         return copy
     }
 
@@ -1001,23 +987,9 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByProductAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("product", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByProductName() -> Self {
         var copy = self
         copy.query.groupBy.append("productName")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByProductNameAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("productName", as: alias)
         return copy
     }
 
@@ -1029,23 +1001,9 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupBySkuAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("sku", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByQuantity() -> Self {
         var copy = self
         copy.query.groupBy.append("quantity")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByQuantityAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("quantity", as: alias)
         return copy
     }
 
@@ -1057,13 +1015,6 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByCommercePlatformAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("commercePlatform", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByCreateTime() -> Self {
         var copy = self
         copy.query.groupBy.append("createTime")
@@ -1071,23 +1022,9 @@ public struct OrderLineRequest<State: Sendable>: Sendable {
     }
 
     @discardableResult
-    public func groupByCreateTimeAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("createTime", as: alias)
-        return copy
-    }
-
-    @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
         copy.query.groupBy.append("version")
-        return copy
-    }
-
-    @discardableResult
-    public func groupByVersionAs(_ alias: String) -> Self {
-        var copy = self
-        copy.query.groupBy("version", as: alias)
         return copy
     }
 
@@ -1116,10 +1053,9 @@ public extension OrderLineRequest where State == RequestExecutable {
         _ = try QueryIntent(comment: query.comment, purpose: query.purpose)
     }
 
-    func newEntity(_ context: UserContext) async throws -> OrderLine {
+    func newEntity(_ context: UserContext) throws -> OrderLine {
         try ensureIntent()
-        let id = try await context.generateInternalID(for: "OrderLine")
-        return context.initializeEntity("OrderLine", try OrderLine.teaqlNewWithID(id))
+        return context.initializeEntity("OrderLine", OrderLine())
     }
 
     func executeForList(_ context: UserContext) async throws -> SmartList<OrderLine> {
@@ -1131,6 +1067,33 @@ public extension OrderLineRequest where State == RequestExecutable {
         }
     }
 
+    func executeForOne(_ context: UserContext) async throws -> OrderLine? {
+        var request = self
+        request.query.limit = 1
+        return try await request.executeForList(context).first
+    }
+
+    /// Pull-based typed stream. Each demand loads at most one bounded chunk;
+    /// no task eagerly buffers the entire query into a SmartList.
+    func executeForStream(_ context: UserContext) throws -> AsyncThrowingStream<OrderLine, Error> {
+        try ensureIntent()
+        guard query.groupBy.isEmpty && query.aggregates.isEmpty else {
+            throw TeaQLError.unsupportedQueryCapability("entity streams require an entity query")
+        }
+        var source = query
+        if !source.orderBy.contains(where: { $0.field == "id" }) { source.orderBy.append(OrderBy("id", .ascending)) }
+        let request = try QueryRequest(query: source)
+        let cursor = OrderLineStreamCursor(offset: source.offset, remaining: source.limit) { offset, limit in
+            var page = request.query; page.offset = offset; page.limit = limit
+            let result = try await context.execute(request.withQuery(page))
+            let snapshots = LoadedEntitySnapshots()
+            return try result.records.map {
+                try OrderLine.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+            }
+        }
+        return AsyncThrowingStream(unfolding: { try await cursor.next() })
+    }
+
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
@@ -1138,4 +1101,33 @@ public extension OrderLineRequest where State == RequestExecutable {
     }
 
 
+}
+
+private actor OrderLineStreamCursor {
+    private var offset: Int
+    private var remaining: Int?
+    private var buffer: [OrderLine] = []
+    private var index = 0
+    private var finished = false
+    private let fetch: @Sendable (Int, Int) async throws -> [OrderLine]
+
+    init(offset: Int, remaining: Int?, fetch: @escaping @Sendable (Int, Int) async throws -> [OrderLine]) {
+        self.offset = offset; self.remaining = remaining; self.fetch = fetch
+    }
+
+    func next() async throws -> OrderLine? {
+        try _Concurrency.Task<Never, Never>.checkCancellation()
+        if index == buffer.count {
+            guard !finished else { return nil }
+            let size = min(128, remaining ?? 128)
+            guard size > 0 else { finished = true; return nil }
+            buffer = try await fetch(offset, size); index = 0
+            offset += buffer.count
+            if let count = remaining { remaining = count - buffer.count }
+            finished = buffer.count < size || remaining == 0
+            guard !buffer.isEmpty else { return nil }
+        }
+        defer { index += 1 }
+        return buffer[index]
+    }
 }
