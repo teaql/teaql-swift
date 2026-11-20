@@ -24,12 +24,20 @@
     "receipt": "teaql-conformance/evidence/2026-11-19-runtime-examples-refresh/generation-v430-candidate/receipt.json",
     "receiptSHA256": "9bf2a08fa9c5bec0d9b1a2e1420044ffdd6bc71c6a1a09ce70d81d1cf0cdbd0a"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-trace-chain-native-entrypoint/runtime/trace-chain/receipt.json",
+    "businessReceiptSHA256": "4d32a464516904d310d58defd72f1e35ffa5aa5957713f33b5b3bc5f17f430bb",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-trace-chain-native-entrypoint/receipt.json",
+    "nativeReceiptSHA256": "ae62bdf1ae9ada6a7177bfbed1a1800e9e504d9c1440f704223f1bada0f6b7fd",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "b494daabe4ae25dbe0aa2e77c7683dcaadaad126"
+  },
   "relatedShowcases": [
     "standard-order/showcase.json"
   ],
   "scene": "Order graph changes, failure rollback and request lineage",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "Examples/TraceChain/verify.sh"
