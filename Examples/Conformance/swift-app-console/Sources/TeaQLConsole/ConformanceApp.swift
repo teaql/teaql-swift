@@ -28,15 +28,14 @@ actor ConformanceAuditSink: AuditSink {
     func events() -> [AuditEvent] { stored }
 }
 
-@main
 enum ConformanceApp {
     static func main() async throws {
         try await verifyOperationalClock()
         try await verifyFieldAwareSQLMasking()
         let directory = FileManager.default.currentDirectoryPath + "/.local"
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
-        let path = directory + "/conformance.sqlite"
-        try? FileManager.default.removeItem(atPath: path)
+        let path = ProcessInfo.processInfo.environment["TEAQL_CONFORMANCE_DB"]
+            ?? directory + "/conformance.sqlite"
 
         let database = try SQLiteDataService(path: path)
         var runtime = TeaQLRuntime()

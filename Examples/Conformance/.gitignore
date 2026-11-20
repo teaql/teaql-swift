@@ -1,2 +1,4 @@
 .build/
 .local/
+
+!/swift-app-console/Package.resolved

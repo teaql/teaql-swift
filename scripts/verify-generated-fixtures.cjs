@@ -2,7 +2,7 @@
 "use strict";
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto'), assert = require('node:assert/strict');
 const repo = path.resolve(__dirname, '..'), sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
-const roots = ['Examples/Conformance', 'Examples/SchoolManagement/swift-lib-core', 'Examples/FacetTrace/swift-lib-core',
+const roots = ['Examples/Conformance/swift-lib-core', 'Examples/SchoolManagement/swift-lib-core', 'Examples/FacetTrace/swift-lib-core',
   'Examples/TraceChain/Generated', 'Examples/TraceChain/standard-order/lib', 'Examples/OrderManagement/swift-lib-core',
   'Examples/QueryGrouping/Generated'];
 let files = 0;

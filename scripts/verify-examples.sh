@@ -29,7 +29,8 @@ TEAQL_GENERATED_E_PROFILE_EVIDENCE_DIR="$inventory_evidence/expression-profiles"
 # deleting the normal build cache or any retained example database.
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
 TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ScalarTypeProbe/verify.sh"
-(cd "$repo/Examples/Conformance" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions TeaQLConsole)
+TEAQL_CONFORMANCE_EVIDENCE_DIR="$inventory_evidence/conformance" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
+  bash "$repo/Examples/Conformance/verify.sh"
 TEAQL_SCHOOL_EVIDENCE_DIR="$inventory_evidence/school-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
   bash "$repo/Examples/SchoolManagement/verify.sh"
 TEAQL_ORDER_EVIDENCE_DIR="$inventory_evidence/order-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
