@@ -1,0 +1,41 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/ScalarTypeProbe",
+  "library": {
+    "generatedFilesManifestSHA256": "8d370cdd6b81b7ccc1e48bcf7ed509ea6f5dbdc18919b82586a4663a2b284c8a",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core"
+  },
+  "model": {
+    "path": "freight-quote.xml",
+    "sha256": "076fdf926be1a8b71e61cdfaf66b539f54c1ac2182e1f2bc75897dfab52d6d38"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build",
+      "jarSHA256": "029f602cf0e2de4ec0910495c340fbeb41f11772b6aca875569f498811158e7d",
+      "qualificationReceiptSHA256": "1012520de60d49cfc1e45c7e08fcf204dd2db36a163909e1e36752065a31047a",
+      "sourceCommit": "99d6bde2351d79b7d8b1b1c5cbc78c5dc777b6f2",
+      "tag": "unreleased-source-99d6bde2"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-freight-quote-generation/receipt.json",
+    "receiptSHA256": "be062c642303e6f3ee19b69441fe4dcfa0aaf9d9446b04b65c9e113243deb626"
+  },
+  "scene": "Precise freight quotes and delivery commitments",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "implemented-pending-native-qualification",
+  "verification": [
+    "bash",
+    "Examples/ScalarTypeProbe/verify-freight-quotes.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Package.resolved",
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "generatedFilesManifestSHA256": "0ce3d713b612748f3f1f69f90e6ec0cbd7d5a0effa60758ec3332949bd8fba8d",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

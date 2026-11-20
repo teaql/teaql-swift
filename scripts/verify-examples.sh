@@ -28,7 +28,7 @@ TEAQL_GENERATED_E_PROFILE_EVIDENCE_DIR="$inventory_evidence/expression-profiles"
 # An explicit scratch path also allows isolated ABI/layout verification without
 # deleting the normal build cache or any retained example database.
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
-TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ScalarTypeProbe/verify.sh"
+TEAQL_FREIGHT_QUOTE_EVIDENCE_DIR="$inventory_evidence/freight-quotes" TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ScalarTypeProbe/verify-freight-quotes.sh"
 TEAQL_CONFORMANCE_EVIDENCE_DIR="$inventory_evidence/conformance" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
   bash "$repo/Examples/Conformance/verify.sh"
 TEAQL_SCHOOL_EVIDENCE_DIR="$inventory_evidence/school-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
