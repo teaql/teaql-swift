@@ -1,0 +1,41 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/ObjectStorage",
+  "library": {
+    "generatedFilesManifestSHA256": "6fe7eb2852e41bd73ed2f2ca2d8a48c44e4371b0e441efb49ea0d8f802563084",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core"
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "1e35ffb88509f292b75620d82996bbc50868c61fd34716f8be010dff7280eafc"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build",
+      "jarSHA256": "029f602cf0e2de4ec0910495c340fbeb41f11772b6aca875569f498811158e7d",
+      "qualificationReceiptSHA256": "1012520de60d49cfc1e45c7e08fcf204dd2db36a163909e1e36752065a31047a",
+      "sourceCommit": "99d6bde2351d79b7d8b1b1c5cbc78c5dc777b6f2",
+      "tag": "unreleased-source-99d6bde2"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/order-attachment-generation/receipt.json",
+    "receiptSHA256": "715bd8f8f61f6ecd96611db1121cb54ce40d72f533b23289c5919e92de0cd95e"
+  },
+  "scene": "Store and retrieve an order receipt through a trusted provider",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "implemented-pending-native-qualification",
+  "verification": [
+    "bash",
+    "Examples/ObjectStorage/verify.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Sources/TeaQLConsole/main.swift",
+      "Package.swift",
+      "Package.resolved"
+    ],
+    "generatedFilesManifestSHA256": "bbe611b75632b164cd32dc73bc892d5afcca3030552015eb7bd8aa4c5e902c2d",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}
