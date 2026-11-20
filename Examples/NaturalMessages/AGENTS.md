@@ -1,7 +1,7 @@
 # Natural message example rules
 
 - Discover generated APIs through the recorded model-aware object/action and
-  field Assist in `automatic-fixture/assist/`, not generated library source.
+  field Assist in `swift-lib-core/assist/`, not generated library source.
 - Never hand-edit either generated fixture. Regenerate and verify every byte.
 - `AutomaticNaturalMessages.swift` must use the original module and Checker.
   Do not install application presentation metadata or a replacement Checker.

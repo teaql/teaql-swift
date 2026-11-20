@@ -23,7 +23,7 @@ function automaticFixture(root){
   }
   assert.equal(json('evaluation.json').errors.length,0);assert.equal(origin.modelSha256,sha(fs.readFileSync(path.join(root,'model.xml'))));
   assert(!origin.implementationHandEdited&&!origin.publicPublication);
-  const app=fs.readFileSync(path.join(repo,'Examples/NaturalMessages/AutomaticNaturalMessages.swift'),'utf8');
+  const app=fs.readFileSync(path.join(repo,'Examples/NaturalMessages/swift-app-console/Sources/NaturalMessagesExample/AutomaticNaturalMessages.swift'),'utf8');
   for(const forbidden of ['CheckerPresentationModel(', 'installCheckerPresentation(', 'struct AppChecker', 'AppChecker(', 'checkers:', 'RuntimeModule(name:'])
     assert(!app.includes(forbidden),'automatic composition replaced: '+forbidden);
   return {files,assists,origin,inputHashes:Object.fromEntries(names.map(name=>[name,sha(fs.readFileSync(path.join(root,name)))]))};
@@ -59,17 +59,22 @@ async function main(){
     }
     if(!exampleOnly)await run([swift,'test','--package-path',work,'--scratch-path',path.join(scratch,'build'),'--jobs','2',...(focused?[]:['--skip-update','--force-resolved-versions'])], 'native-tests.log',focused?240000:900000);
     if(example){
-      const fixture=path.join(work,'Examples/NaturalMessages/automatic-fixture');
+      const fixture=path.join(work,'Examples/NaturalMessages/swift-lib-core');
       const automatic=automaticFixture(fixture),generated=automatic.files;
       for(const[name,hash]of Object.entries(generated)){
         assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(fs.readFileSync(path.join(fixture,name))),hash,name);
       }
       receipt.fixtureFiles=generated;receipt.fixtureSha256=sha(fs.readFileSync(path.join(fixture,'generated-files.json')));
       receipt.fixtureInputHashes=automatic.inputHashes;receipt.generation=automatic.origin;receipt.automaticComposition=true;
-      const consumer=path.join(scratch,'consumer'),build=path.join(scratch,'consumer-build');fs.mkdirSync(path.join(consumer,'Sources/NaturalMessagesExample'),{recursive:true});
-      fs.cpSync(fixture,path.join(consumer,'generated'),{recursive:true});fs.copyFileSync(path.join(work,'Examples/NaturalMessages/AutomaticNaturalMessages.swift'),path.join(consumer,'Sources/NaturalMessagesExample/NaturalMessages.swift'));
-      const manifest='// swift-tools-version: 6.0\nimport PackageDescription\nlet package=Package(name:"NaturalMessagesExample",dependencies:[.package(name:"teaql-swift",path:'+JSON.stringify(work)+')],targets:[.target(name:"GeneratedTeaQL",dependencies:[.product(name:"TeaQLCore",package:"teaql-swift")],path:"generated/Sources/GeneratedTeaQL"),.executableTarget(name:"NaturalMessagesExample",dependencies:["GeneratedTeaQL",.product(name:"TeaQLCore",package:"teaql-swift"),.product(name:"TeaQLSQLite",package:"teaql-swift")],path:"Sources/NaturalMessagesExample")],swiftLanguageModes:[.v6])\n';
-      fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);fs.writeFileSync(path.join(output,'consumer-Package.swift'),manifest);fs.copyFileSync(path.join(work,'Package.resolved'),path.join(consumer,'Package.resolved'));
+      const consumer=path.join(scratch,'swift-app-console'),build=path.join(scratch,'consumer-build');
+      fs.cpSync(path.join(work,'Examples/NaturalMessages/swift-app-console'),consumer,{recursive:true});
+      fs.cpSync(fixture,path.join(scratch,'swift-lib-core'),{recursive:true});
+      for(const[name,digest]of Object.entries(generated).filter(([name])=>name.startsWith('Sources/GeneratedTeaQL/')))
+        assert.equal(sha(fs.readFileSync(path.join(consumer,name))),digest,'native workspace domain differs from sibling library');
+      const manifest=fs.readFileSync(path.join(consumer,'Package.swift'),'utf8').replace('path:"../../.."','path:'+JSON.stringify(work));
+      fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);fs.writeFileSync(path.join(output,'consumer-Package.swift'),manifest);
+      const nativeLock=fs.readFileSync(path.join(consumer,'Package.resolved'));
+      assert.equal(sha(nativeLock),sha(fs.readFileSync(path.join(work,'Package.resolved'))));
       const flags=['--package-path',consumer,'--scratch-path',build,'--jobs','2'];
       await run([swift,'build',...flags,'--product','NaturalMessagesExample','--skip-update','--force-resolved-versions'],'example-build.log',600000,consumer);
       const pins=JSON.parse(fs.readFileSync(path.join(consumer,'Package.resolved'))),original=JSON.parse(fs.readFileSync(path.join(work,'Package.resolved')));
