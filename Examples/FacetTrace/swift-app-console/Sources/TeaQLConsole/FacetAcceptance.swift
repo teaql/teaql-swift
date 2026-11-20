@@ -78,7 +78,7 @@ func verifySQL(_ facts: [SQLExecutionMetadata],
     try require(comment == "load \(secret) Facets" && purpose == "verify \(secret) generated provenance",
         "safe projection changed caller-owned intent")
 }
-@main enum FacetAcceptance {
+enum FacetAcceptance {
     static func main() async {
         do { try await run() }
         catch {

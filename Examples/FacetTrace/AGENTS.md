@@ -1,7 +1,7 @@
 # Generated Facet application rules
 
 Edit application-owned verification, scripts and manifest wiring only.
-`Generated/Sources` is an immutable generated fixture, not API documentation.
+`swift-lib-core/Sources` is an immutable generated fixture, not API documentation.
 Do not read/search it for API discovery. Use progressive model-aware Assist
 with model.xml; use only required object/action and field help, never guess.
 

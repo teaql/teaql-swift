@@ -47,7 +47,7 @@
     },
     {
       "id": "facet-trace",
-      "target": "Examples/FacetTrace/Generated",
+      "target": "Examples/FacetTrace/swift-lib-core",
       "model": "Examples/FacetTrace/model.xml",
       "modelSha256": "0e385417536df9dcacddf8cc778d2156005b766437e2644e4fa673d5783cc9cc",
       "files": {
