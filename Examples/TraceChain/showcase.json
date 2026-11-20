@@ -1,0 +1,60 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/TraceChain",
+  "library": {
+    "generatedFilesManifestSHA256": "e15cb72ca66f92d4fa9f3803b3ac3e5e7b192861f051ddbe1fced091b7e3bd6f",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core"
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "c9743d776718c7b27c97792f75f492fdc99bf427e4bd0c24bf3492de6520c9a2"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "unsigned unpublished versioned source candidate; not a released artifact",
+      "baseRelease": "v4.2.0",
+      "candidatePreparationReceiptSHA256": "52b4c2042be58624c08d07186b7081cf6ad4c0fccfc8e9724bee7f9280b5c02f",
+      "candidateVersion": "4.3.0",
+      "jarSHA256": "3a4988ada43aeb01d5cbba5901c1eef64c58b2bd4142c99fd7692cf1dc413e9e",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "sourceQualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "tag": "unsigned-candidate-v4.3.0"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-19-runtime-examples-refresh/generation-v430-candidate/receipt.json",
+    "receiptSHA256": "9bf2a08fa9c5bec0d9b1a2e1420044ffdd6bc71c6a1a09ce70d81d1cf0cdbd0a"
+  },
+  "relatedShowcases": [
+    "standard-order/showcase.json"
+  ],
+  "scene": "Order graph changes, failure rollback and request lineage",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "implemented-pending-native-qualification",
+  "verification": [
+    "bash",
+    "Examples/TraceChain/verify.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Package.resolved",
+      "Sources/StandardGraphVerification/Main.swift",
+      "Sources/StandardTelemetryVerification/Main.swift",
+      "Sources/TeaQLConsole/AdditionalProofs.swift",
+      "Sources/TeaQLConsole/AggregateProofs.swift",
+      "Sources/TeaQLConsole/BootstrapProofs.swift",
+      "Sources/TeaQLConsole/CheckerOverlapProofs.swift",
+      "Sources/TeaQLConsole/Failures.swift",
+      "Sources/TeaQLConsole/Graph.swift",
+      "Sources/TeaQLConsole/GraphIdentities.swift",
+      "Sources/TeaQLConsole/Observation.swift",
+      "Sources/TeaQLConsole/PaginationProofs.swift",
+      "Sources/TeaQLConsole/PrivacyProofs.swift",
+      "Sources/TeaQLConsole/SharedReferences.swift",
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "generatedFilesManifestSHA256": "f99c6f79aa8e934e72f614198b8d553cb686e696b736f13f554e757b5ba94c48",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

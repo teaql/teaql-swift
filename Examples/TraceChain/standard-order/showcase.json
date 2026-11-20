@@ -1,0 +1,44 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/TraceChain",
+  "library": {
+    "generatedFilesManifestSHA256": "4cfe4c5a8e7d71d825a04e0450f9a89885591ed8d20d4c5f285165a0922df1f4",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core"
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "f207e9603ffa6bdc98007e61093eaa7bed51fc15f26e033fc75709dcb9cde287"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "unsigned unpublished versioned source candidate; not a released artifact",
+      "baseRelease": "v4.2.0",
+      "candidatePreparationReceiptSHA256": "52b4c2042be58624c08d07186b7081cf6ad4c0fccfc8e9724bee7f9280b5c02f",
+      "candidateVersion": "4.3.0",
+      "jarSHA256": "3a4988ada43aeb01d5cbba5901c1eef64c58b2bd4142c99fd7692cf1dc413e9e",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "sourceQualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "tag": "unsigned-candidate-v4.3.0"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-trace-chain-native-scope-pairs/receipt.json",
+    "receiptSHA256": "c164c3e22f663c402e5ed29aef7577316a5b4d4f4ab296ecb5222e020045a5a3"
+  },
+  "scene": "Order paging, item previews and status totals",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "implemented-pending-native-qualification",
+  "verification": [
+    "bash",
+    "Examples/TraceChain/verify-standard-order.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Package.resolved",
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "generatedFilesManifestSHA256": "edaa7f341e1933b91c09b920c32912f8994426646c2eb611e88858a564e58311",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

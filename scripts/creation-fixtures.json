@@ -67,7 +67,7 @@
     },
     {
       "id": "trace-chain",
-      "target": "Examples/TraceChain/Generated",
+      "target": "Examples/TraceChain/swift-lib-core",
       "model": "Examples/TraceChain/model.xml",
       "modelSha256": "e7290d70b3c977fe339828330b5553bde512d61ee3a195285d6aafd1a7c32477",
       "files": {
@@ -93,7 +93,7 @@
     },
     {
       "id": "standard-order",
-      "target": "Examples/TraceChain/standard-order/lib",
+      "target": "Examples/TraceChain/standard-order/swift-lib-core",
       "model": "Examples/TraceChain/standard-order/model.xml",
       "modelSha256": "f207e9603ffa6bdc98007e61093eaa7bed51fc15f26e033fc75709dcb9cde287",
       "files": {
