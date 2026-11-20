@@ -52,14 +52,12 @@ text = (root / 'dependencies.log').read_text()
 start = text.find('{')
 assert start >= 0
 dependencies, _ = json.JSONDecoder().raw_decode(text[start:])
-nodes = []
-def visit(node):
-    nodes.append(node)
-    for child in node.get('dependencies', []):
-        visit(child)
-visit(dependencies)
-local = [node for node in nodes if node.get('path') and pathlib.Path(node['path']).resolve() == runtime.resolve()]
-assert len(local) == 1, local
+direct = dependencies['dependencies']
+local, = [node for node in direct if node.get('path') and pathlib.Path(node['path']).resolve() == runtime]
+domain, = [node for node in direct if node.get('path') and
+    pathlib.Path(node['path']).resolve() == runtime / 'Examples/OrderManagement/swift-lib-core']
+assert any(node['identity'] == local['identity'] and pathlib.Path(node['path']).resolve() == runtime
+    for node in domain['dependencies'])
 observations = []
 for entry in ['workspace', 'sdk']:
     audits = []
@@ -85,7 +83,7 @@ for entry in ['workspace', 'sdk']:
         reportedAuditCounts=audits, secondRunAppAudits=0,
         databaseSHA256=hashlib.sha256(database.read_bytes()).hexdigest()))
 receipt = dict(schema='teaql.swift-order-business/v1', passed=True, entries=observations,
-    localRuntime=local[0], dependencyWarningPrefixBytes=len(text[:start].encode()),
+    localRuntime=local, domainLibraryPath=domain['path'], dependencyWarningPrefixBytes=len(text[:start].encode()),
     generatedScopesUnchanged=True, rootExampleTargetVerified=True,
     separatePackageBuildGraphs=True, businessLogicUnchangedWithNativeMainEntryAdaptation=True)
 (root / 'business-receipt.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')

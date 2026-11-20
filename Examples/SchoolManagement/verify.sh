@@ -51,14 +51,12 @@ text = (root / 'dependencies.log').read_text()
 start = text.find('{')
 assert start >= 0, text[-1000:]
 dependencies, _ = json.JSONDecoder().raw_decode(text[start:])
-nodes = []
-def visit(node):
-    nodes.append(node)
-    for child in node.get('dependencies', []):
-        visit(child)
-visit(dependencies)
-local = [node for node in nodes if node.get('path') and pathlib.Path(node['path']).resolve() == runtime.resolve()]
-assert len(local) == 1, local
+direct = dependencies['dependencies']
+local, = [node for node in direct if node.get('path') and pathlib.Path(node['path']).resolve() == runtime]
+domain, = [node for node in direct if node.get('path') and
+    pathlib.Path(node['path']).resolve() == runtime / 'Examples/SchoolManagement/swift-lib-core']
+assert any(node['identity'] == local['identity'] and pathlib.Path(node['path']).resolve() == runtime
+    for node in domain['dependencies'])
 log = (root / 'application.log').read_text()
 for expected in ['PASS Mutation ledger identity', 'PASS generated bootstrap SQL intent, committed lineage and no-op reseeding',
     'PASS required Query and Mutation comments, including logging disabled',
@@ -74,7 +72,7 @@ with sqlite3.connect(database.resolve().as_uri() + '?mode=ro&immutable=1', uri=T
     assert types == [(1001, 3), (1002, 1)], types
     assert connection.execute('PRAGMA quick_check').fetchone() == ('ok',)
 receipt = dict(schema='teaql.swift-school-business/v1', passed=True,
-    originalApplicationAssertionsPassed=True, localRuntime=local[0],
+    originalApplicationAssertionsPassed=True, localRuntime=local, domainLibraryPath=domain['path'],
     dependencyWarningPrefixBytes=len(text[:start].encode()), sameDatabaseContextRestart=True,
     restartAudits=1, repeatWrites=0, preexistingDatabaseRejectedWithoutModification=True,
     generatedScopesUnchanged=True, sqliteRows=rows, schoolTypeVersions=types,
