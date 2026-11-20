@@ -21,9 +21,17 @@
     "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-freight-quote-generation/receipt.json",
     "receiptSHA256": "be062c642303e6f3ee19b69441fe4dcfa0aaf9d9446b04b65c9e113243deb626"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-freight-quotes-native/runtime/freight-quote/receipt.json",
+    "businessReceiptSHA256": "e9332f1d63da4a47716537945680e1c8053d1dc5df2008ed081e8aec1f32ce97",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-freight-quotes-native/receipt.json",
+    "nativeReceiptSHA256": "06e0789eb961d750ff69d0be8dfb6d9f720f0c172093ded4e63942a6d2f34d78",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "04a866b533e0246bfd0a37dbd1218ae0a5f87ccd"
+  },
   "scene": "Precise freight quotes and delivery commitments",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "Examples/ScalarTypeProbe/verify-freight-quotes.sh"
