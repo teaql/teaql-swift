@@ -30,9 +30,17 @@
     "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/school-generation/receipt.json",
     "receiptSHA256": "86cdc634a758fdf746de3323e8cd5c4fd32a050e50c0b7b04c5e64b397a1165f"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-scopes/runtime/school-management/business-receipt.json",
+    "businessReceiptSHA256": "a3800098d4033220b249296963b4dc819f62c392aea666763ff82fcb3ea2c4f5",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-scopes/receipt.json",
+    "nativeReceiptSHA256": "31a9a34a8cf348d0c7569fdb28f2906fe68aca034640e0506b077785d76502e8",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "14d4b59f257eeb09a503edff9ed8e8292818d91a"
+  },
   "scene": "School startup, constant reconciliation and queryable School data across Context restarts",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "verify.sh"
