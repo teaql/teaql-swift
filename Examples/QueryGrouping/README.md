@@ -1,39 +1,35 @@
-# Generated query grouping example
+# District school directory statistics
 
-Run `bash Examples/QueryGrouping/verify.sh` from the runtime repository. The
-application depends on this repository's runtime, not a published runtime.
-Swift, SQLite development headers and Node.js are required.
+The district uses its school directory to count schools and classes by school
+type. Primary has two schools with three classes, Secondary has one with
+three classes, and an unclassified school contributes four classes to its
+own group. A filter for an unknown school returns no groups.
 
-The generated Q API groups records under caller-selected result names:
+`model.xml` defines the district, school types and schools. The generated
+`swift-lib-core` is immutable. The `swift-app-console` workspace retains
+the generated domain target and uses the local TeaQL SDK for verification.
+The application assembles a SQLite-backed UserContext, seeds schools through
+audited generated mutations, and uses generated Q and E to read the results.
 
 ```swift
-let rows = try await Q.queryRecords()
-    .groupByActiveAs("bucket")
+let statistics = try await Q.schools()
+    .groupBySchoolTypeAs("owner")
     .countAs("hits")
-    .sumRequiredIntegerAs("total")
-    .orderByActiveAscending()
+    .sumClassCountAs("classes")
+    .orderBySchoolTypeAscending()
     .limit(10)
-    .comment("inspect active grouping contributions")
-    .purpose("verify named aggregate result values")
+    .comment("inspect school type totals")
+    .purpose("publish the district school directory")
     .executeForRows(context)
 ```
 
-Ten cases cover Boolean grouping, aliases that shadow entity fields, exact
-Decimal and Int64 values, timestamps, group-only results, nullable references,
-multiple group keys and duplicate-alias rejection. Generated E expressions
-check the original entity values and versions. All sample records are saved
-through generated mutation APIs with audit comments; no INSERT SQL seeds them.
+The workspace also checks Boolean grouping, aliases that shadow entity fields,
+exact Decimal budgets and Int64 registry numbers, timestamps, grouping without
+aggregates, multiple group keys, duplicate-alias rejection and entity versions.
 
-Both runs use the same SQLite database. The first creates two groups and four
-records; the second must reuse all six without writes. The verifier checks each
-named result against explicit expected values. The generated library is
-hash-checked before and after execution.
-
-Logs and the database remain in the printed evidence directory. Set
-`TEAQL_SWIFT_GROUPING_EVIDENCE_DIR` to retain them at a chosen fresh location.
-Disposable build output is removed on exit. A caller-supplied
-`TEAQL_SWIFT_SCRATCH_PATH` remains owned by that caller and is not deleted.
-
-`model.xml` defines the three-object fixture. `Generated/` retains the evaluated
-generator output unchanged; the application manifest compiles its source target
-against the local runtime. Do not edit generated implementations.
+Run `bash Examples/QueryGrouping/verify.sh` from the runtime repository with
+Swift, SQLite development headers, Node.js and Python 3 installed. The two
+launches share a SQLite database. The second must neither reseed nor change the
+rows. Independent SQLite checks and the verifier's result remain in the
+evidence directory. Set `TEAQL_SWIFT_GROUPING_EVIDENCE_DIR` to choose a fresh
+output location. The verifier removes the build directory it creates.

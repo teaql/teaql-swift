@@ -2,6 +2,7 @@
 set -euo pipefail
 example="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$example/../.." && pwd)"
+app="$example/swift-app-console"
 evidence="${TEAQL_SWIFT_GROUPING_EVIDENCE_DIR:-}"
 if [[ -z "$evidence" ]]; then evidence="$(mktemp -d -t teaql-swift-query-grouping.XXXXXXXX)"; fi
 if [[ -e "$evidence/grouping.sqlite" || -e "$evidence/round-1.log" ]]; then
@@ -29,16 +30,20 @@ if [[ -z "$scratch" ]]; then
 fi
 node "$repo/scripts/verify-generated-fixtures.cjs"
 node --test "$example/verify-results.test.cjs"
-cd "$example"
-swift build --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
-  --force-resolved-versions --product GroupingAliasProbe > "$evidence/build.log" 2>&1 || {
+cd "$app"
+options=(--scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions)
+swift package "${options[@]}" show-dependencies --format json > "$evidence/dependencies.log" 2>&1
+swift build --jobs 2 "${options[@]}" --product TeaQLConsole > "$evidence/build.log" 2>&1 || {
     cat "$evidence/build.log"; exit 1;
   }
 binary_path="$(swift build --scratch-path "$scratch" --show-bin-path)"
 for round in 1 2; do
-  "$binary_path/GroupingAliasProbe" "$evidence/grouping.sqlite" nonhuman "$round" \
+  "$binary_path/TeaQLConsole" "$evidence/grouping.sqlite" nonhuman "$round" \
     | tee "$evidence/round-$round.log"
+  python3 -B "$example/verify-sqlite.py" "$evidence/grouping.sqlite" > "$evidence/rows-$round.json"
 done
-node "$example/verify-results.cjs" "$evidence"
+cmp "$evidence/rows-1.json" "$evidence/rows-2.json"
+node "$example/verify-results.cjs" "$evidence" > "$evidence/result.json"
 node "$repo/scripts/verify-generated-fixtures.cjs"
+python3 -B "$example/verify-sqlite.py" "$evidence/grouping.sqlite" "$repo"
 echo "PASS Swift generated grouping aliases twice without cleanup; evidence: $evidence"
