@@ -24,9 +24,18 @@
     "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-trace-chain-native-scope-pairs/receipt.json",
     "receiptSHA256": "c164c3e22f663c402e5ed29aef7577316a5b4d4f4ab296ecb5222e020045a5a3"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-trace-chain-native-entrypoint/runtime/trace-chain/receipt.json",
+    "businessReceiptSHA256": "4d32a464516904d310d58defd72f1e35ffa5aa5957713f33b5b3bc5f17f430bb",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-trace-chain-native-entrypoint/receipt.json",
+    "nativeReceiptSHA256": "ae62bdf1ae9ada6a7177bfbed1a1800e9e504d9c1440f704223f1bada0f6b7fd",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "b494daabe4ae25dbe0aa2e77c7683dcaadaad126",
+    "standardCase": "order"
+  },
   "scene": "Order paging, item previews and status totals",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "Examples/TraceChain/verify-standard-order.sh"
