@@ -19,7 +19,9 @@ let package = Package(
                 .product(name: "TeaQLCore", package: "teaql-swift"),
                 .product(name: "TeaQLSQLite", package: "teaql-swift")
             ],
-            path: "Sources/TeaQLConsole"
+            path: "Sources/TeaQLConsole",
+            // The generated workspace keeps main.swift; the original program uses @main.
+            swiftSettings: [.unsafeFlags(["-parse-as-library"])]
         ),
         .executableTarget(
             name: "StandardTelemetryVerification",
