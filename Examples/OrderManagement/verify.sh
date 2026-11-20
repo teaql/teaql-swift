@@ -87,7 +87,7 @@ for entry in ['workspace', 'sdk']:
 receipt = dict(schema='teaql.swift-order-business/v1', passed=True, entries=observations,
     localRuntime=local[0], dependencyWarningPrefixBytes=len(text[:start].encode()),
     generatedScopesUnchanged=True, rootExampleTargetVerified=True,
-    separatePackageBuildGraphs=True, originalBusinessProgramByteExact=True)
+    separatePackageBuildGraphs=True, businessLogicUnchangedWithNativeMainEntryAdaptation=True)
 (root / 'business-receipt.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
 print(json.dumps(dict(passed=True, entries=2, runsPerEntry=2)))
 PY
