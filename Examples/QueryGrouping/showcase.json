@@ -27,9 +27,17 @@
     "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/school-directory-statistics-generation/receipt.json",
     "receiptSHA256": "13a0cb709efc82f830c7f8243e401ffe7a72f7d85aef4156139413769683a88b"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-directory-statistics-native/runtime/query-grouping/business-receipt.json",
+    "businessReceiptSHA256": "e87cf59e405bde5e6c3007adec5718ebf4efc8c6400deefdedfb21949e4a448a",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-directory-statistics-native/receipt.json",
+    "nativeReceiptSHA256": "178074ead64b792646e2879937441b51406cfc695a3f060ec9e4fe374545f1bd",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "b9c926d7178975411f1b6de4160561922ec0fbed"
+  },
   "scene": "District school counts and classroom totals by school type",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "Examples/QueryGrouping/verify.sh"
