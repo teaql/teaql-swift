@@ -41,6 +41,17 @@
       "Package.swift",
       "Sources/NaturalMessagesExample/AutomaticNaturalMessages.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Catalog.swift",
+      "Sources/GeneratedTeaQL/Models/Entry.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/EntryRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "a33c031b3e7add2a1ea6c5a054f6b0e0b025d1091e358c53d65f17ce83ef0e06",
     "root": "swift-app-console",
     "scope": "swift-app-console"

@@ -44,6 +44,17 @@
       "Sources/TeaQLConsole/OperationalClockVerification.swift",
       "Sources/TeaQLConsole/ConformanceApp.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Platform.swift",
+      "Sources/GeneratedTeaQL/Models/WorkItem.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/WorkItemRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "dbe48453d63b27ab73464af0f02fa65c667ae01c2c887fb45a8086add4403d2c",
     "root": "swift-app-console",
     "scope": "swift-app-console"

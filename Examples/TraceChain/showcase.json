@@ -61,6 +61,25 @@
       "Sources/TeaQLConsole/SharedReferences.swift",
       "Sources/TeaQLConsole/main.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/CustomerOrder.swift",
+      "Sources/GeneratedTeaQL/Models/OrderItem.swift",
+      "Sources/GeneratedTeaQL/Models/Payment.swift",
+      "Sources/GeneratedTeaQL/Models/PaymentAttempt.swift",
+      "Sources/GeneratedTeaQL/Models/Platform.swift",
+      "Sources/GeneratedTeaQL/Models/Shipment.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/PaymentAttemptRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/PaymentRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/ShipmentRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "f99c6f79aa8e934e72f614198b8d553cb686e696b736f13f554e757b5ba94c48",
     "root": "swift-app-console",
     "scope": "swift-app-console"

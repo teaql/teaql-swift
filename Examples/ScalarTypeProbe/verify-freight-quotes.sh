@@ -27,7 +27,7 @@ if [[ -z "$scratch" ]]; then
   scratch="$owned_scratch"
 fi
 check_domain_library() {
-  diff -qr "$example/swift-lib-core/Sources/GeneratedTeaQL" "$app/Sources/GeneratedTeaQL"
+  [[ ! -e "$app/Sources/GeneratedTeaQL" ]]
 }
 check_domain_library
 options=(--package-path "$app" --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions)

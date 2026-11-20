@@ -27,8 +27,7 @@ async function main(){try{
  const work=path.join(scratch,'swift-app-console'),build=path.join(scratch,'build');
  fs.cpSync(path.join(example,'swift-app-console'),work,{recursive:true});
  const current=path.join(example,'swift-lib-core');fs.cpSync(current,path.join(scratch,'swift-lib-core'),{recursive:true});
- for(const[n,h]of Object.entries(report.currentLibrary.files).filter(([n])=>n.startsWith('Sources/GeneratedTeaQL/')))
-  assert.equal(sha(fs.readFileSync(path.join(work,n))),h,'native workspace domain differs from sibling library');
+ assert(!fs.existsSync(path.join(work,'Sources/GeneratedTeaQL')));
  const manifest=fs.readFileSync(path.join(work,'Package.swift'),'utf8').replace('path:"../../.."','path:'+JSON.stringify(repo));
  fs.writeFileSync(path.join(work,'Package.swift'),manifest);fs.writeFileSync(path.join(evidence,'consumer-Package.swift'),manifest);
  const lockfile=path.join(example,'swift-app-console/Package.resolved');
@@ -55,6 +54,7 @@ async function main(){try{
  const jsonStart=descriptionOutput.indexOf('{');assert(jsonStart>=0,'Swift package describe returned no JSON object');
  const description=JSON.parse(descriptionOutput.slice(jsonStart));
  assert(description.dependencies.some(d=>d.path===repo));report.localSourceDependency=true;
+ assert(description.dependencies.some(d=>d.path===path.join(scratch,'swift-lib-core')));
  const bin=(await run(['swift','build',...flags,'--show-bin-path'],'binary-path.log')).trim();assert(bin.startsWith(build+path.sep));
  const binary=path.join(bin,'ContextDerivedExample');assert(fs.existsSync(binary));report.binarySha256=sha(fs.readFileSync(binary));
  for(const round of [1,2]){

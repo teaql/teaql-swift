@@ -53,6 +53,19 @@
       "Sources/FixEAlignment/FixEAlignment.swift",
       "Sources/FixEAlignment/CheckerMetadataProbe.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/OrderItem.swift",
+      "Sources/GeneratedTeaQL/Models/PurchaseOrder.swift",
+      "Sources/GeneratedTeaQL/Models/Tenant.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/PurchaseOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/TenantRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "5c752ccaeb73ac7f2250ab884cd12928a649162fe2203340fd8b6090f75fd3ff",
     "root": "swift-app-console",
     "scope": "swift-app-console"

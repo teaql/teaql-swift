@@ -42,6 +42,17 @@
       "Package.resolved",
       "Sources/TeaQLConsole/main.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/FreightQuote.swift",
+      "Sources/GeneratedTeaQL/Models/Platform.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/FreightQuoteRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "0ce3d713b612748f3f1f69f90e6ec0cbd7d5a0effa60758ec3332949bd8fba8d",
     "root": "swift-app-console",
     "scope": "swift-app-console"

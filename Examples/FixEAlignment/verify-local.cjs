@@ -39,8 +39,7 @@ try {
   const consumer=path.join(scratch,'swift-app-console'),generated=path.join(scratch,'swift-lib-core');
   fs.cpSync(workspace,consumer,{recursive:true});
   fs.cpSync(path.join(example,'swift-lib-core'),generated,{recursive:true});
-  for(const[name,digest]of Object.entries(m.files).filter(([name])=>name.startsWith('Sources/GeneratedTeaQL/')))
-    assert.equal(sha(fs.readFileSync(path.join(workspace,name))),digest,'native workspace domain must match sibling library');
+  assert(!fs.existsSync(path.join(consumer,'Sources/GeneratedTeaQL')));
   const manifest=fs.readFileSync(path.join(consumer,'Package.swift'),'utf8')
     .replace('path: "../../.."','path: '+JSON.stringify(repo));
   fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);

@@ -53,6 +53,27 @@
       "Package.swift",
       "Sources/TeaQLConsole/main.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/CommercePlatform.swift",
+      "Sources/GeneratedTeaQL/Models/Customer.swift",
+      "Sources/GeneratedTeaQL/Models/CustomerOrder.swift",
+      "Sources/GeneratedTeaQL/Models/OrderLine.swift",
+      "Sources/GeneratedTeaQL/Models/OrderSearchPreset.swift",
+      "Sources/GeneratedTeaQL/Models/OrderStatus.swift",
+      "Sources/GeneratedTeaQL/Models/Product.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CommercePlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/CustomerRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderLineRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderSearchPresetRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/ProductRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "812f447a0b7f9a008bfbac7780a87565ee1277f9ec9770bd88cda009834ece57",
     "root": "swift-app-console",
     "scope": "swift-app-console"

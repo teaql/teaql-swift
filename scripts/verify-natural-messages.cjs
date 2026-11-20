@@ -69,8 +69,7 @@ async function main(){
       const consumer=path.join(scratch,'swift-app-console'),build=path.join(scratch,'consumer-build');
       fs.cpSync(path.join(work,'Examples/NaturalMessages/swift-app-console'),consumer,{recursive:true});
       fs.cpSync(fixture,path.join(scratch,'swift-lib-core'),{recursive:true});
-      for(const[name,digest]of Object.entries(generated).filter(([name])=>name.startsWith('Sources/GeneratedTeaQL/')))
-        assert.equal(sha(fs.readFileSync(path.join(consumer,name))),digest,'native workspace domain differs from sibling library');
+      assert(!fs.existsSync(path.join(consumer,'Sources/GeneratedTeaQL')));
       const manifest=fs.readFileSync(path.join(consumer,'Package.swift'),'utf8').replace('path:"../../.."','path:'+JSON.stringify(work));
       fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);fs.writeFileSync(path.join(output,'consumer-Package.swift'),manifest);
       const nativeLock=fs.readFileSync(path.join(consumer,'Package.resolved'));
@@ -84,6 +83,7 @@ async function main(){
       const jsonStart=descriptionOutput.indexOf('{');assert(jsonStart>=0,'Swift package describe returned no JSON object');
       const description=JSON.parse(descriptionOutput.slice(jsonStart));
       assert(description.dependencies.some(d=>d.path===work));receipt.localSourceDependency=true;
+      assert(description.dependencies.some(d=>d.path===path.join(scratch,'swift-lib-core')));
       const bin=(await run([swift,'build',...flags,'--show-bin-path'],'binary-path.log',120000,consumer)).trim();assert(bin.startsWith(build+path.sep));
       const binary=path.join(bin,'NaturalMessagesExample');receipt.binarySha256=sha(fs.readFileSync(binary));
       for(const round of[1,2]){

@@ -34,6 +34,17 @@
       "Package.swift",
       "Package.resolved"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/DispatchOrder.swift",
+      "Sources/GeneratedTeaQL/Models/DistributionCenter.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/DispatchOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/DistributionCenterRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "477f624c5638688a84a6651403264ee4dcd90c9a805e2925be2e4ebc0a60b453",
     "root": "swift-app-console",
     "scope": "swift-app-console"

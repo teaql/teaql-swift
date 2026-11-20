@@ -31,9 +31,8 @@ python3 -B - "$example" <<'CHECK' > "$evidence/generated-domain-origins.json"
 import hashlib,json,pathlib,sys
 root=pathlib.Path(sys.argv[1]);library=root/'swift-lib-core/Sources/GeneratedTeaQL';workspace=root/'swift-app-console/Sources/GeneratedTeaQL'
 files={str(p.relative_to(library)):hashlib.sha256(p.read_bytes()).hexdigest() for p in library.rglob('*.swift')}
-assert set(files)=={str(p.relative_to(workspace)) for p in workspace.rglob('*.swift')}
-for name,digest in files.items():assert hashlib.sha256((workspace/name).read_bytes()).hexdigest()==digest,name
-print(json.dumps(dict(passed=True,domainFiles=files,siblingLibraryImplementationByteExact=True),indent=2,sort_keys=True))
+assert files and not workspace.exists()
+print(json.dumps(dict(passed=True,domainFiles=files,consumer='sibling Swift package'),indent=2,sort_keys=True))
 CHECK
 node "$repo/scripts/verify-generated-fixtures.cjs" > "$evidence/fixture-origins.log"
 swift package "${options[@]}" show-dependencies --format json > "$evidence/dependencies.log" 2>&1
@@ -48,12 +47,11 @@ cmp "$evidence/source-before.sha256" "$evidence/source-after.sha256"
 python3 -B - "$evidence" "$repo" <<'CHECK'
 import hashlib,json,pathlib,sqlite3,sys
 root,runtime=map(pathlib.Path,sys.argv[1:]);text=(root/'dependencies.log').read_text();start=text.find('{');assert start>=0
-dependencies,_=json.JSONDecoder().raw_decode(text[start:]);nodes=[]
-def visit(node):
- nodes.append(node)
- for child in node.get('dependencies',[]):visit(child)
-visit(dependencies)
-local=[node for node in nodes if node.get('path') and pathlib.Path(node['path']).resolve()==runtime.resolve()];assert len(local)==1
+dependencies,_=json.JSONDecoder().raw_decode(text[start:])
+direct=dependencies['dependencies']
+local=[node for node in direct if node.get('path') and pathlib.Path(node['path']).resolve()==runtime.resolve()];assert len(local)==1
+domain=runtime/'Examples/Conformance/swift-lib-core'
+assert any(node.get('path') and pathlib.Path(node['path']).resolve()==domain for node in direct)
 for round in [1,2]:
  log=(root/f'run-{round}.log').read_text();assert 'SWIFT_OPERATIONAL_CLOCK_EXAMPLE' in log
  assert 'PASS Swift minimum runtime conformance: 9/9' in log

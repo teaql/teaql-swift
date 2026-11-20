@@ -48,6 +48,19 @@
       "Package.resolved",
       "Sources/TeaQLConsole/main.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/District.swift",
+      "Sources/GeneratedTeaQL/Models/School.swift",
+      "Sources/GeneratedTeaQL/Models/SchoolType.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/DistrictRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "6c6e79d01c8f2bb9f619f2db795c56024737a091d97e31a840f7bd2ff1560fc6",
     "root": "swift-app-console",
     "scope": "swift-app-console"

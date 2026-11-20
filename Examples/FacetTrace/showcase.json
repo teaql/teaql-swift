@@ -45,6 +45,19 @@
       "Sources/TeaQLConsole/LoadedFacetChecks.swift",
       "Sources/TeaQLConsole/FacetWriteback.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Platform.swift",
+      "Sources/GeneratedTeaQL/Models/School.swift",
+      "Sources/GeneratedTeaQL/Models/SchoolType.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "00529eb2175479fd5a3bc97aa376535fcdc8c5505b3a562fa194215f0f584e5e",
     "root": "swift-app-console",
     "scope": "swift-app-console"

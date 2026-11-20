@@ -41,6 +41,17 @@
       "Package.swift",
       "Sources/ContextDerivedExample/ContextDerived.swift"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Catalog.swift",
+      "Sources/GeneratedTeaQL/Models/Entry.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/EntryRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "a5a28afd8e1aabdb8cf928b8bd030dad1492a7cc49f5cf9e86f8a5824babc4ad",
     "root": "swift-app-console",
     "scope": "swift-app-console"

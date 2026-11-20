@@ -28,7 +28,7 @@ for profile in camelCase snake_case PascalCase; do
   mkdir "$folder"
   model_profile="$(python3 -B -c 'import sys,xml.etree.ElementTree as xml; print(xml.parse(sys.argv[1]).getroot().attrib["json_field_naming"])' "$source/model.xml")"
   [[ "$model_profile" == "$profile" ]]
-  diff -qr "$source/swift-lib-core/Sources/GeneratedTeaQL" "$app/Sources/GeneratedTeaQL"
+  [[ ! -e "$app/Sources/GeneratedTeaQL" ]]
   options=(--package-path "$app" --scratch-path "$target" --disable-build-manifest-caching --force-resolved-versions)
   swift package "${options[@]}" show-dependencies --format json > "$folder/dependencies.log" 2>&1
   swift build "${options[@]}" --jobs 2 --product TeaQLConsole > "$folder/build.log" 2>&1 || {

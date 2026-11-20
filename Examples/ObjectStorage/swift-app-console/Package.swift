@@ -5,20 +5,16 @@ let package = Package(
     name: "order-attachment-service-swift-console",
     platforms: [.macOS(.v14)],
     dependencies: [
-        .package(name: "teaql-swift", path: "../../.."),
+        .package(name: "teaql-swift", path: "../../.."), .package(path: "../swift-lib-core"),
         .package(name: "TeaQLS3Provider", path: "../../../ObjectStorageS3"),
         .package(url: "https://github.com/soto-project/soto.git", exact: "7.17.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", exact: "5.0.1")
     ],
     targets: [
-        .target(
-            name: "GeneratedTeaQL",
-            dependencies: [.product(name: "TeaQLCore", package: "teaql-swift")]
-        ),
         .executableTarget(
             name: "TeaQLConsole",
             dependencies: [
-                "GeneratedTeaQL",
+                .product(name: "GeneratedTeaQL", package: "swift-lib-core"),
                 .product(name: "TeaQLCore", package: "teaql-swift"),
                 .product(name: "TeaQLSQLite", package: "teaql-swift"),
                 .product(name: "TeaQLObjectStorageS3", package: "TeaQLS3Provider"),

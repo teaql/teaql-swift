@@ -54,7 +54,7 @@ let package = Package(
       name: "OrderManagement",
       dependencies: ["TeaQLCore", "TeaQLSQLite", "TeaQLFederal"],
       path: "Examples/OrderManagement",
-      exclude: ["README.md", "model.xml", "showcase.json", "verify.sh", "swift-lib-core/Package.swift", "swift-lib-core/Package.resolved", "swift-lib-core/fixture-manifest.json", "swift-lib-core/README.md", "swift-lib-core/teaql", "swift-lib-core/teaql-i18n.json", "swift-app-console/Package.swift", "swift-app-console/Package.resolved", "swift-app-console/README.md", "swift-app-console/AGENTS.md", "swift-app-console/STANDARD_TELEMETRY.md", "swift-app-console/teaql", "swift-app-console/teaql-i18n.json", "swift-app-console/Sources/GeneratedTeaQL"],
+      exclude: ["README.md", "model.xml", "showcase.json", "verify.sh", "swift-lib-core/Package.swift", "swift-lib-core/Package.resolved", "swift-lib-core/fixture-manifest.json", "swift-lib-core/README.md", "swift-lib-core/teaql", "swift-lib-core/teaql-i18n.json", "swift-app-console/Package.swift", "swift-app-console/Package.resolved", "swift-app-console/README.md", "swift-app-console/AGENTS.md", "swift-app-console/STANDARD_TELEMETRY.md", "swift-app-console/teaql", "swift-app-console/teaql-i18n.json"],
       sources: ["swift-app-console/Sources/TeaQLConsole", "swift-lib-core/Sources/GeneratedTeaQL"]
     ),
     .testTarget(name: "TeaQLCoreTests", dependencies: ["TeaQLCore"], resources: [.process("fixtures")]),

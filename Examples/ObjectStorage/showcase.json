@@ -42,6 +42,19 @@
       "Package.swift",
       "Package.resolved"
     ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/CommercePlatform.swift",
+      "Sources/GeneratedTeaQL/Models/CustomerOrder.swift",
+      "Sources/GeneratedTeaQL/Models/OrderAttachment.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CommercePlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderAttachmentRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
     "generatedFilesManifestSHA256": "bbe611b75632b164cd32dc73bc892d5afcca3030552015eb7bd8aa4c5e902c2d",
     "root": "swift-app-console",
     "scope": "swift-app-console"
