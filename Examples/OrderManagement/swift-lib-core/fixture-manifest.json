@@ -1,9 +1,11 @@
 {
-  "applicationManifestsPreserved": true,
+  "applicationManifestsPreserved": false,
   "evaluatedScope": "swift-lib-core",
   "evaluationErrors": 0,
   "evaluationWarnings": 7,
   "files": {
+    "Package.swift": "25e226ac96c2e837b0de9ac13acf53f52c2b0941c7eb3203dfcc183c32c9d728",
+    "README.md": "e224c34830d38ef20415b07373c54a2868d53a5517a31056158496655d62390a",
     "Sources/GeneratedTeaQL/E.swift": "487cc41fb87479ddb252cf34f3a880f2c94725d0fc30207f6c2bc3da397c79d4",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "286649252b1a2b29fdc3575d315c11a30313d12565f7e0c63a8c30cc67247603",
     "Sources/GeneratedTeaQL/Models/CommercePlatform.swift": "6d9ee7aa17a5689772e41318a5d368787beeac9371cce20cfb00bedb34c0b215",
@@ -22,10 +24,13 @@
     "Sources/GeneratedTeaQL/Requests/OrderSearchPresetRequest.swift": "885f08af942ad78850fe67f8893e9611389770bb122419cd8d76f07d587997e9",
     "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": "6d3557f9c0055b7a73549267d4b1256d7b056ecc325ef57b7b8c48b134341216",
     "Sources/GeneratedTeaQL/Requests/ProductRequest.swift": "b02fe168f35388bfc37e7a4196635863e6a1171b2998e4605b608c40e1e24836",
-    "Sources/GeneratedTeaQL/RuntimeModule.swift": "259a6bc784480905781ddabda3123f9ee269d6886ca2d65d97f576a91761d9a2"
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "259a6bc784480905781ddabda3123f9ee269d6886ca2d65d97f576a91761d9a2",
+    "teaql-i18n.json": "4ae750ac80a6d6ccf296d8fe61d4db0f3cc4b66a285f8926720dfb87d4a42135",
+    "teaql/checker-model.json": "82f1556c56fd3ed10f2e947da68d0defb73215bf2192ccd213cc9c7e8eae9b95",
+    "teaql/model-provenance.json": "3f324c1a2f69d515c29d002bd8d93ec90c3978d16590657e06f03d2403bb7567"
   },
   "generatedManifestSha256": "7ac59837e7a34fc78738b854db6f20b3ced70fb2ac9c21fb0e05fbca5d3ea660",
-  "generationReceipt": "teaql-conformance/evidence/2026-11-19-runtime-examples-refresh/generation-unified-intent-current-source/swift/OrderManagement/model/receipt.json",
+  "generationReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/order-generation/swift/order-showcase/library/receipt.json",
   "generatorCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
   "generatorJarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
   "generatorRelease": "unreleased-source-021b1ed8",
@@ -36,7 +41,7 @@
     "commit": "ab9722b6d31a65d13ad66ccc3a361cd6f4f2425b",
     "path": "Examples/OrderManagement/Generated/fixture-manifest.json"
   },
-  "producerReceiptSha256": "2b232a351f3325b872ff1986a1a55d0bdb5f4e87a747007c5fd64efa37f3a4b1",
+  "producerReceiptSha256": "153d51ca36aca629dc1e0268fc9ea456eeb31258ed92c24c8507183861e663fc",
   "producerSource": {
     "commit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
     "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",

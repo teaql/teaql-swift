@@ -615,93 +615,101 @@
     },
     {
       "archiveSHA256": "e598e578b235fa34193723d7c91f0a3a0e942ed8d7dcc5e9f5daee7c479f4281",
-      "destination": "Examples/OrderManagement/Generated",
+      "destination": "Examples/OrderManagement/swift-lib-core",
       "generatedFiles": {
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/E.swift": {
+        "Examples/OrderManagement/swift-lib-core/Package.swift": {
+          "emittedPath": "Package.swift",
+          "sha256": "25e226ac96c2e837b0de9ac13acf53f52c2b0941c7eb3203dfcc183c32c9d728"
+        },
+        "Examples/OrderManagement/swift-lib-core/README.md": {
+          "emittedPath": "README.md",
+          "sha256": "e224c34830d38ef20415b07373c54a2868d53a5517a31056158496655d62390a"
+        },
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/E.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/E.swift",
           "sha256": "487cc41fb87479ddb252cf34f3a880f2c94725d0fc30207f6c2bc3da397c79d4"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/GeneratedSearchModels.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/GeneratedSearchModels.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
           "sha256": "286649252b1a2b29fdc3575d315c11a30313d12565f7e0c63a8c30cc67247603"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/CommercePlatform.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/CommercePlatform.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/CommercePlatform.swift",
           "sha256": "6d9ee7aa17a5689772e41318a5d368787beeac9371cce20cfb00bedb34c0b215"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/Customer.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/Customer.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/Customer.swift",
           "sha256": "8d6fa70c070101e5337b58965e86ba0b8b97d88d0d939ef540a0abc6c93ae73e"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/CustomerOrder.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/CustomerOrder.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/CustomerOrder.swift",
           "sha256": "fb890c94437b9db6dd40e687249d795b579420c6dcba7eb94d88c593a49bcdaf"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/OrderLine.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/OrderLine.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/OrderLine.swift",
           "sha256": "1f789a4523fe3e4b42fcec553b07dd571c5069ec75b5b1db6edd14d84a7ace74"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/OrderSearchPreset.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/OrderSearchPreset.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/OrderSearchPreset.swift",
           "sha256": "d84b8d05ea275f577a561be5bf129338cd92f775c9a80b36a41ec090394a1bc8"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/OrderStatus.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/OrderStatus.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/OrderStatus.swift",
           "sha256": "49a8810e25025bf60fec5ac9c7b7d4dca512dcac2dc34dc616815463c20c728a"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Models/Product.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/Product.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/Product.swift",
           "sha256": "14fa9cca874848146af6ef521c77134b3bc933b00099df470e89b6b7c73d91bc"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Q.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Q.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Q.swift",
           "sha256": "d895908190893135fcb2e09e7dae994253785f252d07c58a142623c50b42acd2"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/RequestState.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/RequestState.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/RequestState.swift",
           "sha256": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/CommercePlatformRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/CommercePlatformRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/CommercePlatformRequest.swift",
           "sha256": "bb8d681db1e2b7ea72f690e51deadcd2433bec81b208c1607de401ea98a30fa6"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift",
           "sha256": "55da2d3f97800ddceedaf85f9a338bf9f3f2a1c06d930afbce19920aaf5a32df"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/CustomerRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/CustomerRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/CustomerRequest.swift",
           "sha256": "e8b2120dd38450337008e08aa0f2637c3042fb040907c9a387aff0f8f6a9b728"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/OrderLineRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/OrderLineRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/OrderLineRequest.swift",
           "sha256": "b59b90671535affd8ea8637d1112ca3f6dc7cc133bbd489ff34c1609fd361477"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/OrderSearchPresetRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/OrderSearchPresetRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/OrderSearchPresetRequest.swift",
           "sha256": "885f08af942ad78850fe67f8893e9611389770bb122419cd8d76f07d587997e9"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift",
           "sha256": "6d3557f9c0055b7a73549267d4b1256d7b056ecc325ef57b7b8c48b134341216"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/Requests/ProductRequest.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/ProductRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/ProductRequest.swift",
           "sha256": "b02fe168f35388bfc37e7a4196635863e6a1171b2998e4605b608c40e1e24836"
         },
-        "Examples/OrderManagement/Generated/Sources/GeneratedTeaQL/RuntimeModule.swift": {
+        "Examples/OrderManagement/swift-lib-core/Sources/GeneratedTeaQL/RuntimeModule.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/RuntimeModule.swift",
           "sha256": "259a6bc784480905781ddabda3123f9ee269d6886ca2d65d97f576a91761d9a2"
         },
-        "Examples/OrderManagement/Generated/teaql-i18n.json": {
+        "Examples/OrderManagement/swift-lib-core/teaql-i18n.json": {
           "emittedPath": "teaql-i18n.json",
           "sha256": "4ae750ac80a6d6ccf296d8fe61d4db0f3cc4b66a285f8926720dfb87d4a42135"
         },
-        "Examples/OrderManagement/Generated/teaql/checker-model.json": {
+        "Examples/OrderManagement/swift-lib-core/teaql/checker-model.json": {
           "emittedPath": "teaql/checker-model.json",
           "sha256": "82f1556c56fd3ed10f2e947da68d0defb73215bf2192ccd213cc9c7e8eae9b95"
         },
-        "Examples/OrderManagement/Generated/teaql/model-provenance.json": {
+        "Examples/OrderManagement/swift-lib-core/teaql/model-provenance.json": {
           "emittedPath": "teaql/model-provenance.json",
           "sha256": "3f324c1a2f69d515c29d002bd8d93ec90c3978d16590657e06f03d2403bb7567"
         }
@@ -722,18 +730,6 @@
           "commit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
           "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
           "release": "unreleased-source-021b1ed8"
-        }
-      },
-      "preservedApplicationFiles": {
-        "Examples/OrderManagement/Generated/Package.swift": {
-          "emittedSHA256": "25e226ac96c2e837b0de9ac13acf53f52c2b0941c7eb3203dfcc183c32c9d728",
-          "reason": "Application manifest, local dependency wiring or application-specific instructions preserved",
-          "sha256": "11d056029ffbe9d0826e4361c41e262ec6a28bbaad1de22812d20718befe98a8"
-        },
-        "Examples/OrderManagement/Generated/README.md": {
-          "emittedSHA256": "e224c34830d38ef20415b07373c54a2868d53a5517a31056158496655d62390a",
-          "reason": "Application manifest, local dependency wiring or application-specific instructions preserved",
-          "sha256": "3e1154121f0c24f49b0c9f1820a258e069c99bb1a95ade5458b43bb2cdee54e0"
         }
       }
     },

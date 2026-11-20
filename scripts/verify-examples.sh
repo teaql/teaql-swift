@@ -32,9 +32,8 @@ TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ScalarTypeProbe/verify.
 (cd "$repo/Examples/Conformance" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions TeaQLConsole)
 TEAQL_SCHOOL_EVIDENCE_DIR="$inventory_evidence/school-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
   bash "$repo/Examples/SchoolManagement/verify.sh"
-for round in 1 2; do
-  (cd "$repo/Examples/OrderManagement" && swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching --force-resolved-versions teaql-order-management "$inventory_evidence/order-management.sqlite")
-done
+TEAQL_ORDER_EVIDENCE_DIR="$inventory_evidence/order-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
+  bash "$repo/Examples/OrderManagement/verify.sh"
 TEAQL_SWIFT_GROUPING_EVIDENCE_DIR="$inventory_evidence/query-grouping" \
   TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/QueryGrouping/verify.sh"
 trace_args=()

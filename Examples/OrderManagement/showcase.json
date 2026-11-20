@@ -1,0 +1,52 @@
+{
+  "entrypoints": [
+    "swift-app-console TeaQLConsole",
+    "SDK teaql-order-management"
+  ],
+  "expected": {
+    "exactAmount": "129.95",
+    "orderDateSource": "trusted Context businessTime",
+    "orderNumber": "SWIFT-ORDER-001",
+    "orders": 1,
+    "originalBusinessProgramUnchanged": true,
+    "sameDatabaseRunsPerEntry": 2
+  },
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/OrderManagement",
+  "library": {
+    "generatedFilesManifestSHA256": "7ac59837e7a34fc78738b854db6f20b3ced70fb2ac9c21fb0e05fbca5d3ea660",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core"
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "a50951aa0df35cac1f4ed64ef0646860941916aed1ec0919b5b299ef4ad6a303"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build; not a public release",
+      "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+      "qualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "tag": "unreleased-source-021b1ed8"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/order-generation/receipt.json",
+    "receiptSHA256": "5041246b7c9f452219d943efa393ea380ce7f7e172da739a945bb49da2ba5db2"
+  },
+  "scene": "Swift order terminal through a generated workspace and the retained SDK product",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "implemented-pending-native-qualification",
+  "verification": [
+    "bash",
+    "verify.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "generatedFilesManifestSHA256": "812f447a0b7f9a008bfbac7780a87565ee1277f9ec9770bd88cda009834ece57",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

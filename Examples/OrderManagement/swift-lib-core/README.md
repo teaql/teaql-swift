@@ -1,10 +1,10 @@
-# polyglot-order-search-service Swift Core
+# order-management-service Swift Core
 
 This package is generated from the TeaQL model. Do not edit files under
 `Sources/GeneratedTeaQL`; update the model, generator, or `teaql-swift` runtime
 and regenerate.
 
-Queries accept exactly one runtime argument, `UserContext`, and become
+Queries accept exactly one context argument, `UserContext`, and become
 executable only after both `comment` and `purpose` are supplied. Mutations use
 `entity.auditAs("reason").save(context)`.
 
