@@ -3,7 +3,7 @@
   "evaluationErrors": 0,
   "evaluationWarnings": 4,
   "files": {
-    "Package.swift": "c3d99581f5ea27d65ae8a70a4854d644d831d48c7b32af008cc4a579d692dead",
+    "Package.swift": "e29ea1a72c792d217e2f01fef60a74cdcf980f75e3a581b42e764014392a909e",
     "README.md": "2f922ecea2e048e6d44fdf6beb2cf13d7afb9711906f0496b4f52512a86c6683",
     "Sources/GeneratedTeaQL/E.swift": "e40623de5152c7e8bf1df2e9bd8eab277afa8631885c6c8e4d2e64348dd06f8f",
     "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "c7361d32595015f1bc9d82f128eb3ec8137609ec552f204621810838aa180915",
@@ -21,19 +21,19 @@
     "teaql/model-provenance.json": "80eb2676b8ca3b65b6eb913b1eaf159e848cd1234f5158af95ef388d89ec0d40"
   },
   "generatedManifestSha256": "b5e8ad26ea2bb012d637d052cb5e31f10cb41451176387556c799d569fb95d93",
-  "generationReceipt": "teaql-conformance/evidence/2026-11-19-runtime-examples-refresh/generation-unified-intent-current-source/swift/FixEAlignment/model/receipt.json",
+  "generationReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/purchase-order-fix-generation/swift/purchase-order-showcase/library/receipt.json",
   "generatorCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
   "generatorJarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
   "generatorRelease": "unreleased-source-021b1ed8",
   "language": "swift",
   "modelSha256": "a2cf4c907cb084cb0946e993eeba586c8c0701a89fdc4a849808aa743be033b7",
-  "previousFixtureManifestSha256": "ea8ebc05c209ae9c18c5acaac4d999f1091ecbcec57085c44cbf4b0f6b746c35",
+  "previousFixtureManifestSha256": "54464adfee589e5410f4a662ebcbb1ae815b86f80f9007b38bc96f03d6011d8e",
   "previousOrigin": {
     "commit": "ab9722b6d31a65d13ad66ccc3a361cd6f4f2425b",
     "path": "Examples/FixEAlignment/fixture-manifest.json"
   },
   "previousProducerReceiptSha256": "ea0c3df750eb2bb8f0459dffbcc80c0fb0480719d5f5659e2edc8e89b9624d38",
-  "producerReceiptSha256": "b48f71de55c32be3c6f2e2bc1e0cb8d18323f7c738bfdde2bcb6d4343d81b647",
+  "producerReceiptSha256": "fece0f2e55eb07dc9d29d846b17b78ac98d304f010c7e03df05f176e4ee1e49b",
   "producerSource": {
     "commit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
     "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",

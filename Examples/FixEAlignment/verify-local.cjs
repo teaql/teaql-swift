@@ -3,6 +3,7 @@
 // Build only the existing Core/SQLite example targets, with local package wiring.
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os'), cp = require('node:child_process'), crypto = require('node:crypto'), assert = require('node:assert/strict');
 const example = __dirname, repo = path.resolve(example, '../..'), sha = b => crypto.createHash('sha256').update(b).digest('hex');
+const workspace=path.join(example,'swift-app-console'),application=path.join(workspace,'Sources/FixEAlignment');
 function fingerprint() {
   const m = JSON.parse(fs.readFileSync(path.join(example, 'fixture-manifest.json')));
   assert.equal(m.language, 'swift'); assert.equal(m.evaluationErrors, 0);
@@ -12,8 +13,8 @@ function fingerprint() {
     const name = path.join(prefix, e.name), file = path.join(dir, e.name); assert(!e.isSymbolicLink());
     if (e.isDirectory()) visit(file, name); else { assert(e.isFile()); actual.push(name); }
   } }
-  visit(path.join(example, 'generated')); assert.deepEqual(actual.sort(), Object.keys(m.files).sort());
-  for (const [name, expected] of Object.entries(m.files)) assert.equal(sha(fs.readFileSync(path.join(example, 'generated', name))), expected, name);
+  visit(path.join(example, 'swift-lib-core')); assert.deepEqual(actual.sort(), Object.keys(m.files).sort());
+  for (const [name, expected] of Object.entries(m.files)) assert.equal(sha(fs.readFileSync(path.join(example, 'swift-lib-core', name))), expected, name);
   return m;
 }
 const requested = process.env.TEAQL_FIX_E_EVIDENCE_DIR;
@@ -27,36 +28,32 @@ async function main() {
 try {
   const disk = fs.statfsSync(scratch); assert(disk.bavail * disk.bsize > 8 * 1024 ** 3);
   const m = fingerprint(); report.modelSha256 = m.modelSha256;
-  report.partialAncestorApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialAncestorProbe.swift')));
-  report.partialRootApplicationSha256 = sha(fs.readFileSync(path.join(example, 'PartialRootProbe.swift')));
-  report.restorationApplicationSha256 = sha(fs.readFileSync(path.join(example, 'RestorationProbe.swift')));
-  report.projectionApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ProjectionViewsProbe.swift')));
-  report.unchangedViewsApplicationSha256 = sha(fs.readFileSync(path.join(example, 'UnchangedViewsProbe.swift')));
-  report.checkerBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'CheckerBoundaryProbe.swift')));
-  report.expressionBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(example, 'ExpressionBoundaryProbe.swift')));
-  report.graphLifecycleApplicationSha256 = sha(fs.readFileSync(path.join(example, 'GraphFixLifecycleProbe.swift')));
-  fs.cpSync(path.join(example, 'generated'), path.join(scratch, 'generated'), {recursive: true});
-  fs.mkdirSync(path.join(scratch, 'Sources/FixEAlignment'), {recursive: true});
-  for (const file of fs.readdirSync(example).filter(file => file.endsWith('.swift'))) fs.copyFileSync(path.join(example, file), path.join(scratch, 'Sources/FixEAlignment', file));
-  const manifest = `// swift-tools-version: 6.0
-import PackageDescription
-let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaql-swift", path: ${JSON.stringify(repo)})], targets: [
-  .target(name: "GeneratedTeaQL", dependencies: [.product(name: "TeaQLCore", package: "teaql-swift")], path: "generated/Sources/GeneratedTeaQL"),
-  .executableTarget(name: "FixEAlignment", dependencies: ["GeneratedTeaQL", .product(name: "TeaQLCore", package: "teaql-swift"),
-    .product(name: "TeaQLSQLite", package: "teaql-swift")], path: "Sources/FixEAlignment")
-], swiftLanguageModes: [.v6])
-`;
-  fs.writeFileSync(path.join(scratch, 'Package.swift'), manifest); fs.writeFileSync(path.join(evidence, 'consumer-Package.swift'), manifest);
-  const runtimeLock = fs.readFileSync(path.join(repo, 'Package.resolved'));
-  fs.writeFileSync(path.join(scratch, 'Package.resolved'), runtimeLock);
-  report.runtimeResolutionSha256 = sha(runtimeLock);
-  const build = path.join(scratch, 'build'), flags = ['--package-path', scratch, '--scratch-path', build, '--jobs', '2', '--skip-update', '--force-resolved-versions'];
+  report.partialAncestorApplicationSha256 = sha(fs.readFileSync(path.join(application, 'PartialAncestorProbe.swift')));
+  report.partialRootApplicationSha256 = sha(fs.readFileSync(path.join(application, 'PartialRootProbe.swift')));
+  report.restorationApplicationSha256 = sha(fs.readFileSync(path.join(application, 'RestorationProbe.swift')));
+  report.projectionApplicationSha256 = sha(fs.readFileSync(path.join(application, 'ProjectionViewsProbe.swift')));
+  report.unchangedViewsApplicationSha256 = sha(fs.readFileSync(path.join(application, 'UnchangedViewsProbe.swift')));
+  report.checkerBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(application, 'CheckerBoundaryProbe.swift')));
+  report.expressionBoundaryApplicationSha256 = sha(fs.readFileSync(path.join(application, 'ExpressionBoundaryProbe.swift')));
+  report.graphLifecycleApplicationSha256 = sha(fs.readFileSync(path.join(application, 'GraphFixLifecycleProbe.swift')));
+  const consumer=path.join(scratch,'swift-app-console'),generated=path.join(scratch,'swift-lib-core');
+  fs.cpSync(workspace,consumer,{recursive:true});
+  fs.cpSync(path.join(example,'swift-lib-core'),generated,{recursive:true});
+  for(const[name,digest]of Object.entries(m.files).filter(([name])=>name.startsWith('Sources/GeneratedTeaQL/')))
+    assert.equal(sha(fs.readFileSync(path.join(workspace,name))),digest,'native workspace domain must match sibling library');
+  const manifest=fs.readFileSync(path.join(consumer,'Package.swift'),'utf8')
+    .replace('path: "../../.."','path: '+JSON.stringify(repo));
+  fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);
+  fs.writeFileSync(path.join(evidence,'consumer-Package.swift'),manifest);
+  const runtimeLock=fs.readFileSync(path.join(workspace,'Package.resolved'));
+  report.runtimeResolutionSha256=sha(runtimeLock);
+  const build=path.join(scratch,'build'),flags=['--package-path',consumer,'--scratch-path',build,'--jobs','2','--skip-update','--force-resolved-versions'];
   const env = {...process.env, TEAQL_FIX_E_DB: path.join(evidence, 'fixture.sqlite')};
   async function run(command, log, timeout = 120000) {
     const file = path.join(evidence, log), stderrLog = log.replace(/\.log$/, '.stderr.log');
     const stderrFile = path.join(evidence, stderrLog), fd = fs.openSync(file, 'wx'), err = fs.openSync(stderrFile, 'wx'); let result;
     // Preserve warning diagnostics, but never splice stderr into buffered JSON frames.
-    try { result = await runner.run(command, {cwd: scratch, env, timeout, stdio: ['ignore', fd, err]}); }
+    try { result = await runner.run(command, {cwd: consumer, env, timeout, stdio: ['ignore', fd, err]}); }
     finally { fs.closeSync(fd); fs.closeSync(err); }
     const bytes = fs.readFileSync(file), diagnostics = fs.readFileSync(stderrFile);
     report.commands.push({command, exitCode: result.status, signal: result.signal, logSha256: sha(bytes),
@@ -65,8 +62,8 @@ let package = Package(name: "FixEAlignment", dependencies: [.package(name: "teaq
     assert.equal(result.status, 0, bytes.toString().slice(-6000) + diagnostics.toString().slice(-6000)); return bytes.toString();
   }
   await run(['swift', 'build', ...flags, '--product', 'FixEAlignment'], 'build.log', 540000);
-  assert.equal(sha(fs.readFileSync(path.join(scratch, 'Package.resolved'))), report.runtimeResolutionSha256, 'Runtime dependency pins changed');
-  if (fs.existsSync(path.join(scratch, 'Package.resolved'))) fs.copyFileSync(path.join(scratch, 'Package.resolved'), path.join(evidence, 'Package.resolved'));
+  assert.equal(sha(fs.readFileSync(path.join(consumer, 'Package.resolved'))), report.runtimeResolutionSha256, 'Runtime dependency pins changed');
+  if (fs.existsSync(path.join(consumer, 'Package.resolved'))) fs.copyFileSync(path.join(consumer, 'Package.resolved'), path.join(evidence, 'Package.resolved'));
   const bin = (await run(['swift', 'build', ...flags, '--show-bin-path'], 'bin-path.log')).trim();
   assert(bin.startsWith(build + path.sep), 'execute only the actual owned Swift build');
   const executable = path.join(bin, 'FixEAlignment'); report.binarySha256 = sha(fs.readFileSync(executable));
