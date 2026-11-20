@@ -915,61 +915,69 @@
     },
     {
       "archiveSHA256": "aa8189968f1ffc1821b226e78f366cc752bf783644e37915a0f35802a18d0b56",
-      "destination": "Examples/SchoolManagement",
+      "destination": "Examples/SchoolManagement/swift-lib-core",
       "generatedFiles": {
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/E.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Package.swift": {
+          "emittedPath": "Package.swift",
+          "sha256": "17a9453f93a6572320d8237c2b419260a40cb04fb4009b50ce3893804aaae2e8"
+        },
+        "Examples/SchoolManagement/swift-lib-core/README.md": {
+          "emittedPath": "README.md",
+          "sha256": "45a4631ab6059da333208b3e3462bdd79c8159522f8d8126e181fb68bbe0d5b2"
+        },
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/E.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/E.swift",
           "sha256": "02a146e7e82a3bc2a2c3c297d7097f6cc97a65785ae77bb680eefc52a65b4c43"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/GeneratedSearchModels.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/GeneratedSearchModels.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
           "sha256": "636de51e11502959e01afc503c8aafb92e896f8067e05cda543f0b4276c94458"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Models/Platform.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/Platform.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/Platform.swift",
           "sha256": "9738d8031aec35128ad91b8b0011438b247eb8464c181418721de955d10d5af5"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Models/School.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/School.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/School.swift",
           "sha256": "323c8d070bbc2738468268594f90c73d223983e3f3885d6ee61c8a1916094437"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Models/SchoolType.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Models/SchoolType.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Models/SchoolType.swift",
           "sha256": "1e10daf322fc44a93959516c780a8fa22afae6827b62a4046ed9c95fbaa6e9fd"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Q.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Q.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Q.swift",
           "sha256": "43c8f6aa5cb8f762121529babae4926a4b7668a879da509f9a0d2bb1a6ee20ce"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/RequestState.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/RequestState.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/RequestState.swift",
           "sha256": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
           "sha256": "f3a29c5229f6f7a008caa22f623a018ee2f75b1a0658e343cffdbe0320fbac1c"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Requests/SchoolRequest.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/SchoolRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift",
           "sha256": "8b81a6b3a72a4869099edc7b8c66db8d40a9a940488516a76155884390f4b773"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift",
           "sha256": "63ceff4c71a0ff8dec5700160f9d7c96bbb088b61cd096c8e515016331c2c593"
         },
-        "Examples/SchoolManagement/Sources/GeneratedTeaQL/RuntimeModule.swift": {
+        "Examples/SchoolManagement/swift-lib-core/Sources/GeneratedTeaQL/RuntimeModule.swift": {
           "emittedPath": "Sources/GeneratedTeaQL/RuntimeModule.swift",
           "sha256": "374369ca80c4fff6b69a63666a2029fc55992c5a6af73f9f8dfcb98f22f86614"
         },
-        "Examples/SchoolManagement/teaql-i18n.json": {
+        "Examples/SchoolManagement/swift-lib-core/teaql-i18n.json": {
           "emittedPath": "teaql-i18n.json",
           "sha256": "785b10a761a7e3d13b88878bc8702546b19f9bc637d28e76fa780fc79f97ca3d"
         },
-        "Examples/SchoolManagement/teaql/checker-model.json": {
+        "Examples/SchoolManagement/swift-lib-core/teaql/checker-model.json": {
           "emittedPath": "teaql/checker-model.json",
           "sha256": "8e28ee16cddc21191816ed05999142fccb870bf42795f5a1f21268ebd4469e71"
         },
-        "Examples/SchoolManagement/teaql/model-provenance.json": {
+        "Examples/SchoolManagement/swift-lib-core/teaql/model-provenance.json": {
           "emittedPath": "teaql/model-provenance.json",
           "sha256": "37dfcdffaeb5cabe6ffb233212ec4afec39d19c242b3cbcee53e3634c3715a2e"
         }
@@ -990,18 +998,6 @@
           "commit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
           "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
           "release": "unreleased-source-021b1ed8"
-        }
-      },
-      "preservedApplicationFiles": {
-        "Examples/SchoolManagement/Package.swift": {
-          "emittedSHA256": "17a9453f93a6572320d8237c2b419260a40cb04fb4009b50ce3893804aaae2e8",
-          "reason": "Application manifest, local dependency wiring or application-specific instructions preserved",
-          "sha256": "05e98cb6c1467dad7c5a1568edc35f17c586bc0419ca0af0340431d352e73712"
-        },
-        "Examples/SchoolManagement/README.md": {
-          "emittedSHA256": "45a4631ab6059da333208b3e3462bdd79c8159522f8d8126e181fb68bbe0d5b2",
-          "reason": "Application manifest, local dependency wiring or application-specific instructions preserved",
-          "sha256": "d6c879c7f1dac23e8be3ab27c370ea7d74f572baa549931b16234fba4ae281bd"
         }
       }
     },

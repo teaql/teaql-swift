@@ -28,9 +28,13 @@ private actor BootstrapAuditSink: AuditSink {
                 "InferenceExecution#1 version was resolved through Order#1")
     print("PASS Mutation ledger identity (same ID, different entity types keep versions 3/9)")
 
-    let path = FileManager.default.temporaryDirectory
+    let retainedPath = ProcessInfo.processInfo.environment["TEAQL_SCHOOL_MANAGEMENT_DB"]
+    let path = retainedPath ?? FileManager.default.temporaryDirectory
       .appendingPathComponent("teaql-school-swift-\(UUID().uuidString).sqlite").path
-    defer { try? FileManager.default.removeItem(atPath: path) }
+    if retainedPath != nil && FileManager.default.fileExists(atPath: path) {
+      throw TeaQLError.execution("Use a fresh School demonstration database; existing data is preserved")
+    }
+    defer { if retainedPath == nil { try? FileManager.default.removeItem(atPath: path) } }
     let service = try SQLiteDataService(path: path)
     let module = GeneratedRuntimeModule.module
     var runtime = TeaQLRuntime()
@@ -207,6 +211,32 @@ private actor BootstrapAuditSink: AuditSink {
       .executeForList(context)
     try require(changed.count == 1 && changed[0].name == "Primary School" && changed[0].version == 2,
                 "Changed constant was not reconciled exactly once")
+    // Reassemble trusted application state against the same business database.
+    var restartedRuntime = TeaQLRuntime()
+    try restartedRuntime.install(module)
+    let restartAudits = BootstrapAuditSink()
+    let restarted = UserContext(runtime: restartedRuntime, actor: "school-restart",
+      queryExecutor: service, mutationExecutor: service, requestPolicy: RequestPolicy { $0 }, auditSink: restartAudits)
+    try await restarted.ensureSchema(module)
+    let firstRestartAudits = await restartAudits.snapshot()
+    try require(firstRestartAudits.count == 1, "A new Context must reconcile only the changed model constant")
+    try await restarted.ensureSchema(module)
+    let repeatedRestartAudits = await restartAudits.snapshot()
+    try require(repeatedRestartAudits.count == firstRestartAudits.count, "Repeated restart added a bootstrap write")
+    let retainedSchools = try await Q.schools().limit(10).comment("Read Schools after application restart")
+      .purpose("Verify School data survives Context reassembly").executeForList(restarted)
+    let retainedTypes = try await Q.schoolTypes().orderByIdAscending().limit(10).comment("Read types after restart")
+      .purpose("Verify fixed identities and versioned reconciliation").executeForList(restarted)
+    let retainedRoots = try await Q.platforms().limit(10).comment("Read the platform after restart")
+      .purpose("Verify restart does not duplicate the domain root").executeForList(restarted)
+    try require(retainedSchools.count == 1 && retainedSchools[0].name == "Riverside Primary School",
+                "Restart lost or duplicated the persisted School")
+    try require(retainedRoots.count == 1 && retainedRoots[0].id == 1 && retainedTypes.count == 2
+      && retainedTypes[0].id == 1001 && retainedTypes[0].version == 3 && retainedTypes[1].version == 1,
+      "Restart changed model identities or performed duplicate constant writes")
+    let result: [String: Any] = ["roots": retainedRoots.count, "types": retainedTypes.count,
+      "schools": retainedSchools.count, "restartAudits": firstRestartAudits.count, "repeatWrites": 0]
+    print("SHOWCASE_RESULT " + String(data: try JSONSerialization.data(withJSONObject: result), encoding: .utf8)!)
     print("PASS Swift School bootstrap, portable Query parity, and constant relation graph")
   }
 }
