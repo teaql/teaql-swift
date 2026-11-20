@@ -33,9 +33,17 @@
     "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/order-generation/receipt.json",
     "receiptSHA256": "5041246b7c9f452219d943efa393ea380ce7f7e172da739a945bb49da2ba5db2"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-order-accurate-receipt/runtime/order-management/business-receipt.json",
+    "businessReceiptSHA256": "4418a3066245c3f815fafa1007d08b7e743a94b67e92969b39e66882703fd6dc",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-order-accurate-receipt/receipt.json",
+    "nativeReceiptSHA256": "5d96b49b700e0fb9550903b2cba6607ffa7b633531bd90c51f6e233f3fc670c0",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "6a2bc61f9e4f11e9c4a4c10c129aff906957cfcb"
+  },
   "scene": "Swift order terminal through a generated workspace and the retained SDK product",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "verify.sh"
