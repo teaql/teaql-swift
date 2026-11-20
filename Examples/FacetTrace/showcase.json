@@ -21,9 +21,17 @@
     "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/facet-remaining-generation/receipt.json",
     "receiptSHA256": "45c7ecfe08aa1f8b0d1a77c8476f2a3133d1f70220ec4f5f2738a5f4b0343d77"
   },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-facet-retained-lock/runtime/facet-trace/business-receipt.json",
+    "businessReceiptSHA256": "cc2cdc4719f17b4d92066c12b62d1d34e073545ac3af9c7a1cdcf514385bfd95",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-facet-retained-lock/receipt.json",
+    "nativeReceiptSHA256": "699d05d4f4149b01bb82ee6ea3b2683268ab2a75ac3130cbefed7cdf217e010f",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "5f65686a928649ec94aecb8525ec2e2fd3b1eb70"
+  },
   "scene": "School catalog Facets, full membership counts and retained business/privacy assertions",
   "schema": "teaql.model-workspace-showcase/v1",
-  "status": "implemented-pending-native-qualification",
+  "status": "focused-verified",
   "verification": [
     "bash",
     "verify.sh"
