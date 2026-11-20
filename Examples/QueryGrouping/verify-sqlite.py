@@ -27,27 +27,26 @@ def stored(database):
     return rows
 
 
-def dependency_paths(node):
-    if node.get('path'):
-        yield Path(node['path']).resolve()
-    for dependency in node.get('dependencies', []):
-        yield from dependency_paths(dependency)
-
-
 def finish(database, runtime, rows):
     directory = database.parent
     text = (directory / 'dependencies.log').read_text()
     start = text.find('{')
     assert start >= 0, text[-1000:]
     dependency_tree, _ = json.JSONDecoder().raw_decode(text[start:])
-    assert list(dependency_paths(dependency_tree)).count(runtime.resolve()) == 1
+    runtime = runtime.resolve()
+    direct = dependency_tree['dependencies']
+    sdk, = [node for node in direct if node.get('path') and Path(node['path']).resolve() == runtime]
+    library, = [node for node in direct if node.get('path') and
+        Path(node['path']).resolve() == runtime / 'Examples/QueryGrouping/swift-lib-core']
+    assert any(node['identity'] == sdk['identity'] and Path(node['path']).resolve() == runtime
+        for node in library['dependencies'])
     result = json.loads((directory / 'result.json').read_text())
     assert result == dict(passed=True, rounds=2, casesPerRound=11,
                           generatedMutations=6, reseededInSecondRound=0)
     names = ['dependencies.log', 'result.json', 'round-1.log', 'round-2.log',
              'rows-1.json', 'rows-2.json', database.name]
     receipt = dict(schema='teaql.swift-school-grouping-business/v1', passed=True, sameDatabase=True,
-                   localRuntime=str(runtime.resolve()), persistedRows=rows, **{
+                   localRuntime=str(runtime), domainLibraryPath=library['path'], persistedRows=rows, **{
                        k: v for k, v in result.items() if k != 'passed'
                    })
     receipt['evidenceSHA256'] = {name: hashlib.sha256((directory / name).read_bytes()).hexdigest() for name in names}

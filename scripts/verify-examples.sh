@@ -2,8 +2,8 @@
 set -euo pipefail
 
 mode="${1:-}"
-if [[ "$#" -gt 1 || ( "$mode" != "" && "$mode" != "--after-freight-quotes" ) ]]; then
-  echo "Usage: bash scripts/verify-examples.sh [--after-freight-quotes]" >&2
+if [[ "$#" -gt 1 || ( "$mode" != "" && "$mode" != "--after-freight-quotes" && "$mode" != "--after-order-management" ) ]]; then
+  echo "Usage: bash scripts/verify-examples.sh [--after-freight-quotes|--after-order-management]" >&2
   exit 2
 fi
 
@@ -43,10 +43,12 @@ TEAQL_FREIGHT_QUOTE_EVIDENCE_DIR="$inventory_evidence/freight-quotes" TEAQL_SWIF
 TEAQL_CONFORMANCE_EVIDENCE_DIR="$inventory_evidence/conformance" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
   bash "$repo/Examples/Conformance/verify.sh"
 fi
+if [[ "$mode" != "--after-order-management" ]]; then
 TEAQL_SCHOOL_EVIDENCE_DIR="$inventory_evidence/school-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
   bash "$repo/Examples/SchoolManagement/verify.sh"
 TEAQL_ORDER_EVIDENCE_DIR="$inventory_evidence/order-management" TEAQL_SWIFT_SCRATCH_PATH="$scratch" \
   bash "$repo/Examples/OrderManagement/verify.sh"
+fi
 TEAQL_SWIFT_GROUPING_EVIDENCE_DIR="$inventory_evidence/query-grouping" \
   TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/QueryGrouping/verify.sh"
 trace_args=()
@@ -61,6 +63,8 @@ TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ObjectStorage/verify.sh
 node "$repo/scripts/verify-generated-fixtures.cjs"
 if [[ -z "$mode" ]]; then
   echo "PASS: all Swift examples"
+elif [[ "$mode" == "--after-order-management" ]]; then
+  echo "PASS: Swift examples after order management"
 else
   echo "PASS: Swift examples after freight quotes and conformance"
 fi
