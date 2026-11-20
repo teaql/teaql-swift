@@ -7,7 +7,7 @@ let package = Package(
     targets: [
         .target(name: "GeneratedTeaQL", dependencies: [
             .product(name: "TeaQLCore", package: "teaql-swift"),
-        ], path: "../swift-lib-core/Sources/GeneratedTeaQL"),
+        ], path: "Sources/GeneratedTeaQL"),
         .executableTarget(name: "TeaQLConsole", dependencies: [
             "GeneratedTeaQL",
             .product(name: "TeaQLCore", package: "teaql-swift"),

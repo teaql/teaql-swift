@@ -1,6 +1,6 @@
 # Generated Facet Trace example
 
-`model.xml` owns the exact native `swift-lib-core` library and `swift-app-console` workspace. Application code lives in the workspace; the named sibling library stays generator-managed. See `showcase.json` for source-build provenance. The focused gate runs the original business assertions twice on one retained SQLite database, records independent database checks, and removes owned build scratch. It qualifies this SDK source.
+`model.xml` owns the exact native `swift-lib-core` library and `swift-app-console` workspace. Application code lives in the workspace; the named sibling library stays generator-managed. SwiftPM builds the workspace's native emitted GeneratedTeaQL target; its implementation files must match the sibling library byte for byte. See `showcase.json` for source-build provenance. The focused gate runs the original business assertions twice on one retained SQLite database, records independent database checks, and removes owned build scratch. It qualifies this SDK source.
 
 This small School fixture uses generated Q, loaded E and audited graph save with
 real SQLite. The ten generated source files are the unchanged output retained by

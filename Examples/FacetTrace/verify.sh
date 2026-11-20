@@ -28,6 +28,14 @@ fingerprint() {
  (cd "$example" && find swift-lib-core swift-app-console -type f ! -path '*/.build/*' -print0 | sort -z | xargs -0 sha256sum)
 }
 fingerprint > "$evidence/source-before.sha256"
+python3 -B - "$example" <<'CHECK' > "$evidence/generated-domain-origins.json"
+import hashlib,json,pathlib,sys
+root=pathlib.Path(sys.argv[1]);library=root/'swift-lib-core/Sources/GeneratedTeaQL';workspace=root/'swift-app-console/Sources/GeneratedTeaQL'
+files={str(p.relative_to(library)):hashlib.sha256(p.read_bytes()).hexdigest() for p in library.rglob('*.swift')}
+assert set(files)=={str(p.relative_to(workspace)) for p in workspace.rglob('*.swift')}
+for name,digest in files.items():assert hashlib.sha256((workspace/name).read_bytes()).hexdigest()==digest,name
+print(json.dumps(dict(passed=True,domainFiles=files,consumer='native workspace emitted GeneratedTeaQL target',siblingLibraryImplementationByteExact=True),indent=2,sort_keys=True))
+CHECK
 node "$repo/scripts/verify-generated-fixtures.cjs" > "$evidence/fixture-origins.log"
 swift package "${options[@]}" show-dependencies --format json > "$evidence/dependencies.log" 2>&1
 for round in 1 2; do
@@ -59,6 +67,7 @@ with sqlite3.connect(database.resolve().as_uri()+'?mode=ro&immutable=1',uri=True
 receipt=dict(schema='teaql.swift-facet-business/v1',passed=True,scenariosPerRun=26,runs=2,sameDatabase=True,
  businessBodyUnchangedWithNativeMainEntryAdaptation=True,generatedScopesUnchanged=True,
  nativeWorkspaceEntryUsed=True,reverseChildWritebackVerified=True,observations=observations,
+ workspaceGeneratedDomainMatchesLibrary=json.loads((root/'generated-domain-origins.json').read_text()),
  localRuntimePath=local[0]['path'],dependencyWarningPrefixBytes=len(text[:start].encode()),schools=rows,
  databaseSHA256=hashlib.sha256(database.read_bytes()).hexdigest())
 (root/'business-receipt.json').write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
