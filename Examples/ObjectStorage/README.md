@@ -1,5 +1,22 @@
 # Context owned object storage
 
+## File an order receipt
+
+`model.xml` defines the commerce platform, order and attachment. The
+`swift-app-console` compiles its generated domain target against this checkout
+and installs the S3 provider in trusted Context setup. It uploads a receipt,
+saves the order association, then uses generated Q and E to retrieve the stored
+reference and verify the downloaded receipt's size, type and SHA-256.
+
+Run `bash Examples/ObjectStorage/verify.sh` with the dedicated fixture settings.
+The original provider tests and lifecycle calibration run before two business
+launches on one SQLite database. A create-only conflict and an undersized read
+leave the attachment intact. Removing the sample object makes a fresh get
+report missing while the order association remains in SQLite.
+Set `TEAQL_ORDER_ATTACHMENT_EVIDENCE_DIR` to choose a fresh retained output path.
+
+## Provider setup
+
 Tracking: [Swift #42](https://github.com/teaql/teaql-swift/issues/42),
 [shared contract #122](https://github.com/teaql/teaql-conformance/issues/122).
 
