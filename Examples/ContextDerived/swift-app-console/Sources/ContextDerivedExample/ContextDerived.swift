@@ -79,8 +79,8 @@ private struct Checker: EntityChecker {
     }
     let a = context(now); try await context(now, schema: true).ensureSchema(module)
     let suffix = String(UUID().uuidString.prefix(8))
-    func new(_ name: String, _ ctx: UserContext) throws -> Entry {
-      var entry = try Q.entries().comment("Prepare a Context-bearing subject").purpose("Verify generated audited saves").newEntity(ctx)
+    func new(_ name: String, _ ctx: UserContext) async throws -> Entry {
+      var entry = try await Q.entries().comment("Prepare a Context-bearing subject").purpose("Verify generated audited saves").newEntity(ctx)
       entry.updateCatalog(1); entry.updateName(name); return entry
     }
     func load(_ id: Int64, _ ctx: UserContext) async throws -> Entry {
@@ -94,7 +94,7 @@ private struct Checker: EntityChecker {
     }
     func reset() { observer.reset(); resolver.reset() }
     func zero(_ label: String) throws { try require(observer.counts == (0, 0), label + " must not enter provider or audit") }
-    let draft = try new("initial-" + suffix, a)
+    let draft = try await new("initial-" + suffix, a)
     var loaded = try await draft.auditAs("Create using Context defaults").save(a)
     loaded = try await load(loaded.id, a)
     try require(try E.entry(loaded).bornAt().eval() == now && E.entry(loaded).touchedAt().eval() == now, "Business Clock create defaults")
@@ -122,13 +122,13 @@ private struct Checker: EntityChecker {
     try zero("restored edit"); try require(resolver.calls == 0, "failed Fix must not poison no-op")
     loaded.updateName("retry-" + suffix); loaded = try await loaded.auditAs("Retry corrected intent").save(b)
     loaded = try await load(loaded.id, b); try require(loaded.lastIp == "ip-C", "retry Context")
-    let failing = try new("fail-" + suffix, b); resolver.configure("C", fail: true); reset()
+    let failing = try await new("fail-" + suffix, b); resolver.configure("C", fail: true); reset()
     let providerError = try await reject { _ = try await failing.auditAs("Reject failed automatic Context resolution").save(b) }
     try require(providerError.violations.contains { $0.location.modelPath == "guarded_token" }
       && !providerError.description.contains("PRIVATE_CONTEXT_PROVIDER_SECRET"), "safe Context provider location")
     try zero("failed provider"); resolver.configure("C"); _ = try await failing.auditAs("Retry a recovered Context provider").save(b)
-    var parent = try Q.catalogs().comment("Prepare a complete graph").purpose("Verify per-entity Context isolation").newEntity(b)
-    parent.updateName("graph-" + suffix); parent.entryList = SmartList([try new("first-" + suffix, b), try new("second-" + suffix, b)])
+    var parent = try await Q.catalogs().comment("Prepare a complete graph").purpose("Verify per-entity Context isolation").newEntity(b)
+    parent.updateName("graph-" + suffix); parent.entryList = SmartList([try await new("first-" + suffix, b), try await new("second-" + suffix, b)])
     parent = try await parent.auditAs("Create two Context-bearing children").save(b)
     let parents = try await Q.catalogs().withIdIs(parent.id).selectEntryListWith(Q.entries().orderByIdAscending().limit(10)).limit(1)
       .comment("Load the complete Context graph").purpose("Verify later-child failure and retry").executeForList(b)

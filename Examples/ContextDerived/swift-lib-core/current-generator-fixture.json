@@ -1,0 +1,27 @@
+{
+  "applicationManifestsPreserved": false,
+  "evaluatedScope": "swift-lib-core",
+  "evaluationErrors": 0,
+  "files": {
+    "Package.swift": "21003311cdd99ae9b87e579b97680d4ac739af70cf32350197232f5521e801bf",
+    "README.md": "bda4e2a298e95842b066ebf94b9714d4812467b587a51b71ec08e6b44870e37e",
+    "Sources/GeneratedTeaQL/E.swift": "ae0484b0cf96669799ab8f49efeb7eff0b4194f45fabf466b70956bd133f43fb",
+    "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "53cc25d195eae9b1f337c3548e0ff71d3011a8ed67e81006cd7f52c6784557b2",
+    "Sources/GeneratedTeaQL/Models/Catalog.swift": "dfe2781ef7dadd247390cb9e4c208d0ca1595229a3d852d823a988a5bdaff7a6",
+    "Sources/GeneratedTeaQL/Models/Entry.swift": "acd13841f320b1598ddbb6724a5d24961dba3735d424bd3a0a254e37446a0ef8",
+    "Sources/GeneratedTeaQL/Q.swift": "05d020d02addffbfb653e31cc6675fe948ac034ca799e94785b8b24606421868",
+    "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+    "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift": "252a61dff8ff7ffa850ccddb0dab30bc853eb279d229727d72048689a71d46b5",
+    "Sources/GeneratedTeaQL/Requests/EntryRequest.swift": "6d683952aa2d5aa64930fb03b616ec88481af4b4f9f4bbacf8867fdcbeb08176",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "a7a9cfd9d5b5b512f738efb08bf7a1e1d34a3d29876f677442fb27aec52ba4ce",
+    "teaql-i18n.json": "872f2be4fb4df7d76c732d627ae016b07cb39591ef833169277c67db4ec726e8",
+    "teaql/checker-model.json": "b0cce8e03720ef6aefdf8ed8386c79d1270268dc6e41f762033d32516da2cbfd",
+    "teaql/model-provenance.json": "e53112264999fea5486628f71bd6715ba1dc32b44e962b5669b4f00e52fbd0ea"
+  },
+  "generatedManifestSha256": "7c46dc7a95c7eb7e3b1a2b96238ba84d28381cc7354f87ed1e326af7d896d724",
+  "generationReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/context-field-qualified-generation/swift/context-field-showcase/library/receipt.json",
+  "language": "swift",
+  "modelSha256": "c999381a5e3051e5b6ab9e5b027a2f1f5b568adf32d97c2accec5a4fb4472c0a",
+  "producerReceiptSha256": "5afebfcd22e4ac7d53a4ac3e5aa401d677b38b8c7e7b0a3a633759589e075c0d",
+  "schema": "teaql.current-model-scope-fixture/v1"
+}

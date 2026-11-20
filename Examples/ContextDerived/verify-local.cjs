@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+const {currentLibraryInputs}=require('./current-library.cjs');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),cp=require('node:child_process'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const {createOwnedRunner,ownedBytes}=require('../FixEAlignment/owned-command.cjs');
 const example=__dirname,repo=path.resolve(example,'../..'),fixture=path.join(example,'fixture');
@@ -21,15 +22,18 @@ const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'teaql-swift-context-build-')
 const report={schema:'teaql.swift-context-derived-mutation/v1',passed:false,commands:[],rounds:[],publicPublication:false,databaseRetained:true};
 async function main(){try{
  const disk=fs.statfsSync(scratch);assert(disk.bavail*disk.bsize>8*1024**3);
- report.fixture=fingerprint();report.sourceSha256=sourceHash();report.sourceCommit=cp.execFileSync('git',['-C',repo,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
- report.applicationSha256=sha(fs.readFileSync(path.join(example,'ContextDerived.swift')));
- const work=path.join(scratch,'consumer'),build=path.join(scratch,'build');fs.mkdirSync(work);
- fs.cpSync(fixture,path.join(work,'generated'),{recursive:true});fs.mkdirSync(path.join(work,'Sources/ContextDerivedExample'),{recursive:true});
- fs.copyFileSync(path.join(example,'ContextDerived.swift'),path.join(work,'Sources/ContextDerivedExample/ContextDerived.swift'));
- const manifest='// swift-tools-version: 6.0\nimport PackageDescription\nlet package=Package(name:"ContextDerivedExample",dependencies:[.package(name:"teaql-swift",path:'+JSON.stringify(repo)+')],targets:[.target(name:"GeneratedTeaQL",dependencies:[.product(name:"TeaQLCore",package:"teaql-swift")],path:"generated/Sources/GeneratedTeaQL"),.executableTarget(name:"ContextDerivedExample",dependencies:["GeneratedTeaQL",.product(name:"TeaQLCore",package:"teaql-swift"),.product(name:"TeaQLSQLite",package:"teaql-swift")],path:"Sources/ContextDerivedExample")],swiftLanguageModes:[.v6])\n';
+ report.currentLibrary=currentLibraryInputs();report.fixture=fingerprint();report.sourceSha256=sourceHash();report.sourceCommit=cp.execFileSync('git',['-C',repo,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ report.applicationSha256=sha(fs.readFileSync(path.join(example,'swift-app-console/Sources/ContextDerivedExample/ContextDerived.swift')));
+ const work=path.join(scratch,'swift-app-console'),build=path.join(scratch,'build');
+ fs.cpSync(path.join(example,'swift-app-console'),work,{recursive:true});
+ const current=path.join(example,'swift-lib-core');fs.cpSync(current,path.join(scratch,'swift-lib-core'),{recursive:true});
+ for(const[n,h]of Object.entries(report.currentLibrary.files).filter(([n])=>n.startsWith('Sources/GeneratedTeaQL/')))
+  assert.equal(sha(fs.readFileSync(path.join(work,n))),h,'native workspace domain differs from sibling library');
+ const manifest=fs.readFileSync(path.join(work,'Package.swift'),'utf8').replace('path:"../../.."','path:'+JSON.stringify(repo));
  fs.writeFileSync(path.join(work,'Package.swift'),manifest);fs.writeFileSync(path.join(evidence,'consumer-Package.swift'),manifest);
- const lockfile=path.join(repo,'Package.resolved');assert(fs.existsSync(lockfile),'runtime resolution must be pinned');
- fs.copyFileSync(lockfile,path.join(work,'Package.resolved'));report.runtimeResolutionSha256=sha(fs.readFileSync(lockfile));
+ const lockfile=path.join(example,'swift-app-console/Package.resolved');
+ assert.equal(sha(fs.readFileSync(lockfile)),sha(fs.readFileSync(path.join(repo,'Package.resolved'))));
+ report.runtimeResolutionSha256=sha(fs.readFileSync(lockfile));
  const flags=['--package-path',work,'--scratch-path',build,'--jobs','2'];
  const env={...process.env,TEAQL_CONTEXT_FIX_DB:path.join(evidence,'fixture.sqlite')};
  async function run(command,log,timeout=120000){const f=path.join(evidence,log),fd=fs.openSync(f,'wx');
@@ -42,7 +46,8 @@ async function main(){try{
   await run(['swift','test','--package-path',repo,'--scratch-path',path.join(scratch,'unit-build'),'--jobs','2','--skip-update'], 'unit-tests.log',600000);
   report.completeRuntimeTests=true;
  }
- await run(['swift','build',...flags,'--product','ContextDerivedExample','--skip-update'],'build.log',540000);
+ await run(['swift','build',...flags,'--product','ContextDerivedExample','--skip-update','--force-resolved-versions'],'build.log',540000);
+ assert.equal(sha(fs.readFileSync(path.join(work,'Package.resolved'))),report.runtimeResolutionSha256);
  const resolved=JSON.parse(fs.readFileSync(path.join(work,'Package.resolved'))),originalPins=JSON.parse(fs.readFileSync(lockfile));
  for(const pin of resolved.pins){const expected=originalPins.pins.find(p=>p.identity===pin.identity);assert(expected,'unexpected dependency '+pin.identity);assert.deepEqual(pin.state,expected.state,pin.identity);}
  fs.copyFileSync(path.join(work,'Package.resolved'),path.join(evidence,'Package.resolved'));report.dependenciesMatchRuntimePins=true;
@@ -59,7 +64,7 @@ async function main(){try{
   // Read-only independent oracle; no hand-written mutation alternative.
   const oracle='import sqlite3,json,sys\nc=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True)\nr=json.loads(sys.argv[2])\nv=c.execute("SELECT name,last_ip,version FROM entry_data WHERE id=?",(r["physicalId"],)).fetchone()\nassert v==(r["physicalName"],"ip-D",r["physicalVersion"]),v\nc.close()\nprint("SQLITE_ORACLE=passed")\n';
   const observed=await run(['python3','-c',oracle,env.TEAQL_CONTEXT_FIX_DB,JSON.stringify(row)],`oracle-${round}.log`);assert(observed.includes('SQLITE_ORACLE=passed'));
-  report.rounds.push({round,observations:row,physicalOracle:true});assert.deepEqual(fingerprint(),report.fixture);assert.equal(sourceHash(),report.sourceSha256);
+  report.rounds.push({round,observations:row,physicalOracle:true});assert.deepEqual(currentLibraryInputs(),report.currentLibrary);assert.deepEqual(fingerprint(),report.fixture);assert.equal(sourceHash(),report.sourceSha256);
  }
  report.passed=true;report.sameDatabase=true;report.databaseSha256=sha(fs.readFileSync(env.TEAQL_CONTEXT_FIX_DB));
 }catch(error){report.error=String(error);process.exitCode=1;console.error(error);}
