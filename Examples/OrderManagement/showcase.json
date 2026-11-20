@@ -4,11 +4,11 @@
     "SDK teaql-order-management"
   ],
   "expected": {
+    "businessLogicUnchangedWithNativeMainEntryAdaptation": true,
     "exactAmount": "129.95",
     "orderDateSource": "trusted Context businessTime",
     "orderNumber": "SWIFT-ORDER-001",
     "orders": 1,
-    "originalBusinessProgramUnchanged": true,
     "sameDatabaseRunsPerEntry": 2
   },
   "generatedDomainLibraryHandEdited": false,

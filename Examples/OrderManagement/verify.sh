@@ -65,7 +65,7 @@ for entry in ['workspace', 'sdk']:
     audits = []
     for round in [1, 2]:
         log = (root / f'{entry}-{round}.log').read_text()
-        assert 'SWIFT-ORDER-001' in log and 'total=129.95' in log
+        assert re.search(r'ORDER \d+: SWIFT-ORDER-001, total=(?:Optional\(129\.95\)|129\.95), version=1', log)
         assert 'TeaQL query: returned 1 order(s)' in log
         if round == 1:
             assert 'TeaQL seed: created SWIFT-ORDER-001' in log and 'APP AUDIT:' in log

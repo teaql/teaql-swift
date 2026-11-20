@@ -1,7 +1,8 @@
 # Order Management
 
 `model.xml` owns the exact `swift-lib-core` and `swift-app-console` scopes.
-The business program is byte-identical in the native workspace entry. Current
+The business body is preserved in the native workspace entry. Its startup uses
+top-level async invocation so `main.swift` works in both package graphs. Current
 provenance is in `showcase.json`. Run `bash verify.sh` from this scene for two
 starts of the workspace and two starts of the retained SDK product, each pair
 on one SQLite file. Independent SQL checks validate stored orders; owned build

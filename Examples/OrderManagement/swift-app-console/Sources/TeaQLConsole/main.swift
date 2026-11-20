@@ -11,7 +11,6 @@ actor ConsoleAuditSink: AuditSink {
   }
 }
 
-@main
 enum OrderManagementApp {
   static func main() async throws {
     let path = CommandLine.arguments.dropFirst().first
@@ -81,3 +80,5 @@ enum OrderManagementApp {
     print("TeaQL row audit: \(try await database.auditEvents().count) event(s)")
   }
 }
+
+try await OrderManagementApp.main()
