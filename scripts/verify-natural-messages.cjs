@@ -3,6 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),cp=require('node:child_process'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const {createOwnedRunner,ownedBytes}=require('../Examples/FixEAlignment/owned-command.cjs');
 const repo=path.resolve(__dirname,'..'),sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
+const {generatedLibraryFile,useRuntimeInLibraryCopy}=require('./example-library-package.cjs');
 function sourceFiles(){
   const names=cp.execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard'],{cwd:repo,encoding:'utf8'}).split('\0').filter(Boolean);
   const result={};for(const name of [...new Set(names)].sort()){
@@ -19,7 +20,7 @@ function automaticFixture(root){
   assert.equal(Object.keys(files).length,14);assert.equal(Object.keys(assists).length,7);
   assert.deepEqual(names.sort(),[...Object.keys(files),...Object.keys(assists),'generated-files.json','assist-files.json','model.xml','evaluation.json','generation.json'].sort());
   for(const[name,hash]of Object.entries({...files,...assists})){
-    assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(fs.readFileSync(path.join(root,name))),hash,name);
+    assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(generatedLibraryFile(root,name,path.resolve(root,'../../..'))),hash,name);
   }
   assert.equal(json('evaluation.json').errors.length,0);assert.equal(origin.modelSha256,sha(fs.readFileSync(path.join(root,'model.xml'))));
   assert(!origin.implementationHandEdited&&!origin.publicPublication);
@@ -62,13 +63,15 @@ async function main(){
       const fixture=path.join(work,'Examples/NaturalMessages/swift-lib-core');
       const automatic=automaticFixture(fixture),generated=automatic.files;
       for(const[name,hash]of Object.entries(generated)){
-        assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(fs.readFileSync(path.join(fixture,name))),hash,name);
+        assert(!path.isAbsolute(name)&&!name.split('/').includes('..'));assert.equal(sha(generatedLibraryFile(fixture,name,work)),hash,name);
       }
       receipt.fixtureFiles=generated;receipt.fixtureSha256=sha(fs.readFileSync(path.join(fixture,'generated-files.json')));
       receipt.fixtureInputHashes=automatic.inputHashes;receipt.generation=automatic.origin;receipt.automaticComposition=true;
       const consumer=path.join(scratch,'swift-app-console'),build=path.join(scratch,'consumer-build');
       fs.cpSync(path.join(work,'Examples/NaturalMessages/swift-app-console'),consumer,{recursive:true});
-      fs.cpSync(fixture,path.join(scratch,'swift-lib-core'),{recursive:true});
+      const libraryCopy=path.join(scratch,'swift-lib-core');
+      fs.cpSync(fixture,libraryCopy,{recursive:true});
+      useRuntimeInLibraryCopy(fixture,libraryCopy,work);
       assert(!fs.existsSync(path.join(consumer,'Sources/GeneratedTeaQL')));
       const manifest=fs.readFileSync(path.join(consumer,'Package.swift'),'utf8').replace('path:"../../.."','path:'+JSON.stringify(work));
       fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);fs.writeFileSync(path.join(output,'consumer-Package.swift'),manifest);

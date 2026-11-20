@@ -13,7 +13,8 @@
   "library": {
     "generatedFilesManifestSHA256": "ecbe4bbc057084e3f8264169e07c1558217caabfd27da502a199d995291f2e24",
     "root": "swift-lib-core",
-    "scope": "swift-lib-core"
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
   },
   "model": {
     "path": "models/school-model.xml",

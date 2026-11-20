@@ -4,6 +4,7 @@
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os'), cp = require('node:child_process'), crypto = require('node:crypto'), assert = require('node:assert/strict');
 const example = __dirname, repo = path.resolve(example, '../..'), sha = b => crypto.createHash('sha256').update(b).digest('hex');
 const workspace=path.join(example,'swift-app-console'),application=path.join(workspace,'Sources/FixEAlignment');
+const {generatedLibraryFile,useRuntimeInLibraryCopy}=require('../../scripts/example-library-package.cjs');
 function fingerprint() {
   const m = JSON.parse(fs.readFileSync(path.join(example, 'fixture-manifest.json')));
   assert.equal(m.language, 'swift'); assert.equal(m.evaluationErrors, 0);
@@ -14,7 +15,7 @@ function fingerprint() {
     if (e.isDirectory()) visit(file, name); else { assert(e.isFile()); actual.push(name); }
   } }
   visit(path.join(example, 'swift-lib-core')); assert.deepEqual(actual.sort(), Object.keys(m.files).sort());
-  for (const [name, expected] of Object.entries(m.files)) assert.equal(sha(fs.readFileSync(path.join(example, 'swift-lib-core', name))), expected, name);
+  for (const [name, expected] of Object.entries(m.files)) assert.equal(sha(generatedLibraryFile(path.join(example,'swift-lib-core'),name,repo)), expected, name);
   return m;
 }
 const requested = process.env.TEAQL_FIX_E_EVIDENCE_DIR;
@@ -40,6 +41,7 @@ try {
   fs.cpSync(workspace,consumer,{recursive:true});
   fs.cpSync(path.join(example,'swift-lib-core'),generated,{recursive:true});
   assert(!fs.existsSync(path.join(consumer,'Sources/GeneratedTeaQL')));
+  useRuntimeInLibraryCopy(path.join(example,'swift-lib-core'),generated,repo);
   const manifest=fs.readFileSync(path.join(consumer,'Package.swift'),'utf8')
     .replace('path: "../../.."','path: '+JSON.stringify(repo));
   fs.writeFileSync(path.join(consumer,'Package.swift'),manifest);

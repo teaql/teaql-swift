@@ -4,7 +4,8 @@
   "library": {
     "generatedFilesManifestSHA256": "8d370cdd6b81b7ccc1e48bcf7ed509ea6f5dbdc18919b82586a4663a2b284c8a",
     "root": "swift-lib-core",
-    "scope": "swift-lib-core"
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
   },
   "model": {
     "path": "freight-quote.xml",

@@ -2,6 +2,7 @@
 "use strict";
 const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto'), assert = require('node:assert/strict');
 const repo = path.resolve(__dirname, '..'), sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+const {generatedLibraryFile} = require('./example-library-package.cjs');
 const roots = ['Examples/Conformance/swift-lib-core', 'Examples/SchoolManagement/swift-lib-core', 'Examples/FacetTrace/swift-lib-core',
   'Examples/TraceChain/swift-lib-core', 'Examples/TraceChain/standard-order/swift-lib-core', 'Examples/OrderManagement/swift-lib-core',
   'Examples/QueryGrouping/swift-lib-core'];
@@ -24,7 +25,7 @@ for (const relative of roots) {
       && !file.split(/[\\/]/).includes('..'));
     const source = path.join(root, file);
     assert(fs.lstatSync(source).isFile() && !fs.lstatSync(source).isSymbolicLink());
-    assert.equal(sha(fs.readFileSync(source)), expected, 'generated library changed: ' + relative + '/' + file);
+    assert.equal(sha(generatedLibraryFile(root, file, repo)), expected, 'generated library changed: ' + relative + '/' + file);
     files++;
   }
 }

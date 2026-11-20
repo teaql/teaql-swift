@@ -16,7 +16,8 @@
   "library": {
     "generatedFilesManifestSHA256": "7ac59837e7a34fc78738b854db6f20b3ced70fb2ac9c21fb0e05fbca5d3ea660",
     "root": "swift-lib-core",
-    "scope": "swift-lib-core"
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
   },
   "model": {
     "path": "model.xml",

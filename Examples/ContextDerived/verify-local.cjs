@@ -3,6 +3,7 @@
 const {currentLibraryInputs}=require('./current-library.cjs');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),cp=require('node:child_process'),crypto=require('node:crypto'),assert=require('node:assert/strict');
 const {createOwnedRunner,ownedBytes}=require('../FixEAlignment/owned-command.cjs');
+const {useRuntimeInLibraryCopy}=require('../../scripts/example-library-package.cjs');
 const example=__dirname,repo=path.resolve(example,'../..'),fixture=path.join(example,'fixture');
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function files(root){const out=[];function visit(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){
@@ -26,7 +27,9 @@ async function main(){try{
  report.applicationSha256=sha(fs.readFileSync(path.join(example,'swift-app-console/Sources/ContextDerivedExample/ContextDerived.swift')));
  const work=path.join(scratch,'swift-app-console'),build=path.join(scratch,'build');
  fs.cpSync(path.join(example,'swift-app-console'),work,{recursive:true});
- const current=path.join(example,'swift-lib-core');fs.cpSync(current,path.join(scratch,'swift-lib-core'),{recursive:true});
+ const current=path.join(example,'swift-lib-core'),copy=path.join(scratch,'swift-lib-core');
+ fs.cpSync(current,copy,{recursive:true});
+ useRuntimeInLibraryCopy(current,copy,repo);
  assert(!fs.existsSync(path.join(work,'Sources/GeneratedTeaQL')));
  const manifest=fs.readFileSync(path.join(work,'Package.swift'),'utf8').replace('path:"../../.."','path:'+JSON.stringify(repo));
  fs.writeFileSync(path.join(work,'Package.swift'),manifest);fs.writeFileSync(path.join(evidence,'consumer-Package.swift'),manifest);

@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [.library(name: "GeneratedTeaQL", targets: ["GeneratedTeaQL"])],
     dependencies: [
-        .package(url: "https://github.com/teaql/teaql-swift.git", from: "0.6.0")
+        .package(name: "teaql-swift", path: "../../../../..")
     ],
     targets: [
         .target(
