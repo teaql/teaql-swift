@@ -34,6 +34,6 @@ check_standard_startup() {
 }
 
 fingerprint() {
-  find Sources/GeneratedTeaQL ../swift-lib-core/Sources -type f -name '*.swift' -print0 | sort -z | xargs -0 sha256sum
+  find ../swift-lib-core/Sources -type f -name '*.swift' -print0 | sort -z | xargs -0 sha256sum
   sha256sum Package.swift Package.resolved ../swift-lib-core/Package.swift
 }
