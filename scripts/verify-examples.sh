@@ -18,7 +18,7 @@ node "$repo/scripts/verify-natural-messages.cjs" --example-only --output "$inven
 export TEAQL_SWIFT_SCALAR_EVIDENCE_DIR="$inventory_evidence/scalar"
 export TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT="${TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT:-${TEAQL_FIX_E_SOURCE_ROOT:+$TEAQL_FIX_E_SOURCE_ROOT/swift}}"
 if [[ -z "$TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT" ]]; then export TEAQL_SWIFT_EXAMPLE_SOURCE_ROOT="$repo"; fi
-TEAQL_GENERATED_E_PROFILE_EVIDENCE_DIR="$inventory_evidence/expression-profiles" node "$repo/Examples/ExpressionProfiles/verify-local.cjs"
+TEAQL_DISPATCH_PROFILE_EVIDENCE_DIR="$inventory_evidence/expression-profiles" bash "$repo/Examples/ExpressionProfiles/verify-dispatch.sh"
 
 # Local runtime dependencies may gain source files without changing Package.swift.
 # Refresh the build plan so old manifests cannot omit newly added runtime code.
