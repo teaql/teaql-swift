@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-expected=(Conformance ContextDerived ExpressionProfiles FacetTrace FixEAlignment NaturalMessages ObjectStorage OrderManagement QueryGrouping ScalarTypeProbe SchoolManagement TraceChain)
+expected=(Conformance ContextDerived ExpressionProfiles FacetTrace FixEAlignment NaturalMessages ObjectStorage OrderManagement QueryGrouping ScalarTypeProbe SchoolManagement SupplierOnboardingI18n TraceChain)
 mapfile -t actual < <(find "$repo/Examples" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   echo "example inventory changed; update scripts/verify-examples.sh: ${actual[*]}" >&2
@@ -46,4 +46,5 @@ TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/scripts/verify-mutation-batch-ap
 TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/TraceChain/verify-standard-order.sh"
 TEAQL_SWIFT_SCRATCH_PATH="$scratch" bash "$repo/Examples/ObjectStorage/verify.sh"
 node "$repo/scripts/verify-generated-fixtures.cjs"
+bash "$repo/Examples/SupplierOnboardingI18n/run.sh" --verify > "$inventory_evidence/supplier-i18n.jsonl"
 echo "PASS: all Swift examples"

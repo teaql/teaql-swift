@@ -1,0 +1,68 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/SupplierOnboardingI18n",
+  "library": {
+    "generatedFilesManifestSHA256": "6267d6506f277f84130d16de354eedf049bda22394c1986eeab8a1bba79b550c",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core"
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "961f3048ca9c8e9120d81fc0ce9a3ea35629c8d9607aab80319156c21391e2c5"
+  },
+  "producer": {
+    "assistSHA256": {
+      "swift-assist-create-supplier.md": "f531937f50eb96b8483697ee4f9e2efc1f3699f15768a174f3bec6fb9866e9e1",
+      "swift-assist-i18n.md": "fa38463fed781863d0af293c952bddf25be110721ee0ae60bae498a3351aca3f",
+      "swift-assist-query-supplier.md": "2bfaa74f484d1d5747aab14f995a4dcdf36e54e6c2a9d89ffe16928cb1f72fc8"
+    },
+    "evaluationSHA256": "c7a0b3fe8953aec1f5c4a1ebc0ce02f6f17a11bd0db1fceddd395d7848dc985c",
+    "generatorBaseCommit": "92d612e95cde33c323a1b026b5c567f8c8fa4562",
+    "scopes": [
+      "swift-app-console",
+      "swift-lib-core"
+    ]
+  },
+  "qualification": {
+    "baseCommit": "d7027f7fd0d0457547633e83d378e6faeaa5c39d",
+    "evidence": "teaql-conformance/evidence/2026-11-21-i18n-standard-examples/swift.jsonl",
+    "stdoutSHA256": "d7417c9aba2f45938822eb7887636b750d0b975fe66b117776e151af5bdcaeb6"
+  },
+  "scene": "Warehouse supplier onboarding with two real checker rejections and locale isolation",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "semanticModel": {
+    "path": "semantics.json",
+    "sha256": "5ac183bbe622b4bf7bfc157d367714d36a88722c03d64fc1ba68d8ef01faaf18"
+  },
+  "status": "focused-verified",
+  "verification": [
+    "bash",
+    "run.sh",
+    "--verify"
+  ],
+  "workspace": {
+    "applicationEntry": "Sources/TeaQLConsole/main.swift",
+    "applicationOwnedFiles": [
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Package.swift",
+      "README.md",
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Supplier.swift",
+      "Sources/GeneratedTeaQL/Models/Warehouse.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/SupplierRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/WarehouseRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift",
+      "teaql-i18n.json",
+      "teaql/checker-model.json",
+      "teaql/model-provenance.json"
+    ],
+    "generatedFilesManifestSHA256": "6267d6506f277f84130d16de354eedf049bda22394c1986eeab8a1bba79b550c",
+    "root": ".",
+    "scope": "swift-app-console"
+  }
+}
