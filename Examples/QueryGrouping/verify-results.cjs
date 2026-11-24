@@ -5,15 +5,16 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 function expectedCases() {
   return [
     {id: 'boolean-and-sum', value: [{bucket: false, hits: 1, total: 1}, {bucket: true, hits: 3, total: 9}]},
-    {id: 'aliases-shadow-model-fields', value: [{required_long: false, active: 1}, {required_long: true, active: 3}]},
+    {id: 'aliases-shadow-model-fields', value: [{registry_number: false, active: 1}, {registry_number: true, active: 3}]},
     {id: 'timestamp-decoding', value: [{occurred: '2026-08-29T09:30:00Z', hits: 4}]},
     {id: 'exact-decimal', value: [{amount: '12345678901234567890.123456789', hits: 4}]},
     {id: 'exact-long', value: [{key: '9007199254740993', hits: 4}]},
     {id: 'groups-without-aggregate', value: [{bucket: false}, {bucket: true}]},
-    {id: 'nullable-fk-group', value: [{owner: null, hits: 1}, {owner: 1, hits: 2}, {owner: 2, hits: 1}]},
+    {id: 'nullable-fk-group', value: [{owner: null, hits: 1, classes: 4}, {owner: 1, hits: 2, classes: 3}, {owner: 2, hits: 1, classes: 3}]},
     {id: 'multiple-group-aliases', value: [{owner: null, bucket: true, hits: 1}, {owner: 1, bucket: false, hits: 1}, {owner: 1, bucket: true, hits: 1}, {owner: 2, bucket: true, hits: 1}]},
     {id: 'duplicate-alias-rejected', value: true},
     {id: 'entity-E-and-version', value: 4},
+    {id: 'unknown-school-is-empty', value: []},
   ];
 }
 function validate(rounds) {
@@ -24,7 +25,7 @@ function validate(rounds) {
     assert.deepEqual(r.parentIds, [1, 2]); assert.deepEqual(r.recordIds, [1, 2, 3, 4]);
     assert.deepEqual(r.cases, expectedCases());
   }
-  return {passed: true, rounds: 2, casesPerRound: 10, generatedMutations: 6, reseededInSecondRound: 0};
+  return {passed: true, rounds: 2, casesPerRound: 11, generatedMutations: 6, reseededInSecondRound: 0};
 }
 function read(directory) {
   return validate([1, 2].map(round => {

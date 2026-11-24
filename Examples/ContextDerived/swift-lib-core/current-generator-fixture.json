@@ -1,0 +1,33 @@
+{
+  "applicationManifestsPreserved": false,
+  "evaluatedScope": "swift-lib-core",
+  "evaluationErrors": 0,
+  "files": {
+    "Package.swift": "21003311cdd99ae9b87e579b97680d4ac739af70cf32350197232f5521e801bf",
+    "README.md": "bda4e2a298e95842b066ebf94b9714d4812467b587a51b71ec08e6b44870e37e",
+    "Sources/GeneratedTeaQL/E.swift": "ae0484b0cf96669799ab8f49efeb7eff0b4194f45fabf466b70956bd133f43fb",
+    "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "53cc25d195eae9b1f337c3548e0ff71d3011a8ed67e81006cd7f52c6784557b2",
+    "Sources/GeneratedTeaQL/Models/Catalog.swift": "522c81b11a866b40668286203a8f56b3d4e522e8acec86ff5d4e1dc2b4d8e867",
+    "Sources/GeneratedTeaQL/Models/Entry.swift": "aaf34916638167ac7890ab3a7fd65eee80c18ba451f8406007b1a37bb8b894c3",
+    "Sources/GeneratedTeaQL/Q.swift": "05d020d02addffbfb653e31cc6675fe948ac034ca799e94785b8b24606421868",
+    "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+    "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift": "3c8462da9ace4c3295b2d9cf3b86c9087ad4f5999408f49a259bdee3d6454894",
+    "Sources/GeneratedTeaQL/Requests/EntryRequest.swift": "12f554b091f3deb6e548621bfa77e1daa90e6987a281fed630c488588a419085",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "a7a9cfd9d5b5b512f738efb08bf7a1e1d34a3d29876f677442fb27aec52ba4ce",
+    "teaql-i18n.json": "872f2be4fb4df7d76c732d627ae016b07cb39591ef833169277c67db4ec726e8",
+    "teaql/checker-model.json": "b0cce8e03720ef6aefdf8ed8386c79d1270268dc6e41f762033d32516da2cbfd",
+    "teaql/model-provenance.json": "309a598f9d1913cdf5673c1c80b9a1d317db82b53bfa7cb74090d47c07ed1072"
+  },
+  "generationReceipt": "../../generator-v5.0.1.json",
+  "generatorCommit": "e4084ac774dd70292a1c476bfd4901f07d3ad00b",
+  "generatorJarSHA256": "444f552e55a01765d02e7cf32350d29c9be10c1bd3dd1826f554ccb7aa49a9a5",
+  "generatorRelease": "v5.0.1",
+  "language": "swift",
+  "modelSha256": "c999381a5e3051e5b6ab9e5b027a2f1f5b568adf32d97c2accec5a4fb4472c0a",
+  "previousOrigin": {
+    "commit": "fe0e1dfa7a16e12782286d3fdd1173cd6894ead8",
+    "path": "Examples/ContextDerived/swift-lib-core/current-generator-fixture.json",
+    "sha256": "06f382e7884bed31cf701bf417327f8d85e499fd91e10b18a874daeffabe6fa8"
+  },
+  "schema": "teaql.current-model-scope-fixture/v1"
+}

@@ -17,7 +17,7 @@ an installed Swift toolchain.
 
 `AutomaticNaturalMessages.swift` uses the original generated module and Checker.
 The module installs model metadata automatically; application code supplies no
-presentation model or replacement Checker. `automatic-fixture/` retains 14
+presentation model or replacement Checker. `swift-lib-core/` retains 14
 byte-exact generated files, the validated model, provenance and seven real
 object/field Assist responses. Use those responses for API discovery.
 
@@ -45,3 +45,23 @@ are retained as historical manually composed source, not automatic acceptance.
 The verifier retains compact evidence and the database, removes its own compiler
 outputs/checkouts after reaping children, and never overwrites existing evidence.
 No command above publishes a package or tag.
+
+## Current model and workspace
+
+`model.xml` defines the Catalog and Entry business graph. The exact generated
+domain library is read-only in `swift-lib-core/`; its current provenance points to
+the qualified generator source build, with the prior generation identity retained
+separately in its metadata. The application lives in `swift-app-console/Sources/NaturalMessagesExample/AutomaticNaturalMessages.swift`.
+
+Run this focused business entry from the SDK repository root:
+
+```bash
+node scripts/verify-natural-messages.cjs --example-only --output /new/absolute/evidence
+```
+
+The same graph is rejected before writes for an invalid second Entry, then
+corrected and saved through generated Q/E and audited Save. Two runs check
+actual stored values, precise machine locations, English/Chinese messages and
+private-value redaction. Language-specific native length rules remain intact.
+The verifier preserves result stores and compact receipts and removes owned
+build outputs. Full runtime example qualification remains a separate gate.

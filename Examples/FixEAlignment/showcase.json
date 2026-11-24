@@ -1,0 +1,74 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/FixEAlignment",
+  "library": {
+    "generatedFilesManifestSHA256": "b5e8ad26ea2bb012d637d052cb5e31f10cb41451176387556c799d569fb95d93",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "a2cf4c907cb084cb0946e993eeba586c8c0701a89fdc4a849808aa743be033b7"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build; not a public release",
+      "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+      "qualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "tag": "unreleased-source-021b1ed8"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/purchase-order-fix-generation/receipt.json",
+    "receiptSHA256": "920c683d71de38e609d2be2c3d8b7f2fb6c014e3b123edd5c4ea694fc6e91a48"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-purchase-order-native-scopes/runtime/fix-e/receipt.json",
+    "businessReceiptSHA256": "9a088154335fe7e394030541a337ab28730723bdd1a8cb63a1005f2f4edffd78",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-purchase-order-native-scopes/receipt.json",
+    "nativeReceiptSHA256": "3dbb3a8cfbe1109669b56438c06164715aa152fd97ccfc1c2387c7a56c5d5241",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "a721e61754eeaa6e1c7a49e129a9fbbab1918d77"
+  },
+  "scene": "Purchase-order Fix, graph edits and precise loaded-state business outcomes",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "node",
+    "verify-local.cjs"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Sources/FixEAlignment/PageOwnershipProbe.swift",
+      "Sources/FixEAlignment/OwnershipProbe.swift",
+      "Sources/FixEAlignment/RestorationProbe.swift",
+      "Sources/FixEAlignment/PartialRootProbe.swift",
+      "Sources/FixEAlignment/GraphFixLifecycleProbe.swift",
+      "Sources/FixEAlignment/UnchangedViewsProbe.swift",
+      "Sources/FixEAlignment/ProjectionViewsProbe.swift",
+      "Sources/FixEAlignment/ExpressionBoundaryProbe.swift",
+      "Sources/FixEAlignment/CheckerBoundaryProbe.swift",
+      "Sources/FixEAlignment/LoadingProbe.swift",
+      "Sources/FixEAlignment/PartialAncestorProbe.swift",
+      "Sources/FixEAlignment/FixEAlignment.swift",
+      "Sources/FixEAlignment/CheckerMetadataProbe.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/OrderItem.swift",
+      "Sources/GeneratedTeaQL/Models/PurchaseOrder.swift",
+      "Sources/GeneratedTeaQL/Models/Tenant.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/PurchaseOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/TenantRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "5c752ccaeb73ac7f2250ab884cd12928a649162fe2203340fd8b6090f75fd3ff",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

@@ -3,15 +3,15 @@ set -euo pipefail
 example="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo="$(cd "$example/../.." && pwd)"
 if [[ $# -gt 1 ]]; then echo 'usage: bash verify-checker-overlap.sh [retained-sqlite-path]' >&2; exit 2; fi
-evidence="${TEAQL_SWIFT_CHECKER_EVIDENCE:-$(mktemp -d /tmp/teaql-swift-checker-overlap.XXXXXX)}"
+evidence="${TEAQL_SWIFT_CHECKER_EVIDENCE:-$(mktemp -d "${TMPDIR:-/tmp}/teaql-swift-checker-overlap.XXXXXX")}"
 mkdir -p "$evidence"
 evidence="$(cd "$evidence" && pwd)"
 database="${1:-$evidence/checker.sqlite}"
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
-cd "$example"
+cd "$example/swift-app-console"
 hash_library() {
-  find Generated/Sources -type f -name '*.swift' -print0 | sort -z | xargs -0 sha256sum
-  sha256sum Generated/Package.swift
+  find ../swift-lib-core/Sources -type f -name '*.swift' -print0 | sort -z | xargs -0 sha256sum
+  sha256sum Package.swift Package.resolved ../swift-lib-core/Package.swift
 }
 hash_library > "$evidence/verified-before.sha256"
 for round in first second; do

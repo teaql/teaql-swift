@@ -9,7 +9,7 @@
   "fixtures": [
     {
       "id": "conformance",
-      "target": "Examples/Conformance",
+      "target": "Examples/Conformance/swift-lib-core",
       "model": "Examples/Conformance/model.xml",
       "modelSha256": "0a59f66db2487fdd0430087dd5985ae780225c088ad800679cb57c593c6bcee7",
       "files": {
@@ -47,7 +47,7 @@
     },
     {
       "id": "facet-trace",
-      "target": "Examples/FacetTrace/Generated",
+      "target": "Examples/FacetTrace/swift-lib-core",
       "model": "Examples/FacetTrace/model.xml",
       "modelSha256": "0e385417536df9dcacddf8cc778d2156005b766437e2644e4fa673d5783cc9cc",
       "files": {
@@ -67,7 +67,7 @@
     },
     {
       "id": "trace-chain",
-      "target": "Examples/TraceChain/Generated",
+      "target": "Examples/TraceChain/swift-lib-core",
       "model": "Examples/TraceChain/model.xml",
       "modelSha256": "e7290d70b3c977fe339828330b5553bde512d61ee3a195285d6aafd1a7c32477",
       "files": {
@@ -93,7 +93,7 @@
     },
     {
       "id": "standard-order",
-      "target": "Examples/TraceChain/standard-order/lib",
+      "target": "Examples/TraceChain/standard-order/swift-lib-core",
       "model": "Examples/TraceChain/standard-order/model.xml",
       "modelSha256": "f207e9603ffa6bdc98007e61093eaa7bed51fc15f26e033fc75709dcb9cde287",
       "files": {

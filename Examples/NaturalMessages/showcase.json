@@ -1,0 +1,60 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/NaturalMessages",
+  "library": {
+    "generatedFilesManifestSHA256": "c6a33fbb1b6489de0ded8115aaca39e64fba0b01bbac6f2f2248060c8b953231",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "4c69fcaa275d1f7d255f325305cc0c6c5071154d278f9f4af7775ae0758144a6"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build; not a public release",
+      "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+      "qualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "tag": "unreleased-source-021b1ed8"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/catalog-natural-generation/receipt.json",
+    "receiptSHA256": "c321d972c75d8f73f7f62525162f64337461996c487f3ab3abdaef25cba5e23a"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-natural-catalog-native-scopes/runtime/natural-messages/receipt.json",
+    "businessReceiptSHA256": "5ee753f32344b1ddba0e493947c7809d0af50d87dea2c1ef2a5ada4b753f2271",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-natural-catalog-native-scopes/receipt.json",
+    "nativeReceiptSHA256": "141e6708fd24345ef67a09c83206e330aadb5eacd8b2b294f84d7f91b698f9df",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "ef3d4e0c7817d555ffd87df21faf5be3c3336e5b"
+  },
+  "scene": "Catalog entry validation with natural messages, exact locations and private values",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "node",
+    "verify-local.cjs"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Sources/NaturalMessagesExample/AutomaticNaturalMessages.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Catalog.swift",
+      "Sources/GeneratedTeaQL/Models/Entry.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/EntryRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "a33c031b3e7add2a1ea6c5a054f6b0e0b025d1091e358c53d65f17ce83ef0e06",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

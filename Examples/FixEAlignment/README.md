@@ -37,8 +37,10 @@ an explicitly empty reverse list, and real transaction failures after UPDATE
 and before COMMIT. Ten side-effect observers are positively calibrated. The
 three no-op saves perform no provider/transaction/Fix/policy/audit/clock work;
 selected readonly count zero and absent aliases keep their distinct presence.
-Rollback must retain geometry, the original optimistic baseline and business
-plus managed Fix intent. Retry uses the same Swift value and ledger without
+Rollback must retain geometry, the original optimistic baseline and exact business
+intent while undoing invocation-owned Context Fix fields. The uncommitted readback
+must contain the managed Business Clock value, which retry resolves again.
+Retry uses the same Swift value and ledger without
 requerying. A genuine commit returns a new authoritative value/graph, advances
 both committed baselines and clears the old derived count. The returned graph
 is not required to reuse the input ledger's memory address.
@@ -108,3 +110,24 @@ objects retry with fresh traversal and clock state. Missing child input rejects
 before I/O and can be repaired on that same graph. Policy-time edits reject before
 transaction entry; provider-time edits roll back before commit and preserve the
 newer caller intention. All cases run twice without resetting the database.
+
+## Model and workspace
+
+This showcase uses `model.xml`: Tenant owns PurchaseOrder and OrderItem.
+The generated domain library is read-only in `swift-lib-core/`; application code is
+in `swift-app-console/Sources/FixEAlignment`. The workspace hosts the original scenario checks and
+trusted Context/runtime setup.
+
+From the SDK repository root, run:
+
+```bash
+node Examples/FixEAlignment/verify-local.cjs
+```
+
+The verifier checks the model and exact generated-library hashes, builds the
+native workspace with the local SDK, then runs the original business cases
+twice on retained stores. Assertions cover real generated Q/E and audited
+saves, precise loaded state, rejected writes and transaction outcomes. It
+keeps compact receipts and result data and removes owned build output.
+`showcase.json` binds this model, both generation scopes and the focused result;
+the final full SDK example inventory remains a separate gate.

@@ -3132,6 +3132,33 @@ public extension ScalarTypeProbeRequest where State == RequestExecutable {
         }
     }
 
+    func executeForOne(_ context: UserContext) async throws -> ScalarTypeProbe? {
+        var request = self
+        request.query.limit = 1
+        return try await request.executeForList(context).first
+    }
+
+    /// Pull-based typed stream. Each demand loads at most one bounded chunk;
+    /// no task eagerly buffers the entire query into a SmartList.
+    func executeForStream(_ context: UserContext) throws -> AsyncThrowingStream<ScalarTypeProbe, Error> {
+        try ensureIntent()
+        guard query.groupBy.isEmpty && query.aggregates.isEmpty else {
+            throw TeaQLError.unsupportedQueryCapability("entity streams require an entity query")
+        }
+        var source = query
+        if !source.orderBy.contains(where: { $0.field == "id" }) { source.orderBy.append(OrderBy("id", .ascending)) }
+        let request = try QueryRequest(query: source)
+        let cursor = ScalarTypeProbeStreamCursor(offset: source.offset, remaining: source.limit) { offset, limit in
+            var page = request.query; page.offset = offset; page.limit = limit
+            let result = try await context.execute(request.withQuery(page))
+            let snapshots = LoadedEntitySnapshots()
+            return try result.records.map {
+                try ScalarTypeProbe.from(record: $0, root: EntityRoot(), snapshots: snapshots)
+            }
+        }
+        return AsyncThrowingStream(unfolding: { try await cursor.next() })
+    }
+
     func executeForRows(_ context: UserContext) async throws -> SmartList<TeaQLRecord> {
         try ensureIntent()
         let result = try await context.execute(QueryRequest(query: query))
@@ -3139,4 +3166,33 @@ public extension ScalarTypeProbeRequest where State == RequestExecutable {
     }
 
 
+}
+
+private actor ScalarTypeProbeStreamCursor {
+    private var offset: Int
+    private var remaining: Int?
+    private var buffer: [ScalarTypeProbe] = []
+    private var index = 0
+    private var finished = false
+    private let fetch: @Sendable (Int, Int) async throws -> [ScalarTypeProbe]
+
+    init(offset: Int, remaining: Int?, fetch: @escaping @Sendable (Int, Int) async throws -> [ScalarTypeProbe]) {
+        self.offset = offset; self.remaining = remaining; self.fetch = fetch
+    }
+
+    func next() async throws -> ScalarTypeProbe? {
+        try _Concurrency.Task<Never, Never>.checkCancellation()
+        if index == buffer.count {
+            guard !finished else { return nil }
+            let size = min(128, remaining ?? 128)
+            guard size > 0 else { finished = true; return nil }
+            buffer = try await fetch(offset, size); index = 0
+            offset += buffer.count
+            if let count = remaining { remaining = count - buffer.count }
+            finished = buffer.count < size || remaining == 0
+            guard !buffer.isEmpty else { return nil }
+        }
+        defer { index += 1 }
+        return buffer[index]
+    }
 }

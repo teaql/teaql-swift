@@ -48,6 +48,33 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
     public var teaqlEntityKey: EntityKey { EntityKey(entity: "ScalarTypeProbe", id: .int(id == 0 ? teaqlLedgerID : id)) }
     var teaqlPreflightID: Int64 { id == 0 ? teaqlLedgerID : id }
 
+    private struct TeaqlDynamicCodingKey: CodingKey {
+        let stringValue: String
+        var intValue: Int? { nil }
+        init(_ value: String) { stringValue = value }
+        init?(stringValue: String) { self.init(stringValue) }
+        init?(intValue: Int) { return nil }
+    }
+
+    // Reverse relations contain finite value graphs. Inspect every value view;
+    // deduplicating only by ID could hide a separate view's pending descendant.
+    func teaqlHasPendingGraph() -> Bool {
+        let reserved = EntityKey(entity: Self.descriptor.name, id: .int(teaqlLedgerID))
+        if teaqlEntityRoot.hasPending(teaqlEntityKey) || teaqlEntityRoot.hasPending(reserved) { return true }
+        return false
+    }
+
+    func teaqlIsCancelledNew() throws -> Bool {
+        let key = teaqlEntityKey
+        let reserved = EntityKey(entity: Self.descriptor.name, id: .int(teaqlLedgerID))
+        guard teaqlEntityRoot.isNew(reserved),
+            teaqlEntityRoot.isDeleted(key) || teaqlEntityRoot.isDeleted(reserved) else { return false }
+        guard id > 0, id == teaqlLedgerID, version == 0, teaqlLoadedSnapshot == nil else {
+            throw EntityCreationError(entityType: Self.descriptor.name)
+        }
+        return true
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id
         case typePlatform
@@ -197,12 +224,18 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
             self.version = try container.decode(Int64.self, forKey: .version)
             _loadedFields.insert("version")
         }
-        // Hydration never creates or discards an intermediate insert ledger.
+        let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
+        let modeled = Set(["id", "typePlatform", "requiredString", "optionalString", "largeText", "requiredBoolean", "optionalBoolean", "requiredInteger", "optionalInteger", "requiredLong", "optionalLong", "requiredDecimal", "optionalDecimal", "requiredFloat", "optionalFloat", "requiredDouble", "optionalDouble", "requiredDate", "optionalDate", "requiredTime", "optionalTime", "requiredDatetime", "optionalDatetime", "createTime", "updateTime", "version"])
+            .union([])
+        var aliases: TeaQLRecord = [:]
+        for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
+            aliases[key.stringValue] = try dynamicContainer.decode(TeaQLValue.self, forKey: key)
+        }
+        dynamicProperties = QueryProjectionSnapshot(record: aliases)
+        // External JSON decoding owns a read ledger, never a provider snapshot.
         self.teaqlLedgerID = id
-        try teaqlEntityRoot.setOriginalVersion(teaqlEntityKey, version: version)
-        let record = toRecord().filter { _loadedFields.contains($0.key) }
-        self.teaqlLoadedSnapshot = LoadedEntitySnapshots().capture(key: teaqlEntityKey,
-            version: version, record: record)
+        // External presentation JSON is not a trusted provider snapshot.
+        self.teaqlLoadedSnapshot = nil
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -328,8 +361,8 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
             PropertyDescriptor(name: "optionalTime", modelName: "optional_time", column: "optional_time", type: .string, nullable: true, isID: false, isVersion: false),
             PropertyDescriptor(name: "requiredDatetime", modelName: "required_datetime", column: "required_datetime", type: .timestamp, nullable: false, isID: false, isVersion: false),
             PropertyDescriptor(name: "optionalDatetime", modelName: "optional_datetime", column: "optional_datetime", type: .timestamp, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
             PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
@@ -423,6 +456,7 @@ public struct ScalarTypeProbe: TeaQLEntity, TeaQLMutationRootedEntity {
     }
 
     public mutating func teaqlAttachRoot(_ root: EntityRoot) throws {
+        if try teaqlIsCancelledNew() { return }
         if teaqlEntityRoot !== root && teaqlEntityRoot.hasPending(teaqlEntityKey) {
             try root.mergeEntity(from: teaqlEntityRoot, key: teaqlEntityKey)
             teaqlEntityRoot = root
@@ -844,6 +878,7 @@ public struct ScalarTypeProbeAudited: Sendable {
 
     public func save(_ context: UserContext) async throws -> ScalarTypeProbe {
         _ = try MutationIntent(comment: reason)
+        if try entity.teaqlIsCancelledNew() { throw TeaQLError.execution("Cannot save a cancelled new root") }
         try teaqlValidateLoadedIdentities()
         // Freeze an invocation-owned value graph before reviewing it. Attach
         // reached pending children in the value copy, not just in loop locals,
@@ -884,6 +919,7 @@ public struct ScalarTypeProbeAudited: Sendable {
         guard try session.visitEntity(entity, phase: .write) else {
             return try entity.teaqlRebuildSavedGraph(session.readback())
         }
+        if try entity.teaqlIsCancelledNew() { return entity }
         let saved = try await AuditedEntity(entity: entity, reason: reason)
             .saveInGraph(context, session: session, scope: scope)
         return saved
@@ -891,14 +927,17 @@ public struct ScalarTypeProbeAudited: Sendable {
 
     /// Check all original identities without attaching ledgers or changing FKs.
     func teaqlValidateLoadedIdentities() throws {
+        if try entity.teaqlIsCancelledNew() { return }
         try AuditedEntity(entity: entity, reason: reason).validateLoadedIdentity()
     }
 
     func teaqlNormalizeGraph() throws {
+        if try entity.teaqlIsCancelledNew() { return }
         LoadedScalarRestoration.discardRestoredFields(of: entity)
     }
 
     func teaqlValidateInputGraph() throws -> Bool {
+        if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
@@ -985,6 +1024,7 @@ public struct ScalarTypeProbeAudited: Sendable {
 
     func teaqlPreflightGraph(_ context: UserContext, session: GraphMutationSession) throws {
         guard try session.visitEntity(entity, phase: .preflight) else { return }
+        if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
             if !entity.isLoaded("id") {
