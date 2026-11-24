@@ -101,7 +101,7 @@ struct GraphReadbackTests {
     #expect(throws: TeaQLError.self) { try session.readback() }
     try session.endPreparation()
     _ = try session.readback()
-    _ = session.finish(committed: false)
+    _ = session.finish(succeeded: false)
     #expect(throws: TeaQLError.self) { try session.readback() }
   }
 
@@ -113,7 +113,7 @@ struct GraphReadbackTests {
     let graph = try session.readback()
     #expect(try graph.scalarRecord(for: source)["id"] == .int(7))
     #expect(graph.contains(ReadbackProbe(id: 7)))
-    _ = session.finish(committed: true)
+    _ = session.finish(succeeded: true)
   }
 
   @Test func anAffectedRowsZeroResultDoesNotClaimAuthoritativePersistence() throws {
@@ -122,7 +122,7 @@ struct GraphReadbackTests {
       expectedVersion: 1, auditReason: "do not invent a write"), result: MutationResult(affectedRows: 0,
       persistedRecord: ["id": .int(1), "version": .int(2)]), sourceKey: entity.teaqlEntityKey)
     #expect(try !session.readback().contains(entity))
-    _ = session.finish(committed: false)
+    _ = session.finish(succeeded: false)
   }
 
   private func session() throws -> GraphMutationSession {

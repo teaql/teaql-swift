@@ -10,6 +10,9 @@ public enum RelationTopNPolicy: Sendable { case window, alwaysProbe }
 public protocol RelationTopNPlanning: Sendable {
   var relationTopNPolicy: RelationTopNPolicy { get }
 }
+package protocol NativeProviderIdentity {
+  var nativeProviderKind: String { get }
+}
 
 /// Physical schema capability selected by a UserContext.
 /// RuntimeModule installation remains passive; applications call UserContext.ensureSchema(_:).
@@ -18,7 +21,9 @@ package protocol SchemaExecutor: Sendable {
 }
 
 public extension QueryExecutor {
-  var providerKind: String { String(describing: type(of: self)) }
+  var providerKind: String {
+    (self as? any NativeProviderIdentity)?.nativeProviderKind ?? String(describing: type(of: self))
+  }
   var idSetDataSourceIdentity: String { providerKind }
 
   func execute(_ query: SelectQuery) async throws -> QueryResult {
@@ -284,7 +289,9 @@ public protocol GraphTransactionExecutor: MutationExecutor {
 }
 
 public extension MutationExecutor {
-  var providerKind: String { String(describing: type(of: self)) }
+  var providerKind: String {
+    (self as? any NativeProviderIdentity)?.nativeProviderKind ?? String(describing: type(of: self))
+  }
   func execute(_ mutation: Mutation) async throws -> MutationResult {
     try await execute(MutationRequest(mutation: mutation))
   }
@@ -321,17 +328,19 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   }
 
   public func save(_ context: UserContext) async throws -> Entity {
-    _ = try MutationIntent(comment: reason)
-    try validateLoadedIdentity()
-    LoadedScalarRestoration.discardRestoredFields(of: entity)
-    guard try validateVersion() else { return entity }
-    return try await context.executeGraphSave(comment: reason, rootEntityType: Entity.descriptor.name, preparing: { graphContext, _ in
-      try preflight(graphContext)
-    }) { graphContext, session in
-      let key = (entity as? any TeaQLMutationRootedEntity)?.teaqlEntityKey
-        ?? EntityKey(entity: Entity.descriptor.name, id: .int(entity.id))
-      return try await saveInGraph(graphContext, session: session,
-        scope: session.scope(key: key))
+    try await context.withSaveAttempt {
+      _ = try MutationIntent(comment: reason)
+      try validateLoadedIdentity()
+      LoadedScalarRestoration.discardRestoredFields(of: entity)
+      guard try validateVersion() else { return entity }
+      return try await context.executeGraphSave(comment: reason, rootEntityType: Entity.descriptor.name, preparing: { graphContext, _ in
+        try preflight(graphContext)
+      }) { graphContext, session in
+        let key = (entity as? any TeaQLMutationRootedEntity)?.teaqlEntityKey
+          ?? EntityKey(entity: Entity.descriptor.name, id: .int(entity.id))
+        return try await saveInGraph(graphContext, session: session,
+          scope: session.scope(key: key))
+      }
     }
   }
 
@@ -368,6 +377,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     try context.requireGraphSession(session)
     let rooted = entity as? any TeaQLMutationRootedEntity
     try validateLoadedIdentity(rooted: rooted)
+    session.track(rooted?.teaqlEntityRoot)
+    session.trackProvenance(rooted?.teaqlReplayProvenance)
     if let rooted, (entity.version != 0 || rooted.teaqlLoadedSnapshot != nil),
       !rooted.teaqlEntityRoot.hasPending(rooted.teaqlEntityKey) {
       if session.preparedMutations.wasNormalized(ledger: rooted.teaqlEntityRoot, key: rooted.teaqlEntityKey) {
@@ -382,6 +393,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
     let pending = rooted.map { $0.teaqlEntityRoot.mutationSnapshot($0.teaqlEntityKey) }
     let saved = try persistedEntity(from: await context.execute(
       mutation, ledgerRoot: rooted?.teaqlEntityRoot, ledgerKey: rooted?.teaqlEntityKey))
+    if let savedRoot = (saved as? any TeaQLMutationRootedEntity)?.teaqlEntityRoot,
+      savedRoot !== rooted?.teaqlEntityRoot { session.trackReadback(savedRoot) }
     if let rooted, let pending {
       let originalKey = rooted.teaqlEntityKey
       let savedKey = EntityKey(entity: rooted.teaqlEntityKey.entity, id: .int(saved.id))
@@ -401,6 +414,8 @@ public struct AuditedEntity<Entity: TeaQLEntity>: Sendable {
   }
 
   private func validateLoadedIdentity(rooted: (any TeaQLMutationRootedEntity)?) throws {
+    try rooted?.teaqlEntityRoot.requireKnownTransactionState()
+    try rooted?.teaqlReplayProvenance?.requireKnownState()
     if let rooted, let snapshot = rooted.teaqlLoadedSnapshot,
       snapshot.key != rooted.teaqlEntityKey || snapshot.version != entity.version {
       throw TeaQLError.execution("ENTITY_VERSION_CONFLICT: \(Entity.descriptor.name) must retain its loaded identity and version")
@@ -703,10 +718,11 @@ public struct UserContext: Sendable {
   private let entityInitializers: [EntityInitializer]
   private let entityCreationObserver: EntityCreationObserver?
   private let internalIDGenerator: (any InternalIDGenerator)?
-  private let continuousPageState: ContinuousPageState
-  private let idSetObservationState: IdSetObservationState
+  private var continuousPageState: ContinuousPageState
+  private var idSetObservationState: IdSetObservationState
   private let idSetStore: any IdSetStore
-  private let graphTransactionGate: GraphTransactionGate
+  private var graphTransactionGate: GraphTransactionGate
+  private var userTransaction: UserContextTransactionScope?
   private var graphSession: GraphMutationSession?
   private var standaloneFixInvocation: StandaloneFixInvocation?
   package var contextFixFrame: ContextFixFrame?
@@ -782,12 +798,94 @@ public struct UserContext: Sendable {
     self.continuousPageState = ContinuousPageState()
     self.idSetObservationState = IdSetObservationState()
     self.graphTransactionGate = GraphTransactionGate()
+    self.userTransaction = nil
     self.graphSession = nil
     self.standaloneFixInvocation = nil
     self.mutationPolicyCoordinator = MutationPolicyCoordinator(
       registry: mutationPolicyRegistry,
       approvalProvider: mutationPolicyApprovalProvider,
       warningSink: mutationGovernanceSink)
+  }
+
+  private var contextTransactionExecutor: (any UserContextTransactionExecutor)? {
+    guard let writer = mutationExecutor as? any UserContextTransactionExecutor,
+      let reader = queryExecutor as? any UserContextTransactionExecutor,
+      writer === reader else { return nil }
+    return writer
+  }
+
+  /// Group multiple saves using the UserContext passed to the callback.
+  public func transaction<T: Sendable>(
+    _ work: @Sendable (UserContext) async throws -> T
+  ) async throws -> T {
+    guard graphSession == nil, standaloneFixInvocation == nil,
+      !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
+      throw TeaQLError.execution("Cannot start a UserContext transaction inside a graph save")
+    }
+    if let userTransaction {
+      try userTransaction.requireWritable()
+      do { return try await work(self) }
+      catch { userTransaction.fail(error); throw error }
+    }
+    guard let executor = contextTransactionExecutor else {
+      throw TeaQLError.execution("UserContext transaction requires one shared transactional query and mutation provider")
+    }
+    let lease = try await executor.beginUserContextTransaction()
+    let scope = UserContextTransactionScope(providerIdentity: ObjectIdentifier(executor))
+    var view = self
+    view.userTransaction = scope
+    view.queryExecutor = lease.queryExecutor
+    view.mutationExecutor = lease.mutationExecutor
+    view.graphTransactionGate = GraphTransactionGate()
+    view.mutationPolicyCoordinator = mutationPolicyCoordinator.fork()
+    view.continuousPageState = ContinuousPageState()
+    view.idSetObservationState = IdSetObservationState()
+    let result: Result<T, any Error>
+    do {
+      try Task.checkCancellation()
+      result = .success(try await work(view))
+    } catch { result = .failure(error) }
+    scope.closeAccess()
+    lease.closeAccess()
+    // Any admitted save settles its graph before the physical owner completes.
+    await view.graphTransactionGate.acquire()
+    view.graphTransactionGate.release(evidence: view.lastFixEvidence)
+    let completion = scope.takeCompletion()
+    let value: T
+    do {
+      if let failure = completion.failure { throw failure }
+      value = try result.get()
+      try Task.checkCancellation()
+    } catch {
+      do { try await lease.rollback() }
+      catch {
+        completion.fence()
+        throw TransactionOutcomeUnknown()
+      }
+      completion.rollback()
+      throw error
+    }
+
+    var failures: [any Error] = []
+    do { try await lease.commit() }
+    catch let committed as GraphCommittedError { failures.append(contentsOf: committed.causes) }
+    catch {
+      completion.fence()
+      throw TransactionOutcomeUnknown()
+    }
+    failures += completeGraphActions(completion.graphs.flatMap(\.commitActions))
+    failures += await deliverGraphAudits(completion.events)
+    if !failures.isEmpty { throw GraphCommittedError(causes: failures) }
+    return value
+  }
+
+  /// Covers generated admission failures that occur before a graph exists.
+  @_spi(Generated) public func withSaveAttempt<T: Sendable>(
+    _ work: () async throws -> T
+  ) async throws -> T {
+    try userTransaction?.requireWritable()
+    do { return try await work() }
+    catch { userTransaction?.fail(error); throw error }
   }
 
   public func executeGraphSave<T: Sendable>(
@@ -826,7 +924,8 @@ public struct UserContext: Sendable {
       !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
       throw TeaQLError.execution("Independent graph save cannot implicitly join an active graph; pass its explicit session for composed children")
     }
-    guard let transaction = mutationExecutor as? any GraphTransactionExecutor else {
+    let transaction = mutationExecutor as? any GraphTransactionExecutor
+    guard userTransaction != nil || transaction != nil || contextTransactionExecutor != nil else {
       throw TeaQLError.execution("The configured mutation provider does not support atomic graph saves")
     }
     await graphTransactionGate.acquire()
@@ -840,7 +939,7 @@ public struct UserContext: Sendable {
   }
 
   private func executeGraphTransaction<T: Sendable>(
-    _ request: GraphMutationRequest, transaction: any GraphTransactionExecutor,
+    _ request: GraphMutationRequest, transaction: (any GraphTransactionExecutor)?,
     rootEntityType: String?,
     preparation: (@Sendable (UserContext, GraphMutationSession) async throws -> Void)?,
     _ operation: @escaping @Sendable (UserContext, GraphMutationSession) async throws -> T
@@ -852,14 +951,15 @@ public struct UserContext: Sendable {
     invocation.graphSession = session
     invocation.mutationPolicyCoordinator = policy
     let graphContext = invocation
-    var committed = false
-    var transactionStarted = false
+    var lease: (any UserContextTransactionLease)?
+    var legacyTransactionStarted = false
     var retainedEvidence: [FixEvidence] = []
     var gateReleased = false
     defer { if !gateReleased { graphTransactionGate.release(evidence: retainedEvidence) } }
     let result: T
     do {
       try Task.checkCancellation()
+      try userTransaction?.requireWritable()
       try policy.beginGraph(auditReason: request.intent.auditReason, rootEntity: rootEntityType)
       if let preparation {
         try session.beginPreparation()
@@ -885,12 +985,18 @@ public struct UserContext: Sendable {
       }
       try Task.checkCancellation()
       let emptyPreparedPlan = preparation != nil && session.preparedMutations.isEmptyPlan
-      if !emptyPreparedPlan {
-        try await transaction.beginGraphTransaction()
-        transactionStarted = true
-      }
       var executionContext = graphContext
-      if emptyPreparedPlan {
+      if !emptyPreparedPlan, userTransaction == nil {
+        if let executor = contextTransactionExecutor {
+          let owned = try await executor.beginUserContextTransaction()
+          lease = owned
+          executionContext.queryExecutor = owned.queryExecutor
+          executionContext.mutationExecutor = owned.mutationExecutor
+        } else if let transaction {
+          try await transaction.beginGraphTransaction()
+          legacyTransactionStarted = true
+        }
+      } else if emptyPreparedPlan {
         let denied = GraphPreparationExecutor()
         executionContext.queryExecutor = denied; executionContext.mutationExecutor = denied
       }
@@ -902,38 +1008,81 @@ public struct UserContext: Sendable {
       try policy.ensureGraphComplete()
       try Task.checkCancellation()
       try session.preparedMutations.validateLedgers()
-      if transactionStarted { try await transaction.commitGraphTransaction() }
-      committed = true
-      policy.endGraph()
     } catch {
-      if transactionStarted && !committed { try? await transaction.rollbackGraphTransaction() }
       policy.endGraph()
-      let (actions, _, evidence) = session.finish(committed: false)
-      retainedEvidence = evidence
-      for action in actions { try? action() }
+      let completion = session.finish(succeeded: false)
+      retainedEvidence = completion.evidence
       mutationPolicyCoordinator.retain(policy.lastSnapshot)
+      let failure: any Error
       if let check = error as? CheckException {
-        throw CheckException(CheckerMessages.translate(check.violations,config:session.checkerConfiguration!,runtime:runtime,origin:rootEntityType))
+        failure = CheckException(CheckerMessages.translate(check.violations,config:session.checkerConfiguration!,runtime:runtime,origin:rootEntityType))
+      } else { failure = error }
+      if let userTransaction {
+        userTransaction.enlist(completion)
+        userTransaction.fail(failure)
+      } else if let lease {
+        lease.closeAccess()
+        do { try await lease.rollback() }
+        catch {
+          completion.fence()
+          throw TransactionOutcomeUnknown()
+        }
+        completion.rollback()
+      } else {
+        if legacyTransactionStarted { try? await transaction?.rollbackGraphTransaction() }
+        completion.rollback()
       }
-      throw error
+      throw failure
     }
-    let (actions, events, evidence) = session.finish(committed: true)
-    retainedEvidence = evidence
+    policy.endGraph()
+    let completion = session.finish(succeeded: true)
+    retainedEvidence = completion.evidence
+    mutationPolicyCoordinator.retain(policy.lastSnapshot)
+    if let userTransaction {
+      userTransaction.enlist(completion)
+      return result
+    }
+    var deliveryFailures: [any Error] = []
+    if let lease {
+      lease.closeAccess()
+      do { try await lease.commit() }
+      catch let committed as GraphCommittedError { deliveryFailures.append(contentsOf: committed.causes) }
+      catch {
+        completion.fence()
+        throw TransactionOutcomeUnknown()
+      }
+    } else if legacyTransactionStarted {
+      do { try await transaction?.commitGraphTransaction() }
+      catch {
+        try? await transaction?.rollbackGraphTransaction()
+        completion.rollback()
+        throw error
+      }
+    }
+    deliveryFailures += completeGraphActions(completion.commitActions)
+    graphTransactionGate.release(evidence: retainedEvidence)
+    gateReleased = true
+    deliveryFailures += await deliverGraphAudits(completion.events)
+    if !deliveryFailures.isEmpty { throw GraphCommittedError(causes: deliveryFailures) }
+    return result
+  }
+
+  private func completeGraphActions(_ actions: [@Sendable () throws -> Void]) -> [any Error] {
     var deliveryFailures: [any Error] = []
     for action in actions {
       do { try action() }
       catch { deliveryFailures.append(error) }
     }
-    mutationPolicyCoordinator.retain(policy.lastSnapshot)
-    graphTransactionGate.release(evidence: retainedEvidence)
-    gateReleased = true
-    // Commit already succeeded: a sink failure must never trigger rollback.
+    return deliveryFailures
+  }
+
+  private func deliverGraphAudits(_ events: [AuditEvent]) async -> [any Error] {
+    var deliveryFailures: [any Error] = []
     for event in events {
       do { try await loggingAuditSink.record(event) }
       catch { deliveryFailures.append(error) }
     }
-    if !deliveryFailures.isEmpty { throw GraphCommittedError(causes: deliveryFailures) }
-    return result
+    return deliveryFailures
   }
 
   public var fixTime: Date { graphSession?.fixTime ?? standaloneFixInvocation?.time ?? businessTime }
@@ -943,6 +1092,7 @@ public struct UserContext: Sendable {
       throw TeaQLError.execution("GRAPH_PREPARATION_CANNOT_ACCESS_PROVIDER")
     }
     try graphSession?.requireProviderAccess()
+    try userTransaction?.requireAccess()
     try standaloneFixInvocation?.ensureActive()
   }
   public func recordFixEvidence(_ evidence: FixEvidence) {
@@ -1055,6 +1205,13 @@ public struct UserContext: Sendable {
     guard graphSession == nil, standaloneFixInvocation == nil,
       !GraphTransactionGate.Reentry.active.contains(graphTransactionGate.id) else {
       throw InternalIDError.activeGraph
+    }
+    if let userTransaction {
+      // SQL's durable reservation owns its own transaction. It cannot run on
+      // an already leased SQLite connection or recycle an ID on rollback.
+      guard let internalIDGenerator else { throw InternalIDError.activeGraph }
+      if let provider = internalIDGenerator as? any UserContextTransactionExecutor,
+        ObjectIdentifier(provider) == userTransaction.providerIdentity { throw InternalIDError.activeGraph }
     }
     guard let generator = internalIDGenerator ?? (mutationExecutor as? any InternalIDGenerator) else {
       throw InternalIDError.unavailable
@@ -1549,6 +1706,11 @@ public struct UserContext: Sendable {
     _ request: QueryRequest, inheritedIntent: SQLExecutionMetadata?
   ) async throws -> (query: SelectQuery, execution: IdSetExecution?) {
     let query = request.query
+    if userTransaction != nil {
+      var local = query
+      local.idSetPagination = nil
+      return (local, nil)
+    }
     guard let options = query.idSetPagination else {
       await idSetObservationState.observe("ID_SET_DISABLED")
       return (query, nil)
@@ -1617,6 +1779,11 @@ public struct UserContext: Sendable {
   private func prepareContinuousPage(
     _ query: SelectQuery
   ) async -> (query: SelectQuery, execution: ContinuousPageExecution?) {
+    if userTransaction != nil {
+      var local = query
+      local.continuousPage = nil
+      return (local, nil)
+    }
     guard let options = query.continuousPage else {
       await continuousPageState.observe("DISABLED")
       return (query, nil)
@@ -1800,7 +1967,19 @@ public struct UserContext: Sendable {
   public func execute(
     _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
   ) async throws -> MutationResult {
+    if graphSession == nil && userTransaction != nil {
+      return try await withSaveAttempt {
+        try await executeAdmitted(mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+      }
+    }
+    return try await executeAdmitted(mutation, ledgerRoot: ledgerRoot, ledgerKey: ledgerKey)
+  }
+
+  private func executeAdmitted(
+    _ mutation: Mutation, ledgerRoot: EntityRoot?, ledgerKey: EntityKey?
+  ) async throws -> MutationResult {
     try requireProviderAccess()
+    try ledgerRoot?.requireKnownTransactionState()
     let request = try MutationRequest(mutation: mutation)
     let standalone = graphSession == nil
     if standalone {
@@ -1810,6 +1989,10 @@ public struct UserContext: Sendable {
       await graphTransactionGate.acquire()
     }
     defer { if standalone { graphTransactionGate.release(evidence: graphTransactionGate.lastFixEvidence) } }
+    if standalone {
+      try userTransaction?.requireWritable()
+      userTransaction?.track(ledgerRoot)
+    } else { graphSession?.track(ledgerRoot) }
     return try await operationTelemetry.withOperation(
       RuntimeOperation(
         family: "mutation", name: "\(mutation.entity.name).\(mutation.kind.rawValue)",
@@ -1914,11 +2097,13 @@ public struct UserContext: Sendable {
             mutationLineage: lineage)
         if let graphSession { try graphSession.bufferAudit(event, values: auditValues) }
         else {
-          try await loggingAuditSink.record(AuditEvent(entity: event.entity, entityID: event.entityID,
+          let safeEvent = AuditEvent(entity: event.entity, entityID: event.entityID,
             operation: event.operation, reason: LogPrivacy.scrub(reason, values: auditValues),
             actor: event.actor, category: event.category, occurredAt: event.occurredAt,
             mutationGovernance: event.mutationGovernance,
-            mutationLineage: TraceChain.maskLineage(lineage, values: auditValues)))
+            mutationLineage: TraceChain.maskLineage(lineage, values: auditValues))
+          if let userTransaction { userTransaction.bufferAudit(safeEvent) }
+          else { try await loggingAuditSink.record(safeEvent) }
         }
       }
       if auditSink != nil {
@@ -1942,6 +2127,8 @@ public struct UserContext: Sendable {
     _ mutation: Mutation, ledgerRoot: EntityRoot? = nil, ledgerKey: EntityKey? = nil,
     loadedSnapshot: LoadedEntitySnapshot? = nil
   ) throws -> Mutation {
+    try ledgerRoot?.requireKnownTransactionState()
+    graphSession?.track(ledgerRoot)
     let original = try MutationRequest(mutation: mutation).mutation
     if let graphSession, let ledgerRoot, let ledgerKey {
       let fields = Set(ContextFix.fields(self, mutation: original).keys)

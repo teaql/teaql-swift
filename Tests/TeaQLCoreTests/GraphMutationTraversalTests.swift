@@ -20,7 +20,7 @@ struct GraphMutationTraversalTests {
       try graph.endPreparation()
       #expect(try graph.visitEntity(entity, phase: .write))
       #expect(try !graph.visitEntity(copy, phase: .write))
-      _ = graph.finish(committed: false)
+      _ = graph.finish(succeeded: false)
     }
   }
 
@@ -30,7 +30,7 @@ struct GraphMutationTraversalTests {
     var otherID = first; otherID.id = 2
     try graph.beginPreparation()
     for entity in [first, second, otherType, otherID] { #expect(try graph.visitEntity(entity, phase: .preflight)) }
-    _ = graph.finish(committed: false)
+    _ = graph.finish(succeeded: false)
   }
 
   @Test func conflictingVersionValueAndLoadedShapeAreNotDeduplicated() throws {
@@ -45,7 +45,7 @@ struct GraphMutationTraversalTests {
       try graph.beginPreparation()
       #expect(try graph.visitEntity(entity, phase: .preflight))
       #expect(throws: MutationPolicyError.self) { try graph.visitEntity(other, phase: .preflight) }
-      _ = graph.finish(committed: false)
+      _ = graph.finish(succeeded: false)
     }
   }
 
@@ -56,7 +56,7 @@ struct GraphMutationTraversalTests {
     #expect(throws: TeaQLError.self) { try graph.visitEntity(entity, phase: .write) }
     try graph.endPreparation()
     #expect(throws: TeaQLError.self) { try graph.visitEntity(entity, phase: .preflight) }
-    _ = graph.finish(committed: true)
+    _ = graph.finish(succeeded: true)
     #expect(throws: TeaQLError.self) { try graph.visitEntity(entity, phase: .write) }
   }
 
@@ -66,7 +66,7 @@ struct GraphMutationTraversalTests {
     try graph.beginPreparation()
     #expect(try graph.visitEntity(entity, phase: .preflight))
     #expect(try !graph.visitEntity(entity, phase: .preflight))
-    _ = graph.finish(committed: false)
+    _ = graph.finish(succeeded: false)
   }
 
   @Test func repeatedValueCopiesUseTheSharedCanonicalPendingIntention() throws {
@@ -83,7 +83,7 @@ struct GraphMutationTraversalTests {
       try graph.endPreparation()
       #expect(try graph.visitEntity(first, phase: .write))
       #expect(try !graph.visitEntity(second, phase: .write))
-      _ = graph.finish(committed: false)
+      _ = graph.finish(succeeded: false)
     }
   }
 
@@ -97,7 +97,7 @@ struct GraphMutationTraversalTests {
       if versionChanged { second.version = 2 }
       else { second.teaqlEntityRoot.set(second.teaqlEntityKey, field: "value", value: .string("later intent")) }
       #expect(throws: MutationPolicyError.self) { try graph.visitEntity(second, phase: .preflight) }
-      _ = graph.finish(committed: false)
+      _ = graph.finish(succeeded: false)
     }
   }
 }

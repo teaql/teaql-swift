@@ -132,10 +132,12 @@ public protocol TeaQLMutationRootedEntity: TeaQLEntity {
   var teaqlEntityRoot: EntityRoot { get }
   var teaqlEntityKey: EntityKey { get }
   var teaqlLoadedSnapshot: LoadedEntitySnapshot? { get }
+  var teaqlReplayProvenance: TransactionReplayGuard? { get }
 }
 
 public extension TeaQLMutationRootedEntity {
   var teaqlLoadedSnapshot: LoadedEntitySnapshot? { nil }
+  var teaqlReplayProvenance: TransactionReplayGuard? { nil }
 }
 
 public extension TeaQLEntity {
