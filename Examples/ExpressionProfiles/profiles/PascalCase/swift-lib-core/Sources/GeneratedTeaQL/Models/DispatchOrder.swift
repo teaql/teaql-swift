@@ -3,6 +3,24 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let DISTRIBUTION_CENTER_PROPERTY_member = "distributionCenter"
+        static let DISTRIBUTION_CENTER_PROPERTY_model = "distribution_center"
+        static let DISTRIBUTION_CENTER_PROPERTY_column = "distribution_center"
+        static let ORDER_REFERENCE_PROPERTY_member = "orderReference"
+        static let ORDER_REFERENCE_PROPERTY_model = "order_reference"
+        static let ORDER_REFERENCE_PROPERTY_column = "order_reference"
+        static let HANDLING_NOTE_PROPERTY_member = "handlingNote"
+        static let HANDLING_NOTE_PROPERTY_model = "handling_note"
+        static let HANDLING_NOTE_PROPERTY_column = "handling_note"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var distributionCenter: Int64? = nil
@@ -68,7 +86,7 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(DispatchOrder.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.distributionCenter) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .distributionCenter)) != nil {
@@ -82,22 +100,22 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.distributionCenter = try container.decode(Int64?.self, forKey: .distributionCenter)
             }
-            _loadedFields.insert("distributionCenter")
+            _loadedFields.insert(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member)
         }
         if container.contains(.orderReference) {
             self.orderReference = try container.decode(String?.self, forKey: .orderReference)
-            _loadedFields.insert("orderReference")
+            _loadedFields.insert(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member)
         }
         if container.contains(.handlingNote) {
             self.handlingNote = try container.decode(String?.self, forKey: .handlingNote)
-            _loadedFields.insert("handlingNote")
+            _loadedFields.insert(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "distributionCenter", "orderReference", "handlingNote", "version"])
+        let modeled = Set([DispatchOrder.__TeaqlFields.ID_PROPERTY_member, DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -112,10 +130,10 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("distributionCenter") {
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) {
             if isLoaded("distributionCenterEntity"), let related = distributionCenterEntity,
                 related.isLoaded("id"), related.id == distributionCenter {
                 try container.encode(related, forKey: .distributionCenter)
@@ -123,13 +141,13 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(distributionCenter, forKey: .distributionCenter)
             }
         }
-        if _loadedFields.contains("orderReference") {
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) {
             try container.encode(orderReference, forKey: .orderReference)
         }
-        if _loadedFields.contains("handlingNote") {
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) {
             try container.encode(handlingNote, forKey: .handlingNote)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -145,11 +163,11 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "DispatchOrder",
         table: "dispatch_order_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "distributionCenter", modelName: "distribution_center", column: "distribution_center", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "DistributionCenter"),
-            PropertyDescriptor(name: "orderReference", modelName: "order_reference", column: "order_reference", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "handlingNote", modelName: "handling_note", column: "handling_note", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: DispatchOrder.__TeaqlFields.ID_PROPERTY_member, modelName: DispatchOrder.__TeaqlFields.ID_PROPERTY_model, column: DispatchOrder.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, modelName: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_model, column: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "DistributionCenter"),
+            PropertyDescriptor(name: DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, modelName: DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_model, column: DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, modelName: DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_model, column: DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, modelName: DispatchOrder.__TeaqlFields.VERSION_PROPERTY_model, column: DispatchOrder.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -164,16 +182,16 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.distributionCenter = record["distributionCenter"]?.int64Value
-        if record.keys.contains("distributionCenter") { entity._loadedFields.insert("distributionCenter") }
-        entity.orderReference = record["orderReference"]?.stringValue
-        if record.keys.contains("orderReference") { entity._loadedFields.insert("orderReference") }
-        entity.handlingNote = record["handlingNote"]?.stringValue
-        if record.keys.contains("handlingNote") { entity._loadedFields.insert("handlingNote") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[DispatchOrder.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) }
+        entity.distributionCenter = record[DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member]?.int64Value
+        if record.keys.contains(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) { entity._loadedFields.insert(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) }
+        entity.orderReference = record[DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member]?.stringValue
+        if record.keys.contains(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) { entity._loadedFields.insert(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) }
+        entity.handlingNote = record[DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member]?.stringValue
+        if record.keys.contains(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) { entity._loadedFields.insert(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) }
+        entity.version = record[DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -209,30 +227,30 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "distributionCenter": distributionCenter.map { .int($0) } ?? .null,
-            "orderReference": orderReference.map { .string($0) } ?? .null,
-            "handlingNote": handlingNote.map { .string($0) } ?? .null,
-            "version": .int(version)
+            DispatchOrder.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member: distributionCenter.map { .int($0) } ?? .null,
+            DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member: orderReference.map { .string($0) } ?? .null,
+            DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member: handlingNote.map { .string($0) } ?? .null,
+            DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) {
+            record[DispatchOrder.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("distributionCenter") {
-            record["distribution_center"] = distributionCenter.map { .int($0) } ?? .null
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) {
+            record[DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_model] = distributionCenter.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("orderReference") {
-            record["order_reference"] = orderReference.map { .string($0) } ?? .null
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) {
+            record[DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_model] = orderReference.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("handlingNote") {
-            record["handling_note"] = handlingNote.map { .string($0) } ?? .null
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) {
+            record[DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_model] = handlingNote.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[DispatchOrder.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -246,9 +264,9 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("distributionCenterEntity"), isLoaded("distributionCenter"),
-            saved.isLoaded("distributionCenter"), saved.distributionCenter == distributionCenter,
-            graph.forwardMatches(record["distributionCenter"], related: _distributionCenterResult) {
+        if isLoaded("distributionCenterEntity"), isLoaded(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member),
+            saved.isLoaded(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member), saved.distributionCenter == distributionCenter,
+            graph.forwardMatches(record[DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member], related: _distributionCenterResult) {
             saved._distributionCenterResult = _distributionCenterResult.replacingData(
                 try _distributionCenterResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("distributionCenterEntity")
@@ -262,7 +280,7 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "distributionCenter", "orderReference", "handlingNote", "version"])
+        entity._loadedFields = Set([DispatchOrder.__TeaqlFields.ID_PROPERTY_member, DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -289,8 +307,8 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(DispatchOrder.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: DispatchOrder.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -298,8 +316,8 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateDistributionCenter(_ value: Int64?) -> Self {
         self.distributionCenter = value
-        self._loadedFields.insert("distributionCenter")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "distribution_center", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -307,8 +325,8 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOrderReference(_ value: String?) -> Self {
         self.orderReference = value
-        self._loadedFields.insert("orderReference")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "order_reference", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -316,8 +334,8 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateHandlingNote(_ value: String?) -> Self {
         self.handlingNote = value
-        self._loadedFields.insert("handlingNote")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "handling_note", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -325,8 +343,8 @@ public struct DispatchOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: DispatchOrder.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -411,20 +429,20 @@ public struct DispatchOrderAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("distributionCenter") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("distribution_center"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("orderReference") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_reference"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("handlingNote") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("handling_note"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
         }
         return pending
@@ -435,20 +453,20 @@ public struct DispatchOrderAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("distributionCenter") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("distribution_center"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("orderReference") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_reference"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("handlingNote") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("handling_note"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
+            if !entity.isLoaded(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "DispatchOrder")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

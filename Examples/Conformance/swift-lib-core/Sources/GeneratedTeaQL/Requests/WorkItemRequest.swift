@@ -101,15 +101,15 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "title", "description", "platform", "version"]
+        copy.query.projection = [WorkItem.__TeaqlFields.ID_PROPERTY_member, WorkItem.__TeaqlFields.TITLE_PROPERTY_member, WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, WorkItem.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(WorkItem.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(WorkItem.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -118,8 +118,8 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectTitle() -> Self {
         var copy = self
-        if !copy.query.projection.contains("title") {
-            copy.query.projection.append("title")
+        if !copy.query.projection.contains(WorkItem.__TeaqlFields.TITLE_PROPERTY_member) {
+            copy.query.projection.append(WorkItem.__TeaqlFields.TITLE_PROPERTY_member)
         }
         return copy
     }
@@ -128,8 +128,8 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectDescription() -> Self {
         var copy = self
-        if !copy.query.projection.contains("description") {
-            copy.query.projection.append("description")
+        if !copy.query.projection.contains(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member) {
+            copy.query.projection.append(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member)
         }
         return copy
     }
@@ -140,8 +140,8 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(WorkItem.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(WorkItem.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -157,381 +157,381 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
-            copy.query.projection.append("platform")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member) {
+            copy.query.projection.append(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member)
         }
         copy.query.relationQuery(
             "platformEntity",
-            localKey: "platform",
+            localKey: WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "platform",
-            operation: QueryOperation("relation", method: "selectPlatformWith", relation: "platform"))
+            query: child.toQuery(), traceName: WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectPlatformWith", relation: WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByTitleAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("title", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByTitleDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("title", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByDescriptionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("description", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByDescriptionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("description", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPlatformAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("platform", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPlatformDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("platform", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
 
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(WorkItem.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(WorkItem.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(WorkItem.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(WorkItem.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(WorkItem.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withTitleIs(_ value: String) -> Self {
-        adding(.equal("title", .string(value)))
+        adding(.equal(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withTitleIn(_ values: [String]) -> Self {
-        adding(.inList("title", values.map { .string($0) }))
+        adding(.inList(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withTitleIsNot(_ value: String) -> Self {
-        adding(.notEqual("title", .string(value)))
+        adding(.notEqual(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withTitleNotIn(_ values: [String]) -> Self {
-        adding(.notInList("title", values.map { .string($0) }))
+        adding(.notInList(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withTitleGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("title", .string(value)))
+        adding(.greaterThan(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withTitleGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("title", .string(value)))
+        adding(.greaterThanOrEqual(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withTitleLessThan(_ value: String) -> Self {
-        adding(.lessThan("title", .string(value)))
+        adding(.lessThan(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withTitleLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("title", .string(value)))
+        adding(.lessThanOrEqual(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withTitleBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("title", .string(lower), .string(upper)))
+        adding(.between(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withTitleIsKnown() -> Self {
-        adding(.isNotNull("title"))
+        adding(.isNotNull(WorkItem.__TeaqlFields.TITLE_PROPERTY_member))
     }
 
     @discardableResult
     public func withTitleIsUnknown() -> Self {
-        adding(.isNull("title"))
+        adding(.isNull(WorkItem.__TeaqlFields.TITLE_PROPERTY_member))
     }
     @discardableResult
     public func withTitleContaining(_ value: String) -> Self {
-        adding(.contains("title", value))
+        adding(.contains(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withTitleNotContaining(_ value: String) -> Self {
-        adding(.notContains("title", value))
+        adding(.notContains(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withTitleStartingWith(_ value: String) -> Self {
-        adding(.startsWith("title", value))
+        adding(.startsWith(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withTitleNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("title", value))
+        adding(.notStartsWith(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withTitleEndingWith(_ value: String) -> Self {
-        adding(.endsWith("title", value))
+        adding(.endsWith(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withTitleNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("title", value))
+        adding(.notEndsWith(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withTitleSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("title", value))
+        adding(.soundingLike(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withDescriptionIs(_ value: String) -> Self {
-        adding(.equal("description", .string(value)))
+        adding(.equal(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDescriptionIn(_ values: [String]) -> Self {
-        adding(.inList("description", values.map { .string($0) }))
+        adding(.inList(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withDescriptionIsNot(_ value: String) -> Self {
-        adding(.notEqual("description", .string(value)))
+        adding(.notEqual(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDescriptionNotIn(_ values: [String]) -> Self {
-        adding(.notInList("description", values.map { .string($0) }))
+        adding(.notInList(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withDescriptionGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("description", .string(value)))
+        adding(.greaterThan(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDescriptionGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("description", .string(value)))
+        adding(.greaterThanOrEqual(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDescriptionLessThan(_ value: String) -> Self {
-        adding(.lessThan("description", .string(value)))
+        adding(.lessThan(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDescriptionLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("description", .string(value)))
+        adding(.lessThanOrEqual(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDescriptionBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("description", .string(lower), .string(upper)))
+        adding(.between(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withDescriptionIsKnown() -> Self {
-        adding(.isNotNull("description"))
+        adding(.isNotNull(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member))
     }
 
     @discardableResult
     public func withDescriptionIsUnknown() -> Self {
-        adding(.isNull("description"))
+        adding(.isNull(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member))
     }
     @discardableResult
     public func withDescriptionContaining(_ value: String) -> Self {
-        adding(.contains("description", value))
+        adding(.contains(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDescriptionNotContaining(_ value: String) -> Self {
-        adding(.notContains("description", value))
+        adding(.notContains(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDescriptionStartingWith(_ value: String) -> Self {
-        adding(.startsWith("description", value))
+        adding(.startsWith(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDescriptionNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("description", value))
+        adding(.notStartsWith(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDescriptionEndingWith(_ value: String) -> Self {
-        adding(.endsWith("description", value))
+        adding(.endsWith(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDescriptionNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("description", value))
+        adding(.notEndsWith(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDescriptionSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("description", value))
+        adding(.soundingLike(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func filterByPlatform(_ value: Int64) -> Self {
-        adding(.equal("platform", .int(value)))
+        adding(.equal(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterByPlatformIn(_ values: [Int64]) -> Self {
-        adding(.inList("platform", values.map(TeaQLValue.int)))
+        adding(.inList(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withPlatformIsKnown() -> Self {
-        adding(.isNotNull("platform"))
+        adding(.isNotNull(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member))
     }
 
     @discardableResult
     public func withPlatformIsUnknown() -> Self {
-        adding(.isNull("platform"))
+        adding(.isNull(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(WorkItem.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(WorkItem.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -539,14 +539,14 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     public func withPlatformMatching<ChildState: Sendable>(
         _ child: PlatformRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("platform", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutPlatformMatching<ChildState: Sendable>(
         _ child: PlatformRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("platform", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
 
@@ -559,10 +559,10 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "platform",
+            relationName: WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetByPlatformAs", alias: name, relation: "platform")))
+            operation: QueryOperation("facet", method: "facetByPlatformAs", alias: name, relation: WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member)))
         return copy
     }
 
@@ -583,70 +583,70 @@ public struct WorkItemRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(WorkItem.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(WorkItem.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByTitle() -> Self {
         var copy = self
-        copy.query.groupBy.append("title")
+        copy.query.groupBy.append(WorkItem.__TeaqlFields.TITLE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByTitleAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("title", as: alias)
+        copy.query.groupBy(WorkItem.__TeaqlFields.TITLE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByDescription() -> Self {
         var copy = self
-        copy.query.groupBy.append("description")
+        copy.query.groupBy.append(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByDescriptionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("description", as: alias)
+        copy.query.groupBy(WorkItem.__TeaqlFields.DESCRIPTION_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPlatform() -> Self {
         var copy = self
-        copy.query.groupBy.append("platform")
+        copy.query.groupBy.append(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPlatformAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("platform", as: alias)
+        copy.query.groupBy(WorkItem.__TeaqlFields.PLATFORM_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(WorkItem.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(WorkItem.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

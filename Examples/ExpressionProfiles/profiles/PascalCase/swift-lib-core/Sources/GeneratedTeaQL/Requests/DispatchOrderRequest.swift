@@ -101,15 +101,15 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "distributionCenter", "orderReference", "handlingNote", "version"]
+        copy.query.projection = [DispatchOrder.__TeaqlFields.ID_PROPERTY_member, DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(DispatchOrder.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(DispatchOrder.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -120,8 +120,8 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectOrderReference() -> Self {
         var copy = self
-        if !copy.query.projection.contains("orderReference") {
-            copy.query.projection.append("orderReference")
+        if !copy.query.projection.contains(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member) {
+            copy.query.projection.append(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member)
         }
         return copy
     }
@@ -130,8 +130,8 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectHandlingNote() -> Self {
         var copy = self
-        if !copy.query.projection.contains("handlingNote") {
-            copy.query.projection.append("handlingNote")
+        if !copy.query.projection.contains(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member) {
+            copy.query.projection.append(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member)
         }
         return copy
     }
@@ -140,8 +140,8 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -157,381 +157,381 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
         _ child: DistributionCenterRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("distributionCenter") {
-            copy.query.projection.append("distributionCenter")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member) {
+            copy.query.projection.append(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member)
         }
         copy.query.relationQuery(
             "distributionCenterEntity",
-            localKey: "distributionCenter",
+            localKey: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "distributionCenter",
-            operation: QueryOperation("relation", method: "selectDistributionCenterWith", relation: "distributionCenter"))
+            query: child.toQuery(), traceName: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectDistributionCenterWith", relation: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByDistributionCenterAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("distributionCenter", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByDistributionCenterDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("distributionCenter", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByOrderReferenceAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("orderReference", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByOrderReferenceDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("orderReference", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByHandlingNoteAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("handlingNote", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByHandlingNoteDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("handlingNote", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
 
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(DispatchOrder.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(DispatchOrder.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func filterByDistributionCenter(_ value: Int64) -> Self {
-        adding(.equal("distributionCenter", .int(value)))
+        adding(.equal(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterByDistributionCenterIn(_ values: [Int64]) -> Self {
-        adding(.inList("distributionCenter", values.map(TeaQLValue.int)))
+        adding(.inList(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withDistributionCenterIsKnown() -> Self {
-        adding(.isNotNull("distributionCenter"))
+        adding(.isNotNull(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member))
     }
 
     @discardableResult
     public func withDistributionCenterIsUnknown() -> Self {
-        adding(.isNull("distributionCenter"))
+        adding(.isNull(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withOrderReferenceIs(_ value: String) -> Self {
-        adding(.equal("orderReference", .string(value)))
+        adding(.equal(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withOrderReferenceIn(_ values: [String]) -> Self {
-        adding(.inList("orderReference", values.map { .string($0) }))
+        adding(.inList(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withOrderReferenceIsNot(_ value: String) -> Self {
-        adding(.notEqual("orderReference", .string(value)))
+        adding(.notEqual(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withOrderReferenceNotIn(_ values: [String]) -> Self {
-        adding(.notInList("orderReference", values.map { .string($0) }))
+        adding(.notInList(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withOrderReferenceGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("orderReference", .string(value)))
+        adding(.greaterThan(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withOrderReferenceGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("orderReference", .string(value)))
+        adding(.greaterThanOrEqual(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withOrderReferenceLessThan(_ value: String) -> Self {
-        adding(.lessThan("orderReference", .string(value)))
+        adding(.lessThan(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withOrderReferenceLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("orderReference", .string(value)))
+        adding(.lessThanOrEqual(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withOrderReferenceBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("orderReference", .string(lower), .string(upper)))
+        adding(.between(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withOrderReferenceIsKnown() -> Self {
-        adding(.isNotNull("orderReference"))
+        adding(.isNotNull(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member))
     }
 
     @discardableResult
     public func withOrderReferenceIsUnknown() -> Self {
-        adding(.isNull("orderReference"))
+        adding(.isNull(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member))
     }
     @discardableResult
     public func withOrderReferenceContaining(_ value: String) -> Self {
-        adding(.contains("orderReference", value))
+        adding(.contains(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withOrderReferenceNotContaining(_ value: String) -> Self {
-        adding(.notContains("orderReference", value))
+        adding(.notContains(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withOrderReferenceStartingWith(_ value: String) -> Self {
-        adding(.startsWith("orderReference", value))
+        adding(.startsWith(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withOrderReferenceNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("orderReference", value))
+        adding(.notStartsWith(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withOrderReferenceEndingWith(_ value: String) -> Self {
-        adding(.endsWith("orderReference", value))
+        adding(.endsWith(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withOrderReferenceNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("orderReference", value))
+        adding(.notEndsWith(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withOrderReferenceSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("orderReference", value))
+        adding(.soundingLike(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withHandlingNoteIs(_ value: String) -> Self {
-        adding(.equal("handlingNote", .string(value)))
+        adding(.equal(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withHandlingNoteIn(_ values: [String]) -> Self {
-        adding(.inList("handlingNote", values.map { .string($0) }))
+        adding(.inList(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withHandlingNoteIsNot(_ value: String) -> Self {
-        adding(.notEqual("handlingNote", .string(value)))
+        adding(.notEqual(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withHandlingNoteNotIn(_ values: [String]) -> Self {
-        adding(.notInList("handlingNote", values.map { .string($0) }))
+        adding(.notInList(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withHandlingNoteGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("handlingNote", .string(value)))
+        adding(.greaterThan(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withHandlingNoteGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("handlingNote", .string(value)))
+        adding(.greaterThanOrEqual(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withHandlingNoteLessThan(_ value: String) -> Self {
-        adding(.lessThan("handlingNote", .string(value)))
+        adding(.lessThan(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withHandlingNoteLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("handlingNote", .string(value)))
+        adding(.lessThanOrEqual(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withHandlingNoteBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("handlingNote", .string(lower), .string(upper)))
+        adding(.between(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withHandlingNoteIsKnown() -> Self {
-        adding(.isNotNull("handlingNote"))
+        adding(.isNotNull(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member))
     }
 
     @discardableResult
     public func withHandlingNoteIsUnknown() -> Self {
-        adding(.isNull("handlingNote"))
+        adding(.isNull(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member))
     }
     @discardableResult
     public func withHandlingNoteContaining(_ value: String) -> Self {
-        adding(.contains("handlingNote", value))
+        adding(.contains(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withHandlingNoteNotContaining(_ value: String) -> Self {
-        adding(.notContains("handlingNote", value))
+        adding(.notContains(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withHandlingNoteStartingWith(_ value: String) -> Self {
-        adding(.startsWith("handlingNote", value))
+        adding(.startsWith(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withHandlingNoteNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("handlingNote", value))
+        adding(.notStartsWith(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withHandlingNoteEndingWith(_ value: String) -> Self {
-        adding(.endsWith("handlingNote", value))
+        adding(.endsWith(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withHandlingNoteNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("handlingNote", value))
+        adding(.notEndsWith(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withHandlingNoteSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("handlingNote", value))
+        adding(.soundingLike(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -539,14 +539,14 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
     public func withDistributionCenterMatching<ChildState: Sendable>(
         _ child: DistributionCenterRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("distributionCenter", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutDistributionCenterMatching<ChildState: Sendable>(
         _ child: DistributionCenterRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("distributionCenter", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
 
@@ -559,10 +559,10 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "distributionCenter",
+            relationName: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetByDistributionCenterAs", alias: name, relation: "distributionCenter")))
+            operation: QueryOperation("facet", method: "facetByDistributionCenterAs", alias: name, relation: DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member)))
         return copy
     }
 
@@ -583,70 +583,70 @@ public struct DispatchOrderRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(DispatchOrder.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(DispatchOrder.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByDistributionCenter() -> Self {
         var copy = self
-        copy.query.groupBy.append("distributionCenter")
+        copy.query.groupBy.append(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByDistributionCenterAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("distributionCenter", as: alias)
+        copy.query.groupBy(DispatchOrder.__TeaqlFields.DISTRIBUTION_CENTER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByOrderReference() -> Self {
         var copy = self
-        copy.query.groupBy.append("orderReference")
+        copy.query.groupBy.append(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByOrderReferenceAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("orderReference", as: alias)
+        copy.query.groupBy(DispatchOrder.__TeaqlFields.ORDER_REFERENCE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByHandlingNote() -> Self {
         var copy = self
-        copy.query.groupBy.append("handlingNote")
+        copy.query.groupBy.append(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByHandlingNoteAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("handlingNote", as: alias)
+        copy.query.groupBy(DispatchOrder.__TeaqlFields.HANDLING_NOTE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(DispatchOrder.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

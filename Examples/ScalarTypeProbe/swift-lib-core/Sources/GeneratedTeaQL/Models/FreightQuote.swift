@@ -3,6 +3,42 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let PLATFORM_PROPERTY_member = "platform"
+        static let PLATFORM_PROPERTY_model = "platform"
+        static let PLATFORM_PROPERTY_column = "platform"
+        static let REFERENCE_PROPERTY_member = "reference"
+        static let REFERENCE_PROPERTY_model = "reference"
+        static let REFERENCE_PROPERTY_column = "reference"
+        static let AMOUNT_PROPERTY_member = "amount"
+        static let AMOUNT_PROPERTY_model = "amount"
+        static let AMOUNT_PROPERTY_column = "amount"
+        static let SHIPMENT_NUMBER_PROPERTY_member = "shipmentNumber"
+        static let SHIPMENT_NUMBER_PROPERTY_model = "shipment_number"
+        static let SHIPMENT_NUMBER_PROPERTY_column = "shipment_number"
+        static let PACKAGE_COUNT_PROPERTY_member = "packageCount"
+        static let PACKAGE_COUNT_PROPERTY_model = "package_count"
+        static let PACKAGE_COUNT_PROPERTY_column = "package_count"
+        static let DELIVERY_DATE_PROPERTY_member = "deliveryDate"
+        static let DELIVERY_DATE_PROPERTY_model = "delivery_date"
+        static let DELIVERY_DATE_PROPERTY_column = "delivery_date"
+        static let PICKUP_TIME_PROPERTY_member = "pickupTime"
+        static let PICKUP_TIME_PROPERTY_model = "pickup_time"
+        static let PICKUP_TIME_PROPERTY_column = "pickup_time"
+        static let QUOTED_AT_PROPERTY_member = "quotedAt"
+        static let QUOTED_AT_PROPERTY_model = "quoted_at"
+        static let QUOTED_AT_PROPERTY_column = "quoted_at"
+        static let INSTRUCTIONS_PROPERTY_member = "instructions"
+        static let INSTRUCTIONS_PROPERTY_model = "instructions"
+        static let INSTRUCTIONS_PROPERTY_column = "instructions"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var platform: Int64? = nil
@@ -80,7 +116,7 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.platform) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .platform)) != nil {
@@ -94,47 +130,47 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.platform = try container.decode(Int64?.self, forKey: .platform)
             }
-            _loadedFields.insert("platform")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member)
         }
         if container.contains(.reference) {
             self.reference = try container.decode(String?.self, forKey: .reference)
-            _loadedFields.insert("reference")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member)
         }
         if container.contains(.amount) {
             self.amount = try container.decode(Decimal?.self, forKey: .amount)
-            _loadedFields.insert("amount")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member)
         }
         if container.contains(.shipmentNumber) {
             self.shipmentNumber = try container.decode(Int64?.self, forKey: .shipmentNumber)
-            _loadedFields.insert("shipmentNumber")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member)
         }
         if container.contains(.packageCount) {
             self.packageCount = try container.decode(Int64?.self, forKey: .packageCount)
-            if let error = ModeledInteger32.error(packageCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: "package_count") { throw error }
-            _loadedFields.insert("packageCount")
+            if let error = ModeledInteger32.error(packageCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model) { throw error }
+            _loadedFields.insert(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member)
         }
         if container.contains(.deliveryDate) {
             self.deliveryDate = try container.decode(Date?.self, forKey: .deliveryDate)
-            _loadedFields.insert("deliveryDate")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member)
         }
         if container.contains(.pickupTime) {
             self.pickupTime = try container.decode(String?.self, forKey: .pickupTime)
-            _loadedFields.insert("pickupTime")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member)
         }
         if container.contains(.quotedAt) {
             self.quotedAt = try container.decode(Date?.self, forKey: .quotedAt)
-            _loadedFields.insert("quotedAt")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member)
         }
         if container.contains(.instructions) {
             self.instructions = try container.decode(String?.self, forKey: .instructions)
-            _loadedFields.insert("instructions")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "platform", "reference", "amount", "shipmentNumber", "packageCount", "deliveryDate", "pickupTime", "quotedAt", "instructions", "version"])
+        let modeled = Set([FreightQuote.__TeaqlFields.ID_PROPERTY_member, FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, FreightQuote.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -149,10 +185,10 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("platform") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) {
             if isLoaded("platformEntity"), let related = platformEntity,
                 related.isLoaded("id"), related.id == platform {
                 try container.encode(related, forKey: .platform)
@@ -160,32 +196,32 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(platform, forKey: .platform)
             }
         }
-        if _loadedFields.contains("reference") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) {
             try container.encode(reference, forKey: .reference)
         }
-        if _loadedFields.contains("amount") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) {
             try container.encode(amount, forKey: .amount)
         }
-        if _loadedFields.contains("shipmentNumber") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) {
             try container.encode(shipmentNumber, forKey: .shipmentNumber)
         }
-        if _loadedFields.contains("packageCount") {
-            if let error = ModeledInteger32.error(packageCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: "package_count") { throw error }
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) {
+            if let error = ModeledInteger32.error(packageCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model) { throw error }
             try container.encode(packageCount, forKey: .packageCount)
         }
-        if _loadedFields.contains("deliveryDate") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) {
             try container.encode(deliveryDate, forKey: .deliveryDate)
         }
-        if _loadedFields.contains("pickupTime") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) {
             try container.encode(pickupTime, forKey: .pickupTime)
         }
-        if _loadedFields.contains("quotedAt") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) {
             try container.encode(quotedAt, forKey: .quotedAt)
         }
-        if _loadedFields.contains("instructions") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) {
             try container.encode(instructions, forKey: .instructions)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -201,17 +237,17 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "FreightQuote",
         table: "freight_quote_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
-            PropertyDescriptor(name: "reference", modelName: "reference", column: "reference", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "amount", modelName: "amount", column: "amount", type: .decimal, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "shipmentNumber", modelName: "shipment_number", column: "shipment_number", type: .int, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "packageCount", modelName: "package_count", column: "package_count", type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
-            PropertyDescriptor(name: "deliveryDate", modelName: "delivery_date", column: "delivery_date", type: .date, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "pickupTime", modelName: "pickup_time", column: "pickup_time", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "quotedAt", modelName: "quoted_at", column: "quoted_at", type: .timestamp, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "instructions", modelName: "instructions", column: "instructions", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.ID_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.ID_PROPERTY_model, column: FreightQuote.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_model, column: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_model, column: FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_model, column: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_column, type: .decimal, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_model, column: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model, column: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_model, column: FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_column, type: .date, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_model, column: FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_model, column: FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_model, column: FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_column, type: .string, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, modelName: FreightQuote.__TeaqlFields.VERSION_PROPERTY_model, column: FreightQuote.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -226,28 +262,28 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.platform = record["platform"]?.int64Value
-        if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
-        entity.reference = record["reference"]?.stringValue
-        if record.keys.contains("reference") { entity._loadedFields.insert("reference") }
-        entity.amount = record["amount"]?.decimalValue
-        if record.keys.contains("amount") { entity._loadedFields.insert("amount") }
-        entity.shipmentNumber = record["shipmentNumber"]?.int64Value
-        if record.keys.contains("shipmentNumber") { entity._loadedFields.insert("shipmentNumber") }
-        entity.packageCount = record["packageCount"]?.int64Value
-        if record.keys.contains("packageCount") { entity._loadedFields.insert("packageCount") }
-        entity.deliveryDate = record["deliveryDate"]?.dateValue
-        if record.keys.contains("deliveryDate") { entity._loadedFields.insert("deliveryDate") }
-        entity.pickupTime = record["pickupTime"]?.stringValue
-        if record.keys.contains("pickupTime") { entity._loadedFields.insert("pickupTime") }
-        entity.quotedAt = record["quotedAt"]?.dateValue
-        if record.keys.contains("quotedAt") { entity._loadedFields.insert("quotedAt") }
-        entity.instructions = record["instructions"]?.stringValue
-        if record.keys.contains("instructions") { entity._loadedFields.insert("instructions") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[FreightQuote.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(FreightQuote.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.ID_PROPERTY_member) }
+        entity.platform = record[FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member]?.int64Value
+        if record.keys.contains(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) }
+        entity.reference = record[FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member]?.stringValue
+        if record.keys.contains(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) }
+        entity.amount = record[FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member]?.decimalValue
+        if record.keys.contains(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) }
+        entity.shipmentNumber = record[FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member]?.int64Value
+        if record.keys.contains(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) }
+        entity.packageCount = record[FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member]?.int64Value
+        if record.keys.contains(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) }
+        entity.deliveryDate = record[FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member]?.dateValue
+        if record.keys.contains(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) }
+        entity.pickupTime = record[FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member]?.stringValue
+        if record.keys.contains(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) }
+        entity.quotedAt = record[FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member]?.dateValue
+        if record.keys.contains(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) }
+        entity.instructions = record[FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member]?.stringValue
+        if record.keys.contains(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) }
+        entity.version = record[FreightQuote.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -283,54 +319,54 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "platform": platform.map { .int($0) } ?? .null,
-            "reference": reference.map { .string($0) } ?? .null,
-            "amount": amount.map { .decimal($0) } ?? .null,
-            "shipmentNumber": shipmentNumber.map { .int($0) } ?? .null,
-            "packageCount": packageCount.map { .int($0) } ?? .null,
-            "deliveryDate": deliveryDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
-            "pickupTime": pickupTime.map { .string($0) } ?? .null,
-            "quotedAt": quotedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "instructions": instructions.map { .string($0) } ?? .null,
-            "version": .int(version)
+            FreightQuote.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member: platform.map { .int($0) } ?? .null,
+            FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member: reference.map { .string($0) } ?? .null,
+            FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member: amount.map { .decimal($0) } ?? .null,
+            FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member: shipmentNumber.map { .int($0) } ?? .null,
+            FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member: packageCount.map { .int($0) } ?? .null,
+            FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member: deliveryDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
+            FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member: pickupTime.map { .string($0) } ?? .null,
+            FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member: quotedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member: instructions.map { .string($0) } ?? .null,
+            FreightQuote.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.ID_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("platform") {
-            record["platform"] = platform.map { .int($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_model] = platform.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("reference") {
-            record["reference"] = reference.map { .string($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_model] = reference.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("amount") {
-            record["amount"] = amount.map { .decimal($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_model] = amount.map { .decimal($0) } ?? .null
         }
-        if _loadedFields.contains("shipmentNumber") {
-            record["shipment_number"] = shipmentNumber.map { .int($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_model] = shipmentNumber.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("packageCount") {
-            record["package_count"] = packageCount.map { .int($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model] = packageCount.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("deliveryDate") {
-            record["delivery_date"] = deliveryDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_model] = deliveryDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
         }
-        if _loadedFields.contains("pickupTime") {
-            record["pickup_time"] = pickupTime.map { .string($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_model] = pickupTime.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("quotedAt") {
-            record["quoted_at"] = quotedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_model] = quotedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("instructions") {
-            record["instructions"] = instructions.map { .string($0) } ?? .null
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_model] = instructions.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[FreightQuote.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -344,9 +380,9 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("platformEntity"), isLoaded("platform"),
-            saved.isLoaded("platform"), saved.platform == platform,
-            graph.forwardMatches(record["platform"], related: _platformResult) {
+        if isLoaded("platformEntity"), isLoaded(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member),
+            saved.isLoaded(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member), saved.platform == platform,
+            graph.forwardMatches(record[FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member], related: _platformResult) {
             saved._platformResult = _platformResult.replacingData(
                 try _platformResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("platformEntity")
@@ -360,7 +396,7 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "platform", "reference", "amount", "shipmentNumber", "packageCount", "deliveryDate", "pickupTime", "quotedAt", "instructions", "version"])
+        entity._loadedFields = Set([FreightQuote.__TeaqlFields.ID_PROPERTY_member, FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, FreightQuote.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -387,8 +423,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -396,8 +432,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePlatform(_ value: Int64?) -> Self {
         self.platform = value
-        self._loadedFields.insert("platform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -405,8 +441,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateReference(_ value: String?) -> Self {
         self.reference = value
-        self._loadedFields.insert("reference")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "reference", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -414,8 +450,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateAmount(_ value: Decimal?) -> Self {
         self.amount = value
-        self._loadedFields.insert("amount")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "amount", value: value.map { .decimal($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_model, value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -423,8 +459,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateShipmentNumber(_ value: Int64?) -> Self {
         self.shipmentNumber = value
-        self._loadedFields.insert("shipmentNumber")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "shipment_number", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -432,8 +468,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePackageCount(_ value: Int64?) -> Self {
         self.packageCount = value
-        self._loadedFields.insert("packageCount")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "package_count", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -441,8 +477,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateDeliveryDate(_ value: Date?) -> Self {
         self.deliveryDate = value
-        self._loadedFields.insert("deliveryDate")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "delivery_date", value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_model, value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
         return self
     }
 
@@ -450,8 +486,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePickupTime(_ value: String?) -> Self {
         self.pickupTime = value
-        self._loadedFields.insert("pickupTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "pickup_time", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -459,8 +495,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateQuotedAt(_ value: Date?) -> Self {
         self.quotedAt = value
-        self._loadedFields.insert("quotedAt")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "quoted_at", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -468,8 +504,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateInstructions(_ value: String?) -> Self {
         self.instructions = value
-        self._loadedFields.insert("instructions")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "instructions", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -477,8 +513,8 @@ public struct FreightQuote: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: FreightQuote.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -563,38 +599,38 @@ public struct FreightQuoteAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("reference") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("reference"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("amount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("amount"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("shipmentNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("shipment_number"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("packageCount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("package_count"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("deliveryDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("delivery_date"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("pickupTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("pickup_time"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("quotedAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("quoted_at"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("instructions") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("instructions"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
         }
         return pending
@@ -605,38 +641,38 @@ public struct FreightQuoteAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("reference") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("reference"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("amount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("amount"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("shipmentNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("shipment_number"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("packageCount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("package_count"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("deliveryDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("delivery_date"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("pickupTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("pickup_time"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("quotedAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("quoted_at"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("instructions") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("instructions"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
+            if !entity.isLoaded(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(FreightQuote.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "FreightQuote")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

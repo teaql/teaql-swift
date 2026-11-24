@@ -101,15 +101,15 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "name", "code", "color", "displayOrder", "commercePlatform", "version"]
+        copy.query.projection = [OrderStatus.__TeaqlFields.ID_PROPERTY_member, OrderStatus.__TeaqlFields.NAME_PROPERTY_member, OrderStatus.__TeaqlFields.CODE_PROPERTY_member, OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, OrderStatus.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(OrderStatus.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -118,8 +118,8 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectName() -> Self {
         var copy = self
-        if !copy.query.projection.contains("name") {
-            copy.query.projection.append("name")
+        if !copy.query.projection.contains(OrderStatus.__TeaqlFields.NAME_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.NAME_PROPERTY_member)
         }
         return copy
     }
@@ -128,8 +128,8 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectCode() -> Self {
         var copy = self
-        if !copy.query.projection.contains("code") {
-            copy.query.projection.append("code")
+        if !copy.query.projection.contains(OrderStatus.__TeaqlFields.CODE_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.CODE_PROPERTY_member)
         }
         return copy
     }
@@ -138,8 +138,8 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectColor() -> Self {
         var copy = self
-        if !copy.query.projection.contains("color") {
-            copy.query.projection.append("color")
+        if !copy.query.projection.contains(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member)
         }
         return copy
     }
@@ -148,8 +148,8 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectDisplayOrder() -> Self {
         var copy = self
-        if !copy.query.projection.contains("displayOrder") {
-            copy.query.projection.append("displayOrder")
+        if !copy.query.projection.contains(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member)
         }
         return copy
     }
@@ -160,8 +160,8 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -177,87 +177,87 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
         _ child: CommercePlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("commercePlatform") {
-            copy.query.projection.append("commercePlatform")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+            copy.query.projection.append(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
         }
         copy.query.relationQuery(
             "commercePlatformEntity",
-            localKey: "commercePlatform",
+            localKey: OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "commercePlatform",
-            operation: QueryOperation("relation", method: "selectCommercePlatformWith", relation: "commercePlatform"))
+            query: child.toQuery(), traceName: OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectCommercePlatformWith", relation: OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByNameAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("name", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByNameDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("name", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByCodeAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("code", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByCodeDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("code", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByColorAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("color", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByColorDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("color", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByDisplayOrderAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("displayOrder", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByDisplayOrderDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("displayOrder", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByCommercePlatformAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("commercePlatform", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByCommercePlatformDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("commercePlatform", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
@@ -410,460 +410,460 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(OrderStatus.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(OrderStatus.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(OrderStatus.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(OrderStatus.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withNameIs(_ value: String) -> Self {
-        adding(.equal("name", .string(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameIn(_ values: [String]) -> Self {
-        adding(.inList("name", values.map { .string($0) }))
+        adding(.inList(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withNameIsNot(_ value: String) -> Self {
-        adding(.notEqual("name", .string(value)))
+        adding(.notEqual(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameNotIn(_ values: [String]) -> Self {
-        adding(.notInList("name", values.map { .string($0) }))
+        adding(.notInList(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withNameGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("name", .string(value)))
+        adding(.greaterThan(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("name", .string(value)))
+        adding(.greaterThanOrEqual(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameLessThan(_ value: String) -> Self {
-        adding(.lessThan("name", .string(value)))
+        adding(.lessThan(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("name", .string(value)))
+        adding(.lessThanOrEqual(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("name", .string(lower), .string(upper)))
+        adding(.between(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withNameIsKnown() -> Self {
-        adding(.isNotNull("name"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.NAME_PROPERTY_member))
     }
 
     @discardableResult
     public func withNameIsUnknown() -> Self {
-        adding(.isNull("name"))
+        adding(.isNull(OrderStatus.__TeaqlFields.NAME_PROPERTY_member))
     }
     @discardableResult
     public func withNameContaining(_ value: String) -> Self {
-        adding(.contains("name", value))
+        adding(.contains(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameNotContaining(_ value: String) -> Self {
-        adding(.notContains("name", value))
+        adding(.notContains(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameStartingWith(_ value: String) -> Self {
-        adding(.startsWith("name", value))
+        adding(.startsWith(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("name", value))
+        adding(.notStartsWith(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameEndingWith(_ value: String) -> Self {
-        adding(.endsWith("name", value))
+        adding(.endsWith(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("name", value))
+        adding(.notEndsWith(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("name", value))
+        adding(.soundingLike(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withCodeIs(_ value: String) -> Self {
-        adding(.equal("code", .string(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withCodeIn(_ values: [String]) -> Self {
-        adding(.inList("code", values.map { .string($0) }))
+        adding(.inList(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withCodeIsNot(_ value: String) -> Self {
-        adding(.notEqual("code", .string(value)))
+        adding(.notEqual(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withCodeNotIn(_ values: [String]) -> Self {
-        adding(.notInList("code", values.map { .string($0) }))
+        adding(.notInList(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withCodeGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("code", .string(value)))
+        adding(.greaterThan(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withCodeGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("code", .string(value)))
+        adding(.greaterThanOrEqual(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withCodeLessThan(_ value: String) -> Self {
-        adding(.lessThan("code", .string(value)))
+        adding(.lessThan(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withCodeLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("code", .string(value)))
+        adding(.lessThanOrEqual(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withCodeBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("code", .string(lower), .string(upper)))
+        adding(.between(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withCodeIsKnown() -> Self {
-        adding(.isNotNull("code"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.CODE_PROPERTY_member))
     }
 
     @discardableResult
     public func withCodeIsUnknown() -> Self {
-        adding(.isNull("code"))
+        adding(.isNull(OrderStatus.__TeaqlFields.CODE_PROPERTY_member))
     }
     @discardableResult
     public func withCodeContaining(_ value: String) -> Self {
-        adding(.contains("code", value))
+        adding(.contains(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withCodeNotContaining(_ value: String) -> Self {
-        adding(.notContains("code", value))
+        adding(.notContains(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withCodeStartingWith(_ value: String) -> Self {
-        adding(.startsWith("code", value))
+        adding(.startsWith(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withCodeNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("code", value))
+        adding(.notStartsWith(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withCodeEndingWith(_ value: String) -> Self {
-        adding(.endsWith("code", value))
+        adding(.endsWith(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withCodeNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("code", value))
+        adding(.notEndsWith(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withCodeSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("code", value))
+        adding(.soundingLike(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withColorIs(_ value: String) -> Self {
-        adding(.equal("color", .string(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withColorIn(_ values: [String]) -> Self {
-        adding(.inList("color", values.map { .string($0) }))
+        adding(.inList(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withColorIsNot(_ value: String) -> Self {
-        adding(.notEqual("color", .string(value)))
+        adding(.notEqual(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withColorNotIn(_ values: [String]) -> Self {
-        adding(.notInList("color", values.map { .string($0) }))
+        adding(.notInList(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withColorGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("color", .string(value)))
+        adding(.greaterThan(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withColorGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("color", .string(value)))
+        adding(.greaterThanOrEqual(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withColorLessThan(_ value: String) -> Self {
-        adding(.lessThan("color", .string(value)))
+        adding(.lessThan(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withColorLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("color", .string(value)))
+        adding(.lessThanOrEqual(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withColorBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("color", .string(lower), .string(upper)))
+        adding(.between(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withColorIsKnown() -> Self {
-        adding(.isNotNull("color"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member))
     }
 
     @discardableResult
     public func withColorIsUnknown() -> Self {
-        adding(.isNull("color"))
+        adding(.isNull(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member))
     }
     @discardableResult
     public func withColorContaining(_ value: String) -> Self {
-        adding(.contains("color", value))
+        adding(.contains(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withColorNotContaining(_ value: String) -> Self {
-        adding(.notContains("color", value))
+        adding(.notContains(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withColorStartingWith(_ value: String) -> Self {
-        adding(.startsWith("color", value))
+        adding(.startsWith(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withColorNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("color", value))
+        adding(.notStartsWith(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withColorEndingWith(_ value: String) -> Self {
-        adding(.endsWith("color", value))
+        adding(.endsWith(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withColorNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("color", value))
+        adding(.notEndsWith(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withColorSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("color", value))
+        adding(.soundingLike(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withDisplayOrderIs(_ value: Decimal) -> Self {
-        adding(.equal("displayOrder", .decimal(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withDisplayOrderIn(_ values: [Decimal]) -> Self {
-        adding(.inList("displayOrder", values.map { .decimal($0) }))
+        adding(.inList(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withDisplayOrderIsNot(_ value: Decimal) -> Self {
-        adding(.notEqual("displayOrder", .decimal(value)))
+        adding(.notEqual(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withDisplayOrderNotIn(_ values: [Decimal]) -> Self {
-        adding(.notInList("displayOrder", values.map { .decimal($0) }))
+        adding(.notInList(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withDisplayOrderGreaterThan(_ value: Decimal) -> Self {
-        adding(.greaterThan("displayOrder", .decimal(value)))
+        adding(.greaterThan(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withDisplayOrderGreaterThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.greaterThanOrEqual("displayOrder", .decimal(value)))
+        adding(.greaterThanOrEqual(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withDisplayOrderLessThan(_ value: Decimal) -> Self {
-        adding(.lessThan("displayOrder", .decimal(value)))
+        adding(.lessThan(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withDisplayOrderLessThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.lessThanOrEqual("displayOrder", .decimal(value)))
+        adding(.lessThanOrEqual(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withDisplayOrderBetween(_ lower: Decimal, _ upper: Decimal) -> Self {
-        adding(.between("displayOrder", .decimal(lower), .decimal(upper)))
+        adding(.between(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, .decimal(lower), .decimal(upper)))
     }
 
     @discardableResult
     public func withDisplayOrderIsKnown() -> Self {
-        adding(.isNotNull("displayOrder"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member))
     }
 
     @discardableResult
     public func withDisplayOrderIsUnknown() -> Self {
-        adding(.isNull("displayOrder"))
+        adding(.isNull(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func filterByCommercePlatform(_ value: Int64) -> Self {
-        adding(.equal("commercePlatform", .int(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterByCommercePlatformIn(_ values: [Int64]) -> Self {
-        adding(.inList("commercePlatform", values.map(TeaQLValue.int)))
+        adding(.inList(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withCommercePlatformIsKnown() -> Self {
-        adding(.isNotNull("commercePlatform"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member))
     }
 
     @discardableResult
     public func withCommercePlatformIsUnknown() -> Self {
-        adding(.isNull("commercePlatform"))
+        adding(.isNull(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -871,14 +871,14 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     public func withCommercePlatformMatching<ChildState: Sendable>(
         _ child: CommercePlatformRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("commercePlatform", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutCommercePlatformMatching<ChildState: Sendable>(
         _ child: CommercePlatformRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("commercePlatform", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
@@ -916,10 +916,10 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "commercePlatform",
+            relationName: OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetByCommercePlatformAs", alias: name, relation: "commercePlatform")))
+            operation: QueryOperation("facet", method: "facetByCommercePlatformAs", alias: name, relation: OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)))
         return copy
     }
 
@@ -944,7 +944,7 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minDisplayOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "displayOrder", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -957,7 +957,7 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxDisplayOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "displayOrder", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -970,7 +970,7 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumDisplayOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "displayOrder", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -983,7 +983,7 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgDisplayOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "displayOrder", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -999,98 +999,98 @@ public struct OrderStatusRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByName() -> Self {
         var copy = self
-        copy.query.groupBy.append("name")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.NAME_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByNameAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("name", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.NAME_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByCode() -> Self {
         var copy = self
-        copy.query.groupBy.append("code")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.CODE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByCodeAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("code", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.CODE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByColor() -> Self {
         var copy = self
-        copy.query.groupBy.append("color")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByColorAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("color", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.COLOR_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByDisplayOrder() -> Self {
         var copy = self
-        copy.query.groupBy.append("displayOrder")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByDisplayOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("displayOrder", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByCommercePlatform() -> Self {
         var copy = self
-        copy.query.groupBy.append("commercePlatform")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByCommercePlatformAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("commercePlatform", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(OrderStatus.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

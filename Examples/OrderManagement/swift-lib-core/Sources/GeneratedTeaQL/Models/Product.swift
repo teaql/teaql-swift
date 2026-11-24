@@ -3,6 +3,33 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let SKU_PROPERTY_member = "sku"
+        static let SKU_PROPERTY_model = "sku"
+        static let SKU_PROPERTY_column = "sku"
+        static let IMAGE_URL_PROPERTY_member = "imageUrl"
+        static let IMAGE_URL_PROPERTY_model = "image_url"
+        static let IMAGE_URL_PROPERTY_column = "image_url"
+        static let COMMERCE_PLATFORM_PROPERTY_member = "commercePlatform"
+        static let COMMERCE_PLATFORM_PROPERTY_model = "commerce_platform"
+        static let COMMERCE_PLATFORM_PROPERTY_column = "commerce_platform"
+        static let CREATE_TIME_PROPERTY_member = "createTime"
+        static let CREATE_TIME_PROPERTY_model = "create_time"
+        static let CREATE_TIME_PROPERTY_column = "create_time"
+        static let UPDATE_TIME_PROPERTY_member = "updateTime"
+        static let UPDATE_TIME_PROPERTY_model = "update_time"
+        static let UPDATE_TIME_PROPERTY_column = "update_time"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var name: String? = nil
@@ -90,19 +117,19 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(Product.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(Product.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.sku) {
             self.sku = try container.decode(String?.self, forKey: .sku)
-            _loadedFields.insert("sku")
+            _loadedFields.insert(Product.__TeaqlFields.SKU_PROPERTY_member)
         }
         if container.contains(.imageUrl) {
             self.imageUrl = try container.decode(String?.self, forKey: .imageUrl)
-            _loadedFields.insert("imageUrl")
+            _loadedFields.insert(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member)
         }
         if container.contains(.commercePlatform) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .commercePlatform)) != nil {
@@ -116,25 +143,25 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.commercePlatform = try container.decode(Int64?.self, forKey: .commercePlatform)
             }
-            _loadedFields.insert("commercePlatform")
+            _loadedFields.insert(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
         }
         if container.contains(.createTime) {
             self.createTime = try container.decode(Date?.self, forKey: .createTime)
-            _loadedFields.insert("createTime")
+            _loadedFields.insert(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member)
         }
         if container.contains(.updateTime) {
             self.updateTime = try container.decode(Date?.self, forKey: .updateTime)
-            _loadedFields.insert("updateTime")
+            _loadedFields.insert(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(Product.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.orderLineList) {
             self.orderLineList = SmartList(try container.decode([OrderLine].self, forKey: .orderLineList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "name", "sku", "imageUrl", "commercePlatform", "createTime", "updateTime", "version"])
+        let modeled = Set([Product.__TeaqlFields.ID_PROPERTY_member, Product.__TeaqlFields.NAME_PROPERTY_member, Product.__TeaqlFields.SKU_PROPERTY_member, Product.__TeaqlFields.IMAGE_URL_PROPERTY_member, Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, Product.__TeaqlFields.CREATE_TIME_PROPERTY_member, Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member, Product.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["orderLineList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -149,19 +176,19 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(Product.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(Product.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("sku") {
+        if _loadedFields.contains(Product.__TeaqlFields.SKU_PROPERTY_member) {
             try container.encode(sku, forKey: .sku)
         }
-        if _loadedFields.contains("imageUrl") {
+        if _loadedFields.contains(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member) {
             try container.encode(imageUrl, forKey: .imageUrl)
         }
-        if _loadedFields.contains("commercePlatform") {
+        if _loadedFields.contains(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
             if isLoaded("commercePlatformEntity"), let related = commercePlatformEntity,
                 related.isLoaded("id"), related.id == commercePlatform {
                 try container.encode(related, forKey: .commercePlatform)
@@ -169,13 +196,13 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(commercePlatform, forKey: .commercePlatform)
             }
         }
-        if _loadedFields.contains("createTime") {
+        if _loadedFields.contains(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
             try container.encode(createTime, forKey: .createTime)
         }
-        if _loadedFields.contains("updateTime") {
+        if _loadedFields.contains(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
             try container.encode(updateTime, forKey: .updateTime)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(Product.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("orderLineList"), _orderLineListResult.isLoaded {
@@ -196,14 +223,14 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "Product",
         table: "product_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "sku", modelName: "sku", column: "sku", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "imageUrl", modelName: "image_url", column: "image_url", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "commercePlatform", modelName: "commerce_platform", column: "commerce_platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CommercePlatform"),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: Product.__TeaqlFields.ID_PROPERTY_member, modelName: Product.__TeaqlFields.ID_PROPERTY_model, column: Product.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: Product.__TeaqlFields.NAME_PROPERTY_member, modelName: Product.__TeaqlFields.NAME_PROPERTY_model, column: Product.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Product.__TeaqlFields.SKU_PROPERTY_member, modelName: Product.__TeaqlFields.SKU_PROPERTY_model, column: Product.__TeaqlFields.SKU_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Product.__TeaqlFields.IMAGE_URL_PROPERTY_member, modelName: Product.__TeaqlFields.IMAGE_URL_PROPERTY_model, column: Product.__TeaqlFields.IMAGE_URL_PROPERTY_column, type: .string, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, modelName: Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model, column: Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CommercePlatform"),
+            PropertyDescriptor(name: Product.__TeaqlFields.CREATE_TIME_PROPERTY_member, modelName: Product.__TeaqlFields.CREATE_TIME_PROPERTY_model, column: Product.__TeaqlFields.CREATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member, modelName: Product.__TeaqlFields.UPDATE_TIME_PROPERTY_model, column: Product.__TeaqlFields.UPDATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
+            PropertyDescriptor(name: Product.__TeaqlFields.VERSION_PROPERTY_member, modelName: Product.__TeaqlFields.VERSION_PROPERTY_model, column: Product.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -218,22 +245,22 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.sku = record["sku"]?.stringValue
-        if record.keys.contains("sku") { entity._loadedFields.insert("sku") }
-        entity.imageUrl = record["imageUrl"]?.stringValue
-        if record.keys.contains("imageUrl") { entity._loadedFields.insert("imageUrl") }
-        entity.commercePlatform = record["commercePlatform"]?.int64Value
-        if record.keys.contains("commercePlatform") { entity._loadedFields.insert("commercePlatform") }
-        entity.createTime = record["createTime"]?.dateValue
-        if record.keys.contains("createTime") { entity._loadedFields.insert("createTime") }
-        entity.updateTime = record["updateTime"]?.dateValue
-        if record.keys.contains("updateTime") { entity._loadedFields.insert("updateTime") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[Product.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Product.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.ID_PROPERTY_member) }
+        entity.name = record[Product.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(Product.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.sku = record[Product.__TeaqlFields.SKU_PROPERTY_member]?.stringValue
+        if record.keys.contains(Product.__TeaqlFields.SKU_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.SKU_PROPERTY_member) }
+        entity.imageUrl = record[Product.__TeaqlFields.IMAGE_URL_PROPERTY_member]?.stringValue
+        if record.keys.contains(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member) }
+        entity.commercePlatform = record[Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member]?.int64Value
+        if record.keys.contains(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) }
+        entity.createTime = record[Product.__TeaqlFields.CREATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member) }
+        entity.updateTime = record[Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member) }
+        entity.version = record[Product.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Product.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(Product.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -293,42 +320,42 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "name": name.map { .string($0) } ?? .null,
-            "sku": sku.map { .string($0) } ?? .null,
-            "imageUrl": imageUrl.map { .string($0) } ?? .null,
-            "commercePlatform": commercePlatform.map { .int($0) } ?? .null,
-            "createTime": createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "updateTime": updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "version": .int(version)
+            Product.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            Product.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            Product.__TeaqlFields.SKU_PROPERTY_member: sku.map { .string($0) } ?? .null,
+            Product.__TeaqlFields.IMAGE_URL_PROPERTY_member: imageUrl.map { .string($0) } ?? .null,
+            Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member: commercePlatform.map { .int($0) } ?? .null,
+            Product.__TeaqlFields.CREATE_TIME_PROPERTY_member: createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member: updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            Product.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(Product.__TeaqlFields.ID_PROPERTY_member) {
+            record[Product.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(Product.__TeaqlFields.NAME_PROPERTY_member) {
+            record[Product.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("sku") {
-            record["sku"] = sku.map { .string($0) } ?? .null
+        if _loadedFields.contains(Product.__TeaqlFields.SKU_PROPERTY_member) {
+            record[Product.__TeaqlFields.SKU_PROPERTY_model] = sku.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("imageUrl") {
-            record["image_url"] = imageUrl.map { .string($0) } ?? .null
+        if _loadedFields.contains(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member) {
+            record[Product.__TeaqlFields.IMAGE_URL_PROPERTY_model] = imageUrl.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("commercePlatform") {
-            record["commerce_platform"] = commercePlatform.map { .int($0) } ?? .null
+        if _loadedFields.contains(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+            record[Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model] = commercePlatform.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("createTime") {
-            record["create_time"] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+            record[Product.__TeaqlFields.CREATE_TIME_PROPERTY_model] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("updateTime") {
-            record["update_time"] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+            record[Product.__TeaqlFields.UPDATE_TIME_PROPERTY_model] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(Product.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[Product.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -342,9 +369,9 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("commercePlatformEntity"), isLoaded("commercePlatform"),
-            saved.isLoaded("commercePlatform"), saved.commercePlatform == commercePlatform,
-            graph.forwardMatches(record["commercePlatform"], related: _commercePlatformResult) {
+        if isLoaded("commercePlatformEntity"), isLoaded(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member),
+            saved.isLoaded(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member), saved.commercePlatform == commercePlatform,
+            graph.forwardMatches(record[Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member], related: _commercePlatformResult) {
             saved._commercePlatformResult = _commercePlatformResult.replacingData(
                 try _commercePlatformResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("commercePlatformEntity")
@@ -364,7 +391,7 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "name", "sku", "imageUrl", "commercePlatform", "createTime", "updateTime", "version"])
+        entity._loadedFields = Set([Product.__TeaqlFields.ID_PROPERTY_member, Product.__TeaqlFields.NAME_PROPERTY_member, Product.__TeaqlFields.SKU_PROPERTY_member, Product.__TeaqlFields.IMAGE_URL_PROPERTY_member, Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, Product.__TeaqlFields.CREATE_TIME_PROPERTY_member, Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member, Product.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -391,8 +418,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(Product.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -400,8 +427,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Product.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -409,8 +436,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateSku(_ value: String?) -> Self {
         self.sku = value
-        self._loadedFields.insert("sku")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "sku", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Product.__TeaqlFields.SKU_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.SKU_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -418,8 +445,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateImageUrl(_ value: String?) -> Self {
         self.imageUrl = value
-        self._loadedFields.insert("imageUrl")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "image_url", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.IMAGE_URL_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -427,8 +454,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCommercePlatform(_ value: Int64?) -> Self {
         self.commercePlatform = value
-        self._loadedFields.insert("commercePlatform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "commerce_platform", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -436,8 +463,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCreateTime(_ value: Date?) -> Self {
         self.createTime = value
-        self._loadedFields.insert("createTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "create_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.CREATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -445,8 +472,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateUpdateTime(_ value: Date?) -> Self {
         self.updateTime = value
-        self._loadedFields.insert("updateTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "update_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.UPDATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -454,8 +481,8 @@ public struct Product: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(Product.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Product.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -573,29 +600,29 @@ public struct ProductAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("sku") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("sku"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.SKU_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.SKU_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("imageUrl") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("image_url"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.IMAGE_URL_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("commercePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("commerce_platform"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
         }
         for (index, var child) in entity.orderLineList.enumerated() {
@@ -624,29 +651,29 @@ public struct ProductAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("sku") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("sku"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.SKU_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.SKU_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("imageUrl") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("image_url"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.IMAGE_URL_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.IMAGE_URL_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("commercePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("commerce_platform"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Product")])
+            if !entity.isLoaded(Product.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Product.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Product")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

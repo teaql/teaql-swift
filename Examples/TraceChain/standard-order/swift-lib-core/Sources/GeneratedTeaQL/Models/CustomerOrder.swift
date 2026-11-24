@@ -3,6 +3,30 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let CUSTOMER_PROPERTY_member = "customer"
+        static let CUSTOMER_PROPERTY_model = "customer"
+        static let CUSTOMER_PROPERTY_column = "customer"
+        static let STATUS_PROPERTY_member = "status"
+        static let STATUS_PROPERTY_model = "status"
+        static let STATUS_PROPERTY_column = "status"
+        static let ORDER_NUMBER_PROPERTY_member = "orderNumber"
+        static let ORDER_NUMBER_PROPERTY_model = "order_number"
+        static let ORDER_NUMBER_PROPERTY_column = "order_number"
+        static let ORDER_DATE_PROPERTY_member = "orderDate"
+        static let ORDER_DATE_PROPERTY_model = "order_date"
+        static let ORDER_DATE_PROPERTY_column = "order_date"
+        static let TOTAL_AMOUNT_PROPERTY_member = "totalAmount"
+        static let TOTAL_AMOUNT_PROPERTY_model = "total_amount"
+        static let TOTAL_AMOUNT_PROPERTY_column = "total_amount"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var customer: Int64? = nil
@@ -98,7 +122,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.customer) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .customer)) != nil {
@@ -112,7 +136,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.customer = try container.decode(Int64?.self, forKey: .customer)
             }
-            _loadedFields.insert("customer")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member)
         }
         if container.contains(.status) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .status)) != nil {
@@ -126,29 +150,29 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.status = try container.decode(Int64?.self, forKey: .status)
             }
-            _loadedFields.insert("status")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member)
         }
         if container.contains(.orderNumber) {
             self.orderNumber = try container.decode(String?.self, forKey: .orderNumber)
-            _loadedFields.insert("orderNumber")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member)
         }
         if container.contains(.orderDate) {
             self.orderDate = try container.decode(Date?.self, forKey: .orderDate)
-            _loadedFields.insert("orderDate")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member)
         }
         if container.contains(.totalAmount) {
             self.totalAmount = try container.decode(Decimal?.self, forKey: .totalAmount)
-            _loadedFields.insert("totalAmount")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.orderItemList) {
             self.orderItemList = SmartList(try container.decode([OrderItem].self, forKey: .orderItemList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "customer", "status", "orderNumber", "orderDate", "totalAmount", "version"])
+        let modeled = Set([CustomerOrder.__TeaqlFields.ID_PROPERTY_member, CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member, CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member, CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member, CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member, CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member, CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["orderItemList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -163,10 +187,10 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("customer") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member) {
             if isLoaded("customerEntity"), let related = customerEntity,
                 related.isLoaded("id"), related.id == customer {
                 try container.encode(related, forKey: .customer)
@@ -174,7 +198,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(customer, forKey: .customer)
             }
         }
-        if _loadedFields.contains("status") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member) {
             if isLoaded("statusEntity"), let related = statusEntity,
                 related.isLoaded("id"), related.id == status {
                 try container.encode(related, forKey: .status)
@@ -182,16 +206,16 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(status, forKey: .status)
             }
         }
-        if _loadedFields.contains("orderNumber") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
             try container.encode(orderNumber, forKey: .orderNumber)
         }
-        if _loadedFields.contains("orderDate") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member) {
             try container.encode(orderDate, forKey: .orderDate)
         }
-        if _loadedFields.contains("totalAmount") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member) {
             try container.encode(totalAmount, forKey: .totalAmount)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("orderItemList"), _orderItemListResult.isLoaded {
@@ -212,15 +236,15 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "CustomerOrder",
         table: "customer_order_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customer", modelName: "customer", column: "customer", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Customer"),
-            PropertyDescriptor(name: "status", modelName: "status", column: "status", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "OrderStatus"),
-            PropertyDescriptor(name: "orderNumber", modelName: "order_number", column: "order_number", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "orderDate", modelName: "order_date", column: "order_date", type: .date, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "totalAmount", modelName: "total_amount", column: "total_amount", type: .decimal, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.ID_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.ID_PROPERTY_model, column: CustomerOrder.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_model, column: CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Customer"),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model, column: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "OrderStatus"),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model, column: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_model, column: CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_column, type: .date, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_model, column: CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_column, type: .decimal, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model, column: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
-        auditMaskFields: ["order_number"]
+        auditMaskFields: [CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model]
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
@@ -233,20 +257,20 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.customer = record["customer"]?.int64Value
-        if record.keys.contains("customer") { entity._loadedFields.insert("customer") }
-        entity.status = record["status"]?.int64Value
-        if record.keys.contains("status") { entity._loadedFields.insert("status") }
-        entity.orderNumber = record["orderNumber"]?.stringValue
-        if record.keys.contains("orderNumber") { entity._loadedFields.insert("orderNumber") }
-        entity.orderDate = record["orderDate"]?.dateValue
-        if record.keys.contains("orderDate") { entity._loadedFields.insert("orderDate") }
-        entity.totalAmount = record["totalAmount"]?.decimalValue
-        if record.keys.contains("totalAmount") { entity._loadedFields.insert("totalAmount") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[CustomerOrder.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) }
+        entity.customer = record[CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member]?.int64Value
+        if record.keys.contains(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member) }
+        entity.status = record[CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member]?.int64Value
+        if record.keys.contains(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member) }
+        entity.orderNumber = record[CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member]?.stringValue
+        if record.keys.contains(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) }
+        entity.orderDate = record[CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member]?.dateValue
+        if record.keys.contains(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member) }
+        entity.totalAmount = record[CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member]?.decimalValue
+        if record.keys.contains(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member) }
+        entity.version = record[CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -320,38 +344,38 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "customer": customer.map { .int($0) } ?? .null,
-            "status": status.map { .int($0) } ?? .null,
-            "orderNumber": orderNumber.map { .string($0) } ?? .null,
-            "orderDate": orderDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
-            "totalAmount": totalAmount.map { .decimal($0) } ?? .null,
-            "version": .int(version)
+            CustomerOrder.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member: customer.map { .int($0) } ?? .null,
+            CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member: status.map { .int($0) } ?? .null,
+            CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member: orderNumber.map { .string($0) } ?? .null,
+            CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member: orderDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
+            CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member: totalAmount.map { .decimal($0) } ?? .null,
+            CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("customer") {
-            record["customer"] = customer.map { .int($0) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_model] = customer.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("status") {
-            record["status"] = status.map { .int($0) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model] = status.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("orderNumber") {
-            record["order_number"] = orderNumber.map { .string($0) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model] = orderNumber.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("orderDate") {
-            record["order_date"] = orderDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_model] = orderDate.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
         }
-        if _loadedFields.contains("totalAmount") {
-            record["total_amount"] = totalAmount.map { .decimal($0) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_model] = totalAmount.map { .decimal($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -365,16 +389,16 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("customerEntity"), isLoaded("customer"),
-            saved.isLoaded("customer"), saved.customer == customer,
-            graph.forwardMatches(record["customer"], related: _customerResult) {
+        if isLoaded("customerEntity"), isLoaded(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member),
+            saved.isLoaded(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member), saved.customer == customer,
+            graph.forwardMatches(record[CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member], related: _customerResult) {
             saved._customerResult = _customerResult.replacingData(
                 try _customerResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("customerEntity")
         }
-        if isLoaded("statusEntity"), isLoaded("status"),
-            saved.isLoaded("status"), saved.status == status,
-            graph.forwardMatches(record["status"], related: _statusResult) {
+        if isLoaded("statusEntity"), isLoaded(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member),
+            saved.isLoaded(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member), saved.status == status,
+            graph.forwardMatches(record[CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member], related: _statusResult) {
             saved._statusResult = _statusResult.replacingData(
                 try _statusResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("statusEntity")
@@ -394,7 +418,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "customer", "status", "orderNumber", "orderDate", "totalAmount", "version"])
+        entity._loadedFields = Set([CustomerOrder.__TeaqlFields.ID_PROPERTY_member, CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member, CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member, CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member, CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member, CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member, CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -421,8 +445,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -430,8 +454,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCustomer(_ value: Int64?) -> Self {
         self.customer = value
-        self._loadedFields.insert("customer")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "customer", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -439,29 +463,29 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateStatus(_ value: Int64?) -> Self {
         self.status = value
-        self._loadedFields.insert("status")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "status", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
     @discardableResult
     public mutating func updateStatusToNew() -> Self {
         self.status = 1001
-        self._loadedFields.insert("status")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "status", value: .int(1001))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model, value: .int(1001))
         return self
     }
     @discardableResult
     public mutating func updateStatusToPaid() -> Self {
         self.status = 1002
-        self._loadedFields.insert("status")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "status", value: .int(1002))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model, value: .int(1002))
         return self
     }
     @discardableResult
     public mutating func updateStatusToCancelled() -> Self {
         self.status = 1003
-        self._loadedFields.insert("status")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "status", value: .int(1003))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model, value: .int(1003))
         return self
     }
 
@@ -469,8 +493,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOrderNumber(_ value: String?) -> Self {
         self.orderNumber = value
-        self._loadedFields.insert("orderNumber")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "order_number", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -478,8 +502,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOrderDate(_ value: Date?) -> Self {
         self.orderDate = value
-        self._loadedFields.insert("orderDate")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "order_date", value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_model, value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
         return self
     }
 
@@ -487,8 +511,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateTotalAmount(_ value: Decimal?) -> Self {
         self.totalAmount = value
-        self._loadedFields.insert("totalAmount")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "total_amount", value: value.map { .decimal($0) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_model, value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -496,8 +520,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -615,26 +639,26 @@ public struct CustomerOrderAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("customer") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("status") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("status"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("orderNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("orderDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_date"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("totalAmount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("total_amount"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
         }
         for (index, var child) in entity.orderItemList.enumerated() {
@@ -663,26 +687,26 @@ public struct CustomerOrderAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("customer") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.CUSTOMER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("status") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("status"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.STATUS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("orderNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("orderDate") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_date"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ORDER_DATE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("totalAmount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("total_amount"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.TOTAL_AMOUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

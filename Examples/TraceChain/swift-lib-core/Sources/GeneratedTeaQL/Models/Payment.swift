@@ -3,6 +3,21 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let CUSTOMER_ORDER_PROPERTY_member = "customerOrder"
+        static let CUSTOMER_ORDER_PROPERTY_model = "customer_order"
+        static let CUSTOMER_ORDER_PROPERTY_column = "customer_order"
+        static let REFERENCE_CODE_PROPERTY_member = "referenceCode"
+        static let REFERENCE_CODE_PROPERTY_model = "reference_code"
+        static let REFERENCE_CODE_PROPERTY_column = "reference_code"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var customerOrder: Int64? = nil
@@ -82,7 +97,7 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(Payment.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.customerOrder) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .customerOrder)) != nil {
@@ -96,21 +111,21 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.customerOrder = try container.decode(Int64?.self, forKey: .customerOrder)
             }
-            _loadedFields.insert("customerOrder")
+            _loadedFields.insert(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
         }
         if container.contains(.referenceCode) {
             self.referenceCode = try container.decode(String?.self, forKey: .referenceCode)
-            _loadedFields.insert("referenceCode")
+            _loadedFields.insert(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(Payment.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.paymentAttemptList) {
             self.paymentAttemptList = SmartList(try container.decode([PaymentAttempt].self, forKey: .paymentAttemptList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "customerOrder", "referenceCode", "version"])
+        let modeled = Set([Payment.__TeaqlFields.ID_PROPERTY_member, Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, Payment.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["paymentAttemptList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -125,10 +140,10 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(Payment.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("customerOrder") {
+        if _loadedFields.contains(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
             if isLoaded("customerOrderEntity"), let related = customerOrderEntity,
                 related.isLoaded("id"), related.id == customerOrder {
                 try container.encode(related, forKey: .customerOrder)
@@ -136,10 +151,10 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(customerOrder, forKey: .customerOrder)
             }
         }
-        if _loadedFields.contains("referenceCode") {
+        if _loadedFields.contains(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) {
             try container.encode(referenceCode, forKey: .referenceCode)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(Payment.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("paymentAttemptList"), _paymentAttemptListResult.isLoaded {
@@ -160,10 +175,10 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "Payment",
         table: "payment_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
-            PropertyDescriptor(name: "referenceCode", modelName: "reference_code", column: "reference_code", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: Payment.__TeaqlFields.ID_PROPERTY_member, modelName: Payment.__TeaqlFields.ID_PROPERTY_model, column: Payment.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, modelName: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model, column: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
+            PropertyDescriptor(name: Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, modelName: Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_model, column: Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Payment.__TeaqlFields.VERSION_PROPERTY_member, modelName: Payment.__TeaqlFields.VERSION_PROPERTY_model, column: Payment.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -178,14 +193,14 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.customerOrder = record["customerOrder"]?.int64Value
-        if record.keys.contains("customerOrder") { entity._loadedFields.insert("customerOrder") }
-        entity.referenceCode = record["referenceCode"]?.stringValue
-        if record.keys.contains("referenceCode") { entity._loadedFields.insert("referenceCode") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[Payment.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Payment.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(Payment.__TeaqlFields.ID_PROPERTY_member) }
+        entity.customerOrder = record[Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member]?.int64Value
+        if record.keys.contains(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) { entity._loadedFields.insert(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) }
+        entity.referenceCode = record[Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member]?.stringValue
+        if record.keys.contains(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) { entity._loadedFields.insert(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) }
+        entity.version = record[Payment.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Payment.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(Payment.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -245,26 +260,26 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "customerOrder": customerOrder.map { .int($0) } ?? .null,
-            "referenceCode": referenceCode.map { .string($0) } ?? .null,
-            "version": .int(version)
+            Payment.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member: customerOrder.map { .int($0) } ?? .null,
+            Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member: referenceCode.map { .string($0) } ?? .null,
+            Payment.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(Payment.__TeaqlFields.ID_PROPERTY_member) {
+            record[Payment.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("customerOrder") {
-            record["customer_order"] = customerOrder.map { .int($0) } ?? .null
+        if _loadedFields.contains(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+            record[Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model] = customerOrder.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("referenceCode") {
-            record["reference_code"] = referenceCode.map { .string($0) } ?? .null
+        if _loadedFields.contains(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) {
+            record[Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_model] = referenceCode.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(Payment.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[Payment.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -278,9 +293,9 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("customerOrderEntity"), isLoaded("customerOrder"),
-            saved.isLoaded("customerOrder"), saved.customerOrder == customerOrder,
-            graph.forwardMatches(record["customerOrder"], related: _customerOrderResult) {
+        if isLoaded("customerOrderEntity"), isLoaded(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member),
+            saved.isLoaded(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member), saved.customerOrder == customerOrder,
+            graph.forwardMatches(record[Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member], related: _customerOrderResult) {
             saved._customerOrderResult = _customerOrderResult.replacingData(
                 try _customerOrderResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("customerOrderEntity")
@@ -300,7 +315,7 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "customerOrder", "referenceCode", "version"])
+        entity._loadedFields = Set([Payment.__TeaqlFields.ID_PROPERTY_member, Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, Payment.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -327,8 +342,8 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(Payment.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Payment.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -336,8 +351,8 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCustomerOrder(_ value: Int64?) -> Self {
         self.customerOrder = value
-        self._loadedFields.insert("customerOrder")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "customer_order", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -345,8 +360,8 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateReferenceCode(_ value: String?) -> Self {
         self.referenceCode = value
-        self._loadedFields.insert("referenceCode")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "reference_code", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -354,8 +369,8 @@ public struct Payment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(Payment.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Payment.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -473,17 +488,17 @@ public struct PaymentAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
-            if !entity.isLoaded("customerOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
-            if !entity.isLoaded("referenceCode") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("reference_code"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
         }
         for (index, var child) in entity.paymentAttemptList.enumerated() {
@@ -512,17 +527,17 @@ public struct PaymentAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
-            if !entity.isLoaded("customerOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
-            if !entity.isLoaded("referenceCode") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("reference_code"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
+            if !entity.isLoaded(Payment.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Payment.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Payment")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

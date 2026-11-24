@@ -3,6 +3,36 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let FILTER_JSON_PROPERTY_member = "filterJson"
+        static let FILTER_JSON_PROPERTY_model = "filter_json"
+        static let FILTER_JSON_PROPERTY_column = "filter_json"
+        static let REQUEST_ID_PROPERTY_member = "requestId"
+        static let REQUEST_ID_PROPERTY_model = "request_id"
+        static let REQUEST_ID_PROPERTY_column = "request_id"
+        static let OWNER_USER_ID_PROPERTY_member = "ownerUserId"
+        static let OWNER_USER_ID_PROPERTY_model = "owner_user_id"
+        static let OWNER_USER_ID_PROPERTY_column = "owner_user_id"
+        static let COMMERCE_PLATFORM_PROPERTY_member = "commercePlatform"
+        static let COMMERCE_PLATFORM_PROPERTY_model = "commerce_platform"
+        static let COMMERCE_PLATFORM_PROPERTY_column = "commerce_platform"
+        static let CREATE_TIME_PROPERTY_member = "createTime"
+        static let CREATE_TIME_PROPERTY_model = "create_time"
+        static let CREATE_TIME_PROPERTY_column = "create_time"
+        static let UPDATE_TIME_PROPERTY_member = "updateTime"
+        static let UPDATE_TIME_PROPERTY_model = "update_time"
+        static let UPDATE_TIME_PROPERTY_column = "update_time"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var name: String? = nil
@@ -76,23 +106,23 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.filterJson) {
             self.filterJson = try container.decode(String?.self, forKey: .filterJson)
-            _loadedFields.insert("filterJson")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member)
         }
         if container.contains(.requestId) {
             self.requestId = try container.decode(String?.self, forKey: .requestId)
-            _loadedFields.insert("requestId")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member)
         }
         if container.contains(.ownerUserId) {
             self.ownerUserId = try container.decode(String?.self, forKey: .ownerUserId)
-            _loadedFields.insert("ownerUserId")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member)
         }
         if container.contains(.commercePlatform) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .commercePlatform)) != nil {
@@ -106,22 +136,22 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.commercePlatform = try container.decode(Int64?.self, forKey: .commercePlatform)
             }
-            _loadedFields.insert("commercePlatform")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
         }
         if container.contains(.createTime) {
             self.createTime = try container.decode(Date?.self, forKey: .createTime)
-            _loadedFields.insert("createTime")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member)
         }
         if container.contains(.updateTime) {
             self.updateTime = try container.decode(Date?.self, forKey: .updateTime)
-            _loadedFields.insert("updateTime")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "name", "filterJson", "requestId", "ownerUserId", "commercePlatform", "createTime", "updateTime", "version"])
+        let modeled = Set([OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member, OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member, OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member, OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member, OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member, OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member, OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member, OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -136,22 +166,22 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("filterJson") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member) {
             try container.encode(filterJson, forKey: .filterJson)
         }
-        if _loadedFields.contains("requestId") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member) {
             try container.encode(requestId, forKey: .requestId)
         }
-        if _loadedFields.contains("ownerUserId") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member) {
             try container.encode(ownerUserId, forKey: .ownerUserId)
         }
-        if _loadedFields.contains("commercePlatform") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
             if isLoaded("commercePlatformEntity"), let related = commercePlatformEntity,
                 related.isLoaded("id"), related.id == commercePlatform {
                 try container.encode(related, forKey: .commercePlatform)
@@ -159,13 +189,13 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(commercePlatform, forKey: .commercePlatform)
             }
         }
-        if _loadedFields.contains("createTime") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
             try container.encode(createTime, forKey: .createTime)
         }
-        if _loadedFields.contains("updateTime") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
             try container.encode(updateTime, forKey: .updateTime)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -181,15 +211,15 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "OrderSearchPreset",
         table: "order_search_preset_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "filterJson", modelName: "filter_json", column: "filter_json", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "requestId", modelName: "request_id", column: "request_id", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "ownerUserId", modelName: "owner_user_id", column: "owner_user_id", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "commercePlatform", modelName: "commerce_platform", column: "commerce_platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CommercePlatform"),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.ID_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CommercePlatform"),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
+            PropertyDescriptor(name: OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member, modelName: OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_model, column: OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -204,24 +234,24 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.filterJson = record["filterJson"]?.stringValue
-        if record.keys.contains("filterJson") { entity._loadedFields.insert("filterJson") }
-        entity.requestId = record["requestId"]?.stringValue
-        if record.keys.contains("requestId") { entity._loadedFields.insert("requestId") }
-        entity.ownerUserId = record["ownerUserId"]?.stringValue
-        if record.keys.contains("ownerUserId") { entity._loadedFields.insert("ownerUserId") }
-        entity.commercePlatform = record["commercePlatform"]?.int64Value
-        if record.keys.contains("commercePlatform") { entity._loadedFields.insert("commercePlatform") }
-        entity.createTime = record["createTime"]?.dateValue
-        if record.keys.contains("createTime") { entity._loadedFields.insert("createTime") }
-        entity.updateTime = record["updateTime"]?.dateValue
-        if record.keys.contains("updateTime") { entity._loadedFields.insert("updateTime") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member) }
+        entity.name = record[OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.filterJson = record[OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member) }
+        entity.requestId = record[OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member) }
+        entity.ownerUserId = record[OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member) }
+        entity.commercePlatform = record[OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member]?.int64Value
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) }
+        entity.createTime = record[OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member) }
+        entity.updateTime = record[OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member) }
+        entity.version = record[OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -257,46 +287,46 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "name": name.map { .string($0) } ?? .null,
-            "filterJson": filterJson.map { .string($0) } ?? .null,
-            "requestId": requestId.map { .string($0) } ?? .null,
-            "ownerUserId": ownerUserId.map { .string($0) } ?? .null,
-            "commercePlatform": commercePlatform.map { .int($0) } ?? .null,
-            "createTime": createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "updateTime": updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "version": .int(version)
+            OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member: filterJson.map { .string($0) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member: requestId.map { .string($0) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member: ownerUserId.map { .string($0) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member: commercePlatform.map { .int($0) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member: createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member: updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("filterJson") {
-            record["filter_json"] = filterJson.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_model] = filterJson.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("requestId") {
-            record["request_id"] = requestId.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_model] = requestId.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("ownerUserId") {
-            record["owner_user_id"] = ownerUserId.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_model] = ownerUserId.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("commercePlatform") {
-            record["commerce_platform"] = commercePlatform.map { .int($0) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model] = commercePlatform.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("createTime") {
-            record["create_time"] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_model] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("updateTime") {
-            record["update_time"] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_model] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -310,9 +340,9 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("commercePlatformEntity"), isLoaded("commercePlatform"),
-            saved.isLoaded("commercePlatform"), saved.commercePlatform == commercePlatform,
-            graph.forwardMatches(record["commercePlatform"], related: _commercePlatformResult) {
+        if isLoaded("commercePlatformEntity"), isLoaded(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member),
+            saved.isLoaded(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member), saved.commercePlatform == commercePlatform,
+            graph.forwardMatches(record[OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member], related: _commercePlatformResult) {
             saved._commercePlatformResult = _commercePlatformResult.replacingData(
                 try _commercePlatformResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("commercePlatformEntity")
@@ -326,7 +356,7 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "name", "filterJson", "requestId", "ownerUserId", "commercePlatform", "createTime", "updateTime", "version"])
+        entity._loadedFields = Set([OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member, OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member, OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member, OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member, OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member, OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member, OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member, OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -353,8 +383,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -362,8 +392,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -371,8 +401,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateFilterJson(_ value: String?) -> Self {
         self.filterJson = value
-        self._loadedFields.insert("filterJson")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "filter_json", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -380,8 +410,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateRequestId(_ value: String?) -> Self {
         self.requestId = value
-        self._loadedFields.insert("requestId")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "request_id", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -389,8 +419,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOwnerUserId(_ value: String?) -> Self {
         self.ownerUserId = value
-        self._loadedFields.insert("ownerUserId")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "owner_user_id", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -398,8 +428,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCommercePlatform(_ value: Int64?) -> Self {
         self.commercePlatform = value
-        self._loadedFields.insert("commercePlatform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "commerce_platform", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -407,8 +437,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCreateTime(_ value: Date?) -> Self {
         self.createTime = value
-        self._loadedFields.insert("createTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "create_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -416,8 +446,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateUpdateTime(_ value: Date?) -> Self {
         self.updateTime = value
-        self._loadedFields.insert("updateTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "update_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -425,8 +455,8 @@ public struct OrderSearchPreset: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -511,32 +541,32 @@ public struct OrderSearchPresetAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("filterJson") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("filter_json"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("requestId") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("request_id"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("ownerUserId") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("owner_user_id"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("commercePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("commerce_platform"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
         }
         return pending
@@ -547,32 +577,32 @@ public struct OrderSearchPresetAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("filterJson") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("filter_json"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.FILTER_JSON_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("requestId") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("request_id"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.REQUEST_ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("ownerUserId") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("owner_user_id"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.OWNER_USER_ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("commercePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("commerce_platform"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
+            if !entity.isLoaded(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderSearchPreset.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderSearchPreset")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

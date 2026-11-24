@@ -3,6 +3,42 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let CATALOG_PROPERTY_member = "catalog"
+        static let CATALOG_PROPERTY_model = "catalog"
+        static let CATALOG_PROPERTY_column = "catalog"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let BORN_AT_PROPERTY_member = "bornAt"
+        static let BORN_AT_PROPERTY_model = "born_at"
+        static let BORN_AT_PROPERTY_column = "born_at"
+        static let TOUCHED_AT_PROPERTY_member = "touchedAt"
+        static let TOUCHED_AT_PROPERTY_model = "touched_at"
+        static let TOUCHED_AT_PROPERTY_column = "touched_at"
+        static let SOURCE_IP_PROPERTY_member = "sourceIp"
+        static let SOURCE_IP_PROPERTY_model = "source_ip"
+        static let SOURCE_IP_PROPERTY_column = "source_ip"
+        static let LAST_IP_PROPERTY_member = "lastIp"
+        static let LAST_IP_PROPERTY_model = "last_ip"
+        static let LAST_IP_PROPERTY_column = "last_ip"
+        static let OPENED_BY_PROPERTY_member = "openedBy"
+        static let OPENED_BY_PROPERTY_model = "opened_by"
+        static let OPENED_BY_PROPERTY_column = "opened_by"
+        static let CHANGED_BY_PROPERTY_member = "changedBy"
+        static let CHANGED_BY_PROPERTY_model = "changed_by"
+        static let CHANGED_BY_PROPERTY_column = "changed_by"
+        static let GUARDED_TOKEN_PROPERTY_member = "guardedToken"
+        static let GUARDED_TOKEN_PROPERTY_model = "guarded_token"
+        static let GUARDED_TOKEN_PROPERTY_column = "guarded_token"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var catalog: Int64? = nil
@@ -80,7 +116,7 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(Entry.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.catalog) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .catalog)) != nil {
@@ -94,46 +130,46 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.catalog = try container.decode(Int64?.self, forKey: .catalog)
             }
-            _loadedFields.insert("catalog")
+            _loadedFields.insert(Entry.__TeaqlFields.CATALOG_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(Entry.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.bornAt) {
             self.bornAt = try container.decode(Date?.self, forKey: .bornAt)
-            _loadedFields.insert("bornAt")
+            _loadedFields.insert(Entry.__TeaqlFields.BORN_AT_PROPERTY_member)
         }
         if container.contains(.touchedAt) {
             self.touchedAt = try container.decode(Date?.self, forKey: .touchedAt)
-            _loadedFields.insert("touchedAt")
+            _loadedFields.insert(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member)
         }
         if container.contains(.sourceIp) {
             self.sourceIp = try container.decode(String?.self, forKey: .sourceIp)
-            _loadedFields.insert("sourceIp")
+            _loadedFields.insert(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member)
         }
         if container.contains(.lastIp) {
             self.lastIp = try container.decode(String?.self, forKey: .lastIp)
-            _loadedFields.insert("lastIp")
+            _loadedFields.insert(Entry.__TeaqlFields.LAST_IP_PROPERTY_member)
         }
         if container.contains(.openedBy) {
             self.openedBy = try container.decode(String?.self, forKey: .openedBy)
-            _loadedFields.insert("openedBy")
+            _loadedFields.insert(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member)
         }
         if container.contains(.changedBy) {
             self.changedBy = try container.decode(String?.self, forKey: .changedBy)
-            _loadedFields.insert("changedBy")
+            _loadedFields.insert(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member)
         }
         if container.contains(.guardedToken) {
             self.guardedToken = try container.decode(String?.self, forKey: .guardedToken)
-            _loadedFields.insert("guardedToken")
+            _loadedFields.insert(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(Entry.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "catalog", "name", "bornAt", "touchedAt", "sourceIp", "lastIp", "openedBy", "changedBy", "guardedToken", "version"])
+        let modeled = Set([Entry.__TeaqlFields.ID_PROPERTY_member, Entry.__TeaqlFields.CATALOG_PROPERTY_member, Entry.__TeaqlFields.NAME_PROPERTY_member, Entry.__TeaqlFields.BORN_AT_PROPERTY_member, Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member, Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member, Entry.__TeaqlFields.LAST_IP_PROPERTY_member, Entry.__TeaqlFields.OPENED_BY_PROPERTY_member, Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member, Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member, Entry.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -148,10 +184,10 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(Entry.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("catalog") {
+        if _loadedFields.contains(Entry.__TeaqlFields.CATALOG_PROPERTY_member) {
             if isLoaded("catalogEntity"), let related = catalogEntity,
                 related.isLoaded("id"), related.id == catalog {
                 try container.encode(related, forKey: .catalog)
@@ -159,31 +195,31 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(catalog, forKey: .catalog)
             }
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(Entry.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("bornAt") {
+        if _loadedFields.contains(Entry.__TeaqlFields.BORN_AT_PROPERTY_member) {
             try container.encode(bornAt, forKey: .bornAt)
         }
-        if _loadedFields.contains("touchedAt") {
+        if _loadedFields.contains(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member) {
             try container.encode(touchedAt, forKey: .touchedAt)
         }
-        if _loadedFields.contains("sourceIp") {
+        if _loadedFields.contains(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member) {
             try container.encode(sourceIp, forKey: .sourceIp)
         }
-        if _loadedFields.contains("lastIp") {
+        if _loadedFields.contains(Entry.__TeaqlFields.LAST_IP_PROPERTY_member) {
             try container.encode(lastIp, forKey: .lastIp)
         }
-        if _loadedFields.contains("openedBy") {
+        if _loadedFields.contains(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member) {
             try container.encode(openedBy, forKey: .openedBy)
         }
-        if _loadedFields.contains("changedBy") {
+        if _loadedFields.contains(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member) {
             try container.encode(changedBy, forKey: .changedBy)
         }
-        if _loadedFields.contains("guardedToken") {
+        if _loadedFields.contains(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member) {
             try container.encode(guardedToken, forKey: .guardedToken)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(Entry.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -199,19 +235,19 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "Entry",
         table: "entry_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "catalog", modelName: "catalog", column: "catalog", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Catalog"),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "bornAt", modelName: "born_at", column: "born_at", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
-            PropertyDescriptor(name: "touchedAt", modelName: "touched_at", column: "touched_at", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
-            PropertyDescriptor(name: "sourceIp", modelName: "source_ip", column: "source_ip", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "lastIp", modelName: "last_ip", column: "last_ip", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "openedBy", modelName: "opened_by", column: "opened_by", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "changedBy", modelName: "changed_by", column: "changed_by", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "guardedToken", modelName: "guarded_token", column: "guarded_token", type: .string, nullable: false, isID: false, isVersion: false, createFunction: "uniStr"),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: Entry.__TeaqlFields.ID_PROPERTY_member, modelName: Entry.__TeaqlFields.ID_PROPERTY_model, column: Entry.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: Entry.__TeaqlFields.CATALOG_PROPERTY_member, modelName: Entry.__TeaqlFields.CATALOG_PROPERTY_model, column: Entry.__TeaqlFields.CATALOG_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Catalog"),
+            PropertyDescriptor(name: Entry.__TeaqlFields.NAME_PROPERTY_member, modelName: Entry.__TeaqlFields.NAME_PROPERTY_model, column: Entry.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Entry.__TeaqlFields.BORN_AT_PROPERTY_member, modelName: Entry.__TeaqlFields.BORN_AT_PROPERTY_model, column: Entry.__TeaqlFields.BORN_AT_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member, modelName: Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_model, column: Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
+            PropertyDescriptor(name: Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member, modelName: Entry.__TeaqlFields.SOURCE_IP_PROPERTY_model, column: Entry.__TeaqlFields.SOURCE_IP_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Entry.__TeaqlFields.LAST_IP_PROPERTY_member, modelName: Entry.__TeaqlFields.LAST_IP_PROPERTY_model, column: Entry.__TeaqlFields.LAST_IP_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Entry.__TeaqlFields.OPENED_BY_PROPERTY_member, modelName: Entry.__TeaqlFields.OPENED_BY_PROPERTY_model, column: Entry.__TeaqlFields.OPENED_BY_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member, modelName: Entry.__TeaqlFields.CHANGED_BY_PROPERTY_model, column: Entry.__TeaqlFields.CHANGED_BY_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member, modelName: Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_model, column: Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false, createFunction: "uniStr"),
+            PropertyDescriptor(name: Entry.__TeaqlFields.VERSION_PROPERTY_member, modelName: Entry.__TeaqlFields.VERSION_PROPERTY_model, column: Entry.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
-        auditMaskFields: ["guarded_token"]
+        auditMaskFields: [Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_model]
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
@@ -224,28 +260,28 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.catalog = record["catalog"]?.int64Value
-        if record.keys.contains("catalog") { entity._loadedFields.insert("catalog") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.bornAt = record["bornAt"]?.dateValue
-        if record.keys.contains("bornAt") { entity._loadedFields.insert("bornAt") }
-        entity.touchedAt = record["touchedAt"]?.dateValue
-        if record.keys.contains("touchedAt") { entity._loadedFields.insert("touchedAt") }
-        entity.sourceIp = record["sourceIp"]?.stringValue
-        if record.keys.contains("sourceIp") { entity._loadedFields.insert("sourceIp") }
-        entity.lastIp = record["lastIp"]?.stringValue
-        if record.keys.contains("lastIp") { entity._loadedFields.insert("lastIp") }
-        entity.openedBy = record["openedBy"]?.stringValue
-        if record.keys.contains("openedBy") { entity._loadedFields.insert("openedBy") }
-        entity.changedBy = record["changedBy"]?.stringValue
-        if record.keys.contains("changedBy") { entity._loadedFields.insert("changedBy") }
-        entity.guardedToken = record["guardedToken"]?.stringValue
-        if record.keys.contains("guardedToken") { entity._loadedFields.insert("guardedToken") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[Entry.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Entry.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.ID_PROPERTY_member) }
+        entity.catalog = record[Entry.__TeaqlFields.CATALOG_PROPERTY_member]?.int64Value
+        if record.keys.contains(Entry.__TeaqlFields.CATALOG_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.CATALOG_PROPERTY_member) }
+        entity.name = record[Entry.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(Entry.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.bornAt = record[Entry.__TeaqlFields.BORN_AT_PROPERTY_member]?.dateValue
+        if record.keys.contains(Entry.__TeaqlFields.BORN_AT_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.BORN_AT_PROPERTY_member) }
+        entity.touchedAt = record[Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member]?.dateValue
+        if record.keys.contains(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member) }
+        entity.sourceIp = record[Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member]?.stringValue
+        if record.keys.contains(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member) }
+        entity.lastIp = record[Entry.__TeaqlFields.LAST_IP_PROPERTY_member]?.stringValue
+        if record.keys.contains(Entry.__TeaqlFields.LAST_IP_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.LAST_IP_PROPERTY_member) }
+        entity.openedBy = record[Entry.__TeaqlFields.OPENED_BY_PROPERTY_member]?.stringValue
+        if record.keys.contains(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member) }
+        entity.changedBy = record[Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member]?.stringValue
+        if record.keys.contains(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member) }
+        entity.guardedToken = record[Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member]?.stringValue
+        if record.keys.contains(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member) }
+        entity.version = record[Entry.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Entry.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(Entry.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -281,54 +317,54 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "catalog": catalog.map { .int($0) } ?? .null,
-            "name": name.map { .string($0) } ?? .null,
-            "bornAt": bornAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "touchedAt": touchedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "sourceIp": sourceIp.map { .string($0) } ?? .null,
-            "lastIp": lastIp.map { .string($0) } ?? .null,
-            "openedBy": openedBy.map { .string($0) } ?? .null,
-            "changedBy": changedBy.map { .string($0) } ?? .null,
-            "guardedToken": guardedToken.map { .string($0) } ?? .null,
-            "version": .int(version)
+            Entry.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            Entry.__TeaqlFields.CATALOG_PROPERTY_member: catalog.map { .int($0) } ?? .null,
+            Entry.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            Entry.__TeaqlFields.BORN_AT_PROPERTY_member: bornAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member: touchedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member: sourceIp.map { .string($0) } ?? .null,
+            Entry.__TeaqlFields.LAST_IP_PROPERTY_member: lastIp.map { .string($0) } ?? .null,
+            Entry.__TeaqlFields.OPENED_BY_PROPERTY_member: openedBy.map { .string($0) } ?? .null,
+            Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member: changedBy.map { .string($0) } ?? .null,
+            Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member: guardedToken.map { .string($0) } ?? .null,
+            Entry.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(Entry.__TeaqlFields.ID_PROPERTY_member) {
+            record[Entry.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("catalog") {
-            record["catalog"] = catalog.map { .int($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.CATALOG_PROPERTY_member) {
+            record[Entry.__TeaqlFields.CATALOG_PROPERTY_model] = catalog.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.NAME_PROPERTY_member) {
+            record[Entry.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("bornAt") {
-            record["born_at"] = bornAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.BORN_AT_PROPERTY_member) {
+            record[Entry.__TeaqlFields.BORN_AT_PROPERTY_model] = bornAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("touchedAt") {
-            record["touched_at"] = touchedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member) {
+            record[Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_model] = touchedAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("sourceIp") {
-            record["source_ip"] = sourceIp.map { .string($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member) {
+            record[Entry.__TeaqlFields.SOURCE_IP_PROPERTY_model] = sourceIp.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("lastIp") {
-            record["last_ip"] = lastIp.map { .string($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.LAST_IP_PROPERTY_member) {
+            record[Entry.__TeaqlFields.LAST_IP_PROPERTY_model] = lastIp.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("openedBy") {
-            record["opened_by"] = openedBy.map { .string($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member) {
+            record[Entry.__TeaqlFields.OPENED_BY_PROPERTY_model] = openedBy.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("changedBy") {
-            record["changed_by"] = changedBy.map { .string($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member) {
+            record[Entry.__TeaqlFields.CHANGED_BY_PROPERTY_model] = changedBy.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("guardedToken") {
-            record["guarded_token"] = guardedToken.map { .string($0) } ?? .null
+        if _loadedFields.contains(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member) {
+            record[Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_model] = guardedToken.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(Entry.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[Entry.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -342,9 +378,9 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("catalogEntity"), isLoaded("catalog"),
-            saved.isLoaded("catalog"), saved.catalog == catalog,
-            graph.forwardMatches(record["catalog"], related: _catalogResult) {
+        if isLoaded("catalogEntity"), isLoaded(Entry.__TeaqlFields.CATALOG_PROPERTY_member),
+            saved.isLoaded(Entry.__TeaqlFields.CATALOG_PROPERTY_member), saved.catalog == catalog,
+            graph.forwardMatches(record[Entry.__TeaqlFields.CATALOG_PROPERTY_member], related: _catalogResult) {
             saved._catalogResult = _catalogResult.replacingData(
                 try _catalogResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("catalogEntity")
@@ -358,7 +394,7 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "catalog", "name", "bornAt", "touchedAt", "sourceIp", "lastIp", "openedBy", "changedBy", "guardedToken", "version"])
+        entity._loadedFields = Set([Entry.__TeaqlFields.ID_PROPERTY_member, Entry.__TeaqlFields.CATALOG_PROPERTY_member, Entry.__TeaqlFields.NAME_PROPERTY_member, Entry.__TeaqlFields.BORN_AT_PROPERTY_member, Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member, Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member, Entry.__TeaqlFields.LAST_IP_PROPERTY_member, Entry.__TeaqlFields.OPENED_BY_PROPERTY_member, Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member, Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member, Entry.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -385,8 +421,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(Entry.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -394,8 +430,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCatalog(_ value: Int64?) -> Self {
         self.catalog = value
-        self._loadedFields.insert("catalog")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "catalog", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.CATALOG_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.CATALOG_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -403,8 +439,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -412,8 +448,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateBornAt(_ value: Date?) -> Self {
         self.bornAt = value
-        self._loadedFields.insert("bornAt")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "born_at", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.BORN_AT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.BORN_AT_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -421,8 +457,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateTouchedAt(_ value: Date?) -> Self {
         self.touchedAt = value
-        self._loadedFields.insert("touchedAt")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "touched_at", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -430,8 +466,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateSourceIp(_ value: String?) -> Self {
         self.sourceIp = value
-        self._loadedFields.insert("sourceIp")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "source_ip", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.SOURCE_IP_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -439,8 +475,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateLastIp(_ value: String?) -> Self {
         self.lastIp = value
-        self._loadedFields.insert("lastIp")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "last_ip", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.LAST_IP_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.LAST_IP_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -448,8 +484,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOpenedBy(_ value: String?) -> Self {
         self.openedBy = value
-        self._loadedFields.insert("openedBy")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "opened_by", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.OPENED_BY_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -457,8 +493,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateChangedBy(_ value: String?) -> Self {
         self.changedBy = value
-        self._loadedFields.insert("changedBy")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "changed_by", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.CHANGED_BY_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -466,8 +502,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateGuardedToken(_ value: String?) -> Self {
         self.guardedToken = value
-        self._loadedFields.insert("guardedToken")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "guarded_token", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -475,8 +511,8 @@ public struct Entry: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(Entry.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Entry.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -561,38 +597,38 @@ public struct EntryAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("catalog") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("catalog"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.CATALOG_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.CATALOG_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("bornAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("born_at"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.BORN_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.BORN_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("touchedAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("touched_at"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("sourceIp") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("source_ip"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("lastIp") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("last_ip"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.LAST_IP_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.LAST_IP_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("openedBy") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("opened_by"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.OPENED_BY_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("changedBy") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("changed_by"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("guardedToken") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("guarded_token"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
         }
         return pending
@@ -603,38 +639,38 @@ public struct EntryAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("catalog") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("catalog"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.CATALOG_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.CATALOG_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("bornAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("born_at"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.BORN_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.BORN_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("touchedAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("touched_at"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.TOUCHED_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("sourceIp") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("source_ip"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.SOURCE_IP_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("lastIp") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("last_ip"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.LAST_IP_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.LAST_IP_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("openedBy") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("opened_by"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.OPENED_BY_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.OPENED_BY_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("changedBy") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("changed_by"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.CHANGED_BY_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("guardedToken") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("guarded_token"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.GUARDED_TOKEN_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
+            if !entity.isLoaded(Entry.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Entry.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Entry")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

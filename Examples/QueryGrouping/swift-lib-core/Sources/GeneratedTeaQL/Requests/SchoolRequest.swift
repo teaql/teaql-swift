@@ -101,15 +101,15 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "schoolType", "name", "publicNote", "classCount", "plannedClassCount", "registryNumber", "formerRegistryNumber", "annualBudget", "proposedBudget", "occupancyRatio", "forecastOccupancyRatio", "inspectionScore", "previousInspectionScore", "openedOn", "expectedReopening", "schoolDayStarts", "extendedDayEnds", "censusAt", "nextReviewAt", "active", "reviewed", "version"]
+        copy.query.projection = [School.__TeaqlFields.ID_PROPERTY_member, School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, School.__TeaqlFields.NAME_PROPERTY_member, School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, School.__TeaqlFields.OPENED_ON_PROPERTY_member, School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, School.__TeaqlFields.CENSUS_AT_PROPERTY_member, School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, School.__TeaqlFields.ACTIVE_PROPERTY_member, School.__TeaqlFields.REVIEWED_PROPERTY_member, School.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(School.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -120,8 +120,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectName() -> Self {
         var copy = self
-        if !copy.query.projection.contains("name") {
-            copy.query.projection.append("name")
+        if !copy.query.projection.contains(School.__TeaqlFields.NAME_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.NAME_PROPERTY_member)
         }
         return copy
     }
@@ -130,8 +130,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectPublicNote() -> Self {
         var copy = self
-        if !copy.query.projection.contains("publicNote") {
-            copy.query.projection.append("publicNote")
+        if !copy.query.projection.contains(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member)
         }
         return copy
     }
@@ -140,8 +140,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectClassCount() -> Self {
         var copy = self
-        if !copy.query.projection.contains("classCount") {
-            copy.query.projection.append("classCount")
+        if !copy.query.projection.contains(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member)
         }
         return copy
     }
@@ -150,8 +150,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectPlannedClassCount() -> Self {
         var copy = self
-        if !copy.query.projection.contains("plannedClassCount") {
-            copy.query.projection.append("plannedClassCount")
+        if !copy.query.projection.contains(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member)
         }
         return copy
     }
@@ -160,8 +160,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectRegistryNumber() -> Self {
         var copy = self
-        if !copy.query.projection.contains("registryNumber") {
-            copy.query.projection.append("registryNumber")
+        if !copy.query.projection.contains(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member)
         }
         return copy
     }
@@ -170,8 +170,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectFormerRegistryNumber() -> Self {
         var copy = self
-        if !copy.query.projection.contains("formerRegistryNumber") {
-            copy.query.projection.append("formerRegistryNumber")
+        if !copy.query.projection.contains(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member)
         }
         return copy
     }
@@ -180,8 +180,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectAnnualBudget() -> Self {
         var copy = self
-        if !copy.query.projection.contains("annualBudget") {
-            copy.query.projection.append("annualBudget")
+        if !copy.query.projection.contains(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member)
         }
         return copy
     }
@@ -190,8 +190,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectProposedBudget() -> Self {
         var copy = self
-        if !copy.query.projection.contains("proposedBudget") {
-            copy.query.projection.append("proposedBudget")
+        if !copy.query.projection.contains(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member)
         }
         return copy
     }
@@ -200,8 +200,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectOccupancyRatio() -> Self {
         var copy = self
-        if !copy.query.projection.contains("occupancyRatio") {
-            copy.query.projection.append("occupancyRatio")
+        if !copy.query.projection.contains(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member)
         }
         return copy
     }
@@ -210,8 +210,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectForecastOccupancyRatio() -> Self {
         var copy = self
-        if !copy.query.projection.contains("forecastOccupancyRatio") {
-            copy.query.projection.append("forecastOccupancyRatio")
+        if !copy.query.projection.contains(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member)
         }
         return copy
     }
@@ -220,8 +220,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectInspectionScore() -> Self {
         var copy = self
-        if !copy.query.projection.contains("inspectionScore") {
-            copy.query.projection.append("inspectionScore")
+        if !copy.query.projection.contains(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member)
         }
         return copy
     }
@@ -230,8 +230,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectPreviousInspectionScore() -> Self {
         var copy = self
-        if !copy.query.projection.contains("previousInspectionScore") {
-            copy.query.projection.append("previousInspectionScore")
+        if !copy.query.projection.contains(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member)
         }
         return copy
     }
@@ -240,8 +240,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectOpenedOn() -> Self {
         var copy = self
-        if !copy.query.projection.contains("openedOn") {
-            copy.query.projection.append("openedOn")
+        if !copy.query.projection.contains(School.__TeaqlFields.OPENED_ON_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.OPENED_ON_PROPERTY_member)
         }
         return copy
     }
@@ -250,8 +250,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectExpectedReopening() -> Self {
         var copy = self
-        if !copy.query.projection.contains("expectedReopening") {
-            copy.query.projection.append("expectedReopening")
+        if !copy.query.projection.contains(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member)
         }
         return copy
     }
@@ -260,8 +260,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSchoolDayStarts() -> Self {
         var copy = self
-        if !copy.query.projection.contains("schoolDayStarts") {
-            copy.query.projection.append("schoolDayStarts")
+        if !copy.query.projection.contains(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member)
         }
         return copy
     }
@@ -270,8 +270,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectExtendedDayEnds() -> Self {
         var copy = self
-        if !copy.query.projection.contains("extendedDayEnds") {
-            copy.query.projection.append("extendedDayEnds")
+        if !copy.query.projection.contains(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member)
         }
         return copy
     }
@@ -280,8 +280,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectCensusAt() -> Self {
         var copy = self
-        if !copy.query.projection.contains("censusAt") {
-            copy.query.projection.append("censusAt")
+        if !copy.query.projection.contains(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.CENSUS_AT_PROPERTY_member)
         }
         return copy
     }
@@ -290,8 +290,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectNextReviewAt() -> Self {
         var copy = self
-        if !copy.query.projection.contains("nextReviewAt") {
-            copy.query.projection.append("nextReviewAt")
+        if !copy.query.projection.contains(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member)
         }
         return copy
     }
@@ -300,8 +300,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectActive() -> Self {
         var copy = self
-        if !copy.query.projection.contains("active") {
-            copy.query.projection.append("active")
+        if !copy.query.projection.contains(School.__TeaqlFields.ACTIVE_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.ACTIVE_PROPERTY_member)
         }
         return copy
     }
@@ -310,8 +310,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectReviewed() -> Self {
         var copy = self
-        if !copy.query.projection.contains("reviewed") {
-            copy.query.projection.append("reviewed")
+        if !copy.query.projection.contains(School.__TeaqlFields.REVIEWED_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.REVIEWED_PROPERTY_member)
         }
         return copy
     }
@@ -320,8 +320,8 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(School.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -337,1488 +337,1488 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         _ child: SchoolTypeRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("schoolType") {
-            copy.query.projection.append("schoolType")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) {
+            copy.query.projection.append(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member)
         }
         copy.query.relationQuery(
             "schoolTypeEntity",
-            localKey: "schoolType",
+            localKey: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "schoolType",
-            operation: QueryOperation("relation", method: "selectSchoolTypeWith", relation: "schoolType"))
+            query: child.toQuery(), traceName: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectSchoolTypeWith", relation: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderBySchoolTypeAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("schoolType", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderBySchoolTypeDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("schoolType", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByNameAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("name", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.NAME_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByNameDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("name", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.NAME_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPublicNoteAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("publicNote", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPublicNoteDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("publicNote", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByClassCountAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("classCount", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByClassCountDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("classCount", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPlannedClassCountAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("plannedClassCount", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPlannedClassCountDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("plannedClassCount", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByRegistryNumberAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("registryNumber", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByRegistryNumberDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("registryNumber", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByFormerRegistryNumberAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("formerRegistryNumber", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByFormerRegistryNumberDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("formerRegistryNumber", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByAnnualBudgetAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("annualBudget", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByAnnualBudgetDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("annualBudget", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByProposedBudgetAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("proposedBudget", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByProposedBudgetDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("proposedBudget", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByOccupancyRatioAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("occupancyRatio", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByOccupancyRatioDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("occupancyRatio", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByForecastOccupancyRatioAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("forecastOccupancyRatio", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByForecastOccupancyRatioDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("forecastOccupancyRatio", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByInspectionScoreAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("inspectionScore", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByInspectionScoreDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("inspectionScore", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPreviousInspectionScoreAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("previousInspectionScore", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPreviousInspectionScoreDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("previousInspectionScore", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByOpenedOnAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("openedOn", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByOpenedOnDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("openedOn", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByExpectedReopeningAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("expectedReopening", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByExpectedReopeningDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("expectedReopening", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderBySchoolDayStartsAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("schoolDayStarts", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderBySchoolDayStartsDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("schoolDayStarts", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByExtendedDayEndsAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("extendedDayEnds", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByExtendedDayEndsDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("extendedDayEnds", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByCensusAtAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("censusAt", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByCensusAtDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("censusAt", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByNextReviewAtAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("nextReviewAt", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByNextReviewAtDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("nextReviewAt", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByActiveAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("active", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.ACTIVE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByActiveDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("active", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.ACTIVE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByReviewedAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("reviewed", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.REVIEWED_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByReviewedDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("reviewed", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.REVIEWED_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(School.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
 
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(School.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(School.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(School.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(School.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(School.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(School.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(School.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(School.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(School.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func filterBySchoolType(_ value: Int64) -> Self {
-        adding(.equal("schoolType", .int(value)))
+        adding(.equal(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterBySchoolTypeIn(_ values: [Int64]) -> Self {
-        adding(.inList("schoolType", values.map(TeaQLValue.int)))
+        adding(.inList(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withSchoolTypeIsKnown() -> Self {
-        adding(.isNotNull("schoolType"))
+        adding(.isNotNull(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member))
     }
 
     @discardableResult
     public func withSchoolTypeIsUnknown() -> Self {
-        adding(.isNull("schoolType"))
+        adding(.isNull(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withNameIs(_ value: String) -> Self {
-        adding(.equal("name", .string(value)))
+        adding(.equal(School.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameIn(_ values: [String]) -> Self {
-        adding(.inList("name", values.map { .string($0) }))
+        adding(.inList(School.__TeaqlFields.NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withNameIsNot(_ value: String) -> Self {
-        adding(.notEqual("name", .string(value)))
+        adding(.notEqual(School.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameNotIn(_ values: [String]) -> Self {
-        adding(.notInList("name", values.map { .string($0) }))
+        adding(.notInList(School.__TeaqlFields.NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withNameGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("name", .string(value)))
+        adding(.greaterThan(School.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("name", .string(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameLessThan(_ value: String) -> Self {
-        adding(.lessThan("name", .string(value)))
+        adding(.lessThan(School.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("name", .string(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withNameBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("name", .string(lower), .string(upper)))
+        adding(.between(School.__TeaqlFields.NAME_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withNameIsKnown() -> Self {
-        adding(.isNotNull("name"))
+        adding(.isNotNull(School.__TeaqlFields.NAME_PROPERTY_member))
     }
 
     @discardableResult
     public func withNameIsUnknown() -> Self {
-        adding(.isNull("name"))
+        adding(.isNull(School.__TeaqlFields.NAME_PROPERTY_member))
     }
     @discardableResult
     public func withNameContaining(_ value: String) -> Self {
-        adding(.contains("name", value))
+        adding(.contains(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameNotContaining(_ value: String) -> Self {
-        adding(.notContains("name", value))
+        adding(.notContains(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameStartingWith(_ value: String) -> Self {
-        adding(.startsWith("name", value))
+        adding(.startsWith(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("name", value))
+        adding(.notStartsWith(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameEndingWith(_ value: String) -> Self {
-        adding(.endsWith("name", value))
+        adding(.endsWith(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("name", value))
+        adding(.notEndsWith(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withNameSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("name", value))
+        adding(.soundingLike(School.__TeaqlFields.NAME_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withPublicNoteIs(_ value: String) -> Self {
-        adding(.equal("publicNote", .string(value)))
+        adding(.equal(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPublicNoteIn(_ values: [String]) -> Self {
-        adding(.inList("publicNote", values.map { .string($0) }))
+        adding(.inList(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withPublicNoteIsNot(_ value: String) -> Self {
-        adding(.notEqual("publicNote", .string(value)))
+        adding(.notEqual(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPublicNoteNotIn(_ values: [String]) -> Self {
-        adding(.notInList("publicNote", values.map { .string($0) }))
+        adding(.notInList(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withPublicNoteGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("publicNote", .string(value)))
+        adding(.greaterThan(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPublicNoteGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("publicNote", .string(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPublicNoteLessThan(_ value: String) -> Self {
-        adding(.lessThan("publicNote", .string(value)))
+        adding(.lessThan(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPublicNoteLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("publicNote", .string(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPublicNoteBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("publicNote", .string(lower), .string(upper)))
+        adding(.between(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withPublicNoteIsKnown() -> Self {
-        adding(.isNotNull("publicNote"))
+        adding(.isNotNull(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member))
     }
 
     @discardableResult
     public func withPublicNoteIsUnknown() -> Self {
-        adding(.isNull("publicNote"))
+        adding(.isNull(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member))
     }
     @discardableResult
     public func withPublicNoteContaining(_ value: String) -> Self {
-        adding(.contains("publicNote", value))
+        adding(.contains(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withPublicNoteNotContaining(_ value: String) -> Self {
-        adding(.notContains("publicNote", value))
+        adding(.notContains(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withPublicNoteStartingWith(_ value: String) -> Self {
-        adding(.startsWith("publicNote", value))
+        adding(.startsWith(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withPublicNoteNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("publicNote", value))
+        adding(.notStartsWith(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withPublicNoteEndingWith(_ value: String) -> Self {
-        adding(.endsWith("publicNote", value))
+        adding(.endsWith(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withPublicNoteNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("publicNote", value))
+        adding(.notEndsWith(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withPublicNoteSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("publicNote", value))
+        adding(.soundingLike(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withClassCountIs(_ value: Int64) -> Self {
-        adding(.equal("classCount", .int(value)))
+        adding(.equal(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withClassCountIn(_ values: [Int64]) -> Self {
-        adding(.inList("classCount", values.map { .int($0) }))
+        adding(.inList(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withClassCountIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("classCount", .int(value)))
+        adding(.notEqual(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withClassCountNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("classCount", values.map { .int($0) }))
+        adding(.notInList(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withClassCountGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("classCount", .int(value)))
+        adding(.greaterThan(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withClassCountGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("classCount", .int(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withClassCountLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("classCount", .int(value)))
+        adding(.lessThan(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withClassCountLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("classCount", .int(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withClassCountBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("classCount", .int(lower), .int(upper)))
+        adding(.between(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withClassCountIsKnown() -> Self {
-        adding(.isNotNull("classCount"))
+        adding(.isNotNull(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member))
     }
 
     @discardableResult
     public func withClassCountIsUnknown() -> Self {
-        adding(.isNull("classCount"))
+        adding(.isNull(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withPlannedClassCountIs(_ value: Int64) -> Self {
-        adding(.equal("plannedClassCount", .int(value)))
+        adding(.equal(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPlannedClassCountIn(_ values: [Int64]) -> Self {
-        adding(.inList("plannedClassCount", values.map { .int($0) }))
+        adding(.inList(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withPlannedClassCountIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("plannedClassCount", .int(value)))
+        adding(.notEqual(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPlannedClassCountNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("plannedClassCount", values.map { .int($0) }))
+        adding(.notInList(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withPlannedClassCountGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("plannedClassCount", .int(value)))
+        adding(.greaterThan(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPlannedClassCountGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("plannedClassCount", .int(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPlannedClassCountLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("plannedClassCount", .int(value)))
+        adding(.lessThan(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPlannedClassCountLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("plannedClassCount", .int(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPlannedClassCountBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("plannedClassCount", .int(lower), .int(upper)))
+        adding(.between(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withPlannedClassCountIsKnown() -> Self {
-        adding(.isNotNull("plannedClassCount"))
+        adding(.isNotNull(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member))
     }
 
     @discardableResult
     public func withPlannedClassCountIsUnknown() -> Self {
-        adding(.isNull("plannedClassCount"))
+        adding(.isNull(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withRegistryNumberIs(_ value: Int64) -> Self {
-        adding(.equal("registryNumber", .int(value)))
+        adding(.equal(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withRegistryNumberIn(_ values: [Int64]) -> Self {
-        adding(.inList("registryNumber", values.map { .int($0) }))
+        adding(.inList(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withRegistryNumberIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("registryNumber", .int(value)))
+        adding(.notEqual(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withRegistryNumberNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("registryNumber", values.map { .int($0) }))
+        adding(.notInList(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withRegistryNumberGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("registryNumber", .int(value)))
+        adding(.greaterThan(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withRegistryNumberGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("registryNumber", .int(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withRegistryNumberLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("registryNumber", .int(value)))
+        adding(.lessThan(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withRegistryNumberLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("registryNumber", .int(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withRegistryNumberBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("registryNumber", .int(lower), .int(upper)))
+        adding(.between(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withRegistryNumberIsKnown() -> Self {
-        adding(.isNotNull("registryNumber"))
+        adding(.isNotNull(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member))
     }
 
     @discardableResult
     public func withRegistryNumberIsUnknown() -> Self {
-        adding(.isNull("registryNumber"))
+        adding(.isNull(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withFormerRegistryNumberIs(_ value: Int64) -> Self {
-        adding(.equal("formerRegistryNumber", .int(value)))
+        adding(.equal(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberIn(_ values: [Int64]) -> Self {
-        adding(.inList("formerRegistryNumber", values.map { .int($0) }))
+        adding(.inList(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withFormerRegistryNumberIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("formerRegistryNumber", .int(value)))
+        adding(.notEqual(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("formerRegistryNumber", values.map { .int($0) }))
+        adding(.notInList(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withFormerRegistryNumberGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("formerRegistryNumber", .int(value)))
+        adding(.greaterThan(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("formerRegistryNumber", .int(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("formerRegistryNumber", .int(value)))
+        adding(.lessThan(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("formerRegistryNumber", .int(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("formerRegistryNumber", .int(lower), .int(upper)))
+        adding(.between(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withFormerRegistryNumberIsKnown() -> Self {
-        adding(.isNotNull("formerRegistryNumber"))
+        adding(.isNotNull(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member))
     }
 
     @discardableResult
     public func withFormerRegistryNumberIsUnknown() -> Self {
-        adding(.isNull("formerRegistryNumber"))
+        adding(.isNull(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withAnnualBudgetIs(_ value: Decimal) -> Self {
-        adding(.equal("annualBudget", .decimal(value)))
+        adding(.equal(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAnnualBudgetIn(_ values: [Decimal]) -> Self {
-        adding(.inList("annualBudget", values.map { .decimal($0) }))
+        adding(.inList(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withAnnualBudgetIsNot(_ value: Decimal) -> Self {
-        adding(.notEqual("annualBudget", .decimal(value)))
+        adding(.notEqual(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAnnualBudgetNotIn(_ values: [Decimal]) -> Self {
-        adding(.notInList("annualBudget", values.map { .decimal($0) }))
+        adding(.notInList(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withAnnualBudgetGreaterThan(_ value: Decimal) -> Self {
-        adding(.greaterThan("annualBudget", .decimal(value)))
+        adding(.greaterThan(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAnnualBudgetGreaterThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.greaterThanOrEqual("annualBudget", .decimal(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAnnualBudgetLessThan(_ value: Decimal) -> Self {
-        adding(.lessThan("annualBudget", .decimal(value)))
+        adding(.lessThan(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAnnualBudgetLessThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.lessThanOrEqual("annualBudget", .decimal(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAnnualBudgetBetween(_ lower: Decimal, _ upper: Decimal) -> Self {
-        adding(.between("annualBudget", .decimal(lower), .decimal(upper)))
+        adding(.between(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, .decimal(lower), .decimal(upper)))
     }
 
     @discardableResult
     public func withAnnualBudgetIsKnown() -> Self {
-        adding(.isNotNull("annualBudget"))
+        adding(.isNotNull(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member))
     }
 
     @discardableResult
     public func withAnnualBudgetIsUnknown() -> Self {
-        adding(.isNull("annualBudget"))
+        adding(.isNull(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withProposedBudgetIs(_ value: Decimal) -> Self {
-        adding(.equal("proposedBudget", .decimal(value)))
+        adding(.equal(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withProposedBudgetIn(_ values: [Decimal]) -> Self {
-        adding(.inList("proposedBudget", values.map { .decimal($0) }))
+        adding(.inList(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withProposedBudgetIsNot(_ value: Decimal) -> Self {
-        adding(.notEqual("proposedBudget", .decimal(value)))
+        adding(.notEqual(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withProposedBudgetNotIn(_ values: [Decimal]) -> Self {
-        adding(.notInList("proposedBudget", values.map { .decimal($0) }))
+        adding(.notInList(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withProposedBudgetGreaterThan(_ value: Decimal) -> Self {
-        adding(.greaterThan("proposedBudget", .decimal(value)))
+        adding(.greaterThan(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withProposedBudgetGreaterThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.greaterThanOrEqual("proposedBudget", .decimal(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withProposedBudgetLessThan(_ value: Decimal) -> Self {
-        adding(.lessThan("proposedBudget", .decimal(value)))
+        adding(.lessThan(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withProposedBudgetLessThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.lessThanOrEqual("proposedBudget", .decimal(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withProposedBudgetBetween(_ lower: Decimal, _ upper: Decimal) -> Self {
-        adding(.between("proposedBudget", .decimal(lower), .decimal(upper)))
+        adding(.between(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, .decimal(lower), .decimal(upper)))
     }
 
     @discardableResult
     public func withProposedBudgetIsKnown() -> Self {
-        adding(.isNotNull("proposedBudget"))
+        adding(.isNotNull(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member))
     }
 
     @discardableResult
     public func withProposedBudgetIsUnknown() -> Self {
-        adding(.isNull("proposedBudget"))
+        adding(.isNull(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withOccupancyRatioIs(_ value: Double) -> Self {
-        adding(.equal("occupancyRatio", .double(value)))
+        adding(.equal(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withOccupancyRatioIn(_ values: [Double]) -> Self {
-        adding(.inList("occupancyRatio", values.map { .double($0) }))
+        adding(.inList(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withOccupancyRatioIsNot(_ value: Double) -> Self {
-        adding(.notEqual("occupancyRatio", .double(value)))
+        adding(.notEqual(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withOccupancyRatioNotIn(_ values: [Double]) -> Self {
-        adding(.notInList("occupancyRatio", values.map { .double($0) }))
+        adding(.notInList(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withOccupancyRatioGreaterThan(_ value: Double) -> Self {
-        adding(.greaterThan("occupancyRatio", .double(value)))
+        adding(.greaterThan(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withOccupancyRatioGreaterThanOrEqualTo(_ value: Double) -> Self {
-        adding(.greaterThanOrEqual("occupancyRatio", .double(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withOccupancyRatioLessThan(_ value: Double) -> Self {
-        adding(.lessThan("occupancyRatio", .double(value)))
+        adding(.lessThan(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withOccupancyRatioLessThanOrEqualTo(_ value: Double) -> Self {
-        adding(.lessThanOrEqual("occupancyRatio", .double(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withOccupancyRatioBetween(_ lower: Double, _ upper: Double) -> Self {
-        adding(.between("occupancyRatio", .double(lower), .double(upper)))
+        adding(.between(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, .double(lower), .double(upper)))
     }
 
     @discardableResult
     public func withOccupancyRatioIsKnown() -> Self {
-        adding(.isNotNull("occupancyRatio"))
+        adding(.isNotNull(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member))
     }
 
     @discardableResult
     public func withOccupancyRatioIsUnknown() -> Self {
-        adding(.isNull("occupancyRatio"))
+        adding(.isNull(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withForecastOccupancyRatioIs(_ value: Double) -> Self {
-        adding(.equal("forecastOccupancyRatio", .double(value)))
+        adding(.equal(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioIn(_ values: [Double]) -> Self {
-        adding(.inList("forecastOccupancyRatio", values.map { .double($0) }))
+        adding(.inList(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioIsNot(_ value: Double) -> Self {
-        adding(.notEqual("forecastOccupancyRatio", .double(value)))
+        adding(.notEqual(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioNotIn(_ values: [Double]) -> Self {
-        adding(.notInList("forecastOccupancyRatio", values.map { .double($0) }))
+        adding(.notInList(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioGreaterThan(_ value: Double) -> Self {
-        adding(.greaterThan("forecastOccupancyRatio", .double(value)))
+        adding(.greaterThan(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioGreaterThanOrEqualTo(_ value: Double) -> Self {
-        adding(.greaterThanOrEqual("forecastOccupancyRatio", .double(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioLessThan(_ value: Double) -> Self {
-        adding(.lessThan("forecastOccupancyRatio", .double(value)))
+        adding(.lessThan(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioLessThanOrEqualTo(_ value: Double) -> Self {
-        adding(.lessThanOrEqual("forecastOccupancyRatio", .double(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioBetween(_ lower: Double, _ upper: Double) -> Self {
-        adding(.between("forecastOccupancyRatio", .double(lower), .double(upper)))
+        adding(.between(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, .double(lower), .double(upper)))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioIsKnown() -> Self {
-        adding(.isNotNull("forecastOccupancyRatio"))
+        adding(.isNotNull(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member))
     }
 
     @discardableResult
     public func withForecastOccupancyRatioIsUnknown() -> Self {
-        adding(.isNull("forecastOccupancyRatio"))
+        adding(.isNull(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withInspectionScoreIs(_ value: Double) -> Self {
-        adding(.equal("inspectionScore", .double(value)))
+        adding(.equal(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withInspectionScoreIn(_ values: [Double]) -> Self {
-        adding(.inList("inspectionScore", values.map { .double($0) }))
+        adding(.inList(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withInspectionScoreIsNot(_ value: Double) -> Self {
-        adding(.notEqual("inspectionScore", .double(value)))
+        adding(.notEqual(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withInspectionScoreNotIn(_ values: [Double]) -> Self {
-        adding(.notInList("inspectionScore", values.map { .double($0) }))
+        adding(.notInList(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withInspectionScoreGreaterThan(_ value: Double) -> Self {
-        adding(.greaterThan("inspectionScore", .double(value)))
+        adding(.greaterThan(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withInspectionScoreGreaterThanOrEqualTo(_ value: Double) -> Self {
-        adding(.greaterThanOrEqual("inspectionScore", .double(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withInspectionScoreLessThan(_ value: Double) -> Self {
-        adding(.lessThan("inspectionScore", .double(value)))
+        adding(.lessThan(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withInspectionScoreLessThanOrEqualTo(_ value: Double) -> Self {
-        adding(.lessThanOrEqual("inspectionScore", .double(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withInspectionScoreBetween(_ lower: Double, _ upper: Double) -> Self {
-        adding(.between("inspectionScore", .double(lower), .double(upper)))
+        adding(.between(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, .double(lower), .double(upper)))
     }
 
     @discardableResult
     public func withInspectionScoreIsKnown() -> Self {
-        adding(.isNotNull("inspectionScore"))
+        adding(.isNotNull(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member))
     }
 
     @discardableResult
     public func withInspectionScoreIsUnknown() -> Self {
-        adding(.isNull("inspectionScore"))
+        adding(.isNull(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withPreviousInspectionScoreIs(_ value: Double) -> Self {
-        adding(.equal("previousInspectionScore", .double(value)))
+        adding(.equal(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreIn(_ values: [Double]) -> Self {
-        adding(.inList("previousInspectionScore", values.map { .double($0) }))
+        adding(.inList(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreIsNot(_ value: Double) -> Self {
-        adding(.notEqual("previousInspectionScore", .double(value)))
+        adding(.notEqual(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreNotIn(_ values: [Double]) -> Self {
-        adding(.notInList("previousInspectionScore", values.map { .double($0) }))
+        adding(.notInList(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, values.map { .double($0) }))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreGreaterThan(_ value: Double) -> Self {
-        adding(.greaterThan("previousInspectionScore", .double(value)))
+        adding(.greaterThan(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreGreaterThanOrEqualTo(_ value: Double) -> Self {
-        adding(.greaterThanOrEqual("previousInspectionScore", .double(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreLessThan(_ value: Double) -> Self {
-        adding(.lessThan("previousInspectionScore", .double(value)))
+        adding(.lessThan(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreLessThanOrEqualTo(_ value: Double) -> Self {
-        adding(.lessThanOrEqual("previousInspectionScore", .double(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(value)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreBetween(_ lower: Double, _ upper: Double) -> Self {
-        adding(.between("previousInspectionScore", .double(lower), .double(upper)))
+        adding(.between(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, .double(lower), .double(upper)))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreIsKnown() -> Self {
-        adding(.isNotNull("previousInspectionScore"))
+        adding(.isNotNull(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member))
     }
 
     @discardableResult
     public func withPreviousInspectionScoreIsUnknown() -> Self {
-        adding(.isNull("previousInspectionScore"))
+        adding(.isNull(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withOpenedOnIs(_ value: Date) -> Self {
-        adding(.equal("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.equal(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnIn(_ values: [Date]) -> Self {
-        adding(.inList("openedOn", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
+        adding(.inList(School.__TeaqlFields.OPENED_ON_PROPERTY_member, values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withOpenedOnIsNot(_ value: Date) -> Self {
-        adding(.notEqual("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.notEqual(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("openedOn", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
+        adding(.notInList(School.__TeaqlFields.OPENED_ON_PROPERTY_member, values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withOpenedOnGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.greaterThan(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnLessThan(_ value: Date) -> Self {
-        adding(.lessThan("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.lessThan(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.lessThanOrEqual(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("openedOn", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
+        adding(.between(School.__TeaqlFields.OPENED_ON_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
     public func withOpenedOnIsKnown() -> Self {
-        adding(.isNotNull("openedOn"))
+        adding(.isNotNull(School.__TeaqlFields.OPENED_ON_PROPERTY_member))
     }
 
     @discardableResult
     public func withOpenedOnIsUnknown() -> Self {
-        adding(.isNull("openedOn"))
+        adding(.isNull(School.__TeaqlFields.OPENED_ON_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withExpectedReopeningIs(_ value: Date) -> Self {
-        adding(.equal("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.equal(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningIn(_ values: [Date]) -> Self {
-        adding(.inList("expectedReopening", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
+        adding(.inList(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withExpectedReopeningIsNot(_ value: Date) -> Self {
-        adding(.notEqual("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.notEqual(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("expectedReopening", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
+        adding(.notInList(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withExpectedReopeningGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.greaterThan(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningLessThan(_ value: Date) -> Self {
-        adding(.lessThan("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.lessThan(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.lessThanOrEqual(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("expectedReopening", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
+        adding(.between(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
     public func withExpectedReopeningIsKnown() -> Self {
-        adding(.isNotNull("expectedReopening"))
+        adding(.isNotNull(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member))
     }
 
     @discardableResult
     public func withExpectedReopeningIsUnknown() -> Self {
-        adding(.isNull("expectedReopening"))
+        adding(.isNull(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withSchoolDayStartsIs(_ value: String) -> Self {
-        adding(.equal("schoolDayStarts", .string(value)))
+        adding(.equal(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withSchoolDayStartsIn(_ values: [String]) -> Self {
-        adding(.inList("schoolDayStarts", values.map { .string($0) }))
+        adding(.inList(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withSchoolDayStartsIsNot(_ value: String) -> Self {
-        adding(.notEqual("schoolDayStarts", .string(value)))
+        adding(.notEqual(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withSchoolDayStartsNotIn(_ values: [String]) -> Self {
-        adding(.notInList("schoolDayStarts", values.map { .string($0) }))
+        adding(.notInList(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withSchoolDayStartsGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("schoolDayStarts", .string(value)))
+        adding(.greaterThan(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withSchoolDayStartsGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("schoolDayStarts", .string(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withSchoolDayStartsLessThan(_ value: String) -> Self {
-        adding(.lessThan("schoolDayStarts", .string(value)))
+        adding(.lessThan(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withSchoolDayStartsLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("schoolDayStarts", .string(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withSchoolDayStartsBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("schoolDayStarts", .string(lower), .string(upper)))
+        adding(.between(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withSchoolDayStartsIsKnown() -> Self {
-        adding(.isNotNull("schoolDayStarts"))
+        adding(.isNotNull(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member))
     }
 
     @discardableResult
     public func withSchoolDayStartsIsUnknown() -> Self {
-        adding(.isNull("schoolDayStarts"))
+        adding(.isNull(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withExtendedDayEndsIs(_ value: String) -> Self {
-        adding(.equal("extendedDayEnds", .string(value)))
+        adding(.equal(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withExtendedDayEndsIn(_ values: [String]) -> Self {
-        adding(.inList("extendedDayEnds", values.map { .string($0) }))
+        adding(.inList(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withExtendedDayEndsIsNot(_ value: String) -> Self {
-        adding(.notEqual("extendedDayEnds", .string(value)))
+        adding(.notEqual(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withExtendedDayEndsNotIn(_ values: [String]) -> Self {
-        adding(.notInList("extendedDayEnds", values.map { .string($0) }))
+        adding(.notInList(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withExtendedDayEndsGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("extendedDayEnds", .string(value)))
+        adding(.greaterThan(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withExtendedDayEndsGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("extendedDayEnds", .string(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withExtendedDayEndsLessThan(_ value: String) -> Self {
-        adding(.lessThan("extendedDayEnds", .string(value)))
+        adding(.lessThan(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withExtendedDayEndsLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("extendedDayEnds", .string(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withExtendedDayEndsBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("extendedDayEnds", .string(lower), .string(upper)))
+        adding(.between(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withExtendedDayEndsIsKnown() -> Self {
-        adding(.isNotNull("extendedDayEnds"))
+        adding(.isNotNull(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member))
     }
 
     @discardableResult
     public func withExtendedDayEndsIsUnknown() -> Self {
-        adding(.isNull("extendedDayEnds"))
+        adding(.isNull(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withCensusAtIs(_ value: Date) -> Self {
-        adding(.equal("censusAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.equal(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtIn(_ values: [Date]) -> Self {
-        adding(.inList("censusAt", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+        adding(.inList(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withCensusAtIsNot(_ value: Date) -> Self {
-        adding(.notEqual("censusAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.notEqual(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("censusAt", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+        adding(.notInList(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withCensusAtGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("censusAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.greaterThan(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("censusAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtLessThan(_ value: Date) -> Self {
-        adding(.lessThan("censusAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.lessThan(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("censusAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.lessThanOrEqual(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("censusAt", .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
+        adding(.between(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withCensusAtIsKnown() -> Self {
-        adding(.isNotNull("censusAt"))
+        adding(.isNotNull(School.__TeaqlFields.CENSUS_AT_PROPERTY_member))
     }
 
     @discardableResult
     public func withCensusAtIsUnknown() -> Self {
-        adding(.isNull("censusAt"))
+        adding(.isNull(School.__TeaqlFields.CENSUS_AT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withNextReviewAtIs(_ value: Date) -> Self {
-        adding(.equal("nextReviewAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.equal(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtIn(_ values: [Date]) -> Self {
-        adding(.inList("nextReviewAt", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+        adding(.inList(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withNextReviewAtIsNot(_ value: Date) -> Self {
-        adding(.notEqual("nextReviewAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.notEqual(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("nextReviewAt", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+        adding(.notInList(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withNextReviewAtGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("nextReviewAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.greaterThan(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("nextReviewAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtLessThan(_ value: Date) -> Self {
-        adding(.lessThan("nextReviewAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.lessThan(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("nextReviewAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.lessThanOrEqual(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("nextReviewAt", .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
+        adding(.between(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withNextReviewAtIsKnown() -> Self {
-        adding(.isNotNull("nextReviewAt"))
+        adding(.isNotNull(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member))
     }
 
     @discardableResult
     public func withNextReviewAtIsUnknown() -> Self {
-        adding(.isNull("nextReviewAt"))
+        adding(.isNull(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func whichAreActive() -> Self {
-        adding(.equal("active", .bool(true)))
+        adding(.equal(School.__TeaqlFields.ACTIVE_PROPERTY_member, .bool(true)))
     }
 
     @discardableResult
     public func whichAreNotActive() -> Self {
-        adding(.equal("active", .bool(false)))
+        adding(.equal(School.__TeaqlFields.ACTIVE_PROPERTY_member, .bool(false)))
     }
 
 
     @discardableResult
     public func whichAreReviewed() -> Self {
-        adding(.equal("reviewed", .bool(true)))
+        adding(.equal(School.__TeaqlFields.REVIEWED_PROPERTY_member, .bool(true)))
     }
 
     @discardableResult
     public func whichAreNotReviewed() -> Self {
-        adding(.equal("reviewed", .bool(false)))
+        adding(.equal(School.__TeaqlFields.REVIEWED_PROPERTY_member, .bool(false)))
     }
     @discardableResult
     public func withReviewedIsKnown() -> Self {
-        adding(.isNotNull("reviewed"))
+        adding(.isNotNull(School.__TeaqlFields.REVIEWED_PROPERTY_member))
     }
 
     @discardableResult
     public func withReviewedIsUnknown() -> Self {
-        adding(.isNull("reviewed"))
+        adding(.isNull(School.__TeaqlFields.REVIEWED_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(School.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(School.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(School.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(School.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(School.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(School.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(School.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(School.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(School.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(School.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(School.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -1826,14 +1826,14 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     public func withSchoolTypeMatching<ChildState: Sendable>(
         _ child: SchoolTypeRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("schoolType", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutSchoolTypeMatching<ChildState: Sendable>(
         _ child: SchoolTypeRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("schoolType", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
 
@@ -1846,10 +1846,10 @@ public struct SchoolRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "schoolType",
+            relationName: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetBySchoolTypeAs", alias: name, relation: "schoolType")))
+            operation: QueryOperation("facet", method: "facetBySchoolTypeAs", alias: name, relation: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member)))
         return copy
     }
 
@@ -1874,7 +1874,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "classCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1887,7 +1887,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "classCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1900,7 +1900,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "classCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1913,7 +1913,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "classCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1934,7 +1934,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minPlannedClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "plannedClassCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1947,7 +1947,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxPlannedClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "plannedClassCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1960,7 +1960,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumPlannedClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "plannedClassCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1973,7 +1973,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgPlannedClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "plannedClassCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1994,7 +1994,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "registryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2007,7 +2007,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "registryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2020,7 +2020,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "registryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2033,7 +2033,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "registryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2054,7 +2054,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minFormerRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "formerRegistryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2067,7 +2067,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxFormerRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "formerRegistryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2080,7 +2080,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumFormerRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "formerRegistryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2093,7 +2093,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgFormerRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "formerRegistryNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2114,7 +2114,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minAnnualBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "annualBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2127,7 +2127,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxAnnualBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "annualBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2140,7 +2140,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumAnnualBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "annualBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2153,7 +2153,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgAnnualBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "annualBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2174,7 +2174,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minProposedBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "proposedBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2187,7 +2187,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxProposedBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "proposedBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2200,7 +2200,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumProposedBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "proposedBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2213,7 +2213,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgProposedBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "proposedBudget", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2234,7 +2234,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "occupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2247,7 +2247,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "occupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2260,7 +2260,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "occupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2273,7 +2273,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "occupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2294,7 +2294,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minForecastOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "forecastOccupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2307,7 +2307,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxForecastOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "forecastOccupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2320,7 +2320,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumForecastOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "forecastOccupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2333,7 +2333,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgForecastOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "forecastOccupancyRatio", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2354,7 +2354,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "inspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2367,7 +2367,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "inspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2380,7 +2380,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "inspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2393,7 +2393,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "inspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2414,7 +2414,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minPreviousInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "previousInspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2427,7 +2427,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxPreviousInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "previousInspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2440,7 +2440,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumPreviousInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "previousInspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2453,7 +2453,7 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgPreviousInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "previousInspectionScore", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -2469,322 +2469,322 @@ public struct SchoolRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(School.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupBySchoolType() -> Self {
         var copy = self
-        copy.query.groupBy.append("schoolType")
+        copy.query.groupBy.append(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupBySchoolTypeAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("schoolType", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByName() -> Self {
         var copy = self
-        copy.query.groupBy.append("name")
+        copy.query.groupBy.append(School.__TeaqlFields.NAME_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByNameAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("name", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.NAME_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPublicNote() -> Self {
         var copy = self
-        copy.query.groupBy.append("publicNote")
+        copy.query.groupBy.append(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPublicNoteAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("publicNote", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByClassCount() -> Self {
         var copy = self
-        copy.query.groupBy.append("classCount")
+        copy.query.groupBy.append(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("classCount", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPlannedClassCount() -> Self {
         var copy = self
-        copy.query.groupBy.append("plannedClassCount")
+        copy.query.groupBy.append(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPlannedClassCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("plannedClassCount", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByRegistryNumber() -> Self {
         var copy = self
-        copy.query.groupBy.append("registryNumber")
+        copy.query.groupBy.append(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("registryNumber", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByFormerRegistryNumber() -> Self {
         var copy = self
-        copy.query.groupBy.append("formerRegistryNumber")
+        copy.query.groupBy.append(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByFormerRegistryNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("formerRegistryNumber", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByAnnualBudget() -> Self {
         var copy = self
-        copy.query.groupBy.append("annualBudget")
+        copy.query.groupBy.append(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByAnnualBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("annualBudget", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByProposedBudget() -> Self {
         var copy = self
-        copy.query.groupBy.append("proposedBudget")
+        copy.query.groupBy.append(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByProposedBudgetAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("proposedBudget", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByOccupancyRatio() -> Self {
         var copy = self
-        copy.query.groupBy.append("occupancyRatio")
+        copy.query.groupBy.append(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("occupancyRatio", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByForecastOccupancyRatio() -> Self {
         var copy = self
-        copy.query.groupBy.append("forecastOccupancyRatio")
+        copy.query.groupBy.append(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByForecastOccupancyRatioAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("forecastOccupancyRatio", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByInspectionScore() -> Self {
         var copy = self
-        copy.query.groupBy.append("inspectionScore")
+        copy.query.groupBy.append(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("inspectionScore", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPreviousInspectionScore() -> Self {
         var copy = self
-        copy.query.groupBy.append("previousInspectionScore")
+        copy.query.groupBy.append(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPreviousInspectionScoreAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("previousInspectionScore", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByOpenedOn() -> Self {
         var copy = self
-        copy.query.groupBy.append("openedOn")
+        copy.query.groupBy.append(School.__TeaqlFields.OPENED_ON_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByOpenedOnAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("openedOn", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.OPENED_ON_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByExpectedReopening() -> Self {
         var copy = self
-        copy.query.groupBy.append("expectedReopening")
+        copy.query.groupBy.append(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByExpectedReopeningAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("expectedReopening", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupBySchoolDayStarts() -> Self {
         var copy = self
-        copy.query.groupBy.append("schoolDayStarts")
+        copy.query.groupBy.append(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupBySchoolDayStartsAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("schoolDayStarts", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByExtendedDayEnds() -> Self {
         var copy = self
-        copy.query.groupBy.append("extendedDayEnds")
+        copy.query.groupBy.append(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByExtendedDayEndsAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("extendedDayEnds", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByCensusAt() -> Self {
         var copy = self
-        copy.query.groupBy.append("censusAt")
+        copy.query.groupBy.append(School.__TeaqlFields.CENSUS_AT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByCensusAtAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("censusAt", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.CENSUS_AT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByNextReviewAt() -> Self {
         var copy = self
-        copy.query.groupBy.append("nextReviewAt")
+        copy.query.groupBy.append(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByNextReviewAtAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("nextReviewAt", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByActive() -> Self {
         var copy = self
-        copy.query.groupBy.append("active")
+        copy.query.groupBy.append(School.__TeaqlFields.ACTIVE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByActiveAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("active", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.ACTIVE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByReviewed() -> Self {
         var copy = self
-        copy.query.groupBy.append("reviewed")
+        copy.query.groupBy.append(School.__TeaqlFields.REVIEWED_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByReviewedAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("reviewed", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.REVIEWED_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(School.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(School.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

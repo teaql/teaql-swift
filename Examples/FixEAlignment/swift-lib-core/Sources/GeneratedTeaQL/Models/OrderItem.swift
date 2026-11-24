@@ -3,6 +3,33 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let PURCHASE_ORDER_PROPERTY_member = "purchaseOrder"
+        static let PURCHASE_ORDER_PROPERTY_model = "purchase_order"
+        static let PURCHASE_ORDER_PROPERTY_column = "purchase_order"
+        static let TENANT_PROPERTY_member = "tenant"
+        static let TENANT_PROPERTY_model = "tenant"
+        static let TENANT_PROPERTY_column = "tenant"
+        static let PRODUCT_NAME_PROPERTY_member = "productName"
+        static let PRODUCT_NAME_PROPERTY_model = "product_name"
+        static let PRODUCT_NAME_PROPERTY_column = "product_name"
+        static let UNIT_PRICE_PROPERTY_member = "unitPrice"
+        static let UNIT_PRICE_PROPERTY_model = "unit_price"
+        static let UNIT_PRICE_PROPERTY_column = "unit_price"
+        static let CREATE_TIME_PROPERTY_member = "createTime"
+        static let CREATE_TIME_PROPERTY_model = "create_time"
+        static let CREATE_TIME_PROPERTY_column = "create_time"
+        static let UPDATE_TIME_PROPERTY_member = "updateTime"
+        static let UPDATE_TIME_PROPERTY_model = "update_time"
+        static let UPDATE_TIME_PROPERTY_column = "update_time"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var purchaseOrder: Int64? = nil
@@ -84,7 +111,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(OrderItem.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.purchaseOrder) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .purchaseOrder)) != nil {
@@ -98,7 +125,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.purchaseOrder = try container.decode(Int64?.self, forKey: .purchaseOrder)
             }
-            _loadedFields.insert("purchaseOrder")
+            _loadedFields.insert(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member)
         }
         if container.contains(.tenant) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .tenant)) != nil {
@@ -112,30 +139,30 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.tenant = try container.decode(Int64?.self, forKey: .tenant)
             }
-            _loadedFields.insert("tenant")
+            _loadedFields.insert(OrderItem.__TeaqlFields.TENANT_PROPERTY_member)
         }
         if container.contains(.productName) {
             self.productName = try container.decode(String?.self, forKey: .productName)
-            _loadedFields.insert("productName")
+            _loadedFields.insert(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member)
         }
         if container.contains(.unitPrice) {
             self.unitPrice = try container.decode(Decimal?.self, forKey: .unitPrice)
-            _loadedFields.insert("unitPrice")
+            _loadedFields.insert(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member)
         }
         if container.contains(.createTime) {
             self.createTime = try container.decode(Date?.self, forKey: .createTime)
-            _loadedFields.insert("createTime")
+            _loadedFields.insert(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member)
         }
         if container.contains(.updateTime) {
             self.updateTime = try container.decode(Date?.self, forKey: .updateTime)
-            _loadedFields.insert("updateTime")
+            _loadedFields.insert(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(OrderItem.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "purchaseOrder", "tenant", "productName", "unitPrice", "createTime", "updateTime", "version"])
+        let modeled = Set([OrderItem.__TeaqlFields.ID_PROPERTY_member, OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member, OrderItem.__TeaqlFields.TENANT_PROPERTY_member, OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member, OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member, OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member, OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member, OrderItem.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -150,10 +177,10 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("purchaseOrder") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member) {
             if isLoaded("purchaseOrderEntity"), let related = purchaseOrderEntity,
                 related.isLoaded("id"), related.id == purchaseOrder {
                 try container.encode(related, forKey: .purchaseOrder)
@@ -161,7 +188,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(purchaseOrder, forKey: .purchaseOrder)
             }
         }
-        if _loadedFields.contains("tenant") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.TENANT_PROPERTY_member) {
             if isLoaded("tenantEntity"), let related = tenantEntity,
                 related.isLoaded("id"), related.id == tenant {
                 try container.encode(related, forKey: .tenant)
@@ -169,19 +196,19 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(tenant, forKey: .tenant)
             }
         }
-        if _loadedFields.contains("productName") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member) {
             try container.encode(productName, forKey: .productName)
         }
-        if _loadedFields.contains("unitPrice") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member) {
             try container.encode(unitPrice, forKey: .unitPrice)
         }
-        if _loadedFields.contains("createTime") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
             try container.encode(createTime, forKey: .createTime)
         }
-        if _loadedFields.contains("updateTime") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
             try container.encode(updateTime, forKey: .updateTime)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(OrderItem.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -197,14 +224,14 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "OrderItem",
         table: "order_item_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "purchaseOrder", modelName: "purchase_order", column: "purchase_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "PurchaseOrder"),
-            PropertyDescriptor(name: "tenant", modelName: "tenant", column: "tenant", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Tenant"),
-            PropertyDescriptor(name: "productName", modelName: "product_name", column: "product_name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "unitPrice", modelName: "unit_price", column: "unit_price", type: .decimal, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.ID_PROPERTY_member, modelName: OrderItem.__TeaqlFields.ID_PROPERTY_model, column: OrderItem.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member, modelName: OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_model, column: OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "PurchaseOrder"),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.TENANT_PROPERTY_member, modelName: OrderItem.__TeaqlFields.TENANT_PROPERTY_model, column: OrderItem.__TeaqlFields.TENANT_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Tenant"),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member, modelName: OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_model, column: OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member, modelName: OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_model, column: OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_column, type: .decimal, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member, modelName: OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_model, column: OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member, modelName: OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_model, column: OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
+            PropertyDescriptor(name: OrderItem.__TeaqlFields.VERSION_PROPERTY_member, modelName: OrderItem.__TeaqlFields.VERSION_PROPERTY_model, column: OrderItem.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -219,22 +246,22 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.purchaseOrder = record["purchaseOrder"]?.int64Value
-        if record.keys.contains("purchaseOrder") { entity._loadedFields.insert("purchaseOrder") }
-        entity.tenant = record["tenant"]?.int64Value
-        if record.keys.contains("tenant") { entity._loadedFields.insert("tenant") }
-        entity.productName = record["productName"]?.stringValue
-        if record.keys.contains("productName") { entity._loadedFields.insert("productName") }
-        entity.unitPrice = record["unitPrice"]?.decimalValue
-        if record.keys.contains("unitPrice") { entity._loadedFields.insert("unitPrice") }
-        entity.createTime = record["createTime"]?.dateValue
-        if record.keys.contains("createTime") { entity._loadedFields.insert("createTime") }
-        entity.updateTime = record["updateTime"]?.dateValue
-        if record.keys.contains("updateTime") { entity._loadedFields.insert("updateTime") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[OrderItem.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(OrderItem.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.ID_PROPERTY_member) }
+        entity.purchaseOrder = record[OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member]?.int64Value
+        if record.keys.contains(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member) }
+        entity.tenant = record[OrderItem.__TeaqlFields.TENANT_PROPERTY_member]?.int64Value
+        if record.keys.contains(OrderItem.__TeaqlFields.TENANT_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.TENANT_PROPERTY_member) }
+        entity.productName = record[OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member) }
+        entity.unitPrice = record[OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member]?.decimalValue
+        if record.keys.contains(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member) }
+        entity.createTime = record[OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member) }
+        entity.updateTime = record[OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member) }
+        entity.version = record[OrderItem.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(OrderItem.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(OrderItem.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -284,42 +311,42 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "purchaseOrder": purchaseOrder.map { .int($0) } ?? .null,
-            "tenant": tenant.map { .int($0) } ?? .null,
-            "productName": productName.map { .string($0) } ?? .null,
-            "unitPrice": unitPrice.map { .decimal($0) } ?? .null,
-            "createTime": createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "updateTime": updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "version": .int(version)
+            OrderItem.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member: purchaseOrder.map { .int($0) } ?? .null,
+            OrderItem.__TeaqlFields.TENANT_PROPERTY_member: tenant.map { .int($0) } ?? .null,
+            OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member: productName.map { .string($0) } ?? .null,
+            OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member: unitPrice.map { .decimal($0) } ?? .null,
+            OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member: createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member: updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            OrderItem.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(OrderItem.__TeaqlFields.ID_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("purchaseOrder") {
-            record["purchase_order"] = purchaseOrder.map { .int($0) } ?? .null
+        if _loadedFields.contains(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_model] = purchaseOrder.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("tenant") {
-            record["tenant"] = tenant.map { .int($0) } ?? .null
+        if _loadedFields.contains(OrderItem.__TeaqlFields.TENANT_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.TENANT_PROPERTY_model] = tenant.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("productName") {
-            record["product_name"] = productName.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_model] = productName.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("unitPrice") {
-            record["unit_price"] = unitPrice.map { .decimal($0) } ?? .null
+        if _loadedFields.contains(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_model] = unitPrice.map { .decimal($0) } ?? .null
         }
-        if _loadedFields.contains("createTime") {
-            record["create_time"] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_model] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("updateTime") {
-            record["update_time"] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_model] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(OrderItem.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[OrderItem.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -333,16 +360,16 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("purchaseOrderEntity"), isLoaded("purchaseOrder"),
-            saved.isLoaded("purchaseOrder"), saved.purchaseOrder == purchaseOrder,
-            graph.forwardMatches(record["purchaseOrder"], related: _purchaseOrderResult) {
+        if isLoaded("purchaseOrderEntity"), isLoaded(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member),
+            saved.isLoaded(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member), saved.purchaseOrder == purchaseOrder,
+            graph.forwardMatches(record[OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member], related: _purchaseOrderResult) {
             saved._purchaseOrderResult = _purchaseOrderResult.replacingData(
                 try _purchaseOrderResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("purchaseOrderEntity")
         }
-        if isLoaded("tenantEntity"), isLoaded("tenant"),
-            saved.isLoaded("tenant"), saved.tenant == tenant,
-            graph.forwardMatches(record["tenant"], related: _tenantResult) {
+        if isLoaded("tenantEntity"), isLoaded(OrderItem.__TeaqlFields.TENANT_PROPERTY_member),
+            saved.isLoaded(OrderItem.__TeaqlFields.TENANT_PROPERTY_member), saved.tenant == tenant,
+            graph.forwardMatches(record[OrderItem.__TeaqlFields.TENANT_PROPERTY_member], related: _tenantResult) {
             saved._tenantResult = _tenantResult.replacingData(
                 try _tenantResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("tenantEntity")
@@ -356,7 +383,7 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "purchaseOrder", "tenant", "productName", "unitPrice", "createTime", "updateTime", "version"])
+        entity._loadedFields = Set([OrderItem.__TeaqlFields.ID_PROPERTY_member, OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member, OrderItem.__TeaqlFields.TENANT_PROPERTY_member, OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member, OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member, OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member, OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member, OrderItem.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -383,8 +410,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(OrderItem.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -392,8 +419,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePurchaseOrder(_ value: Int64?) -> Self {
         self.purchaseOrder = value
-        self._loadedFields.insert("purchaseOrder")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "purchase_order", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -401,8 +428,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     mutating func teaqlSetTenant(_ value: Int64?) -> Self {
         self.tenant = value
-        self._loadedFields.insert("tenant")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "tenant", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(OrderItem.__TeaqlFields.TENANT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.TENANT_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -410,8 +437,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateProductName(_ value: String?) -> Self {
         self.productName = value
-        self._loadedFields.insert("productName")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "product_name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -419,8 +446,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateUnitPrice(_ value: Decimal?) -> Self {
         self.unitPrice = value
-        self._loadedFields.insert("unitPrice")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "unit_price", value: value.map { .decimal($0) } ?? .null)
+        self._loadedFields.insert(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_model, value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -428,8 +455,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCreateTime(_ value: Date?) -> Self {
         self.createTime = value
-        self._loadedFields.insert("createTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "create_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -437,8 +464,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateUpdateTime(_ value: Date?) -> Self {
         self.updateTime = value
-        self._loadedFields.insert("updateTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "update_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -446,8 +473,8 @@ public struct OrderItem: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(OrderItem.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderItem.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -532,29 +559,29 @@ public struct OrderItemAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("purchaseOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("purchase_order"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("tenant") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("tenant"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.TENANT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.TENANT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("productName") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("product_name"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("unitPrice") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("unit_price"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
         }
         return pending
@@ -565,29 +592,29 @@ public struct OrderItemAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("purchaseOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("purchase_order"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.PURCHASE_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("tenant") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("tenant"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.TENANT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.TENANT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("productName") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("product_name"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.PRODUCT_NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("unitPrice") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("unit_price"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.UNIT_PRICE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
+            if !entity.isLoaded(OrderItem.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderItem.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderItem")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

@@ -3,6 +3,21 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let ORDER_NUMBER_PROPERTY_member = "orderNumber"
+        static let ORDER_NUMBER_PROPERTY_model = "order_number"
+        static let ORDER_NUMBER_PROPERTY_column = "order_number"
+        static let COMMERCE_PLATFORM_PROPERTY_member = "commercePlatform"
+        static let COMMERCE_PLATFORM_PROPERTY_model = "commerce_platform"
+        static let COMMERCE_PLATFORM_PROPERTY_column = "commerce_platform"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var orderNumber: String? = nil
@@ -82,11 +97,11 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.orderNumber) {
             self.orderNumber = try container.decode(String?.self, forKey: .orderNumber)
-            _loadedFields.insert("orderNumber")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member)
         }
         if container.contains(.commercePlatform) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .commercePlatform)) != nil {
@@ -100,17 +115,17 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.commercePlatform = try container.decode(Int64?.self, forKey: .commercePlatform)
             }
-            _loadedFields.insert("commercePlatform")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.orderAttachmentList) {
             self.orderAttachmentList = SmartList(try container.decode([OrderAttachment].self, forKey: .orderAttachmentList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "orderNumber", "commercePlatform", "version"])
+        let modeled = Set([CustomerOrder.__TeaqlFields.ID_PROPERTY_member, CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member, CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["orderAttachmentList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -125,13 +140,13 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("orderNumber") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
             try container.encode(orderNumber, forKey: .orderNumber)
         }
-        if _loadedFields.contains("commercePlatform") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
             if isLoaded("commercePlatformEntity"), let related = commercePlatformEntity,
                 related.isLoaded("id"), related.id == commercePlatform {
                 try container.encode(related, forKey: .commercePlatform)
@@ -139,7 +154,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(commercePlatform, forKey: .commercePlatform)
             }
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("orderAttachmentList"), _orderAttachmentListResult.isLoaded {
@@ -160,10 +175,10 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "CustomerOrder",
         table: "customer_order_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "orderNumber", modelName: "order_number", column: "order_number", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "commercePlatform", modelName: "commerce_platform", column: "commerce_platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CommercePlatform"),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.ID_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.ID_PROPERTY_model, column: CustomerOrder.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model, column: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model, column: CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CommercePlatform"),
+            PropertyDescriptor(name: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member, modelName: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model, column: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -178,14 +193,14 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.orderNumber = record["orderNumber"]?.stringValue
-        if record.keys.contains("orderNumber") { entity._loadedFields.insert("orderNumber") }
-        entity.commercePlatform = record["commercePlatform"]?.int64Value
-        if record.keys.contains("commercePlatform") { entity._loadedFields.insert("commercePlatform") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[CustomerOrder.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) }
+        entity.orderNumber = record[CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member]?.stringValue
+        if record.keys.contains(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) }
+        entity.commercePlatform = record[CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member]?.int64Value
+        if record.keys.contains(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) }
+        entity.version = record[CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -245,26 +260,26 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "orderNumber": orderNumber.map { .string($0) } ?? .null,
-            "commercePlatform": commercePlatform.map { .int($0) } ?? .null,
-            "version": .int(version)
+            CustomerOrder.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member: orderNumber.map { .string($0) } ?? .null,
+            CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member: commercePlatform.map { .int($0) } ?? .null,
+            CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("orderNumber") {
-            record["order_number"] = orderNumber.map { .string($0) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model] = orderNumber.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("commercePlatform") {
-            record["commerce_platform"] = commercePlatform.map { .int($0) } ?? .null
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model] = commercePlatform.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -278,9 +293,9 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("commercePlatformEntity"), isLoaded("commercePlatform"),
-            saved.isLoaded("commercePlatform"), saved.commercePlatform == commercePlatform,
-            graph.forwardMatches(record["commercePlatform"], related: _commercePlatformResult) {
+        if isLoaded("commercePlatformEntity"), isLoaded(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member),
+            saved.isLoaded(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member), saved.commercePlatform == commercePlatform,
+            graph.forwardMatches(record[CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member], related: _commercePlatformResult) {
             saved._commercePlatformResult = _commercePlatformResult.replacingData(
                 try _commercePlatformResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("commercePlatformEntity")
@@ -300,7 +315,7 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "orderNumber", "commercePlatform", "version"])
+        entity._loadedFields = Set([CustomerOrder.__TeaqlFields.ID_PROPERTY_member, CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member, CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member, CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -327,8 +342,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -336,8 +351,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOrderNumber(_ value: String?) -> Self {
         self.orderNumber = value
-        self._loadedFields.insert("orderNumber")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "order_number", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -345,8 +360,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCommercePlatform(_ value: Int64?) -> Self {
         self.commercePlatform = value
-        self._loadedFields.insert("commercePlatform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "commerce_platform", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -354,8 +369,8 @@ public struct CustomerOrder: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -473,17 +488,17 @@ public struct CustomerOrderAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("orderNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("commercePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("commerce_platform"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
         }
         for (index, var child) in entity.orderAttachmentList.enumerated() {
@@ -512,17 +527,17 @@ public struct CustomerOrderAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("orderNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("order_number"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.ORDER_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("commercePlatform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("commerce_platform"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.COMMERCE_PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
+            if !entity.isLoaded(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(CustomerOrder.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "CustomerOrder")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

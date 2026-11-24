@@ -3,6 +3,27 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let PLATFORM_PROPERTY_member = "platform"
+        static let PLATFORM_PROPERTY_model = "platform"
+        static let PLATFORM_PROPERTY_column = "platform"
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let CODE_PROPERTY_member = "code"
+        static let CODE_PROPERTY_model = "code"
+        static let CODE_PROPERTY_column = "code"
+        static let DISPLAY_ORDER_PROPERTY_member = "displayOrder"
+        static let DISPLAY_ORDER_PROPERTY_model = "display_order"
+        static let DISPLAY_ORDER_PROPERTY_column = "display_order"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var platform: Int64? = nil
     public var id: Int64 = 0
@@ -96,33 +117,33 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.platform = try container.decode(Int64?.self, forKey: .platform)
             }
-            _loadedFields.insert("platform")
+            _loadedFields.insert(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member)
         }
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(SchoolType.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(SchoolType.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.code) {
             self.code = try container.decode(String?.self, forKey: .code)
-            _loadedFields.insert("code")
+            _loadedFields.insert(SchoolType.__TeaqlFields.CODE_PROPERTY_member)
         }
         if container.contains(.displayOrder) {
             self.displayOrder = try container.decode(Decimal?.self, forKey: .displayOrder)
-            _loadedFields.insert("displayOrder")
+            _loadedFields.insert(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(SchoolType.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.schoolList) {
             self.schoolList = SmartList(try container.decode([School].self, forKey: .schoolList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["platform", "id", "name", "code", "displayOrder", "version"])
+        let modeled = Set([SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member, SchoolType.__TeaqlFields.ID_PROPERTY_member, SchoolType.__TeaqlFields.NAME_PROPERTY_member, SchoolType.__TeaqlFields.CODE_PROPERTY_member, SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, SchoolType.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["schoolList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -137,7 +158,7 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("platform") {
+        if _loadedFields.contains(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member) {
             if isLoaded("platformEntity"), let related = platformEntity,
                 related.isLoaded("id"), related.id == platform {
                 try container.encode(related, forKey: .platform)
@@ -145,19 +166,19 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(platform, forKey: .platform)
             }
         }
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(SchoolType.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(SchoolType.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("code") {
+        if _loadedFields.contains(SchoolType.__TeaqlFields.CODE_PROPERTY_member) {
             try container.encode(code, forKey: .code)
         }
-        if _loadedFields.contains("displayOrder") {
+        if _loadedFields.contains(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) {
             try container.encode(displayOrder, forKey: .displayOrder)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(SchoolType.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("schoolList"), _schoolListResult.isLoaded {
@@ -178,12 +199,12 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "SchoolType",
         table: "school_type_data",
         properties: [
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "code", modelName: "code", column: "code", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "displayOrder", modelName: "display_order", column: "display_order", type: .decimal, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member, modelName: SchoolType.__TeaqlFields.PLATFORM_PROPERTY_model, column: SchoolType.__TeaqlFields.PLATFORM_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
+            PropertyDescriptor(name: SchoolType.__TeaqlFields.ID_PROPERTY_member, modelName: SchoolType.__TeaqlFields.ID_PROPERTY_model, column: SchoolType.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: SchoolType.__TeaqlFields.NAME_PROPERTY_member, modelName: SchoolType.__TeaqlFields.NAME_PROPERTY_model, column: SchoolType.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: SchoolType.__TeaqlFields.CODE_PROPERTY_member, modelName: SchoolType.__TeaqlFields.CODE_PROPERTY_model, column: SchoolType.__TeaqlFields.CODE_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, modelName: SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_model, column: SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_column, type: .decimal, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: SchoolType.__TeaqlFields.VERSION_PROPERTY_member, modelName: SchoolType.__TeaqlFields.VERSION_PROPERTY_model, column: SchoolType.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -198,18 +219,18 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.platform = record["platform"]?.int64Value
-        if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.code = record["code"]?.stringValue
-        if record.keys.contains("code") { entity._loadedFields.insert("code") }
-        entity.displayOrder = record["displayOrder"]?.decimalValue
-        if record.keys.contains("displayOrder") { entity._loadedFields.insert("displayOrder") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.platform = record[SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member]?.int64Value
+        if record.keys.contains(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member) { entity._loadedFields.insert(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member) }
+        entity.id = record[SchoolType.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(SchoolType.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(SchoolType.__TeaqlFields.ID_PROPERTY_member) }
+        entity.name = record[SchoolType.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(SchoolType.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(SchoolType.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.code = record[SchoolType.__TeaqlFields.CODE_PROPERTY_member]?.stringValue
+        if record.keys.contains(SchoolType.__TeaqlFields.CODE_PROPERTY_member) { entity._loadedFields.insert(SchoolType.__TeaqlFields.CODE_PROPERTY_member) }
+        entity.displayOrder = record[SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member]?.decimalValue
+        if record.keys.contains(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) { entity._loadedFields.insert(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) }
+        entity.version = record[SchoolType.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(SchoolType.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(SchoolType.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -269,34 +290,34 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "platform": platform.map { .int($0) } ?? .null,
-            "id": .int(id),
-            "name": name.map { .string($0) } ?? .null,
-            "code": code.map { .string($0) } ?? .null,
-            "displayOrder": displayOrder.map { .decimal($0) } ?? .null,
-            "version": .int(version)
+            SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member: platform.map { .int($0) } ?? .null,
+            SchoolType.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            SchoolType.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            SchoolType.__TeaqlFields.CODE_PROPERTY_member: code.map { .string($0) } ?? .null,
+            SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member: displayOrder.map { .decimal($0) } ?? .null,
+            SchoolType.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("platform") {
-            record["platform"] = platform.map { .int($0) } ?? .null
+        if _loadedFields.contains(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member) {
+            record[SchoolType.__TeaqlFields.PLATFORM_PROPERTY_model] = platform.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(SchoolType.__TeaqlFields.ID_PROPERTY_member) {
+            record[SchoolType.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(SchoolType.__TeaqlFields.NAME_PROPERTY_member) {
+            record[SchoolType.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("code") {
-            record["code"] = code.map { .string($0) } ?? .null
+        if _loadedFields.contains(SchoolType.__TeaqlFields.CODE_PROPERTY_member) {
+            record[SchoolType.__TeaqlFields.CODE_PROPERTY_model] = code.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("displayOrder") {
-            record["display_order"] = displayOrder.map { .decimal($0) } ?? .null
+        if _loadedFields.contains(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) {
+            record[SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_model] = displayOrder.map { .decimal($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(SchoolType.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[SchoolType.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -310,9 +331,9 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("platformEntity"), isLoaded("platform"),
-            saved.isLoaded("platform"), saved.platform == platform,
-            graph.forwardMatches(record["platform"], related: _platformResult) {
+        if isLoaded("platformEntity"), isLoaded(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member),
+            saved.isLoaded(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member), saved.platform == platform,
+            graph.forwardMatches(record[SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member], related: _platformResult) {
             saved._platformResult = _platformResult.replacingData(
                 try _platformResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("platformEntity")
@@ -332,7 +353,7 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["platform", "id", "name", "code", "displayOrder", "version"])
+        entity._loadedFields = Set([SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member, SchoolType.__TeaqlFields.ID_PROPERTY_member, SchoolType.__TeaqlFields.NAME_PROPERTY_member, SchoolType.__TeaqlFields.CODE_PROPERTY_member, SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member, SchoolType.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -359,8 +380,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePlatform(_ value: Int64?) -> Self {
         self.platform = value
-        self._loadedFields.insert("platform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: SchoolType.__TeaqlFields.PLATFORM_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -368,8 +389,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(SchoolType.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: SchoolType.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -377,8 +398,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(SchoolType.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: SchoolType.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -386,8 +407,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCode(_ value: String?) -> Self {
         self.code = value
-        self._loadedFields.insert("code")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "code", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(SchoolType.__TeaqlFields.CODE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: SchoolType.__TeaqlFields.CODE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -395,8 +416,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateDisplayOrder(_ value: Decimal?) -> Self {
         self.displayOrder = value
-        self._loadedFields.insert("displayOrder")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "display_order", value: value.map { .decimal($0) } ?? .null)
+        self._loadedFields.insert(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_model, value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -404,8 +425,8 @@ public struct SchoolType: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(SchoolType.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: SchoolType.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -523,23 +544,23 @@ public struct SchoolTypeAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("code") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("code"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.CODE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.CODE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("displayOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("display_order"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
         }
         for (index, var child) in entity.schoolList.enumerated() {
@@ -568,23 +589,23 @@ public struct SchoolTypeAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("code") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("code"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.CODE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.CODE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("displayOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("display_order"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.DISPLAY_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
+            if !entity.isLoaded(SchoolType.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(SchoolType.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "SchoolType")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

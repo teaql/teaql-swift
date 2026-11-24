@@ -101,15 +101,15 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "customerOrder", "referenceCode", "version"]
+        copy.query.projection = [Payment.__TeaqlFields.ID_PROPERTY_member, Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, Payment.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(Payment.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(Payment.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -120,8 +120,8 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectReferenceCode() -> Self {
         var copy = self
-        if !copy.query.projection.contains("referenceCode") {
-            copy.query.projection.append("referenceCode")
+        if !copy.query.projection.contains(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member) {
+            copy.query.projection.append(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member)
         }
         return copy
     }
@@ -130,8 +130,8 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(Payment.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(Payment.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -147,57 +147,57 @@ public struct PaymentRequest<State: Sendable>: Sendable {
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customerOrder") {
-            copy.query.projection.append("customerOrder")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+            copy.query.projection.append(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
         }
         copy.query.relationQuery(
             "customerOrderEntity",
-            localKey: "customerOrder",
+            localKey: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "customerOrder",
-            operation: QueryOperation("relation", method: "selectCustomerOrderWith", relation: "customerOrder"))
+            query: child.toQuery(), traceName: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectCustomerOrderWith", relation: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByCustomerOrderAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("customerOrder", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByCustomerOrderDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("customerOrder", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByReferenceCodeAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("referenceCode", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByReferenceCodeDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("referenceCode", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(Payment.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
@@ -256,224 +256,224 @@ public struct PaymentRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(Payment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(Payment.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(Payment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(Payment.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(Payment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(Payment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(Payment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(Payment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(Payment.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(Payment.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(Payment.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func filterByCustomerOrder(_ value: Int64) -> Self {
-        adding(.equal("customerOrder", .int(value)))
+        adding(.equal(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterByCustomerOrderIn(_ values: [Int64]) -> Self {
-        adding(.inList("customerOrder", values.map(TeaQLValue.int)))
+        adding(.inList(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withCustomerOrderIsKnown() -> Self {
-        adding(.isNotNull("customerOrder"))
+        adding(.isNotNull(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member))
     }
 
     @discardableResult
     public func withCustomerOrderIsUnknown() -> Self {
-        adding(.isNull("customerOrder"))
+        adding(.isNull(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withReferenceCodeIs(_ value: String) -> Self {
-        adding(.equal("referenceCode", .string(value)))
+        adding(.equal(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceCodeIn(_ values: [String]) -> Self {
-        adding(.inList("referenceCode", values.map { .string($0) }))
+        adding(.inList(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withReferenceCodeIsNot(_ value: String) -> Self {
-        adding(.notEqual("referenceCode", .string(value)))
+        adding(.notEqual(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceCodeNotIn(_ values: [String]) -> Self {
-        adding(.notInList("referenceCode", values.map { .string($0) }))
+        adding(.notInList(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withReferenceCodeGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("referenceCode", .string(value)))
+        adding(.greaterThan(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceCodeGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("referenceCode", .string(value)))
+        adding(.greaterThanOrEqual(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceCodeLessThan(_ value: String) -> Self {
-        adding(.lessThan("referenceCode", .string(value)))
+        adding(.lessThan(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceCodeLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("referenceCode", .string(value)))
+        adding(.lessThanOrEqual(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceCodeBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("referenceCode", .string(lower), .string(upper)))
+        adding(.between(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withReferenceCodeIsKnown() -> Self {
-        adding(.isNotNull("referenceCode"))
+        adding(.isNotNull(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member))
     }
 
     @discardableResult
     public func withReferenceCodeIsUnknown() -> Self {
-        adding(.isNull("referenceCode"))
+        adding(.isNull(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member))
     }
     @discardableResult
     public func withReferenceCodeContaining(_ value: String) -> Self {
-        adding(.contains("referenceCode", value))
+        adding(.contains(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceCodeNotContaining(_ value: String) -> Self {
-        adding(.notContains("referenceCode", value))
+        adding(.notContains(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceCodeStartingWith(_ value: String) -> Self {
-        adding(.startsWith("referenceCode", value))
+        adding(.startsWith(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceCodeNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("referenceCode", value))
+        adding(.notStartsWith(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceCodeEndingWith(_ value: String) -> Self {
-        adding(.endsWith("referenceCode", value))
+        adding(.endsWith(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceCodeNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("referenceCode", value))
+        adding(.notEndsWith(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceCodeSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("referenceCode", value))
+        adding(.soundingLike(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(Payment.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(Payment.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(Payment.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(Payment.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(Payment.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -481,14 +481,14 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     public func withCustomerOrderMatching<ChildState: Sendable>(
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("customerOrder", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutCustomerOrderMatching<ChildState: Sendable>(
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("customerOrder", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
@@ -526,10 +526,10 @@ public struct PaymentRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "customerOrder",
+            relationName: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetByCustomerOrderAs", alias: name, relation: "customerOrder")))
+            operation: QueryOperation("facet", method: "facetByCustomerOrderAs", alias: name, relation: Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)))
         return copy
     }
 
@@ -550,56 +550,56 @@ public struct PaymentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(Payment.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(Payment.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByCustomerOrder() -> Self {
         var copy = self
-        copy.query.groupBy.append("customerOrder")
+        copy.query.groupBy.append(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByCustomerOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("customerOrder", as: alias)
+        copy.query.groupBy(Payment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByReferenceCode() -> Self {
         var copy = self
-        copy.query.groupBy.append("referenceCode")
+        copy.query.groupBy.append(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByReferenceCodeAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("referenceCode", as: alias)
+        copy.query.groupBy(Payment.__TeaqlFields.REFERENCE_CODE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(Payment.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(Payment.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

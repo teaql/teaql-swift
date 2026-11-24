@@ -101,15 +101,15 @@ public struct DistributionCenterRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "dockName", "version"]
+        copy.query.projection = [DistributionCenter.__TeaqlFields.ID_PROPERTY_member, DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(DistributionCenter.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(DistributionCenter.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -118,8 +118,8 @@ public struct DistributionCenterRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectDockName() -> Self {
         var copy = self
-        if !copy.query.projection.contains("dockName") {
-            copy.query.projection.append("dockName")
+        if !copy.query.projection.contains(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member) {
+            copy.query.projection.append(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member)
         }
         return copy
     }
@@ -128,8 +128,8 @@ public struct DistributionCenterRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -138,32 +138,32 @@ public struct DistributionCenterRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByDockNameAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("dockName", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByDockNameDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("dockName", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
@@ -222,203 +222,203 @@ public struct DistributionCenterRequest<State: Sendable>: Sendable {
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(DistributionCenter.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(DistributionCenter.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withDockNameIs(_ value: String) -> Self {
-        adding(.equal("dockName", .string(value)))
+        adding(.equal(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDockNameIn(_ values: [String]) -> Self {
-        adding(.inList("dockName", values.map { .string($0) }))
+        adding(.inList(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withDockNameIsNot(_ value: String) -> Self {
-        adding(.notEqual("dockName", .string(value)))
+        adding(.notEqual(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDockNameNotIn(_ values: [String]) -> Self {
-        adding(.notInList("dockName", values.map { .string($0) }))
+        adding(.notInList(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withDockNameGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("dockName", .string(value)))
+        adding(.greaterThan(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDockNameGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("dockName", .string(value)))
+        adding(.greaterThanOrEqual(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDockNameLessThan(_ value: String) -> Self {
-        adding(.lessThan("dockName", .string(value)))
+        adding(.lessThan(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDockNameLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("dockName", .string(value)))
+        adding(.lessThanOrEqual(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withDockNameBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("dockName", .string(lower), .string(upper)))
+        adding(.between(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withDockNameIsKnown() -> Self {
-        adding(.isNotNull("dockName"))
+        adding(.isNotNull(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member))
     }
 
     @discardableResult
     public func withDockNameIsUnknown() -> Self {
-        adding(.isNull("dockName"))
+        adding(.isNull(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member))
     }
     @discardableResult
     public func withDockNameContaining(_ value: String) -> Self {
-        adding(.contains("dockName", value))
+        adding(.contains(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDockNameNotContaining(_ value: String) -> Self {
-        adding(.notContains("dockName", value))
+        adding(.notContains(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDockNameStartingWith(_ value: String) -> Self {
-        adding(.startsWith("dockName", value))
+        adding(.startsWith(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDockNameNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("dockName", value))
+        adding(.notStartsWith(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDockNameEndingWith(_ value: String) -> Self {
-        adding(.endsWith("dockName", value))
+        adding(.endsWith(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDockNameNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("dockName", value))
+        adding(.notEndsWith(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withDockNameSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("dockName", value))
+        adding(.soundingLike(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -466,42 +466,42 @@ public struct DistributionCenterRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(DistributionCenter.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(DistributionCenter.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByDockName() -> Self {
         var copy = self
-        copy.query.groupBy.append("dockName")
+        copy.query.groupBy.append(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByDockNameAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("dockName", as: alias)
+        copy.query.groupBy(DistributionCenter.__TeaqlFields.DOCK_NAME_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(DistributionCenter.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

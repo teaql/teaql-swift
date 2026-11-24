@@ -3,6 +3,27 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let BASE_URL_PROPERTY_member = "baseUrl"
+        static let BASE_URL_PROPERTY_model = "base_url"
+        static let BASE_URL_PROPERTY_column = "base_url"
+        static let CREATE_TIME_PROPERTY_member = "createTime"
+        static let CREATE_TIME_PROPERTY_model = "create_time"
+        static let CREATE_TIME_PROPERTY_column = "create_time"
+        static let UPDATE_TIME_PROPERTY_member = "updateTime"
+        static let UPDATE_TIME_PROPERTY_model = "update_time"
+        static let UPDATE_TIME_PROPERTY_column = "update_time"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var name: String? = nil
@@ -92,27 +113,27 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(Platform.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(Platform.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.baseUrl) {
             self.baseUrl = try container.decode(String?.self, forKey: .baseUrl)
-            _loadedFields.insert("baseUrl")
+            _loadedFields.insert(Platform.__TeaqlFields.BASE_URL_PROPERTY_member)
         }
         if container.contains(.createTime) {
             self.createTime = try container.decode(Date?.self, forKey: .createTime)
-            _loadedFields.insert("createTime")
+            _loadedFields.insert(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member)
         }
         if container.contains(.updateTime) {
             self.updateTime = try container.decode(Date?.self, forKey: .updateTime)
-            _loadedFields.insert("updateTime")
+            _loadedFields.insert(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(Platform.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.schoolTypeList) {
             self.schoolTypeList = SmartList(try container.decode([SchoolType].self, forKey: .schoolTypeList))
@@ -121,7 +142,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
             self.schoolList = SmartList(try container.decode([School].self, forKey: .schoolList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "name", "baseUrl", "createTime", "updateTime", "version"])
+        let modeled = Set([Platform.__TeaqlFields.ID_PROPERTY_member, Platform.__TeaqlFields.NAME_PROPERTY_member, Platform.__TeaqlFields.BASE_URL_PROPERTY_member, Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member, Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member, Platform.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["schoolTypeList", "schoolList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -136,22 +157,22 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(Platform.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(Platform.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("baseUrl") {
+        if _loadedFields.contains(Platform.__TeaqlFields.BASE_URL_PROPERTY_member) {
             try container.encode(baseUrl, forKey: .baseUrl)
         }
-        if _loadedFields.contains("createTime") {
+        if _loadedFields.contains(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
             try container.encode(createTime, forKey: .createTime)
         }
-        if _loadedFields.contains("updateTime") {
+        if _loadedFields.contains(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
             try container.encode(updateTime, forKey: .updateTime)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(Platform.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("schoolTypeList"), _schoolTypeListResult.isLoaded {
@@ -177,12 +198,12 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "Platform",
         table: "platform_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "baseUrl", modelName: "base_url", column: "base_url", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "createTime", modelName: "create_time", column: "create_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
-            PropertyDescriptor(name: "updateTime", modelName: "update_time", column: "update_time", type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: Platform.__TeaqlFields.ID_PROPERTY_member, modelName: Platform.__TeaqlFields.ID_PROPERTY_model, column: Platform.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: Platform.__TeaqlFields.NAME_PROPERTY_member, modelName: Platform.__TeaqlFields.NAME_PROPERTY_model, column: Platform.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Platform.__TeaqlFields.BASE_URL_PROPERTY_member, modelName: Platform.__TeaqlFields.BASE_URL_PROPERTY_model, column: Platform.__TeaqlFields.BASE_URL_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member, modelName: Platform.__TeaqlFields.CREATE_TIME_PROPERTY_model, column: Platform.__TeaqlFields.CREATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now"),
+            PropertyDescriptor(name: Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member, modelName: Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_model, column: Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false, createFunction: "now", updateFunction: "now"),
+            PropertyDescriptor(name: Platform.__TeaqlFields.VERSION_PROPERTY_member, modelName: Platform.__TeaqlFields.VERSION_PROPERTY_model, column: Platform.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -197,18 +218,18 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.baseUrl = record["baseUrl"]?.stringValue
-        if record.keys.contains("baseUrl") { entity._loadedFields.insert("baseUrl") }
-        entity.createTime = record["createTime"]?.dateValue
-        if record.keys.contains("createTime") { entity._loadedFields.insert("createTime") }
-        entity.updateTime = record["updateTime"]?.dateValue
-        if record.keys.contains("updateTime") { entity._loadedFields.insert("updateTime") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[Platform.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Platform.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(Platform.__TeaqlFields.ID_PROPERTY_member) }
+        entity.name = record[Platform.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(Platform.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(Platform.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.baseUrl = record[Platform.__TeaqlFields.BASE_URL_PROPERTY_member]?.stringValue
+        if record.keys.contains(Platform.__TeaqlFields.BASE_URL_PROPERTY_member) { entity._loadedFields.insert(Platform.__TeaqlFields.BASE_URL_PROPERTY_member) }
+        entity.createTime = record[Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member) { entity._loadedFields.insert(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member) }
+        entity.updateTime = record[Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member]?.dateValue
+        if record.keys.contains(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member) { entity._loadedFields.insert(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member) }
+        entity.version = record[Platform.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Platform.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(Platform.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -278,34 +299,34 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "name": name.map { .string($0) } ?? .null,
-            "baseUrl": baseUrl.map { .string($0) } ?? .null,
-            "createTime": createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "updateTime": updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "version": .int(version)
+            Platform.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            Platform.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            Platform.__TeaqlFields.BASE_URL_PROPERTY_member: baseUrl.map { .string($0) } ?? .null,
+            Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member: createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member: updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            Platform.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(Platform.__TeaqlFields.ID_PROPERTY_member) {
+            record[Platform.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(Platform.__TeaqlFields.NAME_PROPERTY_member) {
+            record[Platform.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("baseUrl") {
-            record["base_url"] = baseUrl.map { .string($0) } ?? .null
+        if _loadedFields.contains(Platform.__TeaqlFields.BASE_URL_PROPERTY_member) {
+            record[Platform.__TeaqlFields.BASE_URL_PROPERTY_model] = baseUrl.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("createTime") {
-            record["create_time"] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+            record[Platform.__TeaqlFields.CREATE_TIME_PROPERTY_model] = createTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("updateTime") {
-            record["update_time"] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+            record[Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_model] = updateTime.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(Platform.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[Platform.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -340,7 +361,7 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "name", "baseUrl", "createTime", "updateTime", "version"])
+        entity._loadedFields = Set([Platform.__TeaqlFields.ID_PROPERTY_member, Platform.__TeaqlFields.NAME_PROPERTY_member, Platform.__TeaqlFields.BASE_URL_PROPERTY_member, Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member, Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member, Platform.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -367,8 +388,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(Platform.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Platform.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -376,8 +397,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Platform.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Platform.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -385,8 +406,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateBaseUrl(_ value: String?) -> Self {
         self.baseUrl = value
-        self._loadedFields.insert("baseUrl")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "base_url", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Platform.__TeaqlFields.BASE_URL_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Platform.__TeaqlFields.BASE_URL_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -394,8 +415,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCreateTime(_ value: Date?) -> Self {
         self.createTime = value
-        self._loadedFields.insert("createTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "create_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Platform.__TeaqlFields.CREATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -403,8 +424,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateUpdateTime(_ value: Date?) -> Self {
         self.updateTime = value
-        self._loadedFields.insert("updateTime")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "update_time", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -412,8 +433,8 @@ public struct Platform: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(Platform.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Platform.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -562,23 +583,23 @@ public struct PlatformAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("baseUrl") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("base_url"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.BASE_URL_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.BASE_URL_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
         }
         for (index, var child) in entity.schoolTypeList.enumerated() {
@@ -625,23 +646,23 @@ public struct PlatformAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("baseUrl") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("base_url"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.BASE_URL_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.BASE_URL_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("createTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("create_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.CREATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("updateTime") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("update_time"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.UPDATE_TIME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
+            if !entity.isLoaded(Platform.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Platform.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Platform")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

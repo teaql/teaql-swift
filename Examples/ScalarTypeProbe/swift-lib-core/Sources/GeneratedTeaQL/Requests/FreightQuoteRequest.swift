@@ -101,15 +101,15 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "platform", "reference", "amount", "shipmentNumber", "packageCount", "deliveryDate", "pickupTime", "quotedAt", "instructions", "version"]
+        copy.query.projection = [FreightQuote.__TeaqlFields.ID_PROPERTY_member, FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, FreightQuote.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -120,8 +120,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectReference() -> Self {
         var copy = self
-        if !copy.query.projection.contains("reference") {
-            copy.query.projection.append("reference")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member)
         }
         return copy
     }
@@ -130,8 +130,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectAmount() -> Self {
         var copy = self
-        if !copy.query.projection.contains("amount") {
-            copy.query.projection.append("amount")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member)
         }
         return copy
     }
@@ -140,8 +140,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectShipmentNumber() -> Self {
         var copy = self
-        if !copy.query.projection.contains("shipmentNumber") {
-            copy.query.projection.append("shipmentNumber")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member)
         }
         return copy
     }
@@ -150,8 +150,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectPackageCount() -> Self {
         var copy = self
-        if !copy.query.projection.contains("packageCount") {
-            copy.query.projection.append("packageCount")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member)
         }
         return copy
     }
@@ -160,8 +160,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectDeliveryDate() -> Self {
         var copy = self
-        if !copy.query.projection.contains("deliveryDate") {
-            copy.query.projection.append("deliveryDate")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member)
         }
         return copy
     }
@@ -170,8 +170,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectPickupTime() -> Self {
         var copy = self
-        if !copy.query.projection.contains("pickupTime") {
-            copy.query.projection.append("pickupTime")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member)
         }
         return copy
     }
@@ -180,8 +180,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectQuotedAt() -> Self {
         var copy = self
-        if !copy.query.projection.contains("quotedAt") {
-            copy.query.projection.append("quotedAt")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member)
         }
         return copy
     }
@@ -190,8 +190,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectInstructions() -> Self {
         var copy = self
-        if !copy.query.projection.contains("instructions") {
-            copy.query.projection.append("instructions")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member)
         }
         return copy
     }
@@ -200,8 +200,8 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -217,777 +217,777 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
         _ child: PlatformRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("platform") {
-            copy.query.projection.append("platform")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member) {
+            copy.query.projection.append(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member)
         }
         copy.query.relationQuery(
             "platformEntity",
-            localKey: "platform",
+            localKey: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "platform",
-            operation: QueryOperation("relation", method: "selectPlatformWith", relation: "platform"))
+            query: child.toQuery(), traceName: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectPlatformWith", relation: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPlatformAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("platform", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPlatformDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("platform", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByReferenceAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("reference", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByReferenceDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("reference", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByAmountAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("amount", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByAmountDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("amount", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByShipmentNumberAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("shipmentNumber", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByShipmentNumberDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("shipmentNumber", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPackageCountAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("packageCount", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPackageCountDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("packageCount", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByDeliveryDateAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("deliveryDate", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByDeliveryDateDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("deliveryDate", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByPickupTimeAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("pickupTime", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByPickupTimeDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("pickupTime", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByQuotedAtAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("quotedAt", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByQuotedAtDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("quotedAt", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByInstructionsAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("instructions", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByInstructionsDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("instructions", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
 
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(FreightQuote.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func filterByPlatform(_ value: Int64) -> Self {
-        adding(.equal("platform", .int(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterByPlatformIn(_ values: [Int64]) -> Self {
-        adding(.inList("platform", values.map(TeaQLValue.int)))
+        adding(.inList(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withPlatformIsKnown() -> Self {
-        adding(.isNotNull("platform"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member))
     }
 
     @discardableResult
     public func withPlatformIsUnknown() -> Self {
-        adding(.isNull("platform"))
+        adding(.isNull(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withReferenceIs(_ value: String) -> Self {
-        adding(.equal("reference", .string(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceIn(_ values: [String]) -> Self {
-        adding(.inList("reference", values.map { .string($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withReferenceIsNot(_ value: String) -> Self {
-        adding(.notEqual("reference", .string(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceNotIn(_ values: [String]) -> Self {
-        adding(.notInList("reference", values.map { .string($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withReferenceGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("reference", .string(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("reference", .string(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceLessThan(_ value: String) -> Self {
-        adding(.lessThan("reference", .string(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("reference", .string(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withReferenceBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("reference", .string(lower), .string(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withReferenceIsKnown() -> Self {
-        adding(.isNotNull("reference"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member))
     }
 
     @discardableResult
     public func withReferenceIsUnknown() -> Self {
-        adding(.isNull("reference"))
+        adding(.isNull(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member))
     }
     @discardableResult
     public func withReferenceContaining(_ value: String) -> Self {
-        adding(.contains("reference", value))
+        adding(.contains(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceNotContaining(_ value: String) -> Self {
-        adding(.notContains("reference", value))
+        adding(.notContains(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceStartingWith(_ value: String) -> Self {
-        adding(.startsWith("reference", value))
+        adding(.startsWith(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("reference", value))
+        adding(.notStartsWith(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceEndingWith(_ value: String) -> Self {
-        adding(.endsWith("reference", value))
+        adding(.endsWith(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("reference", value))
+        adding(.notEndsWith(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withReferenceSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("reference", value))
+        adding(.soundingLike(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withAmountIs(_ value: Decimal) -> Self {
-        adding(.equal("amount", .decimal(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAmountIn(_ values: [Decimal]) -> Self {
-        adding(.inList("amount", values.map { .decimal($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withAmountIsNot(_ value: Decimal) -> Self {
-        adding(.notEqual("amount", .decimal(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAmountNotIn(_ values: [Decimal]) -> Self {
-        adding(.notInList("amount", values.map { .decimal($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, values.map { .decimal($0) }))
     }
 
     @discardableResult
     public func withAmountGreaterThan(_ value: Decimal) -> Self {
-        adding(.greaterThan("amount", .decimal(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAmountGreaterThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.greaterThanOrEqual("amount", .decimal(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAmountLessThan(_ value: Decimal) -> Self {
-        adding(.lessThan("amount", .decimal(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAmountLessThanOrEqualTo(_ value: Decimal) -> Self {
-        adding(.lessThanOrEqual("amount", .decimal(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(value)))
     }
 
     @discardableResult
     public func withAmountBetween(_ lower: Decimal, _ upper: Decimal) -> Self {
-        adding(.between("amount", .decimal(lower), .decimal(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, .decimal(lower), .decimal(upper)))
     }
 
     @discardableResult
     public func withAmountIsKnown() -> Self {
-        adding(.isNotNull("amount"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member))
     }
 
     @discardableResult
     public func withAmountIsUnknown() -> Self {
-        adding(.isNull("amount"))
+        adding(.isNull(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withShipmentNumberIs(_ value: Int64) -> Self {
-        adding(.equal("shipmentNumber", .int(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withShipmentNumberIn(_ values: [Int64]) -> Self {
-        adding(.inList("shipmentNumber", values.map { .int($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withShipmentNumberIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("shipmentNumber", .int(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withShipmentNumberNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("shipmentNumber", values.map { .int($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withShipmentNumberGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("shipmentNumber", .int(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withShipmentNumberGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("shipmentNumber", .int(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withShipmentNumberLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("shipmentNumber", .int(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withShipmentNumberLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("shipmentNumber", .int(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withShipmentNumberBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("shipmentNumber", .int(lower), .int(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withShipmentNumberIsKnown() -> Self {
-        adding(.isNotNull("shipmentNumber"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member))
     }
 
     @discardableResult
     public func withShipmentNumberIsUnknown() -> Self {
-        adding(.isNull("shipmentNumber"))
+        adding(.isNull(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withPackageCountIs(_ value: Int64) -> Self {
-        adding(.equal("packageCount", .int(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPackageCountIn(_ values: [Int64]) -> Self {
-        adding(.inList("packageCount", values.map { .int($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withPackageCountIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("packageCount", .int(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPackageCountNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("packageCount", values.map { .int($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withPackageCountGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("packageCount", .int(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPackageCountGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("packageCount", .int(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPackageCountLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("packageCount", .int(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPackageCountLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("packageCount", .int(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withPackageCountBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("packageCount", .int(lower), .int(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withPackageCountIsKnown() -> Self {
-        adding(.isNotNull("packageCount"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member))
     }
 
     @discardableResult
     public func withPackageCountIsUnknown() -> Self {
-        adding(.isNull("packageCount"))
+        adding(.isNull(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withDeliveryDateIs(_ value: Date) -> Self {
-        adding(.equal("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.equal(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateIn(_ values: [Date]) -> Self {
-        adding(.inList("deliveryDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
+        adding(.inList(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withDeliveryDateIsNot(_ value: Date) -> Self {
-        adding(.notEqual("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.notEqual(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("deliveryDate", values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, values.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) }))
     }
 
     @discardableResult
     public func withDeliveryDateGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateLessThan(_ value: Date) -> Self {
-        adding(.lessThan("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.lessThan(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: value).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("deliveryDate", .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
+        adding(.between(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, .calendarDate(String(ISO8601DateFormatter().string(from: lower).prefix(10))), .calendarDate(String(ISO8601DateFormatter().string(from: upper).prefix(10)))))
     }
 
     @discardableResult
     public func withDeliveryDateIsKnown() -> Self {
-        adding(.isNotNull("deliveryDate"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member))
     }
 
     @discardableResult
     public func withDeliveryDateIsUnknown() -> Self {
-        adding(.isNull("deliveryDate"))
+        adding(.isNull(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withPickupTimeIs(_ value: String) -> Self {
-        adding(.equal("pickupTime", .string(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPickupTimeIn(_ values: [String]) -> Self {
-        adding(.inList("pickupTime", values.map { .string($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withPickupTimeIsNot(_ value: String) -> Self {
-        adding(.notEqual("pickupTime", .string(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPickupTimeNotIn(_ values: [String]) -> Self {
-        adding(.notInList("pickupTime", values.map { .string($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withPickupTimeGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("pickupTime", .string(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPickupTimeGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("pickupTime", .string(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPickupTimeLessThan(_ value: String) -> Self {
-        adding(.lessThan("pickupTime", .string(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPickupTimeLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("pickupTime", .string(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withPickupTimeBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("pickupTime", .string(lower), .string(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withPickupTimeIsKnown() -> Self {
-        adding(.isNotNull("pickupTime"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member))
     }
 
     @discardableResult
     public func withPickupTimeIsUnknown() -> Self {
-        adding(.isNull("pickupTime"))
+        adding(.isNull(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withQuotedAtIs(_ value: Date) -> Self {
-        adding(.equal("quotedAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.equal(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtIn(_ values: [Date]) -> Self {
-        adding(.inList("quotedAt", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+        adding(.inList(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withQuotedAtIsNot(_ value: Date) -> Self {
-        adding(.notEqual("quotedAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.notEqual(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtNotIn(_ values: [Date]) -> Self {
-        adding(.notInList("quotedAt", values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, values.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) }))
     }
 
     @discardableResult
     public func withQuotedAtGreaterThan(_ value: Date) -> Self {
-        adding(.greaterThan("quotedAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtGreaterThanOrEqualTo(_ value: Date) -> Self {
-        adding(.greaterThanOrEqual("quotedAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtLessThan(_ value: Date) -> Self {
-        adding(.lessThan("quotedAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.lessThan(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtLessThanOrEqualTo(_ value: Date) -> Self {
-        adding(.lessThanOrEqual("quotedAt", .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(value.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtBetween(_ lower: Date, _ upper: Date) -> Self {
-        adding(.between("quotedAt", .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
+        adding(.between(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, .timestamp(Int64(lower.timeIntervalSince1970 * 1_000)), .timestamp(Int64(upper.timeIntervalSince1970 * 1_000))))
     }
 
     @discardableResult
     public func withQuotedAtIsKnown() -> Self {
-        adding(.isNotNull("quotedAt"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member))
     }
 
     @discardableResult
     public func withQuotedAtIsUnknown() -> Self {
-        adding(.isNull("quotedAt"))
+        adding(.isNull(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withInstructionsIs(_ value: String) -> Self {
-        adding(.equal("instructions", .string(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withInstructionsIn(_ values: [String]) -> Self {
-        adding(.inList("instructions", values.map { .string($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withInstructionsIsNot(_ value: String) -> Self {
-        adding(.notEqual("instructions", .string(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withInstructionsNotIn(_ values: [String]) -> Self {
-        adding(.notInList("instructions", values.map { .string($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withInstructionsGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("instructions", .string(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withInstructionsGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("instructions", .string(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withInstructionsLessThan(_ value: String) -> Self {
-        adding(.lessThan("instructions", .string(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withInstructionsLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("instructions", .string(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withInstructionsBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("instructions", .string(lower), .string(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withInstructionsIsKnown() -> Self {
-        adding(.isNotNull("instructions"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member))
     }
 
     @discardableResult
     public func withInstructionsIsUnknown() -> Self {
-        adding(.isNull("instructions"))
+        adding(.isNull(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member))
     }
     @discardableResult
     public func withInstructionsContaining(_ value: String) -> Self {
-        adding(.contains("instructions", value))
+        adding(.contains(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withInstructionsNotContaining(_ value: String) -> Self {
-        adding(.notContains("instructions", value))
+        adding(.notContains(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withInstructionsStartingWith(_ value: String) -> Self {
-        adding(.startsWith("instructions", value))
+        adding(.startsWith(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withInstructionsNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("instructions", value))
+        adding(.notStartsWith(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withInstructionsEndingWith(_ value: String) -> Self {
-        adding(.endsWith("instructions", value))
+        adding(.endsWith(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withInstructionsNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("instructions", value))
+        adding(.notEndsWith(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withInstructionsSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("instructions", value))
+        adding(.soundingLike(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -995,14 +995,14 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     public func withPlatformMatching<ChildState: Sendable>(
         _ child: PlatformRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("platform", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutPlatformMatching<ChildState: Sendable>(
         _ child: PlatformRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("platform", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
 
@@ -1015,10 +1015,10 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "platform",
+            relationName: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetByPlatformAs", alias: name, relation: "platform")))
+            operation: QueryOperation("facet", method: "facetByPlatformAs", alias: name, relation: FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member)))
         return copy
     }
 
@@ -1043,7 +1043,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minAmountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "amount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1056,7 +1056,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxAmountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "amount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1069,7 +1069,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumAmountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "amount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1082,7 +1082,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgAmountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "amount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1103,7 +1103,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minShipmentNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "shipmentNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1116,7 +1116,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxShipmentNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "shipmentNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1129,7 +1129,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumShipmentNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "shipmentNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1142,7 +1142,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgShipmentNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "shipmentNumber", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1163,7 +1163,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minPackageCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "packageCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1176,7 +1176,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxPackageCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "packageCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1189,7 +1189,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumPackageCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "packageCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1202,7 +1202,7 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgPackageCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "packageCount", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -1218,154 +1218,154 @@ public struct FreightQuoteRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPlatform() -> Self {
         var copy = self
-        copy.query.groupBy.append("platform")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPlatformAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("platform", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.PLATFORM_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByReference() -> Self {
         var copy = self
-        copy.query.groupBy.append("reference")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByReferenceAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("reference", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.REFERENCE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByAmount() -> Self {
         var copy = self
-        copy.query.groupBy.append("amount")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByAmountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("amount", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.AMOUNT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByShipmentNumber() -> Self {
         var copy = self
-        copy.query.groupBy.append("shipmentNumber")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByShipmentNumberAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("shipmentNumber", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.SHIPMENT_NUMBER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPackageCount() -> Self {
         var copy = self
-        copy.query.groupBy.append("packageCount")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPackageCountAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("packageCount", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.PACKAGE_COUNT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByDeliveryDate() -> Self {
         var copy = self
-        copy.query.groupBy.append("deliveryDate")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByDeliveryDateAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("deliveryDate", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.DELIVERY_DATE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByPickupTime() -> Self {
         var copy = self
-        copy.query.groupBy.append("pickupTime")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByPickupTimeAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("pickupTime", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.PICKUP_TIME_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByQuotedAt() -> Self {
         var copy = self
-        copy.query.groupBy.append("quotedAt")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByQuotedAtAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("quotedAt", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.QUOTED_AT_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByInstructions() -> Self {
         var copy = self
-        copy.query.groupBy.append("instructions")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByInstructionsAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("instructions", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.INSTRUCTIONS_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(FreightQuote.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

@@ -101,15 +101,15 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectSelfFields() -> Self {
         var copy = self
-        copy.query.projection = ["id", "customerOrder", "fileName", "contentType", "contentLength", "contentSha256", "objectKey", "version"]
+        copy.query.projection = [OrderAttachment.__TeaqlFields.ID_PROPERTY_member, OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member]
         return copy
     }
 
     @discardableResult
     public func selectId() -> Self {
         var copy = self
-        if !copy.query.projection.contains("id") {
-            copy.query.projection.append("id")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.ID_PROPERTY_member)
         }
         return copy
     }
@@ -120,8 +120,8 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectFileName() -> Self {
         var copy = self
-        if !copy.query.projection.contains("fileName") {
-            copy.query.projection.append("fileName")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member)
         }
         return copy
     }
@@ -130,8 +130,8 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectContentType() -> Self {
         var copy = self
-        if !copy.query.projection.contains("contentType") {
-            copy.query.projection.append("contentType")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member)
         }
         return copy
     }
@@ -140,8 +140,8 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectContentLength() -> Self {
         var copy = self
-        if !copy.query.projection.contains("contentLength") {
-            copy.query.projection.append("contentLength")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member)
         }
         return copy
     }
@@ -150,8 +150,8 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectContentSha256() -> Self {
         var copy = self
-        if !copy.query.projection.contains("contentSha256") {
-            copy.query.projection.append("contentSha256")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member)
         }
         return copy
     }
@@ -160,8 +160,8 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectObjectKey() -> Self {
         var copy = self
-        if !copy.query.projection.contains("objectKey") {
-            copy.query.projection.append("objectKey")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member)
         }
         return copy
     }
@@ -170,8 +170,8 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func selectVersion() -> Self {
         var copy = self
-        if !copy.query.projection.contains("version") {
-            copy.query.projection.append("version")
+        if !copy.query.projection.contains(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member)
         }
         return copy
     }
@@ -187,647 +187,647 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
         var copy = self
-        if !copy.query.projection.isEmpty && !copy.query.projection.contains("customerOrder") {
-            copy.query.projection.append("customerOrder")
+        if !copy.query.projection.isEmpty && !copy.query.projection.contains(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+            copy.query.projection.append(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
         }
         copy.query.relationQuery(
             "customerOrderEntity",
-            localKey: "customerOrder",
+            localKey: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member,
             foreignKey: "id",
             many: false,
-            query: child.toQuery(), traceName: "customerOrder",
-            operation: QueryOperation("relation", method: "selectCustomerOrderWith", relation: "customerOrder"))
+            query: child.toQuery(), traceName: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member,
+            operation: QueryOperation("relation", method: "selectCustomerOrderWith", relation: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member))
         return copy
     }
 
     @discardableResult
     public func orderByIdAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByIdDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("id", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByCustomerOrderAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("customerOrder", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByCustomerOrderDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("customerOrder", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByFileNameAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("fileName", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByFileNameDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("fileName", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByContentTypeAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("contentType", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByContentTypeDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("contentType", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByContentLengthAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("contentLength", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByContentLengthDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("contentLength", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByContentSha256Ascending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("contentSha256", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByContentSha256Descending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("contentSha256", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByObjectKeyAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("objectKey", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByObjectKeyDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("objectKey", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .descending)); return copy
     }
 
     @discardableResult
     public func orderByVersionAscending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .ascending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .ascending)); return copy
     }
 
     @discardableResult
     public func orderByVersionDescending() -> Self {
-        var copy = self; copy.query.orderBy.append(OrderBy("version", .descending)); return copy
+        var copy = self; copy.query.orderBy.append(OrderBy(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .descending)); return copy
     }
 
 
 
     @discardableResult
     public func withIdIs(_ value: Int64) -> Self {
-        adding(.equal("id", .int(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdIn(_ values: [Int64]) -> Self {
-        adding(.inList("id", values.map { .int($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("id", .int(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("id", values.map { .int($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withIdGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("id", .int(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("id", .int(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("id", .int(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("id", .int(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withIdBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("id", .int(lower), .int(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withIdIsKnown() -> Self {
-        adding(.isNotNull("id"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.ID_PROPERTY_member))
     }
 
     @discardableResult
     public func withIdIsUnknown() -> Self {
-        adding(.isNull("id"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.ID_PROPERTY_member))
     }
 
 
     @discardableResult
     public func filterByCustomerOrder(_ value: Int64) -> Self {
-        adding(.equal("customerOrder", .int(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func filterByCustomerOrderIn(_ values: [Int64]) -> Self {
-        adding(.inList("customerOrder", values.map(TeaQLValue.int)))
+        adding(.inList(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, values.map(TeaQLValue.int)))
     }
 
     @discardableResult
     public func withCustomerOrderIsKnown() -> Self {
-        adding(.isNotNull("customerOrder"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member))
     }
 
     @discardableResult
     public func withCustomerOrderIsUnknown() -> Self {
-        adding(.isNull("customerOrder"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withFileNameIs(_ value: String) -> Self {
-        adding(.equal("fileName", .string(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withFileNameIn(_ values: [String]) -> Self {
-        adding(.inList("fileName", values.map { .string($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withFileNameIsNot(_ value: String) -> Self {
-        adding(.notEqual("fileName", .string(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withFileNameNotIn(_ values: [String]) -> Self {
-        adding(.notInList("fileName", values.map { .string($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withFileNameGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("fileName", .string(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withFileNameGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("fileName", .string(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withFileNameLessThan(_ value: String) -> Self {
-        adding(.lessThan("fileName", .string(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withFileNameLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("fileName", .string(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withFileNameBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("fileName", .string(lower), .string(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withFileNameIsKnown() -> Self {
-        adding(.isNotNull("fileName"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member))
     }
 
     @discardableResult
     public func withFileNameIsUnknown() -> Self {
-        adding(.isNull("fileName"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member))
     }
     @discardableResult
     public func withFileNameContaining(_ value: String) -> Self {
-        adding(.contains("fileName", value))
+        adding(.contains(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withFileNameNotContaining(_ value: String) -> Self {
-        adding(.notContains("fileName", value))
+        adding(.notContains(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withFileNameStartingWith(_ value: String) -> Self {
-        adding(.startsWith("fileName", value))
+        adding(.startsWith(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withFileNameNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("fileName", value))
+        adding(.notStartsWith(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withFileNameEndingWith(_ value: String) -> Self {
-        adding(.endsWith("fileName", value))
+        adding(.endsWith(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withFileNameNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("fileName", value))
+        adding(.notEndsWith(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withFileNameSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("fileName", value))
+        adding(.soundingLike(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withContentTypeIs(_ value: String) -> Self {
-        adding(.equal("contentType", .string(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentTypeIn(_ values: [String]) -> Self {
-        adding(.inList("contentType", values.map { .string($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withContentTypeIsNot(_ value: String) -> Self {
-        adding(.notEqual("contentType", .string(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentTypeNotIn(_ values: [String]) -> Self {
-        adding(.notInList("contentType", values.map { .string($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withContentTypeGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("contentType", .string(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentTypeGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("contentType", .string(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentTypeLessThan(_ value: String) -> Self {
-        adding(.lessThan("contentType", .string(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentTypeLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("contentType", .string(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentTypeBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("contentType", .string(lower), .string(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withContentTypeIsKnown() -> Self {
-        adding(.isNotNull("contentType"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member))
     }
 
     @discardableResult
     public func withContentTypeIsUnknown() -> Self {
-        adding(.isNull("contentType"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member))
     }
     @discardableResult
     public func withContentTypeContaining(_ value: String) -> Self {
-        adding(.contains("contentType", value))
+        adding(.contains(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentTypeNotContaining(_ value: String) -> Self {
-        adding(.notContains("contentType", value))
+        adding(.notContains(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentTypeStartingWith(_ value: String) -> Self {
-        adding(.startsWith("contentType", value))
+        adding(.startsWith(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentTypeNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("contentType", value))
+        adding(.notStartsWith(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentTypeEndingWith(_ value: String) -> Self {
-        adding(.endsWith("contentType", value))
+        adding(.endsWith(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentTypeNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("contentType", value))
+        adding(.notEndsWith(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentTypeSoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("contentType", value))
+        adding(.soundingLike(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withContentLengthIs(_ value: Int64) -> Self {
-        adding(.equal("contentLength", .int(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withContentLengthIn(_ values: [Int64]) -> Self {
-        adding(.inList("contentLength", values.map { .int($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withContentLengthIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("contentLength", .int(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withContentLengthNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("contentLength", values.map { .int($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withContentLengthGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("contentLength", .int(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withContentLengthGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("contentLength", .int(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withContentLengthLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("contentLength", .int(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withContentLengthLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("contentLength", .int(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withContentLengthBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("contentLength", .int(lower), .int(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withContentLengthIsKnown() -> Self {
-        adding(.isNotNull("contentLength"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member))
     }
 
     @discardableResult
     public func withContentLengthIsUnknown() -> Self {
-        adding(.isNull("contentLength"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member))
     }
 
 
     @discardableResult
     public func withContentSha256Is(_ value: String) -> Self {
-        adding(.equal("contentSha256", .string(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentSha256In(_ values: [String]) -> Self {
-        adding(.inList("contentSha256", values.map { .string($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withContentSha256IsNot(_ value: String) -> Self {
-        adding(.notEqual("contentSha256", .string(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentSha256NotIn(_ values: [String]) -> Self {
-        adding(.notInList("contentSha256", values.map { .string($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withContentSha256GreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("contentSha256", .string(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentSha256GreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("contentSha256", .string(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentSha256LessThan(_ value: String) -> Self {
-        adding(.lessThan("contentSha256", .string(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentSha256LessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("contentSha256", .string(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withContentSha256Between(_ lower: String, _ upper: String) -> Self {
-        adding(.between("contentSha256", .string(lower), .string(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withContentSha256IsKnown() -> Self {
-        adding(.isNotNull("contentSha256"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member))
     }
 
     @discardableResult
     public func withContentSha256IsUnknown() -> Self {
-        adding(.isNull("contentSha256"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member))
     }
     @discardableResult
     public func withContentSha256Containing(_ value: String) -> Self {
-        adding(.contains("contentSha256", value))
+        adding(.contains(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentSha256NotContaining(_ value: String) -> Self {
-        adding(.notContains("contentSha256", value))
+        adding(.notContains(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentSha256StartingWith(_ value: String) -> Self {
-        adding(.startsWith("contentSha256", value))
+        adding(.startsWith(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentSha256NotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("contentSha256", value))
+        adding(.notStartsWith(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentSha256EndingWith(_ value: String) -> Self {
-        adding(.endsWith("contentSha256", value))
+        adding(.endsWith(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentSha256NotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("contentSha256", value))
+        adding(.notEndsWith(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withContentSha256SoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("contentSha256", value))
+        adding(.soundingLike(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withObjectKeyIs(_ value: String) -> Self {
-        adding(.equal("objectKey", .string(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withObjectKeyIn(_ values: [String]) -> Self {
-        adding(.inList("objectKey", values.map { .string($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withObjectKeyIsNot(_ value: String) -> Self {
-        adding(.notEqual("objectKey", .string(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withObjectKeyNotIn(_ values: [String]) -> Self {
-        adding(.notInList("objectKey", values.map { .string($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, values.map { .string($0) }))
     }
 
     @discardableResult
     public func withObjectKeyGreaterThan(_ value: String) -> Self {
-        adding(.greaterThan("objectKey", .string(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withObjectKeyGreaterThanOrEqualTo(_ value: String) -> Self {
-        adding(.greaterThanOrEqual("objectKey", .string(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withObjectKeyLessThan(_ value: String) -> Self {
-        adding(.lessThan("objectKey", .string(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withObjectKeyLessThanOrEqualTo(_ value: String) -> Self {
-        adding(.lessThanOrEqual("objectKey", .string(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(value)))
     }
 
     @discardableResult
     public func withObjectKeyBetween(_ lower: String, _ upper: String) -> Self {
-        adding(.between("objectKey", .string(lower), .string(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, .string(lower), .string(upper)))
     }
 
     @discardableResult
     public func withObjectKeyIsKnown() -> Self {
-        adding(.isNotNull("objectKey"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member))
     }
 
     @discardableResult
     public func withObjectKeyIsUnknown() -> Self {
-        adding(.isNull("objectKey"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member))
     }
     @discardableResult
     public func withObjectKeyContaining(_ value: String) -> Self {
-        adding(.contains("objectKey", value))
+        adding(.contains(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withObjectKeyNotContaining(_ value: String) -> Self {
-        adding(.notContains("objectKey", value))
+        adding(.notContains(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withObjectKeyStartingWith(_ value: String) -> Self {
-        adding(.startsWith("objectKey", value))
+        adding(.startsWith(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withObjectKeyNotStartingWith(_ value: String) -> Self {
-        adding(.notStartsWith("objectKey", value))
+        adding(.notStartsWith(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withObjectKeyEndingWith(_ value: String) -> Self {
-        adding(.endsWith("objectKey", value))
+        adding(.endsWith(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withObjectKeyNotEndingWith(_ value: String) -> Self {
-        adding(.notEndsWith("objectKey", value))
+        adding(.notEndsWith(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
     @discardableResult
     public func withObjectKeySoundingLike(_ value: String) -> Self {
-        adding(.soundingLike("objectKey", value))
+        adding(.soundingLike(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, value))
     }
 
 
     @discardableResult
     public func withVersionIs(_ value: Int64) -> Self {
-        adding(.equal("version", .int(value)))
+        adding(.equal(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionIn(_ values: [Int64]) -> Self {
-        adding(.inList("version", values.map { .int($0) }))
+        adding(.inList(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionIsNot(_ value: Int64) -> Self {
-        adding(.notEqual("version", .int(value)))
+        adding(.notEqual(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionNotIn(_ values: [Int64]) -> Self {
-        adding(.notInList("version", values.map { .int($0) }))
+        adding(.notInList(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, values.map { .int($0) }))
     }
 
     @discardableResult
     public func withVersionGreaterThan(_ value: Int64) -> Self {
-        adding(.greaterThan("version", .int(value)))
+        adding(.greaterThan(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionGreaterThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.greaterThanOrEqual("version", .int(value)))
+        adding(.greaterThanOrEqual(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThan(_ value: Int64) -> Self {
-        adding(.lessThan("version", .int(value)))
+        adding(.lessThan(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionLessThanOrEqualTo(_ value: Int64) -> Self {
-        adding(.lessThanOrEqual("version", .int(value)))
+        adding(.lessThanOrEqual(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(value)))
     }
 
     @discardableResult
     public func withVersionBetween(_ lower: Int64, _ upper: Int64) -> Self {
-        adding(.between("version", .int(lower), .int(upper)))
+        adding(.between(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, .int(lower), .int(upper)))
     }
 
     @discardableResult
     public func withVersionIsKnown() -> Self {
-        adding(.isNotNull("version"))
+        adding(.isNotNull(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
     @discardableResult
     public func withVersionIsUnknown() -> Self {
-        adding(.isNull("version"))
+        adding(.isNull(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member))
     }
 
 
@@ -835,14 +835,14 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     public func withCustomerOrderMatching<ChildState: Sendable>(
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
-        adding(.inSubquery("customerOrder", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.inSubquery(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
     @discardableResult
     public func withoutCustomerOrderMatching<ChildState: Sendable>(
         _ child: CustomerOrderRequest<ChildState>
     ) -> Self {
-        adding(.notInSubquery("customerOrder", RelationQueryPlan(child.toQuery()), "id"))
+        adding(.notInSubquery(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, RelationQueryPlan(child.toQuery()), "id"))
     }
 
 
@@ -855,10 +855,10 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
         var copy = self
         copy.query.facets.append(FacetRequest(
             name: name,
-            relationName: "customerOrder",
+            relationName: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member,
             query: request.toQuery(),
             includeAllFacets: includeAllFacets,
-            operation: QueryOperation("facet", method: "facetByCustomerOrderAs", alias: name, relation: "customerOrder")))
+            operation: QueryOperation("facet", method: "facetByCustomerOrderAs", alias: name, relation: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)))
         return copy
     }
 
@@ -883,7 +883,7 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func minContentLengthAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.min, field: "contentLength", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.min, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -896,7 +896,7 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func maxContentLengthAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.max, field: "contentLength", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.max, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -909,7 +909,7 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func sumContentLengthAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.sum, field: "contentLength", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.sum, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -922,7 +922,7 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func avgContentLengthAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.aggregates.append(QueryAggregate(.avg, field: "contentLength", alias: alias))
+        copy.query.aggregates.append(QueryAggregate(.avg, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, alias: alias))
         return copy
     }
 
@@ -938,112 +938,112 @@ public struct OrderAttachmentRequest<State: Sendable>: Sendable {
     @discardableResult
     public func groupById() -> Self {
         var copy = self
-        copy.query.groupBy.append("id")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.ID_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByIdAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("id", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.ID_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByCustomerOrder() -> Self {
         var copy = self
-        copy.query.groupBy.append("customerOrder")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByCustomerOrderAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("customerOrder", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByFileName() -> Self {
         var copy = self
-        copy.query.groupBy.append("fileName")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByFileNameAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("fileName", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByContentType() -> Self {
         var copy = self
-        copy.query.groupBy.append("contentType")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByContentTypeAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("contentType", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByContentLength() -> Self {
         var copy = self
-        copy.query.groupBy.append("contentLength")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByContentLengthAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("contentLength", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByContentSha256() -> Self {
         var copy = self
-        copy.query.groupBy.append("contentSha256")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByContentSha256As(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("contentSha256", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByObjectKey() -> Self {
         var copy = self
-        copy.query.groupBy.append("objectKey")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByObjectKeyAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("objectKey", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, as: alias)
         return copy
     }
 
     @discardableResult
     public func groupByVersion() -> Self {
         var copy = self
-        copy.query.groupBy.append("version")
+        copy.query.groupBy.append(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member)
         return copy
     }
 
     @discardableResult
     public func groupByVersionAs(_ alias: String) -> Self {
         var copy = self
-        copy.query.groupBy("version", as: alias)
+        copy.query.groupBy(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, as: alias)
         return copy
     }
 

@@ -15,6 +15,8 @@ else
   evidence="$(mktemp -d -t teaql-swift-order-attachment.XXXXXXXX)"
 fi
 evidence="$(cd "$evidence" && pwd)"
+# Keep the runtime log out of the source tree covered by fingerprint().
+export TEAQL_LOG_ENDPOINT="$evidence/runtime.log"
 fingerprint() {
   (cd "$example" && find swift-lib-core swift-app-console -type f -not -path '*/.build/*' -print0 | sort -z | xargs -0 sha256sum)
 }

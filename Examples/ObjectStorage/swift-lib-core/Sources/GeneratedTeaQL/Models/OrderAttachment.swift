@@ -3,6 +3,33 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let CUSTOMER_ORDER_PROPERTY_member = "customerOrder"
+        static let CUSTOMER_ORDER_PROPERTY_model = "customer_order"
+        static let CUSTOMER_ORDER_PROPERTY_column = "customer_order"
+        static let FILE_NAME_PROPERTY_member = "fileName"
+        static let FILE_NAME_PROPERTY_model = "file_name"
+        static let FILE_NAME_PROPERTY_column = "file_name"
+        static let CONTENT_TYPE_PROPERTY_member = "contentType"
+        static let CONTENT_TYPE_PROPERTY_model = "content_type"
+        static let CONTENT_TYPE_PROPERTY_column = "content_type"
+        static let CONTENT_LENGTH_PROPERTY_member = "contentLength"
+        static let CONTENT_LENGTH_PROPERTY_model = "content_length"
+        static let CONTENT_LENGTH_PROPERTY_column = "content_length"
+        static let CONTENT_SHA256_PROPERTY_member = "contentSha256"
+        static let CONTENT_SHA256_PROPERTY_model = "content_sha256"
+        static let CONTENT_SHA256_PROPERTY_column = "content_sha256"
+        static let OBJECT_KEY_PROPERTY_member = "objectKey"
+        static let OBJECT_KEY_PROPERTY_model = "object_key"
+        static let OBJECT_KEY_PROPERTY_column = "object_key"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var customerOrder: Int64? = nil
@@ -74,7 +101,7 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.customerOrder) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .customerOrder)) != nil {
@@ -88,35 +115,35 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.customerOrder = try container.decode(Int64?.self, forKey: .customerOrder)
             }
-            _loadedFields.insert("customerOrder")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
         }
         if container.contains(.fileName) {
             self.fileName = try container.decode(String?.self, forKey: .fileName)
-            _loadedFields.insert("fileName")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member)
         }
         if container.contains(.contentType) {
             self.contentType = try container.decode(String?.self, forKey: .contentType)
-            _loadedFields.insert("contentType")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member)
         }
         if container.contains(.contentLength) {
             self.contentLength = try container.decode(Int64?.self, forKey: .contentLength)
-            if let error = ModeledInteger32.error(contentLength.map { .int($0) } ?? .null, entity: Self.descriptor, field: "content_length") { throw error }
-            _loadedFields.insert("contentLength")
+            if let error = ModeledInteger32.error(contentLength.map { .int($0) } ?? .null, entity: Self.descriptor, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model) { throw error }
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member)
         }
         if container.contains(.contentSha256) {
             self.contentSha256 = try container.decode(String?.self, forKey: .contentSha256)
-            _loadedFields.insert("contentSha256")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member)
         }
         if container.contains(.objectKey) {
             self.objectKey = try container.decode(String?.self, forKey: .objectKey)
-            _loadedFields.insert("objectKey")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "customerOrder", "fileName", "contentType", "contentLength", "contentSha256", "objectKey", "version"])
+        let modeled = Set([OrderAttachment.__TeaqlFields.ID_PROPERTY_member, OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -131,10 +158,10 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("customerOrder") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
             if isLoaded("customerOrderEntity"), let related = customerOrderEntity,
                 related.isLoaded("id"), related.id == customerOrder {
                 try container.encode(related, forKey: .customerOrder)
@@ -142,23 +169,23 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(customerOrder, forKey: .customerOrder)
             }
         }
-        if _loadedFields.contains("fileName") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) {
             try container.encode(fileName, forKey: .fileName)
         }
-        if _loadedFields.contains("contentType") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) {
             try container.encode(contentType, forKey: .contentType)
         }
-        if _loadedFields.contains("contentLength") {
-            if let error = ModeledInteger32.error(contentLength.map { .int($0) } ?? .null, entity: Self.descriptor, field: "content_length") { throw error }
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) {
+            if let error = ModeledInteger32.error(contentLength.map { .int($0) } ?? .null, entity: Self.descriptor, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model) { throw error }
             try container.encode(contentLength, forKey: .contentLength)
         }
-        if _loadedFields.contains("contentSha256") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) {
             try container.encode(contentSha256, forKey: .contentSha256)
         }
-        if _loadedFields.contains("objectKey") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) {
             try container.encode(objectKey, forKey: .objectKey)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -174,16 +201,16 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "OrderAttachment",
         table: "order_attachment_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "customerOrder", modelName: "customer_order", column: "customer_order", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
-            PropertyDescriptor(name: "fileName", modelName: "file_name", column: "file_name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "contentType", modelName: "content_type", column: "content_type", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "contentLength", modelName: "content_length", column: "content_length", type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
-            PropertyDescriptor(name: "contentSha256", modelName: "content_sha256", column: "content_sha256", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "objectKey", modelName: "object_key", column: "object_key", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.ID_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.ID_PROPERTY_model, column: OrderAttachment.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model, column: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "CustomerOrder"),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_model, column: OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_model, column: OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model, column: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_model, column: OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_model, column: OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member, modelName: OrderAttachment.__TeaqlFields.VERSION_PROPERTY_model, column: OrderAttachment.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
-        auditMaskFields: ["object_key"]
+        auditMaskFields: [OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_model]
     )
 
     public static func from(record: TeaQLRecord) throws -> Self {
@@ -196,22 +223,22 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.customerOrder = record["customerOrder"]?.int64Value
-        if record.keys.contains("customerOrder") { entity._loadedFields.insert("customerOrder") }
-        entity.fileName = record["fileName"]?.stringValue
-        if record.keys.contains("fileName") { entity._loadedFields.insert("fileName") }
-        entity.contentType = record["contentType"]?.stringValue
-        if record.keys.contains("contentType") { entity._loadedFields.insert("contentType") }
-        entity.contentLength = record["contentLength"]?.int64Value
-        if record.keys.contains("contentLength") { entity._loadedFields.insert("contentLength") }
-        entity.contentSha256 = record["contentSha256"]?.stringValue
-        if record.keys.contains("contentSha256") { entity._loadedFields.insert("contentSha256") }
-        entity.objectKey = record["objectKey"]?.stringValue
-        if record.keys.contains("objectKey") { entity._loadedFields.insert("objectKey") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[OrderAttachment.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) }
+        entity.customerOrder = record[OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member]?.int64Value
+        if record.keys.contains(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) }
+        entity.fileName = record[OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) }
+        entity.contentType = record[OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) }
+        entity.contentLength = record[OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member]?.int64Value
+        if record.keys.contains(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) }
+        entity.contentSha256 = record[OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) }
+        entity.objectKey = record[OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member]?.stringValue
+        if record.keys.contains(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) }
+        entity.version = record[OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -247,42 +274,42 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "customerOrder": customerOrder.map { .int($0) } ?? .null,
-            "fileName": fileName.map { .string($0) } ?? .null,
-            "contentType": contentType.map { .string($0) } ?? .null,
-            "contentLength": contentLength.map { .int($0) } ?? .null,
-            "contentSha256": contentSha256.map { .string($0) } ?? .null,
-            "objectKey": objectKey.map { .string($0) } ?? .null,
-            "version": .int(version)
+            OrderAttachment.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member: customerOrder.map { .int($0) } ?? .null,
+            OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member: fileName.map { .string($0) } ?? .null,
+            OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member: contentType.map { .string($0) } ?? .null,
+            OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member: contentLength.map { .int($0) } ?? .null,
+            OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member: contentSha256.map { .string($0) } ?? .null,
+            OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member: objectKey.map { .string($0) } ?? .null,
+            OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("customerOrder") {
-            record["customer_order"] = customerOrder.map { .int($0) } ?? .null
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model] = customerOrder.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("fileName") {
-            record["file_name"] = fileName.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_model] = fileName.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("contentType") {
-            record["content_type"] = contentType.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_model] = contentType.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("contentLength") {
-            record["content_length"] = contentLength.map { .int($0) } ?? .null
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model] = contentLength.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("contentSha256") {
-            record["content_sha256"] = contentSha256.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_model] = contentSha256.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("objectKey") {
-            record["object_key"] = objectKey.map { .string($0) } ?? .null
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_model] = objectKey.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[OrderAttachment.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -296,9 +323,9 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("customerOrderEntity"), isLoaded("customerOrder"),
-            saved.isLoaded("customerOrder"), saved.customerOrder == customerOrder,
-            graph.forwardMatches(record["customerOrder"], related: _customerOrderResult) {
+        if isLoaded("customerOrderEntity"), isLoaded(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member),
+            saved.isLoaded(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member), saved.customerOrder == customerOrder,
+            graph.forwardMatches(record[OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member], related: _customerOrderResult) {
             saved._customerOrderResult = _customerOrderResult.replacingData(
                 try _customerOrderResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("customerOrderEntity")
@@ -312,7 +339,7 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "customerOrder", "fileName", "contentType", "contentLength", "contentSha256", "objectKey", "version"])
+        entity._loadedFields = Set([OrderAttachment.__TeaqlFields.ID_PROPERTY_member, OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member, OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member, OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member, OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member, OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -339,8 +366,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -348,8 +375,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCustomerOrder(_ value: Int64?) -> Self {
         self.customerOrder = value
-        self._loadedFields.insert("customerOrder")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "customer_order", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -357,8 +384,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateFileName(_ value: String?) -> Self {
         self.fileName = value
-        self._loadedFields.insert("fileName")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "file_name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -366,8 +393,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateContentType(_ value: String?) -> Self {
         self.contentType = value
-        self._loadedFields.insert("contentType")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "content_type", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -375,8 +402,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateContentLength(_ value: Int64?) -> Self {
         self.contentLength = value
-        self._loadedFields.insert("contentLength")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "content_length", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -384,8 +411,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateContentSha256(_ value: String?) -> Self {
         self.contentSha256 = value
-        self._loadedFields.insert("contentSha256")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "content_sha256", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -393,8 +420,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateObjectKey(_ value: String?) -> Self {
         self.objectKey = value
-        self._loadedFields.insert("objectKey")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "object_key", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -402,8 +429,8 @@ public struct OrderAttachment: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: OrderAttachment.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -488,29 +515,29 @@ public struct OrderAttachmentAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("customerOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("fileName") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("file_name"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("contentType") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("content_type"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("contentLength") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("content_length"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("contentSha256") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("content_sha256"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("objectKey") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("object_key"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
         }
         return pending
@@ -521,29 +548,29 @@ public struct OrderAttachmentAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("customerOrder") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("customer_order"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CUSTOMER_ORDER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("fileName") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("file_name"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.FILE_NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("contentType") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("content_type"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CONTENT_TYPE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("contentLength") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("content_length"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CONTENT_LENGTH_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("contentSha256") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("content_sha256"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.CONTENT_SHA256_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("objectKey") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("object_key"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.OBJECT_KEY_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
+            if !entity.isLoaded(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(OrderAttachment.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "OrderAttachment")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

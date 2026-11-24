@@ -3,6 +3,21 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let PLATFORM_PROPERTY_member = "platform"
+        static let PLATFORM_PROPERTY_model = "platform"
+        static let PLATFORM_PROPERTY_column = "platform"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var platform: Int64? = nil
@@ -82,7 +97,7 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(Customer.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.platform) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .platform)) != nil {
@@ -96,21 +111,21 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.platform = try container.decode(Int64?.self, forKey: .platform)
             }
-            _loadedFields.insert("platform")
+            _loadedFields.insert(Customer.__TeaqlFields.PLATFORM_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(Customer.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(Customer.__TeaqlFields.VERSION_PROPERTY_member)
         }
         if container.contains(.customerOrderList) {
             self.customerOrderList = SmartList(try container.decode([CustomerOrder].self, forKey: .customerOrderList))
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "platform", "name", "version"])
+        let modeled = Set([Customer.__TeaqlFields.ID_PROPERTY_member, Customer.__TeaqlFields.PLATFORM_PROPERTY_member, Customer.__TeaqlFields.NAME_PROPERTY_member, Customer.__TeaqlFields.VERSION_PROPERTY_member])
             .union(["customerOrderList"])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -125,10 +140,10 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(Customer.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("platform") {
+        if _loadedFields.contains(Customer.__TeaqlFields.PLATFORM_PROPERTY_member) {
             if isLoaded("platformEntity"), let related = platformEntity,
                 related.isLoaded("id"), related.id == platform {
                 try container.encode(related, forKey: .platform)
@@ -136,10 +151,10 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(platform, forKey: .platform)
             }
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(Customer.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(Customer.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         if isLoaded("customerOrderList"), _customerOrderListResult.isLoaded {
@@ -160,10 +175,10 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "Customer",
         table: "customer_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "platform", modelName: "platform", column: "platform", type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: Customer.__TeaqlFields.ID_PROPERTY_member, modelName: Customer.__TeaqlFields.ID_PROPERTY_model, column: Customer.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: Customer.__TeaqlFields.PLATFORM_PROPERTY_member, modelName: Customer.__TeaqlFields.PLATFORM_PROPERTY_model, column: Customer.__TeaqlFields.PLATFORM_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isRelation: true, referencedEntity: "Platform"),
+            PropertyDescriptor(name: Customer.__TeaqlFields.NAME_PROPERTY_member, modelName: Customer.__TeaqlFields.NAME_PROPERTY_model, column: Customer.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: Customer.__TeaqlFields.VERSION_PROPERTY_member, modelName: Customer.__TeaqlFields.VERSION_PROPERTY_model, column: Customer.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -178,14 +193,14 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.platform = record["platform"]?.int64Value
-        if record.keys.contains("platform") { entity._loadedFields.insert("platform") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[Customer.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Customer.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(Customer.__TeaqlFields.ID_PROPERTY_member) }
+        entity.platform = record[Customer.__TeaqlFields.PLATFORM_PROPERTY_member]?.int64Value
+        if record.keys.contains(Customer.__TeaqlFields.PLATFORM_PROPERTY_member) { entity._loadedFields.insert(Customer.__TeaqlFields.PLATFORM_PROPERTY_member) }
+        entity.name = record[Customer.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(Customer.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(Customer.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.version = record[Customer.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(Customer.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(Customer.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -245,26 +260,26 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "platform": platform.map { .int($0) } ?? .null,
-            "name": name.map { .string($0) } ?? .null,
-            "version": .int(version)
+            Customer.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            Customer.__TeaqlFields.PLATFORM_PROPERTY_member: platform.map { .int($0) } ?? .null,
+            Customer.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            Customer.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(Customer.__TeaqlFields.ID_PROPERTY_member) {
+            record[Customer.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("platform") {
-            record["platform"] = platform.map { .int($0) } ?? .null
+        if _loadedFields.contains(Customer.__TeaqlFields.PLATFORM_PROPERTY_member) {
+            record[Customer.__TeaqlFields.PLATFORM_PROPERTY_model] = platform.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(Customer.__TeaqlFields.NAME_PROPERTY_member) {
+            record[Customer.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(Customer.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[Customer.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -278,9 +293,9 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("platformEntity"), isLoaded("platform"),
-            saved.isLoaded("platform"), saved.platform == platform,
-            graph.forwardMatches(record["platform"], related: _platformResult) {
+        if isLoaded("platformEntity"), isLoaded(Customer.__TeaqlFields.PLATFORM_PROPERTY_member),
+            saved.isLoaded(Customer.__TeaqlFields.PLATFORM_PROPERTY_member), saved.platform == platform,
+            graph.forwardMatches(record[Customer.__TeaqlFields.PLATFORM_PROPERTY_member], related: _platformResult) {
             saved._platformResult = _platformResult.replacingData(
                 try _platformResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("platformEntity")
@@ -300,7 +315,7 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "platform", "name", "version"])
+        entity._loadedFields = Set([Customer.__TeaqlFields.ID_PROPERTY_member, Customer.__TeaqlFields.PLATFORM_PROPERTY_member, Customer.__TeaqlFields.NAME_PROPERTY_member, Customer.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -327,8 +342,8 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(Customer.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Customer.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -336,8 +351,8 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePlatform(_ value: Int64?) -> Self {
         self.platform = value
-        self._loadedFields.insert("platform")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "platform", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(Customer.__TeaqlFields.PLATFORM_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Customer.__TeaqlFields.PLATFORM_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -345,8 +360,8 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(Customer.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Customer.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -354,8 +369,8 @@ public struct Customer: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(Customer.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: Customer.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -473,17 +488,17 @@ public struct CustomerAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
-            if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
         }
         for (index, var child) in entity.customerOrderList.enumerated() {
@@ -512,17 +527,17 @@ public struct CustomerAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
-            if !entity.isLoaded("platform") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("platform"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.PLATFORM_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.PLATFORM_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
+            if !entity.isLoaded(Customer.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(Customer.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "Customer")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)

@@ -3,6 +3,78 @@ import Foundation
 @_spi(Generated) import TeaQLCore
 
 public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
+    enum __TeaqlFields {
+        static let ID_PROPERTY_member = "id"
+        static let ID_PROPERTY_model = "id"
+        static let ID_PROPERTY_column = "id"
+        static let SCHOOL_TYPE_PROPERTY_member = "schoolType"
+        static let SCHOOL_TYPE_PROPERTY_model = "school_type"
+        static let SCHOOL_TYPE_PROPERTY_column = "school_type"
+        static let NAME_PROPERTY_member = "name"
+        static let NAME_PROPERTY_model = "name"
+        static let NAME_PROPERTY_column = "name"
+        static let PUBLIC_NOTE_PROPERTY_member = "publicNote"
+        static let PUBLIC_NOTE_PROPERTY_model = "public_note"
+        static let PUBLIC_NOTE_PROPERTY_column = "public_note"
+        static let CLASS_COUNT_PROPERTY_member = "classCount"
+        static let CLASS_COUNT_PROPERTY_model = "class_count"
+        static let CLASS_COUNT_PROPERTY_column = "class_count"
+        static let PLANNED_CLASS_COUNT_PROPERTY_member = "plannedClassCount"
+        static let PLANNED_CLASS_COUNT_PROPERTY_model = "planned_class_count"
+        static let PLANNED_CLASS_COUNT_PROPERTY_column = "planned_class_count"
+        static let REGISTRY_NUMBER_PROPERTY_member = "registryNumber"
+        static let REGISTRY_NUMBER_PROPERTY_model = "registry_number"
+        static let REGISTRY_NUMBER_PROPERTY_column = "registry_number"
+        static let FORMER_REGISTRY_NUMBER_PROPERTY_member = "formerRegistryNumber"
+        static let FORMER_REGISTRY_NUMBER_PROPERTY_model = "former_registry_number"
+        static let FORMER_REGISTRY_NUMBER_PROPERTY_column = "former_registry_number"
+        static let ANNUAL_BUDGET_PROPERTY_member = "annualBudget"
+        static let ANNUAL_BUDGET_PROPERTY_model = "annual_budget"
+        static let ANNUAL_BUDGET_PROPERTY_column = "annual_budget"
+        static let PROPOSED_BUDGET_PROPERTY_member = "proposedBudget"
+        static let PROPOSED_BUDGET_PROPERTY_model = "proposed_budget"
+        static let PROPOSED_BUDGET_PROPERTY_column = "proposed_budget"
+        static let OCCUPANCY_RATIO_PROPERTY_member = "occupancyRatio"
+        static let OCCUPANCY_RATIO_PROPERTY_model = "occupancy_ratio"
+        static let OCCUPANCY_RATIO_PROPERTY_column = "occupancy_ratio"
+        static let FORECAST_OCCUPANCY_RATIO_PROPERTY_member = "forecastOccupancyRatio"
+        static let FORECAST_OCCUPANCY_RATIO_PROPERTY_model = "forecast_occupancy_ratio"
+        static let FORECAST_OCCUPANCY_RATIO_PROPERTY_column = "forecast_occupancy_ratio"
+        static let INSPECTION_SCORE_PROPERTY_member = "inspectionScore"
+        static let INSPECTION_SCORE_PROPERTY_model = "inspection_score"
+        static let INSPECTION_SCORE_PROPERTY_column = "inspection_score"
+        static let PREVIOUS_INSPECTION_SCORE_PROPERTY_member = "previousInspectionScore"
+        static let PREVIOUS_INSPECTION_SCORE_PROPERTY_model = "previous_inspection_score"
+        static let PREVIOUS_INSPECTION_SCORE_PROPERTY_column = "previous_inspection_score"
+        static let OPENED_ON_PROPERTY_member = "openedOn"
+        static let OPENED_ON_PROPERTY_model = "opened_on"
+        static let OPENED_ON_PROPERTY_column = "opened_on"
+        static let EXPECTED_REOPENING_PROPERTY_member = "expectedReopening"
+        static let EXPECTED_REOPENING_PROPERTY_model = "expected_reopening"
+        static let EXPECTED_REOPENING_PROPERTY_column = "expected_reopening"
+        static let SCHOOL_DAY_STARTS_PROPERTY_member = "schoolDayStarts"
+        static let SCHOOL_DAY_STARTS_PROPERTY_model = "school_day_starts"
+        static let SCHOOL_DAY_STARTS_PROPERTY_column = "school_day_starts"
+        static let EXTENDED_DAY_ENDS_PROPERTY_member = "extendedDayEnds"
+        static let EXTENDED_DAY_ENDS_PROPERTY_model = "extended_day_ends"
+        static let EXTENDED_DAY_ENDS_PROPERTY_column = "extended_day_ends"
+        static let CENSUS_AT_PROPERTY_member = "censusAt"
+        static let CENSUS_AT_PROPERTY_model = "census_at"
+        static let CENSUS_AT_PROPERTY_column = "census_at"
+        static let NEXT_REVIEW_AT_PROPERTY_member = "nextReviewAt"
+        static let NEXT_REVIEW_AT_PROPERTY_model = "next_review_at"
+        static let NEXT_REVIEW_AT_PROPERTY_column = "next_review_at"
+        static let ACTIVE_PROPERTY_member = "active"
+        static let ACTIVE_PROPERTY_model = "active"
+        static let ACTIVE_PROPERTY_column = "active"
+        static let REVIEWED_PROPERTY_member = "reviewed"
+        static let REVIEWED_PROPERTY_model = "reviewed"
+        static let REVIEWED_PROPERTY_column = "reviewed"
+        static let VERSION_PROPERTY_member = "version"
+        static let VERSION_PROPERTY_model = "version"
+        static let VERSION_PROPERTY_column = "version"
+    }
+
     public private(set) var dynamicProperties = QueryProjectionSnapshot()
     public var id: Int64 = 0
     public var schoolType: Int64? = nil
@@ -104,7 +176,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         _loadedFields.removeAll()
         if container.contains(.id) {
             self.id = try container.decode(Int64.self, forKey: .id)
-            _loadedFields.insert("id")
+            _loadedFields.insert(School.__TeaqlFields.ID_PROPERTY_member)
         }
         if container.contains(.schoolType) {
             if (try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .schoolType)) != nil {
@@ -118,96 +190,96 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
             } else {
                 self.schoolType = try container.decode(Int64?.self, forKey: .schoolType)
             }
-            _loadedFields.insert("schoolType")
+            _loadedFields.insert(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member)
         }
         if container.contains(.name) {
             self.name = try container.decode(String?.self, forKey: .name)
-            _loadedFields.insert("name")
+            _loadedFields.insert(School.__TeaqlFields.NAME_PROPERTY_member)
         }
         if container.contains(.publicNote) {
             self.publicNote = try container.decode(String?.self, forKey: .publicNote)
-            _loadedFields.insert("publicNote")
+            _loadedFields.insert(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member)
         }
         if container.contains(.classCount) {
             self.classCount = try container.decode(Int64?.self, forKey: .classCount)
-            if let error = ModeledInteger32.error(classCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: "class_count") { throw error }
-            _loadedFields.insert("classCount")
+            if let error = ModeledInteger32.error(classCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_model) { throw error }
+            _loadedFields.insert(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member)
         }
         if container.contains(.plannedClassCount) {
             self.plannedClassCount = try container.decode(Int64?.self, forKey: .plannedClassCount)
-            if let error = ModeledInteger32.error(plannedClassCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: "planned_class_count") { throw error }
-            _loadedFields.insert("plannedClassCount")
+            if let error = ModeledInteger32.error(plannedClassCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model) { throw error }
+            _loadedFields.insert(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member)
         }
         if container.contains(.registryNumber) {
             self.registryNumber = try container.decode(Int64?.self, forKey: .registryNumber)
-            _loadedFields.insert("registryNumber")
+            _loadedFields.insert(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member)
         }
         if container.contains(.formerRegistryNumber) {
             self.formerRegistryNumber = try container.decode(Int64?.self, forKey: .formerRegistryNumber)
-            _loadedFields.insert("formerRegistryNumber")
+            _loadedFields.insert(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member)
         }
         if container.contains(.annualBudget) {
             self.annualBudget = try container.decode(Decimal?.self, forKey: .annualBudget)
-            _loadedFields.insert("annualBudget")
+            _loadedFields.insert(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member)
         }
         if container.contains(.proposedBudget) {
             self.proposedBudget = try container.decode(Decimal?.self, forKey: .proposedBudget)
-            _loadedFields.insert("proposedBudget")
+            _loadedFields.insert(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member)
         }
         if container.contains(.occupancyRatio) {
             self.occupancyRatio = try container.decode(Double?.self, forKey: .occupancyRatio)
-            _loadedFields.insert("occupancyRatio")
+            _loadedFields.insert(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member)
         }
         if container.contains(.forecastOccupancyRatio) {
             self.forecastOccupancyRatio = try container.decode(Double?.self, forKey: .forecastOccupancyRatio)
-            _loadedFields.insert("forecastOccupancyRatio")
+            _loadedFields.insert(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member)
         }
         if container.contains(.inspectionScore) {
             self.inspectionScore = try container.decode(Double?.self, forKey: .inspectionScore)
-            _loadedFields.insert("inspectionScore")
+            _loadedFields.insert(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member)
         }
         if container.contains(.previousInspectionScore) {
             self.previousInspectionScore = try container.decode(Double?.self, forKey: .previousInspectionScore)
-            _loadedFields.insert("previousInspectionScore")
+            _loadedFields.insert(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member)
         }
         if container.contains(.openedOn) {
             self.openedOn = try container.decode(Date?.self, forKey: .openedOn)
-            _loadedFields.insert("openedOn")
+            _loadedFields.insert(School.__TeaqlFields.OPENED_ON_PROPERTY_member)
         }
         if container.contains(.expectedReopening) {
             self.expectedReopening = try container.decode(Date?.self, forKey: .expectedReopening)
-            _loadedFields.insert("expectedReopening")
+            _loadedFields.insert(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member)
         }
         if container.contains(.schoolDayStarts) {
             self.schoolDayStarts = try container.decode(String?.self, forKey: .schoolDayStarts)
-            _loadedFields.insert("schoolDayStarts")
+            _loadedFields.insert(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member)
         }
         if container.contains(.extendedDayEnds) {
             self.extendedDayEnds = try container.decode(String?.self, forKey: .extendedDayEnds)
-            _loadedFields.insert("extendedDayEnds")
+            _loadedFields.insert(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member)
         }
         if container.contains(.censusAt) {
             self.censusAt = try container.decode(Date?.self, forKey: .censusAt)
-            _loadedFields.insert("censusAt")
+            _loadedFields.insert(School.__TeaqlFields.CENSUS_AT_PROPERTY_member)
         }
         if container.contains(.nextReviewAt) {
             self.nextReviewAt = try container.decode(Date?.self, forKey: .nextReviewAt)
-            _loadedFields.insert("nextReviewAt")
+            _loadedFields.insert(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member)
         }
         if container.contains(.active) {
             self.active = try container.decode(Bool?.self, forKey: .active)
-            _loadedFields.insert("active")
+            _loadedFields.insert(School.__TeaqlFields.ACTIVE_PROPERTY_member)
         }
         if container.contains(.reviewed) {
             self.reviewed = try container.decode(Bool?.self, forKey: .reviewed)
-            _loadedFields.insert("reviewed")
+            _loadedFields.insert(School.__TeaqlFields.REVIEWED_PROPERTY_member)
         }
         if container.contains(.version) {
             self.version = try container.decode(Int64.self, forKey: .version)
-            _loadedFields.insert("version")
+            _loadedFields.insert(School.__TeaqlFields.VERSION_PROPERTY_member)
         }
         let dynamicContainer = try decoder.container(keyedBy: TeaqlDynamicCodingKey.self)
-        let modeled = Set(["id", "schoolType", "name", "publicNote", "classCount", "plannedClassCount", "registryNumber", "formerRegistryNumber", "annualBudget", "proposedBudget", "occupancyRatio", "forecastOccupancyRatio", "inspectionScore", "previousInspectionScore", "openedOn", "expectedReopening", "schoolDayStarts", "extendedDayEnds", "censusAt", "nextReviewAt", "active", "reviewed", "version"])
+        let modeled = Set([School.__TeaqlFields.ID_PROPERTY_member, School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, School.__TeaqlFields.NAME_PROPERTY_member, School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, School.__TeaqlFields.OPENED_ON_PROPERTY_member, School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, School.__TeaqlFields.CENSUS_AT_PROPERTY_member, School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, School.__TeaqlFields.ACTIVE_PROPERTY_member, School.__TeaqlFields.REVIEWED_PROPERTY_member, School.__TeaqlFields.VERSION_PROPERTY_member])
             .union([])
         var aliases: TeaQLRecord = [:]
         for key in dynamicContainer.allKeys where !modeled.contains(key.stringValue) {
@@ -222,10 +294,10 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        if _loadedFields.contains("id") {
+        if _loadedFields.contains(School.__TeaqlFields.ID_PROPERTY_member) {
             try container.encode(id, forKey: .id)
         }
-        if _loadedFields.contains("schoolType") {
+        if _loadedFields.contains(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) {
             if isLoaded("schoolTypeEntity"), let related = schoolTypeEntity,
                 related.isLoaded("id"), related.id == schoolType {
                 try container.encode(related, forKey: .schoolType)
@@ -233,69 +305,69 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
                 try container.encode(schoolType, forKey: .schoolType)
             }
         }
-        if _loadedFields.contains("name") {
+        if _loadedFields.contains(School.__TeaqlFields.NAME_PROPERTY_member) {
             try container.encode(name, forKey: .name)
         }
-        if _loadedFields.contains("publicNote") {
+        if _loadedFields.contains(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) {
             try container.encode(publicNote, forKey: .publicNote)
         }
-        if _loadedFields.contains("classCount") {
-            if let error = ModeledInteger32.error(classCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: "class_count") { throw error }
+        if _loadedFields.contains(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) {
+            if let error = ModeledInteger32.error(classCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_model) { throw error }
             try container.encode(classCount, forKey: .classCount)
         }
-        if _loadedFields.contains("plannedClassCount") {
-            if let error = ModeledInteger32.error(plannedClassCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: "planned_class_count") { throw error }
+        if _loadedFields.contains(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) {
+            if let error = ModeledInteger32.error(plannedClassCount.map { .int($0) } ?? .null, entity: Self.descriptor, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model) { throw error }
             try container.encode(plannedClassCount, forKey: .plannedClassCount)
         }
-        if _loadedFields.contains("registryNumber") {
+        if _loadedFields.contains(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) {
             try container.encode(registryNumber, forKey: .registryNumber)
         }
-        if _loadedFields.contains("formerRegistryNumber") {
+        if _loadedFields.contains(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) {
             try container.encode(formerRegistryNumber, forKey: .formerRegistryNumber)
         }
-        if _loadedFields.contains("annualBudget") {
+        if _loadedFields.contains(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) {
             try container.encode(annualBudget, forKey: .annualBudget)
         }
-        if _loadedFields.contains("proposedBudget") {
+        if _loadedFields.contains(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) {
             try container.encode(proposedBudget, forKey: .proposedBudget)
         }
-        if _loadedFields.contains("occupancyRatio") {
+        if _loadedFields.contains(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) {
             try container.encode(occupancyRatio, forKey: .occupancyRatio)
         }
-        if _loadedFields.contains("forecastOccupancyRatio") {
+        if _loadedFields.contains(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) {
             try container.encode(forecastOccupancyRatio, forKey: .forecastOccupancyRatio)
         }
-        if _loadedFields.contains("inspectionScore") {
+        if _loadedFields.contains(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) {
             try container.encode(inspectionScore, forKey: .inspectionScore)
         }
-        if _loadedFields.contains("previousInspectionScore") {
+        if _loadedFields.contains(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) {
             try container.encode(previousInspectionScore, forKey: .previousInspectionScore)
         }
-        if _loadedFields.contains("openedOn") {
+        if _loadedFields.contains(School.__TeaqlFields.OPENED_ON_PROPERTY_member) {
             try container.encode(openedOn, forKey: .openedOn)
         }
-        if _loadedFields.contains("expectedReopening") {
+        if _loadedFields.contains(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) {
             try container.encode(expectedReopening, forKey: .expectedReopening)
         }
-        if _loadedFields.contains("schoolDayStarts") {
+        if _loadedFields.contains(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) {
             try container.encode(schoolDayStarts, forKey: .schoolDayStarts)
         }
-        if _loadedFields.contains("extendedDayEnds") {
+        if _loadedFields.contains(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) {
             try container.encode(extendedDayEnds, forKey: .extendedDayEnds)
         }
-        if _loadedFields.contains("censusAt") {
+        if _loadedFields.contains(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) {
             try container.encode(censusAt, forKey: .censusAt)
         }
-        if _loadedFields.contains("nextReviewAt") {
+        if _loadedFields.contains(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) {
             try container.encode(nextReviewAt, forKey: .nextReviewAt)
         }
-        if _loadedFields.contains("active") {
+        if _loadedFields.contains(School.__TeaqlFields.ACTIVE_PROPERTY_member) {
             try container.encode(active, forKey: .active)
         }
-        if _loadedFields.contains("reviewed") {
+        if _loadedFields.contains(School.__TeaqlFields.REVIEWED_PROPERTY_member) {
             try container.encode(reviewed, forKey: .reviewed)
         }
-        if _loadedFields.contains("version") {
+        if _loadedFields.contains(School.__TeaqlFields.VERSION_PROPERTY_member) {
             try container.encode(version, forKey: .version)
         }
         try dynamicProperties.encode(to: encoder)
@@ -311,29 +383,29 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         name: "School",
         table: "school_data",
         properties: [
-            PropertyDescriptor(name: "id", modelName: "id", column: "id", type: .int, nullable: false, isID: true, isVersion: false),
-            PropertyDescriptor(name: "schoolType", modelName: "school_type", column: "school_type", type: .int, nullable: true, isID: false, isVersion: false, isRelation: true, referencedEntity: "SchoolType"),
-            PropertyDescriptor(name: "name", modelName: "name", column: "name", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "publicNote", modelName: "public_note", column: "public_note", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "classCount", modelName: "class_count", column: "class_count", type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
-            PropertyDescriptor(name: "plannedClassCount", modelName: "planned_class_count", column: "planned_class_count", type: .int, nullable: true, isID: false, isVersion: false, isInt32: true),
-            PropertyDescriptor(name: "registryNumber", modelName: "registry_number", column: "registry_number", type: .int, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "formerRegistryNumber", modelName: "former_registry_number", column: "former_registry_number", type: .int, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "annualBudget", modelName: "annual_budget", column: "annual_budget", type: .decimal, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "proposedBudget", modelName: "proposed_budget", column: "proposed_budget", type: .decimal, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "occupancyRatio", modelName: "occupancy_ratio", column: "occupancy_ratio", type: .double, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "forecastOccupancyRatio", modelName: "forecast_occupancy_ratio", column: "forecast_occupancy_ratio", type: .double, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "inspectionScore", modelName: "inspection_score", column: "inspection_score", type: .double, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "previousInspectionScore", modelName: "previous_inspection_score", column: "previous_inspection_score", type: .double, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "openedOn", modelName: "opened_on", column: "opened_on", type: .date, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "expectedReopening", modelName: "expected_reopening", column: "expected_reopening", type: .date, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "schoolDayStarts", modelName: "school_day_starts", column: "school_day_starts", type: .string, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "extendedDayEnds", modelName: "extended_day_ends", column: "extended_day_ends", type: .string, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "censusAt", modelName: "census_at", column: "census_at", type: .timestamp, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "nextReviewAt", modelName: "next_review_at", column: "next_review_at", type: .timestamp, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "active", modelName: "active", column: "active", type: .bool, nullable: false, isID: false, isVersion: false),
-            PropertyDescriptor(name: "reviewed", modelName: "reviewed", column: "reviewed", type: .bool, nullable: true, isID: false, isVersion: false),
-            PropertyDescriptor(name: "version", modelName: "version", column: "version", type: .int, nullable: false, isID: false, isVersion: true)
+            PropertyDescriptor(name: School.__TeaqlFields.ID_PROPERTY_member, modelName: School.__TeaqlFields.ID_PROPERTY_model, column: School.__TeaqlFields.ID_PROPERTY_column, type: .int, nullable: false, isID: true, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, modelName: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_model, column: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_column, type: .int, nullable: true, isID: false, isVersion: false, isRelation: true, referencedEntity: "SchoolType"),
+            PropertyDescriptor(name: School.__TeaqlFields.NAME_PROPERTY_member, modelName: School.__TeaqlFields.NAME_PROPERTY_model, column: School.__TeaqlFields.NAME_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, modelName: School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_model, column: School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_column, type: .string, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, modelName: School.__TeaqlFields.CLASS_COUNT_PROPERTY_model, column: School.__TeaqlFields.CLASS_COUNT_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false, isInt32: true),
+            PropertyDescriptor(name: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, modelName: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model, column: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_column, type: .int, nullable: true, isID: false, isVersion: false, isInt32: true),
+            PropertyDescriptor(name: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, modelName: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_model, column: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, modelName: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_model, column: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_column, type: .int, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, modelName: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_model, column: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_column, type: .decimal, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, modelName: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_model, column: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_column, type: .decimal, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, modelName: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_model, column: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_column, type: .double, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, modelName: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_model, column: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_column, type: .double, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, modelName: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_model, column: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_column, type: .double, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, modelName: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_model, column: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_column, type: .double, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.OPENED_ON_PROPERTY_member, modelName: School.__TeaqlFields.OPENED_ON_PROPERTY_model, column: School.__TeaqlFields.OPENED_ON_PROPERTY_column, type: .date, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, modelName: School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_model, column: School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_column, type: .date, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, modelName: School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_model, column: School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_column, type: .string, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, modelName: School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_model, column: School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_column, type: .string, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.CENSUS_AT_PROPERTY_member, modelName: School.__TeaqlFields.CENSUS_AT_PROPERTY_model, column: School.__TeaqlFields.CENSUS_AT_PROPERTY_column, type: .timestamp, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, modelName: School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_model, column: School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_column, type: .timestamp, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.ACTIVE_PROPERTY_member, modelName: School.__TeaqlFields.ACTIVE_PROPERTY_model, column: School.__TeaqlFields.ACTIVE_PROPERTY_column, type: .bool, nullable: false, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.REVIEWED_PROPERTY_member, modelName: School.__TeaqlFields.REVIEWED_PROPERTY_model, column: School.__TeaqlFields.REVIEWED_PROPERTY_column, type: .bool, nullable: true, isID: false, isVersion: false),
+            PropertyDescriptor(name: School.__TeaqlFields.VERSION_PROPERTY_member, modelName: School.__TeaqlFields.VERSION_PROPERTY_model, column: School.__TeaqlFields.VERSION_PROPERTY_column, type: .int, nullable: false, isID: false, isVersion: true)
         ],
         auditMaskFields: []
     )
@@ -348,52 +420,52 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         let record = try ModeledInteger32.readRecord(record, entity: Self.descriptor)
         var entity = Self(teaqlHydrationRoot: root)
         entity._loadedFields.removeAll()
-        entity.id = record["id"]?.int64Value ?? 0
-        if record.keys.contains("id") { entity._loadedFields.insert("id") }
-        entity.schoolType = record["schoolType"]?.int64Value
-        if record.keys.contains("schoolType") { entity._loadedFields.insert("schoolType") }
-        entity.name = record["name"]?.stringValue
-        if record.keys.contains("name") { entity._loadedFields.insert("name") }
-        entity.publicNote = record["publicNote"]?.stringValue
-        if record.keys.contains("publicNote") { entity._loadedFields.insert("publicNote") }
-        entity.classCount = record["classCount"]?.int64Value
-        if record.keys.contains("classCount") { entity._loadedFields.insert("classCount") }
-        entity.plannedClassCount = record["plannedClassCount"]?.int64Value
-        if record.keys.contains("plannedClassCount") { entity._loadedFields.insert("plannedClassCount") }
-        entity.registryNumber = record["registryNumber"]?.int64Value
-        if record.keys.contains("registryNumber") { entity._loadedFields.insert("registryNumber") }
-        entity.formerRegistryNumber = record["formerRegistryNumber"]?.int64Value
-        if record.keys.contains("formerRegistryNumber") { entity._loadedFields.insert("formerRegistryNumber") }
-        entity.annualBudget = record["annualBudget"]?.decimalValue
-        if record.keys.contains("annualBudget") { entity._loadedFields.insert("annualBudget") }
-        entity.proposedBudget = record["proposedBudget"]?.decimalValue
-        if record.keys.contains("proposedBudget") { entity._loadedFields.insert("proposedBudget") }
-        entity.occupancyRatio = record["occupancyRatio"]?.doubleValue
-        if record.keys.contains("occupancyRatio") { entity._loadedFields.insert("occupancyRatio") }
-        entity.forecastOccupancyRatio = record["forecastOccupancyRatio"]?.doubleValue
-        if record.keys.contains("forecastOccupancyRatio") { entity._loadedFields.insert("forecastOccupancyRatio") }
-        entity.inspectionScore = record["inspectionScore"]?.doubleValue
-        if record.keys.contains("inspectionScore") { entity._loadedFields.insert("inspectionScore") }
-        entity.previousInspectionScore = record["previousInspectionScore"]?.doubleValue
-        if record.keys.contains("previousInspectionScore") { entity._loadedFields.insert("previousInspectionScore") }
-        entity.openedOn = record["openedOn"]?.dateValue
-        if record.keys.contains("openedOn") { entity._loadedFields.insert("openedOn") }
-        entity.expectedReopening = record["expectedReopening"]?.dateValue
-        if record.keys.contains("expectedReopening") { entity._loadedFields.insert("expectedReopening") }
-        entity.schoolDayStarts = record["schoolDayStarts"]?.stringValue
-        if record.keys.contains("schoolDayStarts") { entity._loadedFields.insert("schoolDayStarts") }
-        entity.extendedDayEnds = record["extendedDayEnds"]?.stringValue
-        if record.keys.contains("extendedDayEnds") { entity._loadedFields.insert("extendedDayEnds") }
-        entity.censusAt = record["censusAt"]?.dateValue
-        if record.keys.contains("censusAt") { entity._loadedFields.insert("censusAt") }
-        entity.nextReviewAt = record["nextReviewAt"]?.dateValue
-        if record.keys.contains("nextReviewAt") { entity._loadedFields.insert("nextReviewAt") }
-        entity.active = record["active"]?.boolValue
-        if record.keys.contains("active") { entity._loadedFields.insert("active") }
-        entity.reviewed = record["reviewed"]?.boolValue
-        if record.keys.contains("reviewed") { entity._loadedFields.insert("reviewed") }
-        entity.version = record["version"]?.int64Value ?? 0
-        if record.keys.contains("version") { entity._loadedFields.insert("version") }
+        entity.id = record[School.__TeaqlFields.ID_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(School.__TeaqlFields.ID_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.ID_PROPERTY_member) }
+        entity.schoolType = record[School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member]?.int64Value
+        if record.keys.contains(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) }
+        entity.name = record[School.__TeaqlFields.NAME_PROPERTY_member]?.stringValue
+        if record.keys.contains(School.__TeaqlFields.NAME_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.NAME_PROPERTY_member) }
+        entity.publicNote = record[School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member]?.stringValue
+        if record.keys.contains(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) }
+        entity.classCount = record[School.__TeaqlFields.CLASS_COUNT_PROPERTY_member]?.int64Value
+        if record.keys.contains(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) }
+        entity.plannedClassCount = record[School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member]?.int64Value
+        if record.keys.contains(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) }
+        entity.registryNumber = record[School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member]?.int64Value
+        if record.keys.contains(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) }
+        entity.formerRegistryNumber = record[School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member]?.int64Value
+        if record.keys.contains(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) }
+        entity.annualBudget = record[School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member]?.decimalValue
+        if record.keys.contains(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) }
+        entity.proposedBudget = record[School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member]?.decimalValue
+        if record.keys.contains(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) }
+        entity.occupancyRatio = record[School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member]?.doubleValue
+        if record.keys.contains(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) }
+        entity.forecastOccupancyRatio = record[School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member]?.doubleValue
+        if record.keys.contains(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) }
+        entity.inspectionScore = record[School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member]?.doubleValue
+        if record.keys.contains(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) }
+        entity.previousInspectionScore = record[School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member]?.doubleValue
+        if record.keys.contains(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) }
+        entity.openedOn = record[School.__TeaqlFields.OPENED_ON_PROPERTY_member]?.dateValue
+        if record.keys.contains(School.__TeaqlFields.OPENED_ON_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.OPENED_ON_PROPERTY_member) }
+        entity.expectedReopening = record[School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member]?.dateValue
+        if record.keys.contains(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) }
+        entity.schoolDayStarts = record[School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member]?.stringValue
+        if record.keys.contains(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) }
+        entity.extendedDayEnds = record[School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member]?.stringValue
+        if record.keys.contains(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) }
+        entity.censusAt = record[School.__TeaqlFields.CENSUS_AT_PROPERTY_member]?.dateValue
+        if record.keys.contains(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) }
+        entity.nextReviewAt = record[School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member]?.dateValue
+        if record.keys.contains(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) }
+        entity.active = record[School.__TeaqlFields.ACTIVE_PROPERTY_member]?.boolValue
+        if record.keys.contains(School.__TeaqlFields.ACTIVE_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.ACTIVE_PROPERTY_member) }
+        entity.reviewed = record[School.__TeaqlFields.REVIEWED_PROPERTY_member]?.boolValue
+        if record.keys.contains(School.__TeaqlFields.REVIEWED_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.REVIEWED_PROPERTY_member) }
+        entity.version = record[School.__TeaqlFields.VERSION_PROPERTY_member]?.int64Value ?? 0
+        if record.keys.contains(School.__TeaqlFields.VERSION_PROPERTY_member) { entity._loadedFields.insert(School.__TeaqlFields.VERSION_PROPERTY_member) }
         entity.teaqlLedgerID = entity.id
         try root.setOriginalVersion(entity.teaqlEntityKey, version: entity.version)
         entity.teaqlLoadedSnapshot = snapshots.capture(key: entity.teaqlEntityKey,
@@ -429,102 +501,102 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
 
     public func toRecord() -> TeaQLRecord {
         [
-            "id": .int(id),
-            "schoolType": schoolType.map { .int($0) } ?? .null,
-            "name": name.map { .string($0) } ?? .null,
-            "publicNote": publicNote.map { .string($0) } ?? .null,
-            "classCount": classCount.map { .int($0) } ?? .null,
-            "plannedClassCount": plannedClassCount.map { .int($0) } ?? .null,
-            "registryNumber": registryNumber.map { .int($0) } ?? .null,
-            "formerRegistryNumber": formerRegistryNumber.map { .int($0) } ?? .null,
-            "annualBudget": annualBudget.map { .decimal($0) } ?? .null,
-            "proposedBudget": proposedBudget.map { .decimal($0) } ?? .null,
-            "occupancyRatio": occupancyRatio.map { .double($0) } ?? .null,
-            "forecastOccupancyRatio": forecastOccupancyRatio.map { .double($0) } ?? .null,
-            "inspectionScore": inspectionScore.map { .double($0) } ?? .null,
-            "previousInspectionScore": previousInspectionScore.map { .double($0) } ?? .null,
-            "openedOn": openedOn.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
-            "expectedReopening": expectedReopening.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
-            "schoolDayStarts": schoolDayStarts.map { .string($0) } ?? .null,
-            "extendedDayEnds": extendedDayEnds.map { .string($0) } ?? .null,
-            "censusAt": censusAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "nextReviewAt": nextReviewAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
-            "active": active.map { .bool($0) } ?? .null,
-            "reviewed": reviewed.map { .bool($0) } ?? .null,
-            "version": .int(version)
+            School.__TeaqlFields.ID_PROPERTY_member: .int(id),
+            School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member: schoolType.map { .int($0) } ?? .null,
+            School.__TeaqlFields.NAME_PROPERTY_member: name.map { .string($0) } ?? .null,
+            School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member: publicNote.map { .string($0) } ?? .null,
+            School.__TeaqlFields.CLASS_COUNT_PROPERTY_member: classCount.map { .int($0) } ?? .null,
+            School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member: plannedClassCount.map { .int($0) } ?? .null,
+            School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member: registryNumber.map { .int($0) } ?? .null,
+            School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member: formerRegistryNumber.map { .int($0) } ?? .null,
+            School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member: annualBudget.map { .decimal($0) } ?? .null,
+            School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member: proposedBudget.map { .decimal($0) } ?? .null,
+            School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member: occupancyRatio.map { .double($0) } ?? .null,
+            School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member: forecastOccupancyRatio.map { .double($0) } ?? .null,
+            School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member: inspectionScore.map { .double($0) } ?? .null,
+            School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member: previousInspectionScore.map { .double($0) } ?? .null,
+            School.__TeaqlFields.OPENED_ON_PROPERTY_member: openedOn.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
+            School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member: expectedReopening.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null,
+            School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member: schoolDayStarts.map { .string($0) } ?? .null,
+            School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member: extendedDayEnds.map { .string($0) } ?? .null,
+            School.__TeaqlFields.CENSUS_AT_PROPERTY_member: censusAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member: nextReviewAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null,
+            School.__TeaqlFields.ACTIVE_PROPERTY_member: active.map { .bool($0) } ?? .null,
+            School.__TeaqlFields.REVIEWED_PROPERTY_member: reviewed.map { .bool($0) } ?? .null,
+            School.__TeaqlFields.VERSION_PROPERTY_member: .int(version)
         ]
     }
 
     public func toMutationRecord() -> TeaQLRecord {
         var record: TeaQLRecord = [:]
-        if _loadedFields.contains("id") {
-            record["id"] = .int(id)
+        if _loadedFields.contains(School.__TeaqlFields.ID_PROPERTY_member) {
+            record[School.__TeaqlFields.ID_PROPERTY_model] = .int(id)
         }
-        if _loadedFields.contains("schoolType") {
-            record["school_type"] = schoolType.map { .int($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) {
+            record[School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_model] = schoolType.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("name") {
-            record["name"] = name.map { .string($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.NAME_PROPERTY_member) {
+            record[School.__TeaqlFields.NAME_PROPERTY_model] = name.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("publicNote") {
-            record["public_note"] = publicNote.map { .string($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) {
+            record[School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_model] = publicNote.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("classCount") {
-            record["class_count"] = classCount.map { .int($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) {
+            record[School.__TeaqlFields.CLASS_COUNT_PROPERTY_model] = classCount.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("plannedClassCount") {
-            record["planned_class_count"] = plannedClassCount.map { .int($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) {
+            record[School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model] = plannedClassCount.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("registryNumber") {
-            record["registry_number"] = registryNumber.map { .int($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) {
+            record[School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_model] = registryNumber.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("formerRegistryNumber") {
-            record["former_registry_number"] = formerRegistryNumber.map { .int($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) {
+            record[School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_model] = formerRegistryNumber.map { .int($0) } ?? .null
         }
-        if _loadedFields.contains("annualBudget") {
-            record["annual_budget"] = annualBudget.map { .decimal($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) {
+            record[School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_model] = annualBudget.map { .decimal($0) } ?? .null
         }
-        if _loadedFields.contains("proposedBudget") {
-            record["proposed_budget"] = proposedBudget.map { .decimal($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) {
+            record[School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_model] = proposedBudget.map { .decimal($0) } ?? .null
         }
-        if _loadedFields.contains("occupancyRatio") {
-            record["occupancy_ratio"] = occupancyRatio.map { .double($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) {
+            record[School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_model] = occupancyRatio.map { .double($0) } ?? .null
         }
-        if _loadedFields.contains("forecastOccupancyRatio") {
-            record["forecast_occupancy_ratio"] = forecastOccupancyRatio.map { .double($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) {
+            record[School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_model] = forecastOccupancyRatio.map { .double($0) } ?? .null
         }
-        if _loadedFields.contains("inspectionScore") {
-            record["inspection_score"] = inspectionScore.map { .double($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) {
+            record[School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_model] = inspectionScore.map { .double($0) } ?? .null
         }
-        if _loadedFields.contains("previousInspectionScore") {
-            record["previous_inspection_score"] = previousInspectionScore.map { .double($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) {
+            record[School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_model] = previousInspectionScore.map { .double($0) } ?? .null
         }
-        if _loadedFields.contains("openedOn") {
-            record["opened_on"] = openedOn.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.OPENED_ON_PROPERTY_member) {
+            record[School.__TeaqlFields.OPENED_ON_PROPERTY_model] = openedOn.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
         }
-        if _loadedFields.contains("expectedReopening") {
-            record["expected_reopening"] = expectedReopening.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) {
+            record[School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_model] = expectedReopening.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null
         }
-        if _loadedFields.contains("schoolDayStarts") {
-            record["school_day_starts"] = schoolDayStarts.map { .string($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) {
+            record[School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_model] = schoolDayStarts.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("extendedDayEnds") {
-            record["extended_day_ends"] = extendedDayEnds.map { .string($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) {
+            record[School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_model] = extendedDayEnds.map { .string($0) } ?? .null
         }
-        if _loadedFields.contains("censusAt") {
-            record["census_at"] = censusAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) {
+            record[School.__TeaqlFields.CENSUS_AT_PROPERTY_model] = censusAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("nextReviewAt") {
-            record["next_review_at"] = nextReviewAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) {
+            record[School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_model] = nextReviewAt.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null
         }
-        if _loadedFields.contains("active") {
-            record["active"] = active.map { .bool($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.ACTIVE_PROPERTY_member) {
+            record[School.__TeaqlFields.ACTIVE_PROPERTY_model] = active.map { .bool($0) } ?? .null
         }
-        if _loadedFields.contains("reviewed") {
-            record["reviewed"] = reviewed.map { .bool($0) } ?? .null
+        if _loadedFields.contains(School.__TeaqlFields.REVIEWED_PROPERTY_member) {
+            record[School.__TeaqlFields.REVIEWED_PROPERTY_model] = reviewed.map { .bool($0) } ?? .null
         }
-        if _loadedFields.contains("version") {
-            record["version"] = .int(version)
+        if _loadedFields.contains(School.__TeaqlFields.VERSION_PROPERTY_member) {
+            record[School.__TeaqlFields.VERSION_PROPERTY_model] = .int(version)
         }
         return record
     }
@@ -538,9 +610,9 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         var saved = try Self.from(record: record,
             root: graph.root, snapshots: graph.snapshots)
         if !graph.contains(self) { saved.dynamicProperties = dynamicProperties }
-        if isLoaded("schoolTypeEntity"), isLoaded("schoolType"),
-            saved.isLoaded("schoolType"), saved.schoolType == schoolType,
-            graph.forwardMatches(record["schoolType"], related: _schoolTypeResult) {
+        if isLoaded("schoolTypeEntity"), isLoaded(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member),
+            saved.isLoaded(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member), saved.schoolType == schoolType,
+            graph.forwardMatches(record[School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member], related: _schoolTypeResult) {
             saved._schoolTypeResult = _schoolTypeResult.replacingData(
                 try _schoolTypeResult.data.map { try $0.teaqlRebuildSavedGraph(graph) })
             saved._loadedFields.insert("schoolTypeEntity")
@@ -554,7 +626,7 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
         var entity = Self(teaqlHydrationRoot: EntityRoot())
         entity.id = value
         entity.teaqlLedgerID = value
-        entity._loadedFields = Set(["id", "schoolType", "name", "publicNote", "classCount", "plannedClassCount", "registryNumber", "formerRegistryNumber", "annualBudget", "proposedBudget", "occupancyRatio", "forecastOccupancyRatio", "inspectionScore", "previousInspectionScore", "openedOn", "expectedReopening", "schoolDayStarts", "extendedDayEnds", "censusAt", "nextReviewAt", "active", "reviewed", "version"])
+        entity._loadedFields = Set([School.__TeaqlFields.ID_PROPERTY_member, School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member, School.__TeaqlFields.NAME_PROPERTY_member, School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member, School.__TeaqlFields.CLASS_COUNT_PROPERTY_member, School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member, School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member, School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member, School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member, School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member, School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member, School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member, School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member, School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member, School.__TeaqlFields.OPENED_ON_PROPERTY_member, School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member, School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member, School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member, School.__TeaqlFields.CENSUS_AT_PROPERTY_member, School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member, School.__TeaqlFields.ACTIVE_PROPERTY_member, School.__TeaqlFields.REVIEWED_PROPERTY_member, School.__TeaqlFields.VERSION_PROPERTY_member])
         entity.teaqlEntityRoot.markAsNew(entity.teaqlEntityKey)
         entity.teaqlEntityRoot.set(entity.teaqlEntityKey, field: "id", value: .int(value))
         return entity
@@ -581,8 +653,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateId(_ value: Int64) -> Self {
         self.id = value
-        self._loadedFields.insert("id")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "id", value: .int(value))
+        self._loadedFields.insert(School.__TeaqlFields.ID_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.ID_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -590,8 +662,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateSchoolType(_ value: Int64?) -> Self {
         self.schoolType = value
-        self._loadedFields.insert("schoolType")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_type", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -599,8 +671,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateName(_ value: String?) -> Self {
         self.name = value
-        self._loadedFields.insert("name")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "name", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.NAME_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.NAME_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -608,8 +680,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePublicNote(_ value: String?) -> Self {
         self.publicNote = value
-        self._loadedFields.insert("publicNote")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "public_note", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -617,8 +689,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateClassCount(_ value: Int64?) -> Self {
         self.classCount = value
-        self._loadedFields.insert("classCount")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "class_count", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.CLASS_COUNT_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -626,8 +698,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePlannedClassCount(_ value: Int64?) -> Self {
         self.plannedClassCount = value
-        self._loadedFields.insert("plannedClassCount")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "planned_class_count", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -635,8 +707,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateRegistryNumber(_ value: Int64?) -> Self {
         self.registryNumber = value
-        self._loadedFields.insert("registryNumber")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "registry_number", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -644,8 +716,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateFormerRegistryNumber(_ value: Int64?) -> Self {
         self.formerRegistryNumber = value
-        self._loadedFields.insert("formerRegistryNumber")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "former_registry_number", value: value.map { .int($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_model, value: value.map { .int($0) } ?? .null)
         return self
     }
 
@@ -653,8 +725,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateAnnualBudget(_ value: Decimal?) -> Self {
         self.annualBudget = value
-        self._loadedFields.insert("annualBudget")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "annual_budget", value: value.map { .decimal($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_model, value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -662,8 +734,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateProposedBudget(_ value: Decimal?) -> Self {
         self.proposedBudget = value
-        self._loadedFields.insert("proposedBudget")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "proposed_budget", value: value.map { .decimal($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_model, value: value.map { .decimal($0) } ?? .null)
         return self
     }
 
@@ -671,8 +743,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOccupancyRatio(_ value: Double?) -> Self {
         self.occupancyRatio = value
-        self._loadedFields.insert("occupancyRatio")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "occupancy_ratio", value: value.map { .double($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_model, value: value.map { .double($0) } ?? .null)
         return self
     }
 
@@ -680,8 +752,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateForecastOccupancyRatio(_ value: Double?) -> Self {
         self.forecastOccupancyRatio = value
-        self._loadedFields.insert("forecastOccupancyRatio")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "forecast_occupancy_ratio", value: value.map { .double($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_model, value: value.map { .double($0) } ?? .null)
         return self
     }
 
@@ -689,8 +761,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateInspectionScore(_ value: Double?) -> Self {
         self.inspectionScore = value
-        self._loadedFields.insert("inspectionScore")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "inspection_score", value: value.map { .double($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_model, value: value.map { .double($0) } ?? .null)
         return self
     }
 
@@ -698,8 +770,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updatePreviousInspectionScore(_ value: Double?) -> Self {
         self.previousInspectionScore = value
-        self._loadedFields.insert("previousInspectionScore")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "previous_inspection_score", value: value.map { .double($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_model, value: value.map { .double($0) } ?? .null)
         return self
     }
 
@@ -707,8 +779,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateOpenedOn(_ value: Date?) -> Self {
         self.openedOn = value
-        self._loadedFields.insert("openedOn")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "opened_on", value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.OPENED_ON_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.OPENED_ON_PROPERTY_model, value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
         return self
     }
 
@@ -716,8 +788,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateExpectedReopening(_ value: Date?) -> Self {
         self.expectedReopening = value
-        self._loadedFields.insert("expectedReopening")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "expected_reopening", value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_model, value: value.map { .calendarDate(String(ISO8601DateFormatter().string(from: $0).prefix(10))) } ?? .null)
         return self
     }
 
@@ -725,8 +797,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateSchoolDayStarts(_ value: String?) -> Self {
         self.schoolDayStarts = value
-        self._loadedFields.insert("schoolDayStarts")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "school_day_starts", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -734,8 +806,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateExtendedDayEnds(_ value: String?) -> Self {
         self.extendedDayEnds = value
-        self._loadedFields.insert("extendedDayEnds")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "extended_day_ends", value: value.map { .string($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_model, value: value.map { .string($0) } ?? .null)
         return self
     }
 
@@ -743,8 +815,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateCensusAt(_ value: Date?) -> Self {
         self.censusAt = value
-        self._loadedFields.insert("censusAt")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "census_at", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.CENSUS_AT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.CENSUS_AT_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -752,8 +824,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateNextReviewAt(_ value: Date?) -> Self {
         self.nextReviewAt = value
-        self._loadedFields.insert("nextReviewAt")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "next_review_at", value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_model, value: value.map { .timestamp(Int64($0.timeIntervalSince1970 * 1_000)) } ?? .null)
         return self
     }
 
@@ -761,8 +833,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateActive(_ value: Bool?) -> Self {
         self.active = value
-        self._loadedFields.insert("active")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "active", value: value.map { .bool($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.ACTIVE_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.ACTIVE_PROPERTY_model, value: value.map { .bool($0) } ?? .null)
         return self
     }
 
@@ -770,8 +842,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateReviewed(_ value: Bool?) -> Self {
         self.reviewed = value
-        self._loadedFields.insert("reviewed")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "reviewed", value: value.map { .bool($0) } ?? .null)
+        self._loadedFields.insert(School.__TeaqlFields.REVIEWED_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.REVIEWED_PROPERTY_model, value: value.map { .bool($0) } ?? .null)
         return self
     }
 
@@ -779,8 +851,8 @@ public struct School: TeaQLEntity, TeaQLMutationRootedEntity {
     @discardableResult
     public mutating func updateVersion(_ value: Int64) -> Self {
         self.version = value
-        self._loadedFields.insert("version")
-        self.teaqlEntityRoot.set(teaqlEntityKey, field: "version", value: .int(value))
+        self._loadedFields.insert(School.__TeaqlFields.VERSION_PROPERTY_member)
+        self.teaqlEntityRoot.set(teaqlEntityKey, field: School.__TeaqlFields.VERSION_PROPERTY_model, value: .int(value))
         return self
     }
 
@@ -865,74 +937,74 @@ public struct SchoolAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return false }
         var pending = try AuditedEntity(entity: entity, reason: reason).validateVersion()
         if pending && entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("schoolType") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("publicNote") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("public_note"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("classCount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("class_count"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.CLASS_COUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("plannedClassCount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("planned_class_count"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("registryNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("registry_number"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("formerRegistryNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("former_registry_number"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("annualBudget") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("annual_budget"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("proposedBudget") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("proposed_budget"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("occupancyRatio") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("occupancy_ratio"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("forecastOccupancyRatio") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("forecast_occupancy_ratio"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("inspectionScore") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("inspection_score"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("previousInspectionScore") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("previous_inspection_score"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("openedOn") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("opened_on"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.OPENED_ON_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.OPENED_ON_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("expectedReopening") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("expected_reopening"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("schoolDayStarts") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_day_starts"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("extendedDayEnds") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("extended_day_ends"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("censusAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("census_at"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.CENSUS_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("nextReviewAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("next_review_at"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("active") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.ACTIVE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.ACTIVE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("reviewed") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("reviewed"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.REVIEWED_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.REVIEWED_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
         }
         return pending
@@ -943,74 +1015,74 @@ public struct SchoolAudited: Sendable {
         if try entity.teaqlIsCancelledNew() { return }
         if entity.version != 0 && !entity.teaqlEntityRoot.isNew(entity.teaqlEntityKey)
             && entity.teaqlEntityRoot.hasPending(entity.teaqlEntityKey) {
-            if !entity.isLoaded("id") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("id"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.ID_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.ID_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("schoolType") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_type"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.SCHOOL_TYPE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("name") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("name"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.NAME_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.NAME_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("publicNote") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("public_note"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PUBLIC_NOTE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("classCount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("class_count"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.CLASS_COUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.CLASS_COUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("plannedClassCount") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("planned_class_count"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PLANNED_CLASS_COUNT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("registryNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("registry_number"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.REGISTRY_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("formerRegistryNumber") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("former_registry_number"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.FORMER_REGISTRY_NUMBER_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("annualBudget") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("annual_budget"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.ANNUAL_BUDGET_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("proposedBudget") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("proposed_budget"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PROPOSED_BUDGET_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("occupancyRatio") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("occupancy_ratio"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.OCCUPANCY_RATIO_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("forecastOccupancyRatio") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("forecast_occupancy_ratio"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.FORECAST_OCCUPANCY_RATIO_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("inspectionScore") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("inspection_score"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.INSPECTION_SCORE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("previousInspectionScore") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("previous_inspection_score"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.PREVIOUS_INSPECTION_SCORE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("openedOn") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("opened_on"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.OPENED_ON_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.OPENED_ON_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("expectedReopening") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("expected_reopening"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.EXPECTED_REOPENING_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("schoolDayStarts") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("school_day_starts"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.SCHOOL_DAY_STARTS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("extendedDayEnds") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("extended_day_ends"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.EXTENDED_DAY_ENDS_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("censusAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("census_at"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.CENSUS_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.CENSUS_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("nextReviewAt") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("next_review_at"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.NEXT_REVIEW_AT_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("active") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("active"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.ACTIVE_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.ACTIVE_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("reviewed") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("reviewed"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.REVIEWED_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.REVIEWED_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
-            if !entity.isLoaded("version") {
-                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property("version"), message: "Mutation requires a fully loaded entity", entityType: "School")])
+            if !entity.isLoaded(School.__TeaqlFields.VERSION_PROPERTY_member) {
+                throw CheckException([CheckResult(ruleID: "invalid_type", location: .property(School.__TeaqlFields.VERSION_PROPERTY_model), message: "Mutation requires a fully loaded entity", entityType: "School")])
             }
         }
         try AuditedEntity(entity: entity, reason: reason).preflight(context)
