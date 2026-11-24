@@ -198,7 +198,7 @@ completion, callbacks and post-commit audit delivery; rollback errors do not
 replace business errors, and committed delivery failures never cause rollback.
 See the [graph tests](Tests/TeaQLCoreTests/GraphTelemetryTests.swift) and
 [real SQLite/SDK tests](Tests/TeaQLStandardTelemetryTests/GraphSDKTests.swift).
-The [generated graph example](Examples/TraceChain/Sources/StandardGraphVerification/Main.swift)
+The [generated graph example](Examples/TraceChain/swift-app-console/Sources/StandardGraphVerification/Main.swift)
 also exercises six-entity creation, actual SQLite failure/rollback, mixed retry
 and marked deletion through Q/E and audited save. Its local gate replays the
 same database twice, preserving explicit/inherited comments and generated code.
@@ -217,7 +217,7 @@ exporting records share a 2,048-record quota per signal; timeout-pressure tests
 verify loss accounting and recovery. Closed telemetry does not prevent business
 Q/E or audit. Ten response scenarios and healthy startup/graph/Order are requalified;
 see [transport and shutdown](STANDARD_TELEMETRY.md#transport-and-shutdown).
-The [complete Order example](Examples/TraceChain/standard-order/Application/Main.swift)
+The [complete Order example](Examples/TraceChain/standard-order/swift-app-console/Sources/TeaQLConsole/main.swift)
 loads relations and facets through generated Q/E; explicit count is optional,
 with one trace through entity construction. Its local gate replays audited
 bootstrap twice without database cleanup. Public-release qualification is still

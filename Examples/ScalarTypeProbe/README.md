@@ -1,4 +1,16 @@
-# Generated scalar fixture: exact SQLite Decimal
+# Freight quote settlement
+
+The generated Swift console records three freight bids and revises the
+offshore rate. Generated Q and E verify the exact total, full-width shipment
+numbers and delivery date, wall clock and timestamp. A missing required
+amount is rejected, and a restart retains the accepted version.
+
+`freight-quote.xml` defines the model. The native `swift-app-console`
+includes the same generated domain sources as `swift-lib-core` and
+uses the local TeaQL runtime. Run the business scenario and original scalar
+checks with `bash Examples/ScalarTypeProbe/verify-freight-quotes.sh`.
+
+## Generated scalar fixture calibration
 
 `BooleanBoundaryVerification` additionally verifies generated Boolean Q/E,
 true/false/unknown, and COUNT aliases that resemble modeled fields. It runs twice

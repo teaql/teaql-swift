@@ -1,0 +1,69 @@
+{
+  "expected": {
+    "groupingChecksPerRun": 11,
+    "repeatWrites": 0,
+    "schoolTypes": 2,
+    "schools": 4
+  },
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/QueryGrouping",
+  "library": {
+    "generatedFilesManifestSHA256": "49908926a572daf7e5a0890d4a07b39f90d096139b13fa59ef1ad513b06deccc",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "8dbbc19db26d07f16d6354e1bb61146ccdf7d1d205bed97443b9f3c1e867c2c9"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build",
+      "jarSHA256": "029f602cf0e2de4ec0910495c340fbeb41f11772b6aca875569f498811158e7d",
+      "qualificationReceiptSHA256": "1012520de60d49cfc1e45c7e08fcf204dd2db36a163909e1e36752065a31047a",
+      "sourceCommit": "99d6bde2351d79b7d8b1b1c5cbc78c5dc777b6f2",
+      "tag": "unreleased-source-99d6bde2"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/school-directory-statistics-generation/receipt.json",
+    "receiptSHA256": "13a0cb709efc82f830c7f8243e401ffe7a72f7d85aef4156139413769683a88b"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-directory-statistics-native/runtime/query-grouping/business-receipt.json",
+    "businessReceiptSHA256": "e87cf59e405bde5e6c3007adec5718ebf4efc8c6400deefdedfb21949e4a448a",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-directory-statistics-native/receipt.json",
+    "nativeReceiptSHA256": "178074ead64b792646e2879937441b51406cfc695a3f060ec9e4fe374545f1bd",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "b9c926d7178975411f1b6de4160561922ec0fbed"
+  },
+  "scene": "District school counts and classroom totals by school type",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "bash",
+    "Examples/QueryGrouping/verify.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Package.resolved",
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/District.swift",
+      "Sources/GeneratedTeaQL/Models/School.swift",
+      "Sources/GeneratedTeaQL/Models/SchoolType.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/DistrictRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "6c6e79d01c8f2bb9f619f2db795c56024737a091d97e31a840f7bd2ff1560fc6",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

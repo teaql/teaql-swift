@@ -1,0 +1,65 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/ExpressionProfiles",
+  "library": {
+    "generatedFilesManifestSHA256": "0dadea85ba502701d7b3ef7fdb26691707bd81610a3554ad0d8ac7e140ce418e",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "80efe091edc3c7e43fa0b654cc1fecf65fda6664434b3a3ee8d8676027e70ede"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build",
+      "jarSHA256": "029f602cf0e2de4ec0910495c340fbeb41f11772b6aca875569f498811158e7d",
+      "qualificationReceiptSHA256": "1012520de60d49cfc1e45c7e08fcf204dd2db36a163909e1e36752065a31047a",
+      "sourceCommit": "99d6bde2351d79b7d8b1b1c5cbc78c5dc777b6f2",
+      "tag": "unreleased-source-99d6bde2"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/dispatch-document-profiles-generation/receipt.json",
+    "receiptSHA256": "11b1084da4040d1a68378b9ee879d98dd18d61b7eace2700c2e3dc207276c1b3"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-dispatch-profiles-native/runtime/expression-profiles/receipt.json",
+    "businessReceiptSHA256": "4bce6a0391f11ea2c9f366601c7aecfc3a33f3c84c813fd18a5b4e24ea99de7f",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-dispatch-profiles-native/receipt.json",
+    "nativeReceiptSHA256": "4fa893a9453994ce5c09b5ca7dfb0252d8e324337b06178d18edc26fc08056c4",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "a4c4051d1e40c930fa3ccced336c67243147bcff"
+  },
+  "relatedShowcases": [
+    "profiles/snake_case/showcase.json",
+    "profiles/PascalCase/showcase.json"
+  ],
+  "scene": "Read a dispatch order in camelCase",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "bash",
+    "Examples/ExpressionProfiles/verify-dispatch.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Sources/TeaQLConsole/main.swift",
+      "Package.swift",
+      "Package.resolved"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/DispatchOrder.swift",
+      "Sources/GeneratedTeaQL/Models/DistributionCenter.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/DispatchOrderRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/DistributionCenterRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "c06e60f45980df47c26e19882fa84a967f2f7d5921ed054c31837dcbae5d880f",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

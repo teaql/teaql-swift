@@ -1,5 +1,6 @@
 .build/
 .swiftpm/
 Package.resolved
+!/swift-app-console/Package.resolved
 *.db
 *.log

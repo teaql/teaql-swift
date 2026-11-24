@@ -1,0 +1,71 @@
+{
+  "expected": {
+    "constantIdentities": [
+      1001,
+      1002
+    ],
+    "originalBusinessAssertionsRetained": true,
+    "restartedContextsUseSameDatabase": true,
+    "rootIdentity": 1
+  },
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/SchoolManagement",
+  "library": {
+    "generatedFilesManifestSHA256": "ecbe4bbc057084e3f8264169e07c1558217caabfd27da502a199d995291f2e24",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "models/school-model.xml",
+    "sha256": "b5cd06ae44464fc29ed24de82654b47c80f546110496756aa15923cee1c511b4"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build; not a public release",
+      "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+      "qualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "tag": "unreleased-source-021b1ed8"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/school-generation/receipt.json",
+    "receiptSHA256": "86cdc634a758fdf746de3323e8cd5c4fd32a050e50c0b7b04c5e64b397a1165f"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-scopes/runtime/school-management/business-receipt.json",
+    "businessReceiptSHA256": "a3800098d4033220b249296963b4dc819f62c392aea666763ff82fcb3ea2c4f5",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-school-scopes/receipt.json",
+    "nativeReceiptSHA256": "31a9a34a8cf348d0c7569fdb28f2906fe68aca034640e0506b077785d76502e8",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "14d4b59f257eeb09a503edff9ed8e8292818d91a"
+  },
+  "scene": "School startup, constant reconciliation and queryable School data across Context restarts",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "bash",
+    "verify.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Sources/TeaQLConsole/main.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Platform.swift",
+      "Sources/GeneratedTeaQL/Models/School.swift",
+      "Sources/GeneratedTeaQL/Models/SchoolType.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "3060566169f25e329074294e4cd27132d37eeda8f6894fb8e218a64e92bf9f07",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

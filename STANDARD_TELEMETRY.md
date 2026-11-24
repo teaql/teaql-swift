@@ -153,7 +153,7 @@ checks startup hints and unchanged generated-library hashes:
 bash Examples/TraceChain/verify-standard-telemetry.sh
 ```
 
-The [complete Order example](Examples/TraceChain/standard-order/Application/Main.swift)
+The [complete Order example](Examples/TraceChain/standard-order/swift-app-console/Sources/TeaQLConsole/main.swift)
 also uses generated Q and E for forward detail, reverse previews, full child
 counts and facets. Counted and uncounted lists use the same terminal. The runtime
 owns one root through entity construction, applies root policy once and preserves
@@ -168,7 +168,7 @@ Both examples are included in `scripts/verify-examples.sh`. Conformance's
 delivery: two enabled runs produce eight roots and sixty physical SQL logs, with
 ordinary SQL logging off. Fifteen retained domain files match the current
 producer. Bootstrap and the application replay twice on one retained database.
-The [generated graph example](Examples/TraceChain/Sources/StandardGraphVerification/Main.swift)
+The [generated graph example](Examples/TraceChain/swift-app-console/Sources/StandardGraphVerification/Main.swift)
 adds six-entity creation, an actual SQLite-triggered failure, rollback with no
 committed audit, mixed retry and marked deletion. It uses Q/E and generated
 audited save, not handwritten domain SQL. Only the fault-injection trigger is

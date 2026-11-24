@@ -1,0 +1,39 @@
+{
+  "applicationManifestsPreserved": false,
+  "evaluatedScope": "swift-lib-core",
+  "evaluationErrors": 0,
+  "files": {
+    "Package.swift": "84bb9b1e26a8dc55296948194aa2cb696e7c983b697a7f1f32754e7c96a008bc",
+    "README.md": "cf187ddf57a3c9e3fb7ff5a9bea935956d83209c32c860808d1d831fbbf33585",
+    "Sources/GeneratedTeaQL/E.swift": "391141d8f347d2aef7d6534e726de494bdf3cdb0ffa900d40611eb4acf94ead2",
+    "Sources/GeneratedTeaQL/GeneratedSearchModels.swift": "5da726733fdbb196e19955119be281ef5cc38932d21062d47517f5eda3c583a7",
+    "Sources/GeneratedTeaQL/Models/Customer.swift": "7a1ff481fb7de6d51a44e2bd8b34f4954685dbbdca0a54b6679e13297b2df399",
+    "Sources/GeneratedTeaQL/Models/CustomerOrder.swift": "0e0439ed6461c93f525fc9f0f9078fe32d96765d82999aa180d7d33002628202",
+    "Sources/GeneratedTeaQL/Models/OrderItem.swift": "34e93fe4a1f78fdb920ea0b4d40514231763c0f0577feb162b4833f5c846e631",
+    "Sources/GeneratedTeaQL/Models/OrderStatus.swift": "1804b5860ae26bff5676ae95da9e8aeee89a04ad014a21b9ddbf165311208a11",
+    "Sources/GeneratedTeaQL/Models/Platform.swift": "5bab7a535afd518d36fe0e4783ac658cc8f671b11545fb98b8e18ba75498cb2d",
+    "Sources/GeneratedTeaQL/Q.swift": "a100f2591ed448effd7034e97026336ff32de8f36b393c4fe52b94f0d7cd1981",
+    "Sources/GeneratedTeaQL/RequestState.swift": "85b75526d6445ff92166c4765a3ec0490e88d1e23ee69ebe47ce14bad0249b9c",
+    "Sources/GeneratedTeaQL/Requests/CustomerOrderRequest.swift": "e696cda73a5c8e59b13abe1dcb01eea2ea552986ca3efa068d8128f6ccdf6f29",
+    "Sources/GeneratedTeaQL/Requests/CustomerRequest.swift": "089f86417b0f3b98521041f752a4bdab5a7876da4e6d6dfcd770b63d67f1dcd2",
+    "Sources/GeneratedTeaQL/Requests/OrderItemRequest.swift": "332ce8c5115aeff64dd71c14e71a00a3f7c71d390dda73ea6ba5015bb8df4603",
+    "Sources/GeneratedTeaQL/Requests/OrderStatusRequest.swift": "965d5feb04ef11cd46704fdff8e1536f66088356aae5acfc5697b49ab95d0983",
+    "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift": "df0c05c624229483aaf232db5b55967b1f3748a555f93e3c4076abbe4c512997",
+    "Sources/GeneratedTeaQL/RuntimeModule.swift": "e9d2356ec613d213937142d3facd886ebf6b65ba7dfa7198f2177832e1a9d68f",
+    "teaql-i18n.json": "ee5dc28e916a8907555d5d5a4d0e3cf2fa37aad047af37abed0800582af18d96",
+    "teaql/checker-model.json": "11e9102d94684fd30e13941514301d2cf6f20522c275cfa36eece9842ff1014e",
+    "teaql/model-provenance.json": "f70f70eddcd10c85b1791da5f57498705b9a8e541c389e4a8033a07bceb40b01"
+  },
+  "generationReceipt": "../../../generator-v5.0.1.json",
+  "generatorCommit": "e4084ac774dd70292a1c476bfd4901f07d3ad00b",
+  "generatorJarSHA256": "444f552e55a01765d02e7cf32350d29c9be10c1bd3dd1826f554ccb7aa49a9a5",
+  "generatorRelease": "v5.0.1",
+  "modelSha256": "f207e9603ffa6bdc98007e61093eaa7bed51fc15f26e033fc75709dcb9cde287",
+  "modelSource": "Examples/TraceChain/standard-order/model.xml",
+  "previousOrigin": {
+    "commit": "fe0e1dfa7a16e12782286d3fdd1173cd6894ead8",
+    "path": "Examples/TraceChain/standard-order/swift-lib-core/fixture-manifest.json",
+    "sha256": "5a77ca71cd45ea4e5bff547d6b176884f398b05dd8e84250cb58d65067973314"
+  },
+  "schema": "teaql.retained-example-fixture/v1"
+}

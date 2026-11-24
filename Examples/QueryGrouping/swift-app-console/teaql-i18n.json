@@ -1,0 +1,129 @@
+{
+    "schema": "teaql.i18n/v1",
+    "defaultLocale": "en",
+    "locales": {
+        "de": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ko": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "pt": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "zh-TW": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "fil": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "en": {
+            "vocabulary": {
+                "property.school.plannedClassCount": "Planned Class Count",
+                "property.school.annualBudget": "Annual Budget",
+                "property.school.occupancyRatio": "Occupancy Ratio",
+                "property.school.censusAt": "Census At",
+                "entity.district": "District",
+                "property.school.nextReviewAt": "Next Review At",
+                "property.school.extendedDayEnds": "Extended Day Ends",
+                "property.district.id": "Id",
+                "property.district.version": "Version",
+                "property.school.previousInspectionScore": "Previous Inspection Score",
+                "property.school.id": "Id",
+                "property.school.publicNote": "Public Note",
+                "property.schoolType.district": "District",
+                "property.schoolType.version": "Version",
+                "property.district.name": "Name",
+                "property.school.formerRegistryNumber": "Former Registry Number",
+                "property.school.registryNumber": "Registry Number",
+                "property.school.active": "Active",
+                "property.school.schoolType": "School Type",
+                "property.school.schoolDayStarts": "School Day Starts",
+                "property.schoolType.id": "Id",
+                "entity.school": "School",
+                "property.school.name": "Name",
+                "property.school.reviewed": "Reviewed",
+                "property.school.openedOn": "Opened On",
+                "entity.schoolType": "School Type",
+                "property.school.proposedBudget": "Proposed Budget",
+                "property.school.classCount": "Class Count",
+                "property.school.forecastOccupancyRatio": "Forecast Occupancy Ratio",
+                "property.school.expectedReopening": "Expected Reopening",
+                "property.school.version": "Version",
+                "property.school.inspectionScore": "Inspection Score",
+                "property.schoolType.name": "Name"
+            },
+            "messages": {
+            }
+        },
+        "fr": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "zh-CN": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "es": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ar": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "vi": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "th": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "uk": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "ja": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        },
+        "id": {
+            "vocabulary": {
+            },
+            "messages": {
+            }
+        }
+    }
+}

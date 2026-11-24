@@ -1,0 +1,66 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/FacetTrace",
+  "library": {
+    "generatedFilesManifestSHA256": "083e9aa95863d614808eed37498d45e5017a9f63034894df3e718b1dc7bde17b",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "0e385417536df9dcacddf8cc778d2156005b766437e2644e4fa673d5783cc9cc"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build; not a public release",
+      "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+      "qualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "tag": "unreleased-source-021b1ed8"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/facet-remaining-generation/receipt.json",
+    "receiptSHA256": "45c7ecfe08aa1f8b0d1a77c8476f2a3133d1f70220ec4f5f2738a5f4b0343d77"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-facet-retained-lock/runtime/facet-trace/business-receipt.json",
+    "businessReceiptSHA256": "cc2cdc4719f17b4d92066c12b62d1d34e073545ac3af9c7a1cdcf514385bfd95",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-facet-retained-lock/receipt.json",
+    "nativeReceiptSHA256": "699d05d4f4149b01bb82ee6ea3b2683268ab2a75ac3130cbefed7cdf217e010f",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "5f65686a928649ec94aecb8525ec2e2fd3b1eb70"
+  },
+  "scene": "School catalog Facets, full membership counts and retained business/privacy assertions",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "bash",
+    "verify.sh"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Sources/TeaQLConsole/main.swift",
+      "Sources/TeaQLConsole/FacetAcceptance.swift",
+      "Sources/TeaQLConsole/ObservedProofs.swift",
+      "Sources/TeaQLConsole/LoadedFacetChecks.swift",
+      "Sources/TeaQLConsole/FacetWriteback.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Platform.swift",
+      "Sources/GeneratedTeaQL/Models/School.swift",
+      "Sources/GeneratedTeaQL/Models/SchoolType.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/PlatformRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/SchoolTypeRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "00529eb2175479fd5a3bc97aa376535fcdc8c5505b3a562fa194215f0f584e5e",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

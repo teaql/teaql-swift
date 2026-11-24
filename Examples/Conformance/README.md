@@ -1,5 +1,7 @@
 # runtime-example-conformance-service Swift Core
 
+`model.xml` owns `swift-lib-core` and `swift-app-console`. Application code lives in the native workspace. Run `bash Examples/Conformance/verify.sh` from the SDK root for the original lifecycle assertions twice on one retained SQLite file and independent persisted-result checks. The gate never resets that database and removes owned build scratch. Current source provenance and qualification are in `showcase.json`.
+
 `OperationalClockVerification.swift` first calibrates the Context Business Clock,
 then moves business time forwards/backwards while a real one-second cache entry
 expires. Operational work makes zero additional Business Clock reads; zero/omitted
@@ -21,7 +23,7 @@ needs its own verification. Run `bash scripts/verify-examples.sh` from the runti
 repository with the plaintext-debug environment variable unset.
 
 This package is generated from the TeaQL model. Do not edit files under
-`Sources/GeneratedTeaQL`; update the model, generator, or `teaql-swift` runtime
+`swift-lib-core/Sources/GeneratedTeaQL` and the workspace's identical generated copy; update the model, generator, or `teaql-swift` runtime
 and regenerate.
 
 Queries accept exactly one context argument, `UserContext`, and become

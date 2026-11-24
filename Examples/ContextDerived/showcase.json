@@ -1,0 +1,60 @@
+{
+  "generatedDomainLibraryHandEdited": false,
+  "goalId": "swift:Examples/ContextDerived",
+  "library": {
+    "generatedFilesManifestSHA256": "7c46dc7a95c7eb7e3b1a2b96238ba84d28381cc7354f87ed1e326af7d896d724",
+    "root": "swift-lib-core",
+    "scope": "swift-lib-core",
+    "useLocalSwiftRuntime": true
+  },
+  "model": {
+    "path": "model.xml",
+    "sha256": "c999381a5e3051e5b6ab9e5b027a2f1f5b568adf32d97c2accec5a4fb4472c0a"
+  },
+  "producer": {
+    "generator": {
+      "artifactKind": "qualified source build; not a public release",
+      "jarSHA256": "34dd804dccf05470dad46d086d58412e4a9dfcd0a1c6ed34f8f90c55ff478220",
+      "qualificationReceiptSHA256": "5119b9f3a5c95fb84f527885fdd5bac0fe79a56352a55b8acf116f67fd12787d",
+      "sourceCommit": "021b1ed8bee5db7eef38a6b1e3a3ef2e7ac69daa",
+      "tag": "unreleased-source-021b1ed8"
+    },
+    "receipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/context-field-qualified-generation/receipt.json",
+    "receiptSHA256": "fd8c37aeb5622a41a2dd8768724e432d5f97b58bf720f39217a8f31a8f4c1d90"
+  },
+  "qualification": {
+    "businessReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-context-field-native-scopes/runtime/context-derived/receipt.json",
+    "businessReceiptSHA256": "5243fabe67c3d71c68a71d59d77c05b24bdb1806bfbaa1c1ca30a9c3e2738b7e",
+    "nativeReceipt": "teaql-conformance/evidence/2026-11-20-example-showcase-remediation/swift-context-field-native-scopes/receipt.json",
+    "nativeReceiptSHA256": "1283b59d6b562d40dc6f50603e28328c17c4b35e2c0cf1dea2adb4226ff3ad05",
+    "remainingFullRuntimeInventory": true,
+    "sourceCommit": "18fe3d6e47e9dd8e3c5ca08a07c60ed2286f346d"
+  },
+  "scene": "Catalog entry edits with trusted Context defaults, no-op saves and rollback",
+  "schema": "teaql.model-workspace-showcase/v1",
+  "status": "focused-verified",
+  "verification": [
+    "node",
+    "verify-local.cjs"
+  ],
+  "workspace": {
+    "applicationOwnedFiles": [
+      "Package.swift",
+      "Sources/ContextDerivedExample/ContextDerived.swift"
+    ],
+    "domainSourcesFromLibrary": [
+      "Sources/GeneratedTeaQL/E.swift",
+      "Sources/GeneratedTeaQL/GeneratedSearchModels.swift",
+      "Sources/GeneratedTeaQL/Models/Catalog.swift",
+      "Sources/GeneratedTeaQL/Models/Entry.swift",
+      "Sources/GeneratedTeaQL/Q.swift",
+      "Sources/GeneratedTeaQL/RequestState.swift",
+      "Sources/GeneratedTeaQL/Requests/CatalogRequest.swift",
+      "Sources/GeneratedTeaQL/Requests/EntryRequest.swift",
+      "Sources/GeneratedTeaQL/RuntimeModule.swift"
+    ],
+    "generatedFilesManifestSHA256": "a5a28afd8e1aabdb8cf928b8bd030dad1492a7cc49f5cf9e86f8a5824babc4ad",
+    "root": "swift-app-console",
+    "scope": "swift-app-console"
+  }
+}

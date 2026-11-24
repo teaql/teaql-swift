@@ -5,7 +5,14 @@ repo="$(cd "$example/../.." && pwd)"
 if [[ $# -gt 1 ]]; then echo 'usage: bash verify.sh [retained-sqlite-path]' >&2; exit 2; fi
 evidence_parent="${TEAQL_EXAMPLES_EVIDENCE_DIR:-${TMPDIR:-/tmp}}"
 mkdir -p "$evidence_parent"
-trace_evidence="$(mktemp -d "$evidence_parent/teaql-swift-generated-trace-evidence-XXXXXX")"
+trace_evidence="${TEAQL_SWIFT_TRACE_EVIDENCE_DIR:-}"
+if [[ -n "$trace_evidence" ]]; then
+  mkdir -p "$(dirname "$trace_evidence")"
+  mkdir "$trace_evidence"
+else
+  trace_evidence="$(mktemp -d "$evidence_parent/teaql-swift-generated-trace-evidence-XXXXXX")"
+fi
+trace_evidence="$(cd "$trace_evidence" && pwd)"
 echo "Swift TraceChain compact evidence: $trace_evidence"
 if [[ $# -eq 1 ]]; then
   trace_database="$1"
@@ -13,10 +20,10 @@ else
   trace_database="$trace_evidence/trace.sqlite"
 fi
 scratch="${TEAQL_SWIFT_SCRATCH_PATH:-$repo/.build}"
-cd "$example"
+cd "$example/swift-app-console"
 hash_library() {
-  find Generated/Sources -type f -name '*.swift' -print0 | sort -z | xargs -0 sha256sum
-  sha256sum Generated/Package.swift
+  find ../swift-lib-core/Sources -type f -name '*.swift' -print0 | sort -z | xargs -0 sha256sum
+  sha256sum Package.swift Package.resolved ../swift-lib-core/Package.swift
 }
 finish() {
   result=$?
@@ -37,6 +44,8 @@ finish() {
 trap finish EXIT
 hash_library > "$trace_evidence/generated-before.sha256"
 node --test "$repo/Examples/TraceChain/verify-checker-observation.test.cjs"
+swift build --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
+  --force-resolved-versions --product TraceChainVerification
 for round in first second; do
   timeout --kill-after=10s 180s env -u TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS -u TEAQL_SWIFT_TRACE_SCENARIO \
     swift run --jobs 2 --scratch-path "$scratch" --disable-build-manifest-caching \
