@@ -8,7 +8,7 @@ if [[ "$#" -gt 1 || ( "$mode" != "" && "$mode" != "--after-freight-quotes" && "$
 fi
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-expected=(Conformance ContextDerived ExpressionProfiles FacetTrace FixEAlignment NaturalMessages ObjectStorage OrderManagement QueryGrouping ScalarTypeProbe SchoolManagement TraceChain)
+expected=(Conformance ContextDerived ExpressionProfiles FacetTrace FixEAlignment NaturalMessages ObjectStorage OrderManagement QueryGrouping ScalarTypeProbe SchoolManagement SupplierOnboardingI18n TraceChain)
 mapfile -t actual < <(find "$repo/Examples" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 if [[ "${actual[*]}" != "${expected[*]}" ]]; then
   echo "example inventory changed; update scripts/verify-examples.sh: ${actual[*]}" >&2
@@ -72,3 +72,5 @@ elif [[ "$mode" == "--after-order-management" ]]; then
 else
   echo "PASS: Swift examples after freight quotes and conformance"
 fi
+
+bash "$repo/Examples/SupplierOnboardingI18n/run.sh" --verify > "$inventory_evidence/supplier-i18n.jsonl"

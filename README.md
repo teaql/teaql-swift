@@ -356,6 +356,7 @@ Request JSON is not allowed to replace those trusted capabilities.
 - [Order Management example](Examples/OrderManagement/README.md)
 - [Trace Chain example](Examples/TraceChain/README.md)
 - [Binary object storage and temporary S3 URLs](Examples/ObjectStorage/README.md)
+- [Supplier onboarding in 15 locales](Examples/SupplierOnboardingI18n/README.md)
 - [Governance and SPI](RUNTIME_GUIDE.md#governance)
 
 ## Safe troubleshooting
