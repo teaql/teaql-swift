@@ -74,7 +74,7 @@ final class GraphTraceScopeTests: XCTestCase {
     let key = EntityKey(entity: "CustomerOrder", id: .int(1))
     let scope = try first.scope(key: key)
     XCTAssertThrowsError(try second.scope(key: key, localReason: "wrong parent", parent: scope))
-    _ = first.finish(committed: false)
+    _ = first.finish(succeeded: false)
     XCTAssertThrowsError(try first.scope(key: key))
     XCTAssertThrowsError(try first.afterCommit {})
     XCTAssertEqual(scope.recover().first?.comment, "first graph")

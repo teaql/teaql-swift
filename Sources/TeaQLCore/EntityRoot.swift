@@ -20,6 +20,17 @@ public struct EntityCommitStateConflict: Error, Sendable, CustomStringConvertibl
   public var description: String { "ENTITY_PENDING_CHANGED_AFTER_COMMIT: committed data must be reloaded before reconciling the preserved pending intention" }
 }
 
+/// Read-only provenance may survive replacement of a generated entity's ledger.
+public final class TransactionReplayGuard: @unchecked Sendable {
+  private let lock = NSLock()
+  private var failure: (any Error)?
+
+  package func fence(_ error: any Error) { lock.withLock { failure = error } }
+  package func requireKnownState() throws {
+    try lock.withLock { if let failure { throw failure } }
+  }
+}
+
 /// Pending mutation ledger shared by one generated object graph.
 public final class EntityRoot: @unchecked Sendable {
   private let lock = NSLock()
@@ -29,8 +40,19 @@ public final class EntityRoot: @unchecked Sendable {
   private var deletedKeys: Set<EntityKey> = []
   private var traceChains: [EntityKey: [TraceNode]] = [:]
   private var localAuditReasons: [EntityKey: String] = [:]
+  package let replayGuard = TransactionReplayGuard()
 
   public init() {}
+
+  @_spi(Generated) public var transactionReplayProvenance: TransactionReplayGuard { replayGuard }
+
+  package func fenceTransaction(_ error: any Error) {
+    replayGuard.fence(error)
+  }
+
+  package func requireKnownTransactionState() throws {
+    try replayGuard.requireKnownState()
+  }
 
   public func set(_ key: EntityKey, field: String, value: TeaQLValue) {
     precondition(!field.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -133,6 +155,8 @@ public final class EntityRoot: @unchecked Sendable {
   }
 
   public func merge(from other: EntityRoot) throws {
+    try requireKnownTransactionState()
+    try other.requireKnownTransactionState()
     if other === self { return }
     let state = other.fullSnapshot()
     try importState(state)
@@ -140,6 +164,8 @@ public final class EntityRoot: @unchecked Sendable {
 
   /// Copy only a reached typed key. Never drain or rebind the source graph.
   public func mergeEntity(from other: EntityRoot, key: EntityKey) throws {
+    try requireKnownTransactionState()
+    try other.requireKnownTransactionState()
     if other === self { return }
     let state = other.fullSnapshot(key: key)
     try importState(state)

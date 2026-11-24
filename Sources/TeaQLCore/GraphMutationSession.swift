@@ -67,6 +67,8 @@ public final class GraphMutationSession: @unchecked Sendable {
   private var loadedProvenance: SQLExecutionMetadata?
   private var fixEvidence: [FixEvidence] = []
   private var persistedRecords: [EntityKey: TeaQLRecord] = [:]
+  private var replayGuards: [ObjectIdentifier: TransactionReplayGuard] = [:]
+  private var readbackLedgers: [EntityRoot] = []
   private struct VisitKey: Hashable {
     let ledger: ObjectIdentifier
     let entity: EntityKey
@@ -122,6 +124,9 @@ public final class GraphMutationSession: @unchecked Sendable {
         throw TeaQLError.execution("GRAPH_TRAVERSAL_OUTSIDE_PHASE")
       }
       let ledger = entity.teaqlEntityRoot, key = entity.teaqlEntityKey
+      let replayGuard = ledger.replayGuard
+      replayGuards[ObjectIdentifier(replayGuard)] = replayGuard
+      if let origin = entity.teaqlReplayProvenance { replayGuards[ObjectIdentifier(origin)] = origin }
       let identity = VisitKey(ledger: ObjectIdentifier(ledger), entity: key)
       let values = pendingMutationRecord(entity, rooted: entity)
       if let prior = visits[phase]?[identity] {
@@ -156,10 +161,26 @@ public final class GraphMutationSession: @unchecked Sendable {
     }
   }
 
+  package func track(_ ledger: EntityRoot?) {
+    trackProvenance(ledger?.replayGuard)
+  }
+
+  package func trackProvenance(_ guardForReplay: TransactionReplayGuard?) {
+    guard let guardForReplay else { return }
+    lock.withLock { replayGuards[ObjectIdentifier(guardForReplay)] = guardForReplay }
+  }
+
+  package func trackReadback(_ ledger: EntityRoot?) {
+    guard let ledger else { return }
+    lock.withLock { readbackLedgers.append(ledger) }
+  }
+
   @_spi(Generated) public func readback() throws -> GraphReadback {
     try lock.withLock {
       guard active && !preparing else { throw TeaQLError.execution("GRAPH_READBACK_OUTSIDE_EXECUTION") }
-      return GraphReadback(records: persistedRecords)
+      let readback = GraphReadback(records: persistedRecords)
+      if !persistedRecords.isEmpty { readbackLedgers.append(readback.root) }
+      return readback
     }
   }
 
@@ -207,24 +228,45 @@ public final class GraphMutationSession: @unchecked Sendable {
       return LogPrivacy.inheritIntent(current, inherited: loadedProvenance)!
     }
   }
-  package func finish(committed: Bool) -> ([@Sendable () throws -> Void], [AuditEvent], [FixEvidence]) {
+  package struct Completion: Sendable {
+    let commitActions: [@Sendable () throws -> Void]
+    let rollbackActions: [@Sendable () throws -> Void]
+    let events: [AuditEvent]
+    let evidence: [FixEvidence]
+    let replayGuards: [TransactionReplayGuard]
+    let readbacks: [EntityRoot]
+
+    func rollback() {
+      for action in rollbackActions.reversed() { try? action() }
+      for ledger in readbacks { ledger.fenceTransaction(TransactionReadbackRolledBack()) }
+    }
+
+    func fence() {
+      for guardForReplay in replayGuards { guardForReplay.fence(TransactionOutcomeUnknown()) }
+      for ledger in readbacks { ledger.fenceTransaction(TransactionOutcomeUnknown()) }
+    }
+  }
+
+  package func finish(succeeded: Bool) -> Completion {
     lock.withLock {
       precondition(active)
       active = false
       preparedMutations.clear()
       let oldSecrets = loadedProvenance.map(LogPrivacy.privateValues) ?? []
-      let events = committed ? auditEvents.map { event, values in
+      let events = succeeded ? auditEvents.map { event, values in
         AuditEvent(entity: event.entity, entityID: event.entityID, operation: event.operation,
           reason: LogPrivacy.scrub(event.reason, values: privacyValues + values + oldSecrets), actor: event.actor,
           category: event.category, occurredAt: event.occurredAt,
           mutationGovernance: event.mutationGovernance,
           mutationLineage: TraceChain.maskLineage(event.mutationLineage ?? [], values: privacyValues + values + oldSecrets))
       } : []
-      let actions = committed ? commitActions : rollbackActions.reversed()
+      let completion = Completion(commitActions: succeeded ? commitActions : [], rollbackActions: rollbackActions,
+        events: events, evidence: fixEvidence, replayGuards: Array(replayGuards.values), readbacks: readbackLedgers)
       commitActions = []; rollbackActions = []; auditEvents = []; privacyValues = []; loadedProvenance = nil
       persistedRecords = [:]
       visits = [:]
-      return (Array(actions), events, fixEvidence)
+      replayGuards = [:]; readbackLedgers = []
+      return completion
     }
   }
 }
@@ -238,6 +280,8 @@ package final class GraphTransactionGate: @unchecked Sendable {
   private var occupied = false
   private var waiters: [CheckedContinuation<Void, Never>] = []
   private var retainedFixEvidence: [FixEvidence] = []
+
+  package init() {}
 
   package func acquire() async {
     while true {

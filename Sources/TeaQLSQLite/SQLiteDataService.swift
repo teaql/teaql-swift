@@ -62,14 +62,39 @@ public enum SQLiteError: Error, Sendable, Equatable, CustomStringConvertible {
   }
 }
 
-public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor, InternalIDGenerator {
+public actor SQLiteDataService: UserContextTransactionExecutor, GraphTransactionExecutor, SchemaExecutor, RelationTopNPlanning, SQLDiagnosticExecutor, SQLCountDiagnosticExecutor, QueryIntentProvenanceExecutor, InternalIDGenerator {
   private let handle: SQLiteHandle
   private var database: OpaquePointer { handle.pointer }
   private let compiler = SQLiteCompiler()
   private var graphTransactionActive = false
+  private let connectionGate = GraphTransactionGate()
+  private var contextTransactionOwner: UUID?
+  private var connectionInvalidated = false
   public let path: String
   public nonisolated var idSetDataSourceIdentity: String { "sqlite:\(path)" }
   public nonisolated var relationTopNPolicy: RelationTopNPolicy { .alwaysProbe }
+
+  private func withConnection<T>(checkCancellation: Bool = true, _ operation: () throws -> T) async throws -> T {
+    await connectionGate.acquire()
+    defer { connectionGate.release(evidence: []) }
+    if checkCancellation { try Task.checkCancellation() }
+    try requireUsableConnection()
+    return try operation()
+  }
+
+  private func requireUsableConnection() throws {
+    guard !connectionInvalidated else {
+      throw TeaQLError.execution("SQLite connection was invalidated after an unconfirmed transaction")
+    }
+  }
+
+  private func requireOwner(_ access: SQLiteTransactionAccess) throws {
+    try access.requireOpen()
+    guard contextTransactionOwner == access.id else {
+      throw TeaQLError.execution("TRANSACTION_CONTEXT_EXPIRED: the transaction callback has ended")
+    }
+    try Task.checkCancellation()
+  }
 
   public init(path: String) throws {
     self.path = path
@@ -275,9 +300,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   /// Provider SPI. Application code calls `context.ensureSchema(module)`.
-  package func ensureSchema(_ module: RuntimeModule, context: UserContext) throws {
-    try ensureSoundexFunction()
-    try ensureEntitySchemas(module.entities)
+  package func ensureSchema(_ module: RuntimeModule, context: UserContext) async throws {
+    try await withConnection {
+      try ensureSoundexFunction()
+      try ensureEntitySchemas(module.entities)
+    }
   }
 
   private func ensureSoundexFunction() throws {
@@ -297,7 +324,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   /// Creation reserves a durable ID in its own transaction. Never join a
   /// business graph transaction: its rollback must not recycle a returned ID.
-  public func nextID(for entity: String, context: UserContext) throws -> Int64 {
+  public func nextID(for entity: String, context: UserContext) async throws -> Int64 {
+    try await withConnection { try reserveID(for: entity) }
+  }
+
+  private func reserveID(for entity: String) throws -> Int64 {
     try Task.checkCancellation()
     guard !entity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       throw InternalIDError.invalidEntityName
@@ -319,7 +350,11 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
 
   /// Advances an ID space after model-defined roots or constants are seeded.
   /// The floor is monotonic and is never allowed to move backwards.
-  public func ensureIDFloor(typeName: String, floor: Int64) throws {
+  public func ensureIDFloor(typeName: String, floor: Int64) async throws {
+    try await withConnection { try ensureIDFloorUnleased(typeName: typeName, floor: floor) }
+  }
+
+  private func ensureIDFloorUnleased(typeName: String, floor: Int64) throws {
     guard floor >= 0 else {
       throw TeaQLError.execution("Invalid ID space floor \(floor) for \(typeName)")
     }
@@ -386,6 +421,15 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   package func executeDiagnosed(_ request: QueryRequest) async throws -> QueryResult {
+    try await withConnection { try executeCurrentQuery(request) }
+  }
+
+  func executeDiagnosed(_ request: QueryRequest, owner: SQLiteTransactionAccess) throws -> QueryResult {
+    try requireOwner(owner)
+    return try executeCurrentQuery(request)
+  }
+
+  private func executeCurrentQuery(_ request: QueryRequest) throws -> QueryResult {
     let query = request.query
     let compiled = try compiler.compile(query)
     let startedAt = DispatchTime.now().uptimeNanoseconds
@@ -430,6 +474,15 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   package func countDiagnosed(_ request: QueryRequest) async throws -> SQLCountResult {
+    try await withConnection { try countCurrentQuery(request) }
+  }
+
+  func countDiagnosed(_ request: QueryRequest, owner: SQLiteTransactionAccess) throws -> SQLCountResult {
+    try requireOwner(owner)
+    return try countCurrentQuery(request)
+  }
+
+  private func countCurrentQuery(_ request: QueryRequest) throws -> SQLCountResult {
     let query = request.query
     let compiled = try compiler.compileCount(query)
     let startedAt = DispatchTime.now().uptimeNanoseconds
@@ -467,10 +520,19 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   package func executeDiagnosed(_ request: MutationRequest) async throws -> MutationResult {
+    try await withConnection { try executeCurrentMutation(request, joined: graphTransactionActive) }
+  }
+
+  func executeDiagnosed(_ request: MutationRequest, owner: SQLiteTransactionAccess) throws -> MutationResult {
+    try requireOwner(owner)
+    return try executeCurrentMutation(request, joined: true)
+  }
+
+  private func executeCurrentMutation(_ request: MutationRequest, joined: Bool) throws -> MutationResult {
     // The nonthrowing intent-bearing request constructor is also used by
     // trusted infrastructure. Re-admit here, before even opening a transaction.
     let mutation = try request.mutation.validatedForExecution()
-    if graphTransactionActive {
+    if joined {
       let result = try performMutation(mutation)
       if result.affectedRows > 0 { try insertAudit(mutation, generatedValues: result.generatedValues) }
       return result
@@ -488,26 +550,70 @@ public actor SQLiteDataService: QueryExecutor, MutationExecutor, GraphTransactio
   }
 
   public func beginGraphTransaction() async throws {
-    guard !graphTransactionActive else {
-      throw TeaQLError.execution("A graph transaction is already active")
+    try await withConnection {
+      guard !graphTransactionActive else {
+        throw TeaQLError.execution("A graph transaction is already active")
+      }
+      try executeSQL("BEGIN IMMEDIATE")
+      graphTransactionActive = true
     }
-    try executeSQL("BEGIN IMMEDIATE")
-    graphTransactionActive = true
   }
 
   public func commitGraphTransaction() async throws {
-    guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
-    try executeSQL("COMMIT")
-    graphTransactionActive = false
+    try await withConnection(checkCancellation: false) {
+      guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
+      try executeSQL("COMMIT")
+      graphTransactionActive = false
+    }
   }
 
   public func rollbackGraphTransaction() async throws {
-    guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
-    defer { graphTransactionActive = false }
-    try executeSQL("ROLLBACK")
+    try await withConnection(checkCancellation: false) {
+      guard graphTransactionActive else { throw TeaQLError.execution("No graph transaction is active") }
+      defer { graphTransactionActive = false }
+      try executeSQL("ROLLBACK")
+    }
   }
 
-  public func auditEvents() throws -> [TeaQLRecord] {
+  public func beginUserContextTransaction() async throws -> any UserContextTransactionLease {
+    await connectionGate.acquire()
+    do {
+      try Task.checkCancellation()
+      try requireUsableConnection()
+      guard !graphTransactionActive else { throw TeaQLError.execution("SQLite already owns a graph transaction") }
+      try executeSQL("BEGIN IMMEDIATE")
+      let access = SQLiteTransactionAccess()
+      contextTransactionOwner = access.id
+      return SQLiteTransactionLease(service: self, access: access)
+    } catch {
+      connectionGate.release(evidence: [])
+      throw error
+    }
+  }
+
+  func finishUserContextTransaction(_ access: SQLiteTransactionAccess, commit: Bool) throws {
+    guard contextTransactionOwner == access.id else { throw TransactionOutcomeUnknown() }
+    access.close()
+    defer {
+      access.finish()
+      contextTransactionOwner = nil
+      connectionGate.release(evidence: [])
+    }
+    do { try executeSQL(commit ? "COMMIT" : "ROLLBACK") }
+    catch {
+      if sqlite3_get_autocommit(database) == 0 {
+        if commit { try? executeSQL("ROLLBACK") }
+        if sqlite3_get_autocommit(database) == 0 { connectionInvalidated = true }
+      }
+      throw TransactionOutcomeUnknown()
+    }
+  }
+
+  public func auditEvents() async throws -> [TeaQLRecord] {
+    try await withConnection { try readAuditEvents() }
+  }
+
+  private func readAuditEvents() throws -> [TeaQLRecord] {
     let descriptor = EntityDescriptor(
       name: "TeaQLRowAuditEvent", table: "teaql_row_audit_event",
       properties: [
