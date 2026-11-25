@@ -223,6 +223,29 @@ with one trace through entity construction. Its local gate replays audited
 bootstrap twice without database cleanup. Public-release qualification is still
 in progress.
 
+## Environment variables
+
+### Runtime logging
+
+| Environment variable | Default | Values and behavior |
+| --- | --- | --- |
+| `TEAQL_DOMAIN` | The single configured model name, or `teaql` | Runtime log name and default filename stem. An explicit log name in startup options takes precedence. |
+| `TEAQL_LOG_ENDPOINT` | `./logs/<log-name>.log` | Local path, local `file:` URL, `stdout`, `stderr`, or `-` for stdout. Relative paths resolve from the working directory. Rotation applies to files. |
+| `TEAQL_LOG_FORMAT` | `json` | `json` writes one structured record per line. `human` renders readable text. An explicit startup format takes precedence. |
+| `TEAQL_LOG_MAX_SIZE` | `50M` | File rotation threshold. Use positive bytes or a binary suffix `K`, `KB`, `M`, `MB`, `G`, or `GB`. |
+| `TEAQL_LOG_MAX_FILES` | `7` | Maximum number of rotated files. Use a nonnegative integer. `0` keeps only the active file. |
+| `TEAQL_ALLOW_SENSITIVE_PLAINTEXT_LOGS` | Unset | The exact value `I_UNDERSTAND_SENSITIVE_DATA_MAY_BE_WRITTEN_TO_DISK` allows eligible application values in explicitly configured diagnostic output. Credential fields stay redacted. |
+
+### OpenTelemetry
+
+Add the `TeaQLStandardTelemetry` Swift package product and call `StandardTelemetryModule.install()` before creating a `UserContext`.
+
+| Environment variable | Default | Values and behavior |
+| --- | --- | --- |
+| `TEAQL_TELEMETRY_ENABLED` | `false` | `true` enables the standard module. Set the service name and Collector endpoint as well. `false` disables export. |
+| `TEAQL_TELEMETRY_SERVICE_NAME` | Unset | Required when enabled. Use 1–120 ASCII letters, digits, underscores, periods, or hyphens. |
+| `TEAQL_TELEMETRY_OTLP_ENDPOINT` | Unset | Required when enabled. OTLP/HTTP Collector base URL, for example `http://localhost:4318`. Use an absolute HTTP(S) URL without user information, a query, or a fragment. |
+
 ## Discover only the API needed next
 
 A coding agent does not need every generated method in its context. Start with
